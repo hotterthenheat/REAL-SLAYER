@@ -29,6 +29,7 @@ import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 import { DealerDynamicsPanel } from './DealerDynamicsPanel';
 import { GexReadCard } from './GexReadCard';
+import { TerminalReadCard } from './TerminalReadCard';
 import { ZeroDtePanel } from './ZeroDtePanel';
 import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
@@ -1138,6 +1139,17 @@ export function DealerFlowView() {
 
       {activeEngineView === 'profile' ? (
         <>
+          {/* ============== PRE-CALCULATED READ (the conclusion, up top) ============== */}
+          {(filteredProfile || profile) && (
+            <TerminalReadCard
+              profile={filteredProfile || profile}
+              candles={chartCandles}
+              ticker={selectedAsset.ticker}
+              decimals={selectedAsset.decimals}
+              isLive={!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC'}
+            />
+          )}
+
           {/* ============== GEX PAGE HEADER (derived from real GEX profile) ============== */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-2 font-mono">
             <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
