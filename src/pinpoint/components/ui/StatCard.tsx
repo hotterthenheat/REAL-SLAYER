@@ -2,7 +2,7 @@ import React from 'react';
 import { toneText, type Tone } from './tones';
 
 interface StatCardProps {
-  label: string;
+  label: React.ReactNode;
   value: React.ReactNode;
   /** Secondary line under the value (context, units, delta) */
   sub?: React.ReactNode;

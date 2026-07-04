@@ -17,6 +17,7 @@
  */
 import { useCallback, useRef, useState } from 'react';
 import { Download, Maximize2 } from 'lucide-react';
+import { toast } from '../ui/toast';
 
 /** Pointer→viewBox-x crosshair for a width=100% SVG with viewBox width `viewBoxW`. */
 export function useCrosshair(viewBoxW: number) {
@@ -50,6 +51,7 @@ function triggerDownload(blob: Blob, filename: string) {
   const a = document.createElement('a');
   a.href = url; a.download = filename; document.body.appendChild(a); a.click();
   document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  toast.success('Export ready', { description: filename });
 }
 
 export function exportSvg(svg: SVGSVGElement | null, name: string) {
