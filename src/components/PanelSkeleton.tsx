@@ -1,16 +1,22 @@
-import React from 'react';
+import { Skeleton } from './ui/Skeleton';
 
+/**
+ * PanelSkeleton — a loading placeholder for data panels. The label stays crisp (a
+ * pulsing/shimmering title reads as a rendering bug); only the value tiles shimmer
+ * via the shared Skeleton primitive. Uses surface tokens so it matches the panel it
+ * stands in for. For REAL loading states only, never decorative filler.
+ */
 export function PanelSkeleton({ label, rows = 4 }: { label?: string; rows?: number }) {
   return (
-    <div className="rounded-xl border border-white/5 bg-black/40 p-4 flex flex-col gap-3 animate-pulse">
+    <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4" role="status" aria-label={label ? `${label} loading` : 'Loading'}>
       {label && (
-        <span className="text-[10px] font-mono font-black uppercase tracking-[0.2em] text-zinc-500">
+        <span className="font-mono text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
           {label}
         </span>
       )}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {Array.from({ length: rows * 2 }).map((_, i) => (
-          <div key={i} className="h-9 rounded-lg bg-white/5" />
+          <Skeleton key={i} className="h-9" />
         ))}
       </div>
     </div>
