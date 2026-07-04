@@ -1,0 +1,24 @@
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+
+# Local-only preview/scratch entry files (regenerable; never committed)
+_*.tsx
+_*.mjs
+_*.cjs
+*.log
+.env*
+!.env.example
+# Keyless-mode user store (file-based fallback when SQL_HOST is unset). Never commit user data.
+users-fallback.json
+users-fallback.json*
+
+# Local SQLite database (per-user tracked trades / backtesting). Never commit trade data.
+data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+_*.html
