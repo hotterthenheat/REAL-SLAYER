@@ -66,6 +66,7 @@ import { ChainContract } from '../lib/v11Math';
 // is actually rendered, keeping the heavy 3D vendor chunk off the page's load.
 const GexSurface3D = lazy(() => import('./GexSurface3D').then(m => ({ default: m.GexSurface3D })));
 const IvSurface3D = lazy(() => import('./IvSurface3D').then(m => ({ default: m.IvSurface3D })));
+const QuantVizLab = lazy(() => import('./quant/QuantVizLab'));
 
 type StrategyPreset = 'iron_condor' | 'straddle' | 'butterfly' | 'vertical';
 
@@ -1281,6 +1282,15 @@ export default function QuantSuiteView() {
             )}
           </motion.div>
         </AnimatePresence>
+      </div>
+
+      {/* ECharts / echarts-gl visual analytics — intraday price, equity curve, and
+          GL vol surface / risk cloud / dealer flow field. Live-looking mock now,
+          pluggable to the real feed via echartOptions.ts. */}
+      <div className="border-t border-[var(--border)] pt-4" id="quant-suite-echarts">
+        <Suspense fallback={<div className="h-64 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
+          <QuantVizLab />
+        </Suspense>
       </div>
 
       {/* Risk-neutral probability distribution — the market's own forward distribution (Breeden-Litzenberger),
