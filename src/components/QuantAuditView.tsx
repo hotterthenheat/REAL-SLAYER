@@ -564,10 +564,6 @@ export function QuantAuditView({
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 px-3 py-2 border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] text-[10px] font-bold rounded-lg uppercase tracking-wide">
-            <span className="w-1.5 h-1.5 bg-[var(--success)] rounded-full" />
-            Synced
-          </div>
           <button
             onClick={onClearTrades}
             className="flex items-center gap-1.5 px-3 py-2 border border-[var(--border)] text-[var(--danger)] hover:border-[var(--danger)]/50 hover:bg-[var(--danger)]/5 text-[10px] font-bold rounded-lg cursor-pointer transition-all uppercase tracking-wide focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"

@@ -374,15 +374,6 @@ export function SkyVisionView() {
     }
   }, [activeRecommendation, selectedOptionType]);
 
-  // Real-time custom targets list
-  const profitTargetsList = useMemo(() => {
-    return [
-      { id: 't1', label: 'Take Profit 1', optionValue: activePrice * 1.3, expectedPnL: '+30%', status: tradeHealthValue > 70 ? 'HIT TP 1' : 'IN PROGRESS' },
-      { id: 't2', label: 'Take Profit 2', optionValue: activePrice * 1.8, expectedPnL: '+80%', status: tradeHealthValue > 85 ? 'HIT TP 2' : 'IN PROGRESS' },
-      { id: 't3', label: 'Take Profit 3', optionValue: activePrice * 2.5, expectedPnL: '+150%', status: tradeHealthValue > 95 ? 'HIT TP 3' : 'PENDING' },
-      { id: 't4', label: 'Take Profit 4', optionValue: activePrice * 3.5, expectedPnL: '+250%', status: 'PENDING' },
-    ];
-  }, [activePrice, tradeHealthValue]);
 
   if (!isExpanded) {
     return (
@@ -637,28 +628,9 @@ export function SkyVisionView() {
 
           </div>
 
-          {/* PROFIT TARGETS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            {profitTargetsList.map((tgt) => {
-              const isHit = tgt.status.includes('HIT TP');
-              return (
-                <div
-                  key={tgt.id}
-                  className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg flex items-center justify-between text-left"
-                >
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-[var(--text-tertiary)] tracking-wider block font-black uppercase">{tgt.label}</span>
-                    <h4 className={`text-[10px] font-black uppercase ${isHit ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>{tgt.status}</h4>
-                    <span className="text-[10px] text-[var(--text-secondary)] block font-mono">Target <span className="font-bold text-[var(--text-primary)] tabular-nums">${tgt.optionValue.toFixed(2)}</span></span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-black text-[var(--success)] block tabular-nums">{tgt.expectedPnL}</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-mono tracking-wider">Expected</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* The real, reasoned target ladder lives in TradePlanCard (EMA / sweep / strike /
+              GEX-wall derived). The old fixed-multiple "Take Profit 1–4" PnL cards were
+              formulaic filler and were removed. */}
 
           {/* STRIKE GRAVITY MAP — dealer-pressure ranking & zones */}
           <StrikeGravityPanel />
