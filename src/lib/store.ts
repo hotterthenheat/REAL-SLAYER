@@ -37,8 +37,8 @@ interface MarketState {
 
 export interface ContractStore {
   // Navigation & View Tabs
-  activeTab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace' | 'multichart';
-  setActiveTab: (tab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace' | 'multichart', keepContract?: boolean) => void;
+  activeTab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace';
+  setActiveTab: (tab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace', keepContract?: boolean) => void;
 
   // Theme settings
   themeMode: 'light' | 'dark';
