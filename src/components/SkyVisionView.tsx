@@ -14,6 +14,7 @@ import { AssetSparkline } from './AssetSparkline';
 // as a clearly-labelled MODEL fallback when the premium-gated server option_chain
 // is unavailable. `ChainContract` mirrors the server's per-strike chain shape.
 import { calculateAnalyticGreeks, type ChainContract } from '../lib/v11Math';
+import { Table, THead, TBody, TR, TH, TD } from './ui/Table';
 
 // OptionCard Component for selection - strictly no Delta/Gamma clutter (Bug #4, Bug #7)
 // Hoisted to module scope so its identity is stable across renders (prevents remounting
@@ -830,33 +831,33 @@ export function SkyVisionView() {
                     )}
                   </div>
                   {/* Full table — md and up */}
-                  <div className="hidden md:block overflow-x-auto">
-                    <table className="w-full text-left text-[10px] font-mono text-[var(--text-secondary)]">
-                      <thead>
-                        <tr className="border-b border-[var(--border)] text-[var(--text-tertiary)] uppercase tracking-widest">
-                          <th className="pb-2 font-black">Rank</th>
-                          <th className="pb-2 font-black">Contract</th>
-                          <th className="pb-2 font-black">Exp</th>
-                          <th className="pb-2 font-black">Open Int</th>
-                          <th className="pb-2 font-black">Volume</th>
-                          <th className="pb-2 font-black text-right">Delta Notional</th>
-                          <th className="pb-2 font-black text-right">Gamma</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-[var(--border)] text-xs">
+                  <div className="hidden md:block">
+                    <Table bare>
+                      <THead sticky={false}>
+                        <TR>
+                          <TH>Rank</TH>
+                          <TH>Contract</TH>
+                          <TH>Exp</TH>
+                          <TH align="right">Open Int</TH>
+                          <TH align="right">Volume</TH>
+                          <TH align="right">Delta Notional</TH>
+                          <TH align="right">Gamma</TH>
+                        </TR>
+                      </THead>
+                      <TBody>
                         {(serverState.deep_intelligence.impact_contracts || []).map((c: any) => (
-                          <tr key={c.contract} className="hover:bg-[var(--surface-2)] transition-colors">
-                            <td className={`py-2 font-black tabular-nums ${c.rank === 1 ? 'text-[var(--danger)]' : c.rank === 2 ? 'text-[var(--info)]' : 'text-[var(--text-tertiary)]'}`}>#{c.rank}</td>
-                            <td className="py-2 font-black text-[var(--text-primary)]">{c.contract}</td>
-                            <td className="py-2">{c.expiration}</td>
-                            <td className="py-2 text-[var(--success)] tabular-nums">{c.oi != null ? c.oi.toLocaleString() : '--'}</td>
-                            <td className="py-2 text-[var(--success)] tabular-nums">{c.volume != null ? c.volume.toLocaleString() : '--'}</td>
-                            <td className="py-2 text-right font-bold text-[var(--text-primary)] tabular-nums">{c.deltaNotional}</td>
-                            <td className="py-2 text-right font-bold text-[var(--text-primary)] tabular-nums">{c.gammaContribution}</td>
-                          </tr>
+                          <TR key={c.contract} interactive>
+                            <TD className={`font-black ${c.rank === 1 ? 'text-[var(--danger)]' : c.rank === 2 ? 'text-[var(--info)]' : 'text-[var(--text-tertiary)]'}`}>#{c.rank}</TD>
+                            <TD className="font-black text-[var(--text-primary)]">{c.contract}</TD>
+                            <TD>{c.expiration}</TD>
+                            <TD align="right" className="text-[var(--success)]">{c.oi != null ? c.oi.toLocaleString() : '--'}</TD>
+                            <TD align="right" className="text-[var(--success)]">{c.volume != null ? c.volume.toLocaleString() : '--'}</TD>
+                            <TD align="right" className="font-bold text-[var(--text-primary)]">{c.deltaNotional}</TD>
+                            <TD align="right" className="font-bold text-[var(--text-primary)]">{c.gammaContribution}</TD>
+                          </TR>
                         ))}
-                      </tbody>
-                    </table>
+                      </TBody>
+                    </Table>
                   </div>
                </div>
 

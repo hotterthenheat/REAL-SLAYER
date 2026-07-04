@@ -15,6 +15,10 @@ import { SlayerScoreWidget, VolatilityStateWidget } from './WorkspaceWidgets';
 import PinpointChart from './PinpointChart';
 import { Term } from './ui/Tooltip';
 import { ToggleGroup } from './ui/ToggleGroup';
+import { Popover } from './ui/Popover';
+import { Sheet } from './ui/Sheet';
+import { Badge } from './ui/Badge';
+import { Switch } from './ui/Switch';
 // Lazy-loaded: this is the ONLY consumer of three.js (~470kb) + recharts (~248kb).
 // Deferring it keeps those vendor chunks out of the GEX page's initial load — they
 // fetch on demand the first time the 3D physics panel is actually opened.
@@ -39,10 +43,20 @@ import {
   Target,
   Search,
   ChevronDown,
+  Check,
+  CalendarClock,
   Activity
 } from 'lucide-react';
 import { ASSET_LIST } from '../data';
 import { fmtNum } from '../lib/format';
+
+// Row chrome for the expiry-ladder popover — a selected row glows accent, others hover.
+const expiryRowCls = (active: boolean) =>
+  `flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left transition-colors cursor-pointer ${
+    active
+      ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)]/40'
+      : 'border-transparent hover:bg-[var(--surface-3)]'
+  }`;
 
 const fmtBn = (v: number) => `${v >= 0 ? '+' : '−'}$${(Math.abs(v / 1e9)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}B`;
 const fmtGreek = (v: number) => {
@@ -387,6 +401,18 @@ export function DealerFlowView() {
   const [activeExpiries, setActiveExpiries] = useState<string[]>(['mon']);
   const [selectedCustomExpiry, setSelectedCustomExpiry] = useState<string>('Jul 17 (Monthly Expiry)');
   const [showCustomDropdown, setShowCustomDropdown] = useState<boolean>(false);
+  // Expiry selector surface: a Popover on desktop, a bottom Sheet on phones (a 300px
+  // popover is too cramped to scan the ladder on a small screen).
+  const [expirySheetOpen, setExpirySheetOpen] = useState(false);
+  const [isNarrowExpiry, setIsNarrowExpiry] = useState(false);
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 640px)');
+    const sync = () => setIsNarrowExpiry(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
 
   // Unified Exposure Controls
   const [exposureMetric, setExposureMetric] = useState<'gex' | 'dex' | 'vex'>('gex');
@@ -792,6 +818,105 @@ export function DealerFlowView() {
     );
   }
 
+  // Shared expiry-selector chrome — rendered inside a desktop Popover or a mobile Sheet.
+  const expiryTriggerInner = (
+    <>
+      <CalendarClock className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />
+      <div className="flex flex-col leading-none gap-0.5 min-w-0">
+        <span className="text-[7.5px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Selected Expiry</span>
+        <span className="text-[11px] font-black tabular-nums text-[var(--text-primary)] truncate">
+          {isMultiExpiry
+            ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'expiry' : 'expiries'}`
+            : expiryTab === 'aggregated'
+              ? 'All Dates'
+              : (() => { const t = tickerExpirations.find(x => x.id === expiryTab); return t ? `${t.date} · ${t.dteDays}DTE` : 'Select Expiry'; })()}
+        </span>
+      </div>
+      <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" />
+    </>
+  );
+  const expiryTriggerCls = 'flex items-center gap-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-3)] px-3 py-2 text-left transition-colors hover:border-[var(--accent-color)]/50 hover:bg-[var(--surface-2)] cursor-pointer';
+
+  const expiryLadder = (
+    <div className="flex flex-col">
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-3 py-2.5">
+        <span className="font-mono text-[9px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Expiry Ladder</span>
+        <Switch
+          size="sm"
+          tone="success"
+          label="Multi"
+          checked={isMultiExpiry}
+          onChange={(v) => {
+            setIsMultiExpiry(v);
+            if (v) {
+              if (expiryTab !== 'custom' && expiryTab !== 'aggregated') setActiveExpiries([expiryTab]);
+              else setActiveExpiries([tickerExpirations[0].id]);
+            } else {
+              setExpiryTab((activeExpiries[0] as any) || 'mon');
+            }
+          }}
+        />
+      </div>
+
+      <div className="max-h-[340px] overflow-y-auto p-1.5 flex flex-col gap-1">
+        {!isMultiExpiry && (
+          <button onClick={() => setExpiryTab('aggregated')} className={expiryRowCls(expiryTab === 'aggregated')}>
+            <span className="flex items-center gap-2.5 min-w-0">
+              <span className={`w-1 h-4 rounded-full shrink-0 ${expiryTab === 'aggregated' ? 'bg-[var(--success)]' : 'bg-[var(--text-tertiary)]'}`} />
+              <span className="flex flex-col leading-none gap-0.5 text-left">
+                <span className="text-[11px] font-black text-[var(--text-primary)]">All Dates</span>
+                <span className="text-[7.5px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Master profile · total gravity</span>
+              </span>
+            </span>
+            {expiryTab === 'aggregated' && <Check className="w-3.5 h-3.5 text-[var(--success)] shrink-0" />}
+          </button>
+        )}
+
+        {tickerExpirations.map((item) => {
+          const isActive = isMultiExpiry ? activeExpiries.includes(item.id) : expiryTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (isMultiExpiry) {
+                  if (activeExpiries.includes(item.id)) {
+                    if (activeExpiries.length > 1) setActiveExpiries(activeExpiries.filter(x => x !== item.id));
+                  } else {
+                    setActiveExpiries([...activeExpiries, item.id]);
+                  }
+                } else {
+                  setExpiryTab(item.id as any);
+                }
+              }}
+              className={expiryRowCls(isActive)}
+            >
+              <span className="flex items-center gap-2.5 min-w-0">
+                {isMultiExpiry && (
+                  <span className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${isActive ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/15' : 'border-[var(--border-strong)]'}`}>
+                    {isActive && <Check className="w-2.5 h-2.5 text-[var(--accent-color)]" />}
+                  </span>
+                )}
+                <span className="text-[12px] font-black tabular-nums text-[var(--text-primary)]">{item.date}</span>
+                <span className="text-[8px] font-black uppercase text-[var(--text-tertiary)] bg-[var(--surface-2)] px-1 rounded">{item.label}</span>
+              </span>
+              <span className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] font-mono font-bold tabular-nums text-[var(--text-secondary)]">{item.dteDays}DTE</span>
+                {!isMultiExpiry && isActive && <Check className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {expiryTab !== 'aggregated' && !isMultiExpiry && (
+        <div className="flex items-start gap-1.5 border-t border-[var(--border)] px-3 py-2 text-[9.5px] font-medium text-[var(--warning)]">
+          <ShieldAlert className="w-3 h-3 shrink-0 mt-px" aria-hidden="true" />
+          Single-expiry breakdown is a deterministic model, not a per-expiration feed.
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className={`w-full tabular-data ${activeEngineView === 'terminal' ? 'h-full flex flex-col min-h-0' : 'space-y-6'}`} id="dealerflow-main-workspace-view">
       {/* ============== HEADER STRIP ============== */}
@@ -1045,139 +1170,40 @@ export function DealerFlowView() {
           </div>
 
           {/* ============== TRADER INTENT EXPIRY CONTROLLER ============== */}
-          <div className="flex flex-col gap-3 p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg" id="trader-intent-expiries-panel">
-            <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[var(--border)] pb-2.5 gap-3">
-              <div className="flex flex-col gap-1">
-                <span className="text-[10px] font-black uppercase text-[var(--text-secondary)] tracking-widest leading-none flex items-center gap-2">
-                  Expiry
-                  <span className="text-[10px] bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/20 px-1.5 py-0.5 rounded font-bold font-mono">
-                    {selectedAsset.ticker} PIPELINE
-                  </span>
-                  {expiryTab !== 'aggregated' && (
-                    <span className="text-[10px] bg-[var(--warning)]/10 text-[var(--warning)] border border-[var(--warning)]/30 px-1.5 py-0.5 rounded font-black font-mono tracking-widest" title="Server delivers one aggregated chain; the per-expiry split shown when a single expiry is selected is a deterministic model, not a per-expiration feed.">
-                      MODEL SPLIT
-                    </span>
-                  )}
-                </span>
-                <span className="text-[11px] font-medium text-[var(--text-tertiary)]">Calendar is real; per-expiry hedging split is modeled from the aggregated chain (use ALL DATES for the live profile)</span>
-                {expiryTab !== 'aggregated' && (
-                  <span className="text-[10px] font-bold text-[var(--warning)] flex items-center gap-1">
-                    <ShieldAlert className="w-3 h-3 shrink-0" aria-hidden="true" />
-                    Model split — single-expiry breakdown is deterministic, not a per-expiration feed
-                  </span>
-                )}
-              </div>
-              
-              {/* Dynamic Toggle Button */}
-              <button
-                onClick={() => {
-                  const newVal = !isMultiExpiry;
-                  setIsMultiExpiry(newVal);
-                  if (newVal) {
-                    if (expiryTab !== 'custom' && expiryTab !== 'aggregated') {
-                      setActiveExpiries([expiryTab]);
-                    } else {
-                      setActiveExpiries([tickerExpirations[0].id]);
-                    }
-                  } else {
-                    setExpiryTab((activeExpiries[0] as any) || 'mon');
-                  }
-                }}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-[10px] font-bold tracking-wider uppercase transition-all duration-200 cursor-pointer ${
-                  isMultiExpiry 
-                    ? 'bg-[var(--success)]/15 border-[var(--success)]/30 text-[var(--success)] shadow-[0_0_12px_rgba(74,222,128,0.12)] font-black' 
-                    : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                }`}
-                id="multi-expiry-global-toggle"
-              >
-                <div className={`w-3 h-3 rounded-full flex items-center justify-center border ${isMultiExpiry ? 'border-[var(--success)] bg-[var(--success)]' : 'border-zinc-500 bg-transparent'}`}>
-                  {isMultiExpiry && <div className="w-1.5 h-1.5 rounded-full bg-black/85" />}
-                </div>
-                <span> MULTI-EXPIRY AGGREGATION</span>
-              </button>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg" id="trader-intent-expiries-panel">
+            <div className="flex flex-col gap-1 min-w-0">
+              <span className="text-[10px] font-black uppercase text-[var(--text-secondary)] tracking-widest leading-none flex items-center gap-2 flex-wrap">
+                Expiry
+                <Badge tone="success" size="sm">{selectedAsset.ticker} PIPELINE</Badge>
+                {isMultiExpiry ? (
+                  <Badge tone="accent" size="sm" dot pulse>{activeExpiries.length} {activeExpiries.length === 1 ? 'EXPIRY' : 'EXPIRIES'}</Badge>
+                ) : expiryTab !== 'aggregated' ? (
+                  <Badge tone="warning" size="sm" title="Server delivers one aggregated chain; the per-expiry split shown when a single expiry is selected is a deterministic model, not a per-expiration feed.">MODEL SPLIT</Badge>
+                ) : null}
+              </span>
+              <span className="text-[11px] font-medium text-[var(--text-tertiary)]">Calendar is real; per-expiry hedging split is modeled from the aggregated chain (use All Dates for the live profile)</span>
             </div>
 
-            <div className="flex flex-wrap sm:flex-nowrap gap-2.5 sm:overflow-x-auto pb-3 sm:snap-x sm:snap-mandatory" style={{ scrollbarWidth: 'thin', scrollbarColor: '#3f3f46 #18181b' }}>
-              {!isMultiExpiry && (
-                <button
-                  onClick={() => {
-                    setExpiryTab('aggregated');
-                  }}
-                  className={`flex w-full sm:w-auto sm:shrink-0 sm:min-w-[140px] flex-col text-left p-2.5 rounded-lg border transition-all cursor-pointer sm:snap-start ${
-                    expiryTab === 'aggregated'
-                      ? 'bg-emerald-500/10 border-emerald-500/30'
-                      : 'bg-[var(--surface-3)] border-[var(--border)] hover:bg-[var(--surface-2)] hover:border-zinc-700'
-                  }`}
-                >
-                  <span className="text-[7.5px] font-black uppercase tracking-widest text-[var(--text-tertiary)] flex items-center gap-1">
-                    <span className={`w-1 h-3 rounded-full ${expiryTab === 'aggregated' ? 'bg-[var(--success)]' : 'bg-[var(--text-tertiary)]'}`} />
-                    MASTER PROFILE
-                  </span>
-                  <span className={`text-[11px] font-bold mt-1.5 leading-none ${expiryTab === 'aggregated' ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                    All Dates
-                  </span>
-                  <span className={`text-[7.5px] font-black mt-2 tracking-widest ${expiryTab === 'aggregated' ? 'text-[var(--success)]' : 'text-[var(--text-tertiary)]'}`}>
-                    Total Gravity
-                  </span>
+            {/* Compact expiry selector — full ladder + multi-expiry aggregation lives in a Popover
+                on desktop, a bottom Sheet on phones (a 300px popover is too cramped to scan there). */}
+            {isNarrowExpiry ? (
+              <>
+                <button id="expiry-selector-trigger" onClick={() => setExpirySheetOpen(true)} className={expiryTriggerCls}>
+                  {expiryTriggerInner}
                 </button>
-              )}
-
-              {tickerExpirations.map((item) => {
-                const isActive = isMultiExpiry
-                  ? activeExpiries.includes(item.id)
-                  : expiryTab === item.id;
-
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      if (isMultiExpiry) {
-                        if (activeExpiries.includes(item.id)) {
-                          if (activeExpiries.length > 1) {
-                            setActiveExpiries(activeExpiries.filter(x => x !== item.id));
-                          }
-                        } else {
-                          setActiveExpiries([...activeExpiries, item.id]);
-                        }
-                      } else {
-                        setExpiryTab(item.id as any);
-                      }
-                    }}
-                    className={`flex flex-col text-left p-2.5 rounded-lg border transition-all cursor-pointer relative overflow-hidden w-full sm:w-auto sm:shrink-0 sm:min-w-[130px] sm:snap-start ${
-                      isActive
-                        ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)]/40'
-                        : 'bg-[var(--surface-3)] border-[var(--border)] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)]'
-                    }`}
-                  >
-                    {isMultiExpiry && (
-                      <div className="absolute top-2 right-2">
-                        <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center ${isActive ? 'border-[var(--accent-color)] bg-[var(--accent-color)]/10' : 'border-[var(--border-strong)] bg-transparent'}`}>
-                          {isActive && <div className="w-1.5 h-1.5 rounded-sm bg-[var(--accent-color)]" />}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <span className={`text-[12px] font-black leading-none tabular-nums ${isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                        {item.date}
-                      </span>
-                      <span className="text-[10px] font-black uppercase text-[var(--text-tertiary)] bg-[var(--surface-2)] px-1 rounded">
-                        {item.label}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1 mt-1 border-t border-[var(--border)] pt-1.5">
-                      <span className="text-[10px] font-mono font-bold tabular-nums text-[var(--text-secondary)]">
-                        {item.dteDays}DTE
-                      </span>
-                      <span className={`text-[10px] font-black tracking-widest ml-auto ${isActive ? 'text-[var(--accent-color)]' : 'text-[var(--text-tertiary)]'}`}>
-                        {isActive ? 'SELECTED' : 'SELECT'}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+                <Sheet open={expirySheetOpen} onClose={() => setExpirySheetOpen(false)} side="bottom" title="Select Expiry" size="72vh">
+                  {expiryLadder}
+                </Sheet>
+              </>
+            ) : (
+              <Popover
+                align="end"
+                width={300}
+                trigger={<button id="expiry-selector-trigger" className={expiryTriggerCls}>{expiryTriggerInner}</button>}
+              >
+                {expiryLadder}
+              </Popover>
+            )}
           </div>
 
           {/* ============== DEALER FLOW MAP (Hero Chart) ============== */}

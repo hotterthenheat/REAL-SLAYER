@@ -12,6 +12,8 @@ import { Maximize2, Minimize2, X } from 'lucide-react';
 import { useContractStore } from '../lib/store';
 import type { WidgetType } from '../lib/workspace';
 import { formatTime } from '../lib/timeUtils';
+import { Table, THead, TBody, TR, TH, TD } from './ui/Table';
+import { Badge } from './ui/Badge';
 
 /* ------------------------------------------------------------------ */
 /* Pane chrome                                                         */
@@ -148,24 +150,24 @@ const TerminalTable = ({
   if (!rows.length) return <Empty label={empty} />;
   return (
     <div className="flex-1 overflow-auto w-full">
-      <table className="w-full text-left text-[10px] tabular-nums">
-        <thead className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-[0.12em] sticky top-0 bg-[var(--surface)] z-10">
-          <tr className="border-b border-[var(--border)]">
+      <Table bare className="text-[10px]">
+        <THead>
+          <TR>
             {headers.map((h, i) => (
-              <th key={i} className="py-1.5 px-1.5 font-semibold">{h}</th>
+              <TH key={i} align={i === 0 ? 'left' : 'right'}>{h}</TH>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TR>
+        </THead>
+        <TBody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors">
+            <TR key={i} interactive>
               {r.map((c, j) => (
-                <td key={j} className="py-1.5 px-1.5 text-[var(--text-secondary)]">{c}</td>
+                <TD key={j} align={j === 0 ? 'left' : 'right'}>{c}</TD>
               ))}
-            </tr>
+            </TR>
           ))}
-        </tbody>
-      </table>
+        </TBody>
+      </Table>
     </div>
   );
 };
@@ -248,46 +250,40 @@ const LiveOptionsFlow = React.memo(() => {
       <SubHead>
         <span className="flex items-center gap-1.5">
           Options Flow
-          <span
-            className="px-1 py-0.5 rounded-[2px] text-[8px] font-bold tracking-wider"
-            style={{
-              color: isLiveData ? 'var(--success)' : 'var(--warning)',
-              background: `color-mix(in srgb, ${isLiveData ? 'var(--success)' : 'var(--warning)'} 14%, transparent)`,
-            }}
-          >
+          <Badge tone={isLiveData ? 'success' : 'warning'} size="sm" dot pulse={isLiveData}>
             {isLiveData ? 'LIVE' : 'MODEL'}
-          </span>
+          </Badge>
         </span>
       </SubHead>
       {feed.length === 0 ? (
         <Empty label={isLiveData ? 'Live options flow' : 'Model options flow'} />
       ) : (
         <div className="flex-1 overflow-auto">
-          <table className="w-full text-left text-[10px] tabular-nums">
-            <thead className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-[0.12em] sticky top-0 bg-[var(--surface)] z-10">
-              <tr className="border-b border-[var(--border)]">
-                <th className="py-1.5 px-1.5 font-semibold min-w-[64px]">Time</th>
-                <th className="py-1.5 px-1.5 font-semibold">Contract</th>
-                <th className="py-1.5 px-1.5 font-semibold">Type</th>
-                <th className="py-1.5 px-1.5 font-semibold">Detail</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table bare className="text-[10px]">
+            <THead>
+              <TR>
+                <TH className="min-w-[64px]">Time</TH>
+                <TH>Contract</TH>
+                <TH>Type</TH>
+                <TH>Detail</TH>
+              </TR>
+            </THead>
+            <TBody>
               {feed.map((row: any) => {
                 const tone = biasTone(`${row.type} ${row.desc}`);
                 return (
-                  <tr key={row.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-3)] transition-colors">
-                    <td className="py-1.5 px-1.5" style={{ borderLeft: `2px solid ${STATUS_COLOR[tone]}`, paddingLeft: '6px' }}>
+                  <TR key={row.id} interactive>
+                    <TD style={{ borderLeft: `2px solid ${STATUS_COLOR[tone]}`, paddingLeft: '6px' }}>
                       <span className="text-[var(--text-tertiary)]">{stamp}</span>
-                    </td>
-                    <td className="py-1.5 px-1.5 text-[var(--text-primary)] font-semibold truncate">{row.contract}</td>
-                    <td className="py-1.5 px-1.5">{toned(String(row.type || '—'), tone)}</td>
-                    <td className="py-1.5 px-1.5 text-[var(--text-secondary)] truncate">{row.desc}</td>
-                  </tr>
+                    </TD>
+                    <TD className="text-[var(--text-primary)] font-semibold truncate">{row.contract}</TD>
+                    <TD>{toned(String(row.type || '—'), tone)}</TD>
+                    <TD className="text-[var(--text-secondary)] truncate">{row.desc}</TD>
+                  </TR>
                 );
               })}
-            </tbody>
-          </table>
+            </TBody>
+          </Table>
         </div>
       )}
     </div>
