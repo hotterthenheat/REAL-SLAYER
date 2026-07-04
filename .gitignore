@@ -16,7 +16,9 @@ users-fallback.json
 users-fallback.json*
 
 # Local SQLite database (per-user tracked trades / backtesting). Never commit trade data.
-data/
+# Anchored to the repo root so it only ignores the runtime DB folder, not source
+# directories named "data" (e.g. src/pinpoint/data/ chart helpers).
+/data/
 *.db
 *.db-journal
 *.db-wal
