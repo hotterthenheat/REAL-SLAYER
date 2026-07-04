@@ -24,7 +24,7 @@ import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 import { DealerDynamicsPanel } from './DealerDynamicsPanel';
 import { GexReadCard } from './GexReadCard';
 import { ZeroDtePanel } from './ZeroDtePanel';
-import { LiveTerminalFlow } from './LiveTerminalFlow';
+import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
 import { PanelSkeleton } from './PanelSkeleton';
 import {
@@ -1446,7 +1446,7 @@ export function DealerFlowView() {
       ) : activeEngineView === 'targets' ? (
         <IntradayTargetsView profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
       ) : activeEngineView === 'terminal' ? (
-        <LiveTerminalFlow profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
+        <PinpointTerminal ticker={selectedAsset.ticker} />
       ) : (
         <div className="space-y-5" id="institutional-physics-dash-wrapper">
           <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>

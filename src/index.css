@@ -274,6 +274,40 @@ body {
   --radius-full: 9999px;
 }
 
+/* ====================================================================
+   PINPOINT FLOW MAP — chart-area design tokens (transplanted).
+   These power the Pinpoint GEX Terminal sub-view (src/pinpoint/**). The
+   token names are unique to that module, so this block is purely additive
+   and leaves the rest of the Slayer terminal untouched. Dark-only by
+   design — a trading chart stays dark in every theme. The pink/blue GEX
+   heatmap itself is painted with inline rgb() styles (heatmap.ts), so it
+   renders independently of these tokens.
+   ==================================================================== */
+@theme {
+  /* Surfaces */
+  --color-canvas: #050505;
+  --color-panel: #0a0a0a;
+  --color-panelHover: #101010;
+  --color-inset: #070707;
+  --color-inputBg: #050505;
+  /* Borders */
+  --color-borderSubtle: #1c1c1c;
+  --color-borderMuted: #2a2a2a;
+  --color-borderFocus: #ededed;
+  /* Text */
+  --color-textPrimary: #ededed;
+  --color-textSecondary: #8f8f8f;
+  --color-textMuted: #4d4d4d;
+  /* Directional / status accents */
+  --color-bull: #10b981;
+  --color-bear: #f43f5e;
+  --color-warn: #f59e0b;
+  --color-select: #38bdf8;
+}
+
+/* Tabular figures for the Flow Map's numeric tables, ladders, and panes. */
+.tnum { font-variant-numeric: tabular-nums; }
+
 /* Custom UI glass class */
 @keyframes border-rotate {
   from {
