@@ -4,19 +4,18 @@ import EChart from '../ui/EChart';
 import { ToggleGroup } from '../ui/ToggleGroup';
 import { Term } from '../ui/Tooltip';
 import { toast } from '../ui/toast';
-import {
-  candleMaVolumeOption,
-  equityCurveOption,
-  volSurfaceOption,
-  riskScatter3DOption,
-  dealerFlowFieldOption,
-} from './echartOptions';
+import { candleMaVolumeOption, equityCurveOption } from './echartOptions';
+import ThreeSurface from './ThreeSurface';
+import LazyMount from './LazyMount';
+import { ivSurfaceGrid, riskCloudPoints, hedgingPressureGrid } from './surfaces';
 
 /**
- * QuantVizLab — a visual analytics strip for the Quant page, powered by ECharts /
- * echarts-gl. Every panel renders live-looking mock data out of the box (no API
- * keys); the generators in echartOptions.ts are the single seam to swap for a real
- * feed. GL panels code-split, so the ~1MB 3D runtime only loads on this page.
+ * QuantVizLab — a visual analytics strip for the Quant page. 2D panels (intraday
+ * candles, equity curve) use ECharts; the 3D surfaces (IV surface, IV×GEX risk cloud,
+ * dealer hedging-pressure) use three.js via <ThreeSurface>, each wrapped in <LazyMount>
+ * so only on-screen surfaces hold a WebGL context (bounding the context count that used
+ * to blank the panels). Every panel renders live-looking model data out of the box; the
+ * generators (echartOptions.ts / surfaces.ts) are the single seam to swap for a feed.
  */
 
 function VizPanel({
@@ -65,9 +64,9 @@ export default function QuantVizLab() {
   // Options are regenerated when seed/ticker change (the "refresh" re-rolls mock).
   const candle = useMemo(() => candleMaVolumeOption(ticker), [ticker, seed]);
   const equity = useMemo(() => (echarts: any) => equityCurveOption(echarts), [seed]);
-  const surface = useMemo(() => volSurfaceOption(), [seed]);
-  const scatter = useMemo(() => riskScatter3DOption(), [seed]);
-  const flow = useMemo(() => dealerFlowFieldOption(), [seed]);
+  const ivGrid = useMemo(() => ivSurfaceGrid(), [seed]);
+  const riskCloud = useMemo(() => riskCloudPoints(), [seed]);
+  const hedgeGrid = useMemo(() => hedgingPressureGrid(), [seed]);
 
   const refresh = () => { setSeed(s => s + 1); toast.info('Regenerated mock feed', { description: 'Swap generators for a live feed once API keys are set.' }); };
 
@@ -112,7 +111,7 @@ export default function QuantVizLab() {
         </VizPanel>
       </div>
 
-      {/* Row 2: two GL surfaces */}
+      {/* Row 2: two real 3D surfaces (three.js) — drag to orbit · scroll to zoom */}
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <VizPanel
           title="Implied Vol Surface"
@@ -121,7 +120,9 @@ export default function QuantVizLab() {
           icon={<Box />}
           height={380}
         >
-          <EChart option={surface} gl />
+          <LazyMount minHeight={380}>
+            <ThreeSurface grid={ivGrid} axisLabels={['Moneyness', 'Tenor', 'IV']} height={380} />
+          </LazyMount>
         </VizPanel>
         <VizPanel
           title="Strike × IV × GEX"
@@ -130,13 +131,17 @@ export default function QuantVizLab() {
           icon={<Box />}
           height={380}
         >
-          <EChart option={scatter} gl />
+          <LazyMount minHeight={380}>
+            <ThreeSurface points={riskCloud} axisLabels={['Strike Δ', 'IV %', 'Net GEX']} height={380} />
+          </LazyMount>
         </VizPanel>
       </div>
 
-      {/* Row 3: dealer flow field (hero) */}
-      <VizPanel title="Dealer Flow Field" subtitle="vector field · hedging pressure" icon={<Waves />} height={300}>
-        <EChart option={flow} gl />
+      {/* Row 3: dealer hedging-pressure surface (hero) */}
+      <VizPanel title="Dealer Hedging Pressure" subtitle="strike × time-to-close × |hedging flow| (model)" icon={<Waves />} height={320}>
+        <LazyMount minHeight={320}>
+          <ThreeSurface grid={hedgeGrid} axisLabels={['Strike', 'Time → Close', 'Pressure']} height={320} />
+        </LazyMount>
       </VizPanel>
     </section>
   );

@@ -10,7 +10,8 @@ import { useEffect, useRef } from 'react';
  *
  * `option` may be a plain ECharts option object or a factory `(echarts) => option`
  * — use the factory form when the option needs `echarts.graphic.LinearGradient`,
- * `echarts.time`, `echarts.format`, etc.
+ * `echarts.time`, `echarts.format`, etc. 3D surfaces use three.js (see ThreeSurface),
+ * not echarts-gl — this wrapper is 2D only.
  */
 
 type EChartsModule = typeof import('echarts');
@@ -18,8 +19,6 @@ type OptionOrFactory = any | ((echarts: EChartsModule) => any);
 
 interface EChartProps {
   option: OptionOrFactory;
-  /** Load echarts-gl for 3D / GL series (scatter3D, surface, flowGL, …). */
-  gl?: boolean;
   className?: string;
   style?: React.CSSProperties;
   /** Replace the whole option on update instead of merging (default false). */
@@ -69,7 +68,7 @@ function registerSlayerTheme(echarts: EChartsModule) {
   });
 }
 
-export default function EChart({ option, gl, className, style, notMerge, onInit }: EChartProps) {
+export default function EChart({ option, className, style, notMerge, onInit }: EChartProps) {
   const elRef = useRef<HTMLDivElement | null>(null);
   const chartRef = useRef<any>(null);
   const echartsRef = useRef<EChartsModule | null>(null);
@@ -82,7 +81,6 @@ export default function EChart({ option, gl, className, style, notMerge, onInit 
     let ro: ResizeObserver | null = null;
     (async () => {
       const echarts = (await import('echarts')) as unknown as EChartsModule;
-      if (gl) await import('echarts-gl');
       if (disposed || !elRef.current) return;
       registerSlayerTheme(echarts);
       const chart = echarts.init(elRef.current, 'slayer-dark', { renderer: 'canvas' });
@@ -102,7 +100,7 @@ export default function EChart({ option, gl, className, style, notMerge, onInit 
       echartsRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gl]);
+  }, []);
 
   // Apply option updates once the chart exists.
   useEffect(() => {
