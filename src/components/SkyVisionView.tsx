@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore, ContractState } from '../lib/store';
-import { InteractiveChart } from './InteractiveChart';
 import PinpointTerminal from './PinpointTerminal';
+import PinpointChart from './PinpointChart';
 import { StrikeGravityPanel } from './StrikeGravityPanel';
 import { TradePlanCard } from './TradePlanCard';
 import { ASSET_LIST, optionExpiryLabel } from '../data';
@@ -1021,25 +1021,7 @@ export function SkyVisionView() {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full relative"
           >
-            <InteractiveChart
-              candles={chartCandles}
-              displacementZones={chartDisplacementZones}
-              fvgs={chartFvgs}
-              liquidityEvents={chartLiquidityEvents}
-              tape={chartTape}
-              timeframe={selectedTimeframe}
-              selectedTicker={selectedAsset.ticker}
-              showFVGs={true}
-              showLiquiditySweeps={true}
-              showDisplacementEvents={true}
-              watermarkText="LIVE CHART"
-              gexLevels={serverState?.deep_intelligence?.dealer_metrics ? {
-                callWall: serverState.deep_intelligence.dealer_metrics.callWall,
-                putWall: serverState.deep_intelligence.dealer_metrics.putWall,
-                gammaFlip: serverState.deep_intelligence.dealer_metrics.flipLevel,
-                magnet: serverState.deep_intelligence.dealer_metrics.magnetStrike,
-              } : undefined}
-            />
+            <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={isChartExpanded ? 480 : 190} />
           </motion.div>
         </div>
 

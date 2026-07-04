@@ -23,6 +23,7 @@ import { GexNodesPrimitive } from './gexNodesPrimitive';
 import { candleTheme } from './candleTheme';
 import type { Candle } from '../../types/market';
 import type { KeyLevels, OverlayMode } from '../../types/gex';
+import { Term } from '../../../components/ui/Tooltip';
 
 interface StrikeChartProps {
   ticker: string;
@@ -225,17 +226,17 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
   return (
     <div className="flex flex-col gap-2 h-full">
       <div className="flex items-center gap-3.5 px-1 flex-wrap select-none">
-        {[
-          { label: 'Call Wall', cls: 'bg-bull' },
-          { label: 'Put Wall', cls: 'bg-bear' },
-          { label: 'Flip', cls: 'bg-warn' },
-          { label: 'King', cls: 'bg-[#eab308]' },
-          { label: '+GEX node', cls: 'bg-[#32CBFF]' },
-          { label: '−GEX node', cls: 'bg-[#EF9CDA]' },
-        ].map(item => (
+        {([
+          { label: 'Call Wall', cls: 'bg-bull', term: 'callWall' },
+          { label: 'Put Wall', cls: 'bg-bear', term: 'putWall' },
+          { label: 'Flip', cls: 'bg-warn', term: 'gammaFlip' },
+          { label: 'King', cls: 'bg-[#eab308]', term: 'king' },
+          { label: '+GEX node', cls: 'bg-[#32CBFF]', term: 'gexNode' },
+          { label: '−GEX node', cls: 'bg-[#EF9CDA]', term: 'gexNode' },
+        ] as const).map(item => (
           <span key={item.label} className="flex items-center gap-1.5 font-mono text-[10px] text-textSecondary">
             <span className={`inline-block w-3 h-0.5 rounded-full ${item.cls}`} />
-            {item.label}
+            <Term id={item.term}>{item.label}</Term>
           </span>
         ))}
         <span className="ml-auto font-mono text-[10px] text-textMuted uppercase tracking-wider">

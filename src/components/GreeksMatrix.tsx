@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { GexProfileData, GexStrikeDetail } from '../types';
+import { Term } from './ui/Tooltip';
 
 /**
  * Greeks Matrix — strike × dealer-exposure grid. Same visual language as the Gamma Matrix (diverging
@@ -70,7 +71,7 @@ export function GreeksMatrix({ profile, decimals = 0 }: { profile: GexProfileDat
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-[var(--border)] text-[8px] font-black uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--surface)]">
           <span className="text-[var(--text-secondary)]">Dealer exposure / strike · per-column heat</span>
-          <span>DEX · Δ-exp</span><span>GEX · Γ-exp</span><span>VEX · vanna</span><span>CEX · charm</span>
+          <span><Term id="dex">DEX</Term> · Δ-exp</span><span><Term id="gex">GEX</Term> · Γ-exp</span><span><Term id="vex">VEX</Term> · vanna</span><span><Term id="cex">CEX</Term> · charm</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px]" style={{ boxShadow: 'inset 0 0 0 1.5px var(--accent-color)' }} />Spot</span>
           <span style={{ color: 'var(--success)' }}>+ long</span><span style={{ color: 'var(--danger)' }}>− short</span>
         </div>

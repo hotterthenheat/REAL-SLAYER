@@ -15,6 +15,7 @@ import { ClerkGate } from './components/ClerkGate';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette } from './components/CommandPalette';
+import { Toaster } from './components/ui/toast';
 import { LegalCenter, useLegal } from './components/LegalCenter';
 // Eagerly imported because SlayerIntro (also eager, on the landing path) imports it
 // statically — a lazy() wrapper here can't code-split it and only warns at build.
@@ -1040,6 +1041,9 @@ export default function App() {
 
       {/* Command palette (⌘K) — keyboard-driven navigation */}
       <CommandPalette />
+
+      {/* Global status toasts (saved layouts, exports, data-fetch failures) */}
+      <Toaster />
 
       {/* Subscription Tier Upgrade Celebration Overlay */}
       <CelebrationOverlay

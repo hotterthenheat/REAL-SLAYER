@@ -3,6 +3,7 @@ import * as ReactGridLayout from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import { X, GripVertical, Plus, RotateCcw, LayoutGrid } from 'lucide-react';
+import { toast } from './ui/toast';
 
 // react-grid-layout ships as `export =` (namespace) — access the HOC + Responsive grid off it and
 // keep our own lean layout-item type so we don't fight the @types version's Layout shape.
@@ -59,7 +60,7 @@ export function TerminalWorkspace({ panels, storageKey, onExit }: { panels: Work
     const maxY = state.layout.reduce((m, l) => Math.max(m, l.y + l.h), 0);
     persist({ layout: [...state.layout, { i: id, x: 0, y: maxY, w: p.w ?? 4, h: p.h ?? 10, minW: p.minW ?? 2, minH: p.minH ?? 4 }], active: [...state.active, id] });
   };
-  const reset = () => { try { localStorage.removeItem(storageKey); } catch { /* ignore */ } setState(defaultState()); };
+  const reset = () => { try { localStorage.removeItem(storageKey); } catch { /* ignore */ } setState(defaultState()); toast.info('Layout reset to default'); };
 
   const [addOpen, setAddOpen] = useState(false);
   const inactive = panels.filter(p => !state.active.includes(p.id));

@@ -12,7 +12,9 @@ import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore } from '../lib/store';
 import { SlayerScoreWidget, VolatilityStateWidget } from './WorkspaceWidgets';
-import { InteractiveChart } from './InteractiveChart';
+import PinpointChart from './PinpointChart';
+import { Term } from './ui/Tooltip';
+import { ToggleGroup } from './ui/ToggleGroup';
 // Lazy-loaded: this is the ONLY consumer of three.js (~470kb) + recharts (~248kb).
 // Deferring it keeps those vendor chunks out of the GEX page's initial load — they
 // fetch on demand the first time the 3D physics panel is actually opened.
@@ -808,19 +810,19 @@ export function DealerFlowView() {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-nowrap lg:items-center gap-2">
-          {[
-            { label: 'Net GEX', value: filteredProfile ? fmtBn(filteredProfile.netGex) : '—', tone: (filteredProfile?.netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)' },
-            { label: 'Call Wall', value: filteredProfile?.callWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--success)' },
-            { label: 'Put Wall', value: filteredProfile?.putWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--danger)' },
-            { label: 'γ-Flip', value: filteredProfile?.gammaFlip?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--warning)' },
-            { label: 'Pin Magnet', value: filteredProfile?.magnet?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--info)' },
-            { label: 'Dist to Flip', value: filteredProfile?.gammaFlip ? `${Math.abs(filteredProfile.spot - filteredProfile.gammaFlip).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}` : '—', tone: 'var(--text-primary)' },
-          ].map(card => (
+          {([
+            { label: 'Net GEX', value: filteredProfile ? fmtBn(filteredProfile.netGex) : '—', tone: (filteredProfile?.netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', term: 'netGex' },
+            { label: 'Call Wall', value: filteredProfile?.callWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--success)', term: 'callWall' },
+            { label: 'Put Wall', value: filteredProfile?.putWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--danger)', term: 'putWall' },
+            { label: 'γ-Flip', value: filteredProfile?.gammaFlip?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--warning)', term: 'gammaFlip' },
+            { label: 'Pin Magnet', value: filteredProfile?.magnet?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--info)', def: 'Strike acting as the strongest price magnet/pin into expiration.' },
+            { label: 'Dist to Flip', value: filteredProfile?.gammaFlip ? `${Math.abs(filteredProfile.spot - filteredProfile.gammaFlip).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}` : '—', tone: 'var(--text-primary)', def: 'Distance from spot to the gamma-flip level — how far price must travel to change the dealer-hedging regime.' },
+          ] as Array<{ label: string; value: string; tone: string; term?: string; def?: string }>).map(card => (
             <div key={card.label} className="relative overflow-hidden bg-[var(--surface-2)] border border-[var(--border)] rounded-md pl-3 pr-3 py-1.5 min-w-0 lg:min-w-[88px] shrink-0" id={`card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
               {/* tone spine — each level carries its semantic colour as a left rail (instrument-panel read) */}
               <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: card.tone, opacity: 0.75 }} />
               <div className="text-[8px] font-black tracking-widest text-[var(--text-tertiary)] uppercase truncate">
-                {card.label}
+                {card.term ? <Term id={card.term as any}>{card.label}</Term> : card.def ? <Term def={card.def}>{card.label}</Term> : card.label}
               </div>
               <div className="text-[13px] sm:text-[14px] font-mono font-bold tabular-nums truncate leading-tight" style={{ color: card.tone }}>{card.value}</div>
             </div>
@@ -831,58 +833,18 @@ export function DealerFlowView() {
       {/* ============== SUB-TABS & SEARCH ============== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-0.5" id="dealerflow-subtabs-bar">
         <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2.5 justify-start items-center">
-          <button
-            onClick={() => setActiveEngineView('profile')}
-            aria-label="Hedging profile view"
-            aria-pressed={activeEngineView === 'profile'}
-            className={`flex shrink-0 items-center gap-2 px-3.5 py-2 font-mono text-[9px] font-black uppercase tracking-wider border rounded-md transition-colors cursor-pointer ${
-              activeEngineView === 'profile'
-                ? 'bg-[var(--surface-3)] border-[var(--accent-color)]/50 text-[var(--text-primary)]'
-                : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-            HEDGING PROFILE
-          </button>
-          <button
-            onClick={() => setActiveEngineView('targets')}
-            aria-label="Ranked targets view"
-            aria-pressed={activeEngineView === 'targets'}
-            className={`flex shrink-0 items-center gap-2 px-3.5 py-2 font-mono text-[9px] font-black uppercase tracking-wider border rounded-md transition-colors cursor-pointer ${
-              activeEngineView === 'targets'
-                ? 'bg-[var(--surface-3)] border-[var(--danger)]/50 text-[var(--text-primary)]'
-                : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Target className="w-3.5 h-3.5 text-[var(--danger)]" />
-            RANKED TARGETS
-          </button>
-          <button
-            onClick={() => setActiveEngineView('physics')}
-            aria-label="Dealer mechanics view"
-            aria-pressed={activeEngineView === 'physics'}
-            className={`flex shrink-0 items-center gap-2 px-3.5 py-2 font-mono text-[9px] font-black uppercase tracking-wider border rounded-md transition-colors cursor-pointer ${
-              activeEngineView === 'physics'
-                ? 'bg-[var(--surface-3)] border-[var(--warning)]/50 text-[var(--text-primary)]'
-                : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Zap className="w-3.5 h-3.5 text-[var(--warning)]" />
-            DEALER MECHANICS
-          </button>
-          <button
-            onClick={() => setActiveEngineView('terminal')}
-            aria-label="Live terminal flow view"
-            aria-pressed={activeEngineView === 'terminal'}
-            className={`flex shrink-0 items-center gap-2 px-3.5 py-2 font-mono text-[9px] font-black uppercase tracking-wider border rounded-md transition-colors cursor-pointer ${
-              activeEngineView === 'terminal'
-                ? 'bg-[var(--surface-3)] border-[var(--accent-color)]/50 text-[var(--text-primary)]'
-                : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-            LIVE TERMINAL FLOW
-          </button>
+          <ToggleGroup<'profile' | 'physics' | 'targets' | 'terminal'>
+            ariaLabel="Engine view"
+            size="sm"
+            value={activeEngineView}
+            onChange={setActiveEngineView}
+            options={[
+              { value: 'profile', label: 'Hedging Profile', icon: <Layers className="text-[var(--accent-color)]" /> },
+              { value: 'targets', label: 'Ranked Targets', icon: <Target className="text-[var(--danger)]" /> },
+              { value: 'physics', label: 'Dealer Mechanics', icon: <Zap className="text-[var(--warning)]" /> },
+              { value: 'terminal', label: 'Live Terminal Flow', icon: <Activity className="text-[var(--accent-color)]" /> },
+            ]}
+          />
         </div>
 
         {/* Global Market Search */}
@@ -1426,20 +1388,7 @@ export function DealerFlowView() {
               <FeedChip feed={serverState?.candle_feed} />
             </div>
             <div className="flex-1 w-full h-[320px]">
-              <InteractiveChart
-                candles={chartCandles}
-                displacementZones={chartDisplacementZones}
-                fvgs={chartFvgs}
-                liquidityEvents={chartLiquidityEvents}
-                tape={chartTape}
-                timeframe={selectedTimeframe}
-                selectedTicker={selectedAsset.ticker}
-                priceDecimals={selectedAsset.decimals}
-                showFVGs={true}
-                showLiquiditySweeps={true}
-                showDisplacementEvents={true}
-                watermarkText="PRICE ACTION — SUPPLY/DEMAND & IMBALANCE OVERLAY"
-              />
+              <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={300} />
             </div>
           </div>
         </>
