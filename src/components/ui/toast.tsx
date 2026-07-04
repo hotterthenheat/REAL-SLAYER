@@ -20,6 +20,7 @@ export interface ToastRecord {
   title: string;
   description?: string;
   duration: number;
+  leaving?: boolean;
 }
 
 type Listener = (toasts: ToastRecord[]) => void;
@@ -32,9 +33,19 @@ function emit() {
   for (const l of listeners) l(toasts);
 }
 
-function dismiss(id: number) {
+function remove(id: number) {
   toasts = toasts.filter(t => t.id !== id);
   emit();
+}
+
+// Mark the toast leaving so it can animate out, then remove it after the exit.
+function dismiss(id: number) {
+  const t = toasts.find(x => x.id === id);
+  if (!t || t.leaving) return;
+  toasts = toasts.map(x => (x.id === id ? { ...x, leaving: true } : x));
+  emit();
+  if (typeof window !== 'undefined') window.setTimeout(() => remove(id), 170);
+  else remove(id);
 }
 
 function push(type: ToastType, title: string, opts?: { description?: string; duration?: number }) {
@@ -69,7 +80,7 @@ function ToastCard({ t }: { t: ToastRecord }) {
     <div
       role="status"
       className="pointer-events-auto flex w-[340px] max-w-[calc(100vw-2rem)] items-start gap-2.5 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-[0_12px_36px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
-      style={{ animation: 'sl-toast-in 200ms cubic-bezier(0.16,1,0.3,1)' }}
+      style={{ animation: t.leaving ? 'sl-toast-out 160ms ease-in forwards' : 'sl-toast-in 200ms cubic-bezier(0.16,1,0.3,1)' }}
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
       <Icon className="mt-[1px] h-4 w-4 shrink-0" style={{ color }} />
@@ -103,7 +114,7 @@ export function Toaster() {
   return (
     <div className="pointer-events-none fixed bottom-4 right-4 z-[10000] flex flex-col-reverse gap-2" aria-live="polite">
       {items.map(t => <ToastCard key={t.id} t={t} />)}
-      <style>{`@keyframes sl-toast-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}`}</style>
+      <style>{`@keyframes sl-toast-in{from{opacity:0;transform:translateY(10px) scale(.98)}to{opacity:1;transform:none}}@keyframes sl-toast-out{to{opacity:0;transform:translateX(14px) scale(.97)}}`}</style>
     </div>
   );
 }

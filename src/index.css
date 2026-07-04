@@ -504,6 +504,21 @@ div:hover > svg > .animated-svg-border-rect {
   animation: fadeIn 0.65s var(--ease-out-expo) both;
 }
 
+/* Skeleton shimmer — a translucent highlight swept via transform (GPU-composited,
+   no per-frame repaint). Applied by the Skeleton primitive for a "premium loading"
+   read instead of a flat opacity pulse. Respects reduced-motion. */
+@keyframes skShimmer { 100% { transform: translateX(100%); } }
+.sk-shimmer { position: relative; overflow: hidden; }
+.sk-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text-primary) 8%, transparent), transparent);
+  animation: skShimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .sk-shimmer::after { animation: none; } }
+
 /* Staggered children reveal — drop .stagger-children on any container */
 .stagger-children > * {
   animation: fadeIn 0.6s var(--ease-out-expo) both;
