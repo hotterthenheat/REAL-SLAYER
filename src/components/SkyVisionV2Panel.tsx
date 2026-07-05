@@ -15,6 +15,7 @@
 import React from 'react';
 import { useContractStore } from '../lib/store';
 import { Crosshair, TrendingUp, TrendingDown, Target, Gauge, Layers } from 'lucide-react';
+import { LiveValue } from './ui/LiveValue';
 
 const fmt = (v: number | undefined, d = 2) => (typeof v === 'number' && isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—');
 const strengthTone = (s: number) => (s >= 70 ? 'var(--success)' : s >= 45 ? 'var(--warning)' : 'var(--danger)');
@@ -107,7 +108,7 @@ export function SkyVisionV2Panel({ compact = false }: { compact?: boolean }) {
               </span>
             }
           />
-          <Stat label="Master Score" value={master.score} tone={strengthTone(master.score)} big />
+          <Stat label="Master Score" value={<LiveValue value={master.score} />} tone={strengthTone(master.score)} big />
           <Stat label="Health" value={master.tradeHealth} />
           <Stat label="Confidence" value={`${master.confidence}%`} />
           <Stat label="Swing" value={master.swingType} />
@@ -126,13 +127,13 @@ export function SkyVisionV2Panel({ compact = false }: { compact?: boolean }) {
               <div>
                 <div className="text-[17px] font-black text-[var(--text-primary)] leading-none">{lead.key}</div>
                 <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-[13px] font-black" style={{ color: strengthTone(lead.strength) }}>{lead.strength}</span>
+                  <span className="text-[13px] font-black" style={{ color: strengthTone(lead.strength) }}><LiveValue value={lead.strength} /></span>
                   <span className="text-[10px] font-bold" style={{ color: lead.trend === 'RISING' ? 'var(--success)' : lead.trend === 'FALLING' ? 'var(--danger)' : 'var(--text-tertiary)' }}>{lead.trend}</span>
                   <span className="text-[10px] text-[var(--text-tertiary)] truncate">"{lead.label}"</span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[10px] mt-auto">
-                <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Premium</span><span className="text-[var(--text-primary)] font-mono font-bold">${fmt(lead.premium)}</span></div>
+                <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Premium</span><span className="text-[var(--text-primary)] font-mono font-bold">$<LiveValue value={lead.premium} format={(v) => fmt(v as number)} /></span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Δ</span><span className="text-[var(--text-primary)] font-mono">{fmt(lead.delta)}</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-secondary)]">IV</span><span className="text-[var(--text-primary)] font-mono">{fmt(lead.iv * 100, 1)}%</span></div>
                 <div className="flex justify-between"><span className="text-[var(--text-secondary)]">Vol</span><span className="text-[var(--text-primary)] font-mono">{fmt(lead.volume, 0)}</span></div>
