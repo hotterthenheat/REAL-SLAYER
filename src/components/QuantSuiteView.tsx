@@ -72,6 +72,7 @@ const QuantSurface3D = lazy(() => import('./quant/QuantSurface3D'));
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
 import { ivSurfaceGrid, ivStrikeDomain, type SurfaceProfile } from './quant/dealerSurfaces';
+import { DataStateBadge, liveState } from './ui/DataStateBadge';
 import type { SurfaceMarker } from './quant/QuantSurface3D';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
@@ -584,18 +585,13 @@ export default function QuantSuiteView() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-black tracking-widest text-[var(--text-primary)] uppercase font-sans whitespace-nowrap">Quant Lab</h2>
-              <span
-                className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${
-                  isLiveData
-                    ? 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10'
-                    : 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10'
-                }`}
+              <DataStateBadge
+                state={liveState(isLiveData)}
+                className="shrink-0"
                 title={isLiveData
                   ? 'Computing on the live option chain streamed from the server.'
                   : 'No live chain connected — computing on a high-fidelity model chain. Connect a data API key to go live.'}
-              >
-                {isLiveData ? 'LIVE CHAIN' : 'MODEL MODE'}
-              </span>
+              />
             </div>
             <p className="text-[9px] text-[var(--text-tertiary)] mt-0.5 uppercase tracking-widest">
               Risk-Neutral Density · Realized Vol · Multi-Leg Risk · Dealer GEX
