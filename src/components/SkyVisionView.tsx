@@ -339,6 +339,25 @@ export function SkyVisionView() {
     return fmt(g, 'model');
   }, [activeChainContract, isChainLive, spotPrice, activeStrike, selectedOptionType, atmIv]);
 
+  // ── Setup rationale: the "why this / what invalidates / liquidity" read the audit asks
+  // for, derived only from data already on screen (chain spread + dealer flip), guarded so
+  // a missing field degrades to a clean state rather than a dash or a crash. ──
+  const setupRationale = useMemo(() => {
+    const c = activeChainContract;
+    const bid = c && isFinite(c.bid) ? c.bid : null;
+    const ask = c && isFinite(c.ask) ? c.ask : null;
+    const mid = bid != null && ask != null ? (bid + ask) / 2 : null;
+    const spreadPct = mid && mid > 0 && bid != null && ask != null ? (ask - bid) / mid : null;
+    const liquidity = spreadPct == null ? null : spreadPct < 0.05 ? 'Tight' : spreadPct < 0.12 ? 'Fair' : 'Wide';
+    const di = (serverState as any)?.deep_intelligence?.dealer_metrics;
+    const flip: number | null = typeof di?.flipLevel === 'number' && isFinite(di.flipLevel) ? di.flipLevel : null;
+    const isCall = selectedOptionType === 'C';
+    // A call is dealer-supported when spot sits above the flip (long-gamma stabilisation on
+    // the call side); a put when spot sits below it.
+    const support = flip == null ? null : ((spotPrice >= flip) === isCall ? 'Supportive' : 'Against');
+    return { liquidity, spreadPct, flip, support, isCall };
+  }, [activeChainContract, serverState, spotPrice, selectedOptionType]);
+
   // Dynamic Forensic Thesis generator
   const forensicThesis = useMemo(() => {
     switch (activeRecommendation) {
@@ -624,6 +643,33 @@ export function SkyVisionView() {
 
               </div>
 
+            </div>
+
+            {/* SETUP RATIONALE — dealer support / invalidation / liquidity / horizon, so the
+                verdict always answers "why this, what invalidates it, is it tradeable". */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-t border-[var(--border)] pt-3">
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Dealer support</span>
+                <span className="block text-[11px] font-bold mt-0.5" style={{ color: setupRationale.support === 'Supportive' ? 'var(--success)' : setupRationale.support === 'Against' ? 'var(--danger)' : 'var(--text-secondary)' }}>
+                  {setupRationale.support ?? 'Awaiting flip'}
+                </span>
+              </div>
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Invalidation</span>
+                <span className="block text-[11px] font-bold mt-0.5 text-[var(--warning)] tabular-nums">
+                  {setupRationale.flip != null ? `${setupRationale.isCall ? 'Lose' : 'Reclaim'} ${setupRationale.flip.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : 'Flip pending'}
+                </span>
+              </div>
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Liquidity</span>
+                <span className="block text-[11px] font-bold mt-0.5 tabular-nums" style={{ color: setupRationale.liquidity === 'Tight' ? 'var(--success)' : setupRationale.liquidity === 'Wide' ? 'var(--danger)' : 'var(--text-secondary)' }}>
+                  {setupRationale.liquidity ? `${setupRationale.liquidity}${setupRationale.spreadPct != null ? ` · ${(setupRationale.spreadPct * 100).toFixed(0)}% spr` : ''}` : 'No quote'}
+                </span>
+              </div>
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Horizon</span>
+                <span className="block text-[11px] font-bold mt-0.5 text-[var(--info)]">Swing · ≤ 2 wks</span>
+              </div>
             </div>
 
           </div>
