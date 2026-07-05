@@ -24,6 +24,7 @@ import {
 import { useContractStore } from '../lib/store';
 import { ASSET_LIST } from '../data';
 import { RiskNeutralDistribution } from './RiskNeutralDistribution';
+import { ErrorBoundary } from './ErrorBoundary';
 import { TailRiskMap } from './TailRiskMap';
 import { IvSmile } from './IvSmile';
 import { GreekExposurePanel } from './GreekExposurePanel';
@@ -77,6 +78,17 @@ import type { SurfaceMarker } from './quant/QuantSurface3D';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 import { FactorLabPanel } from './FactorLabPanel';
+
+/** Labeled loading state for the heavy lazy WebGL panels — tells the user a 3D
+ *  surface is initializing rather than showing a bare pulsing rectangle. */
+function Surface3DLoading({ label }: { label: string }) {
+  return (
+    <div className="h-[460px] w-full flex flex-col items-center justify-center gap-3 rounded-md border border-[var(--border)] bg-[var(--surface-2)]" role="status" aria-live="polite">
+      <div className="w-8 h-8 rounded-full border-2 border-[var(--border)] border-t-[var(--accent-color)] animate-spin" />
+      <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
+    </div>
+  );
+}
 
 type StrategyPreset = 'iron_condor' | 'straddle' | 'butterfly' | 'vertical';
 
@@ -664,23 +676,25 @@ export default function QuantSuiteView() {
                 </div>
                 <div className="px-3 pb-3">
                   <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[#0a0a0b]">
-                    <Suspense fallback={<div className="h-[460px] w-full animate-pulse bg-[var(--surface-2)]" />}>
-                      <QuantSurface3D
-                        grid={ivHeroGrid}
-                        ramp="sequential"
-                        height={460}
-                        axisLabels={['strike', 'tenor', 'IV']}
-                        xDomain={ivHeroDomain}
-                        xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                        valueFormat={(v) => `${(v * 100).toFixed(1)}%`}
-                        markers={ivHeroMarkers}
-                        floorHeatmap
-                        legend
-                        dataState={isLiveData ? 'live' : 'model'}
-                        sliceCol={ivHeroSliceCol}
-                        sliceRow={0}
-                      />
-                    </Suspense>
+                    <ErrorBoundary label="IV Surface (WebGL)">
+                      <Suspense fallback={<Surface3DLoading label="Loading volatility surface…" />}>
+                        <QuantSurface3D
+                          grid={ivHeroGrid}
+                          ramp="sequential"
+                          height={460}
+                          axisLabels={['strike', 'tenor', 'IV']}
+                          xDomain={ivHeroDomain}
+                          xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                          valueFormat={(v) => `${(v * 100).toFixed(1)}%`}
+                          markers={ivHeroMarkers}
+                          floorHeatmap
+                          legend
+                          dataState={isLiveData ? 'live' : 'model'}
+                          sliceCol={ivHeroSliceCol}
+                          sliceRow={0}
+                        />
+                      </Suspense>
+                    </ErrorBoundary>
                   </div>
                   <div className="mt-2 flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)]/50 px-3 py-2">
                     <Activity className="mt-0.5 h-3 w-3 shrink-0 text-[var(--accent-color)]" />
@@ -730,9 +744,11 @@ export default function QuantSuiteView() {
             {/* §2 DEALER MECHANICS GEOMETRY — real exposure surfaces (Gamma/Vanna/Charm) + edge */}
             {activeSubTab === 'mechanics' && (
               <div className="space-y-5">
-                <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-                  <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} live={isLiveData} />
-                </Suspense>
+                <ErrorBoundary label="Dealer Mechanics (WebGL)">
+                  <Suspense fallback={<Surface3DLoading label="Loading dealer mechanics…" />}>
+                    <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} live={isLiveData} />
+                  </Suspense>
+                </ErrorBoundary>
                 {/* Quant edge — RND / VRP / skew / scenario / Kelly / dealer clock */}
                 <QuantEdgePanel />
               </div>

@@ -73,6 +73,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
 
   const [checkoutError, setCheckoutError] = useState<string>('');
 
+  // Tracks which plan (by planKey) is currently redirecting to Stripe so we can
+  // disable its CTA and show a pending label during the async round-trip.
+  const [checkoutPending, setCheckoutPending] = useState<string | null>(null);
+
   // Opens the lifetime contact modal. Paid plans never reach this — they
   // go straight to Stripe Checkout via handleStripeCheckout.
   const handleCheckoutPlan = (plan: string) => {
@@ -110,6 +114,8 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
       if (onRequestAuth) onRequestAuth();
       return;
     }
+    setCheckoutPending(planKey);
+    setCheckoutError('');
     try {
       const res = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
@@ -118,15 +124,18 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data?.url) {
+        // Leave the pending state on: the page is navigating away to Stripe.
         window.location.href = data.url;
         return;
       }
-      // Non-ok or missing url: surface a lightweight error to the user.
+      // Non-ok or missing url: surface a lightweight error and re-enable the CTA.
       setCheckoutError(data?.error || 'Unable to start checkout. Please try again.');
       setSelectedPlanForCheckout(planKey);
+      setCheckoutPending(null);
     } catch (e) {
       setCheckoutError('Unable to reach the payment service. Please try again.');
       setSelectedPlanForCheckout(planKey);
+      setCheckoutPending(null);
     }
   }
 
@@ -157,10 +166,12 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
     const mailto = `mailto:info@slayerterminal.com?subject=${encodeURIComponent('Lifetime Pass enquiry')}&body=${encodeURIComponent(bodyLines.join('\n'))}`;
     try {
       window.location.href = mailto;
+      // Only show the success confirmation once the mailto handoff actually fired.
+      setContactSubmitted(true);
     } catch {
-      /* no-op: confirmation below still tells the user how to reach us */
+      // No mail client available: don't fake success — tell the user how to reach us.
+      setLifetimeFormError('We couldn’t open your mail app. Please email us directly at info@slayerterminal.com and we’ll follow up with a custom quote.');
     }
-    setContactSubmitted(true);
   };
 
   return (
@@ -252,9 +263,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
 
             <button
               onClick={() => handleStripeCheckout('discord')}
-              className="w-full py-3 bg-[var(--surface-3)] text-[var(--text-primary)] hover:bg-[var(--border-strong)] font-semibold text-[13px] rounded-xl transition-colors duration-200 cursor-pointer border border-[var(--border)]"
+              disabled={checkoutPending === 'discord'}
+              className="w-full py-3 bg-[var(--surface-3)] text-[var(--text-primary)] hover:bg-[var(--border-strong)] font-semibold text-[13px] rounded-xl transition-colors duration-200 cursor-pointer border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Select plan
+              {checkoutPending === 'discord' ? 'Redirecting…' : 'Select plan'}
             </button>
           </motion.div>
 
@@ -302,9 +314,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
 
             <button
               onClick={() => handleStripeCheckout('pinpoint')}
-              className="w-full py-3 bg-[var(--surface-3)] text-[var(--text-primary)] hover:bg-[var(--border-strong)] font-semibold text-[13px] rounded-xl transition-colors duration-200 cursor-pointer border border-[var(--border)]"
+              disabled={checkoutPending === 'pinpoint'}
+              className="w-full py-3 bg-[var(--surface-3)] text-[var(--text-primary)] hover:bg-[var(--border-strong)] font-semibold text-[13px] rounded-xl transition-colors duration-200 cursor-pointer border border-[var(--border)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Select plan
+              {checkoutPending === 'pinpoint' ? 'Redirecting…' : 'Select plan'}
             </button>
           </motion.div>
 
@@ -360,9 +373,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
 
             <button
               onClick={() => handleStripeCheckout('skyvision')}
-              className="w-full py-3 bg-[var(--text-primary)] text-[var(--surface)] hover:opacity-90 font-semibold text-[13px] rounded-xl transition-opacity duration-200 cursor-pointer"
+              disabled={checkoutPending === 'skyvision'}
+              className="w-full py-3 bg-[var(--text-primary)] text-[var(--surface)] hover:opacity-90 font-semibold text-[13px] rounded-xl transition-opacity duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Select plan
+              {checkoutPending === 'skyvision' ? 'Redirecting…' : 'Select plan'}
             </button>
           </motion.div>
 
@@ -806,6 +820,15 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
 
               {/* Modal Bottom Controls */}
               <div className="border-t border-[var(--border)] px-4 sm:px-6 py-3.5 sm:py-4 flex gap-3 justify-center items-center">
+                {checkoutError && selectedPlanForCheckout !== 'lifetime' && (
+                  <button
+                    onClick={() => handleStripeCheckout(selectedPlanForCheckout)}
+                    disabled={checkoutPending === selectedPlanForCheckout}
+                    className="w-full py-3 rounded-xl bg-[var(--text-primary)] text-[var(--surface)] hover:opacity-90 font-semibold text-[12px] transition-opacity cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span>{checkoutPending === selectedPlanForCheckout ? 'Redirecting…' : 'Try again'}</span>
+                  </button>
+                )}
                 <button
                   onClick={() => setSelectedPlanForCheckout(null)}
                   className="w-full py-3 rounded-xl bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-strong)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] font-semibold text-[12px] transition-colors cursor-pointer flex items-center justify-center gap-2"

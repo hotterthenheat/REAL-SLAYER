@@ -81,6 +81,8 @@ export default function ArborCapital() {
   const [newRequestType, setNewRequestType] = useState('Feature Request');
   const [requestSubmitted, setRequestSubmitted] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
+  // Track which rows this session has already upvoted so a single click counts once.
+  const [votedIds, setVotedIds] = useState<Set<string>>(new Set());
 
   const handleAddRequest = (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +100,10 @@ export default function ArborCapital() {
   };
 
   const handleVote = (id: string) => {
+    // One vote per row per session — ignore repeat clicks on an already-voted row.
+    if (votedIds.has(id)) return;
     setUserRequests((prev) => prev.map((r) => (r.id === id ? { ...r, votes: r.votes + 1 } : r)));
+    setVotedIds((prev) => new Set(prev).add(id));
   };
 
   // Aggregate stats from the real logged trade archive (empty until trades log).
@@ -533,10 +538,16 @@ export default function ArborCapital() {
                           value={newRequestTitle}
                           onChange={(e) => { setNewRequestTitle(e.target.value); if (requestError) setRequestError(null); }}
                           aria-invalid={!!requestError}
+                          maxLength={120}
                           placeholder="e.g. Alert when IV drops below 15%"
                           className={`w-full rounded-lg border bg-[var(--surface)] p-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] ${requestError ? 'border-[var(--danger)]/60' : 'border-[var(--border)] focus:border-[var(--success)]/60'}`}
                         />
-                        <FieldError>{requestError}</FieldError>
+                        <div className="flex items-center justify-between gap-2">
+                          <FieldError>{requestError}</FieldError>
+                          <span className="text-[9px] tabular-nums text-[var(--text-tertiary)] ml-auto shrink-0">
+                            {newRequestTitle.length}/120
+                          </span>
+                        </div>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] block">
@@ -612,16 +623,35 @@ export default function ArborCapital() {
                               {req.title}
                             </span>
                           </div>
-                          <button
-                            onClick={() => handleVote(req.id)}
-                            aria-label={`Upvote "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`}
-                            className="flex flex-col items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5 shrink-0 hover:border-[var(--success)]/60 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
-                          >
-                            <ChevronUp className="w-3.5 h-3.5 text-[var(--success)]" aria-hidden="true" />
-                            <span className="text-[11px] font-bold tabular-nums text-[var(--text-primary)]">
-                              {req.votes}
-                            </span>
-                          </button>
+                          {(() => {
+                            const voted = votedIds.has(req.id);
+                            return (
+                              <button
+                                onClick={() => handleVote(req.id)}
+                                disabled={voted}
+                                aria-pressed={voted}
+                                aria-label={
+                                  voted
+                                    ? `Voted for "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`
+                                    : `Upvote "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`
+                                }
+                                className={`flex flex-col items-center justify-center rounded-lg border px-2.5 py-1.5 shrink-0 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
+                                  voted
+                                    ? 'border-[var(--success)]/60 bg-[var(--success)]/10 cursor-default'
+                                    : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--success)]/60'
+                                }`}
+                              >
+                                <ChevronUp
+                                  className="w-3.5 h-3.5 text-[var(--success)]"
+                                  aria-hidden="true"
+                                  style={voted ? { fill: 'var(--success)' } : undefined}
+                                />
+                                <span className="text-[11px] font-bold tabular-nums text-[var(--text-primary)]">
+                                  {req.votes}
+                                </span>
+                              </button>
+                            );
+                          })()}
                         </div>
                       );
                     })}

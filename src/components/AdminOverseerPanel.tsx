@@ -3,11 +3,24 @@ import { formatDateTime } from '../lib/timeUtils';
 import { ConfirmDialog } from './ConfirmDialog';
 import { FieldError, zodError, type SubmitState } from './ui/Field';
 import { SearchInput } from './ui/SearchInput';
+import { DataStateBadge, type DataState } from './ui/DataStateBadge';
 import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
   ShieldAlert, Users, Activity, Key, MonitorPlay, Radio,
-  Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, Search, RefreshCw, ScrollText
+  Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, Search, RefreshCw, ScrollText, Wifi
 } from 'lucide-react';
+
+/**
+ * Map the server's provider identifier to a data-state + human label for the Feed Health card.
+ * Any live provider reads green; the synthetic sandbox reads as Model Mode.
+ */
+const FEED_META: Record<string, { state: DataState; label: string }> = {
+  THETADATA_LIVE: { state: 'live', label: 'ThetaData Live' },
+  TRADIER_POLYGON_COMPLEMENTARY: { state: 'live', label: 'Tradier + Polygon' },
+  TRADIER_LIVE: { state: 'live', label: 'Tradier Live' },
+  POLYGON_LIVE: { state: 'live', label: 'Polygon Live' },
+  SANDBOX_SYNTHETIC: { state: 'model', label: 'Sandbox Synthetic' },
+};
 
 interface AdminPanelProps {
   session: any;
@@ -136,6 +149,14 @@ function StatCard({ label, value, color = 'text-[var(--text-primary)]' }: { labe
 
 function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; reload: () => void; onSimulateTier: (s: string, n: number) => void }) {
   const [busy, setBusy] = useState(false);
+  const [recent, setRecent] = useState<any[]>([]);
+  const [recentLoaded, setRecentLoaded] = useState(false);
+  // Recent-activity preview: the five newest audit entries, refreshed whenever the overview
+  // reloads so operational actions surface here without leaving the Overview tab.
+  useEffect(() => {
+    let alive = true;
+    api('/api/admin/audit').then((d) => { if (alive) { setRecent((d.entries || []).slice(0, 5)); setRecentLoaded(true); } }).catch(() => { if (alive) setRecentLoaded(true); });
+  }, [overview?.audit_entries]);
   const toggleMaintenance = async () => {
     setBusy(true);
     try { await api('/api/admin/maintenance', { method: 'POST', body: JSON.stringify({ enabled: !overview?.maintenance_mode }) }); reload(); } finally { setBusy(false); }
@@ -145,13 +166,64 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
     reload();
   };
   const flags = overview?.feature_flags || {};
+  const feed = FEED_META[overview?.data_source] || { state: 'required' as DataState, label: overview?.data_source || 'Unknown' };
+  const serverTime = typeof overview?.server_time === 'number' ? overview.server_time : null;
   return (
     <div className="space-y-5 animate-fadeIn">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Total Users" value={overview?.total_users ?? '—'} />
         <StatCard label="Live Connections" value={overview?.live_connections ?? '—'} color="text-[var(--success)]" />
         <StatCard label="Suspended" value={overview?.suspended ?? '—'} color="text-[var(--warning)]" />
         <StatCard label="Banned" value={overview?.banned ?? '—'} color="text-[var(--danger)]" />
+        <StatCard label="Audit Entries" value={overview?.audit_entries ?? '—'} />
+        <StatCard label="Coupons" value={overview?.coupons ?? '—'} />
+      </div>
+
+      {/* Feed health — the market-data provider currently backing every terminal read. */}
+      <div className={`${CARD} p-5`}>
+        <SectionHeader icon={Wifi} title="Feed Health" iconColor={feed.state === 'live' ? 'text-[var(--success)]' : 'text-[var(--info)]'} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Provider</div>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${feed.state === 'live' ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--info)]'}`}></span>
+              <span className="text-[12px] font-bold text-[var(--text-primary)]">{feed.label}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Mode</div>
+            <DataStateBadge state={feed.state} />
+          </div>
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Live Connections</div>
+            <div className="text-[13px] font-bold text-[var(--success)] tabular-nums">{overview?.live_connections ?? '—'}</div>
+          </div>
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Server Time</div>
+            <div className="text-[13px] font-bold text-[var(--text-secondary)] tabular-nums">{serverTime ? formatDateTime(new Date(serverTime).toISOString()) : '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent activity — the five newest audit-trail entries, previewed on Overview. */}
+      <div className={`${CARD} p-5`}>
+        <SectionHeader icon={ScrollText} title="Recent Activity" />
+        {!recentLoaded ? (
+          <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest py-2">Loading…</div>
+        ) : recent.length === 0 ? (
+          <div className="text-[10px] text-[var(--text-tertiary)] leading-relaxed py-2">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here as they happen.</div>
+        ) : (
+          <div className="divide-y divide-[var(--border)]">
+            {recent.map((e) => (
+              <div key={e.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                <span className="text-[10px] text-[var(--warning)] font-bold uppercase tracking-wide shrink-0 w-40 truncate" title={e.action_taken}>{e.action_taken}</span>
+                <span className="text-[10px] text-[var(--success)] truncate min-w-0 flex-1" title={e.admin_email}>{e.admin_email}</span>
+                {e.target_id && <span className="text-[10px] text-[var(--text-tertiary)] truncate max-w-[30%] hidden sm:inline" title={e.target_id}>{e.target_id}</span>}
+                <span className="text-[9px] text-[var(--text-tertiary)] tabular-nums whitespace-nowrap shrink-0">{formatDateTime(e.timestamp)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Maintenance */}
@@ -329,7 +401,7 @@ function UsersTab() {
                     <select aria-label={`Access tier for ${u.email}`} value={u.access_tier} onChange={(e) => changeTier(u.email, e.target.value)} className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] uppercase px-2 py-1 rounded outline-none focus:border-[var(--border-strong)]">
                       {['guest', 'discord', 'intraday', 'quant', 'enterprise', 'lifetime'].map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    {u.role !== 'user' && <span className="text-[var(--warning)]" title={u.role}></span>}
+                    {u.role !== 'user' && <span className="text-[8px] font-black uppercase tracking-widest text-[var(--warning)] bg-[var(--warning)]/15 border border-[var(--warning)]/30 rounded px-1 py-0.5 leading-none" title={`Role: ${u.role}`}>{u.role}</span>}
                   </div>
                 </td>
                 <td className="p-3 text-[var(--success)] tabular-nums">{u.referral_tokens_pool}</td>
@@ -385,31 +457,76 @@ function UsersTab() {
 
 function AuditTab() {
   const [entries, setEntries] = useState<any[]>([]);
-  useEffect(() => { api('/api/admin/audit').then((d) => setEntries(d.entries || [])).catch(() => {}); }, []);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [q, setQ] = useState('');
+  const load = useCallback(() => {
+    setStatus('loading');
+    api('/api/admin/audit').then((d) => { setEntries(d.entries || []); setStatus('ready'); }).catch(() => setStatus('error'));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  // Client-side filter across admin, action, target and IP — the audit log is capped at 200
+  // entries server-side, so filtering in the browser is cheap and keeps the trail responsive.
+  const filtered = entries.filter((e) => {
+    if (!q.trim()) return true;
+    const hay = `${e.admin_email} ${e.action_taken} ${e.target_id} ${e.ip_address} ${e.method}`.toLowerCase();
+    return hay.includes(q.trim().toLowerCase());
+  });
   return (
-    <div className={`${CARD} overflow-x-auto animate-fadeIn`}>
-      <table className="w-full text-[10.5px]">
-        <thead>
-          <tr className="border-b border-[var(--border)]">
-            <th className={TH}>Timestamp</th><th className={TH}>Admin</th>
-            <th className={TH}>Action</th><th className={TH}>Target</th>
-            <th className={TH}>Method</th><th className={TH}>IP</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e) => (
-            <tr key={e.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
-              <td className="p-3 text-[var(--text-tertiary)] whitespace-nowrap">{formatDateTime(e.timestamp)}</td>
-              <td className="p-3 text-[var(--success)]">{e.admin_email}</td>
-              <td className="p-3 text-[var(--warning)] font-bold">{e.action_taken}</td>
-              <td className="p-3 text-[var(--text-secondary)]">{e.target_id}</td>
-              <td className="p-3 text-[var(--text-tertiary)]">{e.method}</td>
-              <td className="p-3 text-[var(--text-tertiary)] tabular-nums">{e.ip_address}</td>
+    <div className="space-y-3 animate-fadeIn">
+      <div className="flex items-center gap-2">
+        <SearchInput
+          id="admin-audit-search"
+          ariaLabel="Filter audit trail"
+          value={q}
+          onChange={setQ}
+          onClear={() => setQ('')}
+          placeholder="Filter by admin, action, target, IP…"
+          className="flex-1"
+        />
+        <button onClick={load} aria-label="Refresh audit trail" className="p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"><RefreshCw className={`w-4 h-4 ${status === 'loading' ? 'animate-spin' : ''}`} /></button>
+      </div>
+      <div className={`${CARD} overflow-x-auto`}>
+        <table className="w-full text-[10.5px]">
+          <thead>
+            <tr className="border-b border-[var(--border)]">
+              <th className={TH}>Timestamp</th><th className={TH}>Admin</th>
+              <th className={TH}>Action</th><th className={TH}>Target</th>
+              <th className={TH}>Method</th><th className={TH}>IP</th>
             </tr>
-          ))}
-          {entries.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[var(--text-tertiary)] text-[10px] leading-relaxed">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here automatically.</td></tr>}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filtered.map((e) => (
+              <tr key={e.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
+                <td className="p-3 text-[var(--text-tertiary)] whitespace-nowrap">{formatDateTime(e.timestamp)}</td>
+                <td className="p-3 text-[var(--success)]">{e.admin_email}</td>
+                <td className="p-3 text-[var(--warning)] font-bold">{e.action_taken}</td>
+                <td className="p-3 text-[var(--text-secondary)]">{e.target_id}</td>
+                <td className="p-3 text-[var(--text-tertiary)]">{e.method}</td>
+                <td className="p-3 text-[var(--text-tertiary)] tabular-nums">{e.ip_address}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={6} className="p-8 text-center text-[10px] leading-relaxed">
+                {status === 'loading' ? (
+                  <span className="text-[var(--text-tertiary)] uppercase tracking-widest">Loading audit trail…</span>
+                ) : status === 'error' ? (
+                  <span className="inline-flex flex-col items-center gap-2 text-[var(--danger)]">
+                    <span className="uppercase tracking-widest font-bold">Could not load the audit trail.</span>
+                    <button onClick={load} className="px-3 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] tracking-widest font-bold transition-colors">Retry</button>
+                  </span>
+                ) : q.trim() ? (
+                  <span className="text-[var(--text-tertiary)]">No audit entries match “{q.trim()}”.</span>
+                ) : (
+                  <span className="text-[var(--text-tertiary)]">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here automatically.</span>
+                )}
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {status === 'ready' && entries.length > 0 && (
+        <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest tabular-nums">{filtered.length} of {entries.length} entries</div>
+      )}
     </div>
   );
 }
@@ -420,8 +537,15 @@ function CouponsTab() {
   const [msg, setMsg] = useState('');
   const [errs, setErrs] = useState<{ code?: string | null; value?: string | null }>({});
   const [state, setState] = useState<SubmitState>('idle');
-  const load = () => api('/api/admin/coupons').then((d) => setCoupons(d.coupons || [])).catch(() => {});
-  useEffect(() => { load(); }, []);
+  const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  // Today (YYYY-MM-DD) as the minimum selectable expiry so an admin can't mint a
+  // coupon that's already expired the moment it's created.
+  const today = new Date().toISOString().slice(0, 10);
+  const load = useCallback(() => {
+    setListStatus('loading');
+    api('/api/admin/coupons').then((d) => { setCoupons(d.coupons || []); setListStatus('ready'); }).catch(() => setListStatus('error'));
+  }, []);
+  useEffect(() => { load(); }, [load]);
   const create = async () => {
     setMsg('');
     // Validate before hitting the API so bad coupon values show inline instead of a silent
@@ -461,7 +585,7 @@ function CouponsTab() {
             className={FIELD} />
           <input aria-label="User restriction (email, optional)" placeholder="User restriction (email, optional)" value={form.user_restriction} onChange={(e) => setForm({ ...form, user_restriction: e.target.value })}
             className={FIELD} />
-          <input aria-label="Expiry date" type="date" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+          <input aria-label="Expiry date" type="date" min={today} value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
             className={FIELD} />
         </div>
         <div className="flex items-center gap-3">
@@ -470,6 +594,11 @@ function CouponsTab() {
           </button>
           {msg && <span role="status" className={`text-[10px] ${state === 'error' ? 'text-[var(--danger)]' : state === 'success' ? 'text-[var(--success)]' : 'text-[var(--text-secondary)]'}`}>{msg}</span>}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest tabular-nums">{listStatus === 'ready' ? `${coupons.length} coupon${coupons.length === 1 ? '' : 's'}` : ''}</span>
+        <button onClick={load} aria-label="Refresh coupons" className="p-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"><RefreshCw className={`w-4 h-4 ${listStatus === 'loading' ? 'animate-spin' : ''}`} /></button>
       </div>
 
       <div className={`${CARD} overflow-x-auto`}>
@@ -487,7 +616,20 @@ function CouponsTab() {
                 <td className="p-3 text-[var(--text-tertiary)]">{c.expires_at || 'never'}</td>
               </tr>
             ))}
-            {coupons.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-[var(--text-tertiary)] text-[10px] leading-relaxed">No coupons created yet. Generate one above and it will appear here with its redemption status.</td></tr>}
+            {coupons.length === 0 && (
+              <tr><td colSpan={5} className="p-8 text-center text-[10px] leading-relaxed">
+                {listStatus === 'loading' ? (
+                  <span className="text-[var(--text-tertiary)] uppercase tracking-widest">Loading coupons…</span>
+                ) : listStatus === 'error' ? (
+                  <span className="inline-flex flex-col items-center gap-2 text-[var(--danger)]">
+                    <span className="uppercase tracking-widest font-bold">Could not load coupons.</span>
+                    <button onClick={load} className="px-3 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] tracking-widest font-bold transition-colors">Retry</button>
+                  </span>
+                ) : (
+                  <span className="text-[var(--text-tertiary)]">No coupons created yet. Generate one above and it will appear here with its redemption status.</span>
+                )}
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
