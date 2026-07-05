@@ -38,7 +38,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7620-c',
     ticker: 'SPX',
-    strike: 7620,
+    strike: 5520,
     isCall: true,
     health: 96,
     expectedMove: '+42.5%',
@@ -126,7 +126,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7600-c',
     ticker: 'SPX',
-    strike: 7600,
+    strike: 5500,
     isCall: true,
     health: 95,
     expectedMove: '+39.1%',
@@ -238,7 +238,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7660-c',
     ticker: 'SPX',
-    strike: 7660,
+    strike: 5560,
     isCall: true,
     health: 86,
     expectedMove: '+45.0%',
@@ -282,7 +282,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7640-c',
     ticker: 'SPX',
-    strike: 7640,
+    strike: 5540,
     isCall: true,
     health: 88,
     expectedMove: '+30.2%',
@@ -328,7 +328,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7650-c',
     ticker: 'SPX',
-    strike: 7650,
+    strike: 5550,
     isCall: true,
     health: 83,
     expectedMove: '+18.5%',
@@ -372,7 +372,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7590-p',
     ticker: 'SPX',
-    strike: 7590,
+    strike: 5490,
     isCall: false,
     health: 84,
     expectedMove: '+27.0%',
@@ -440,7 +440,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7610-p',
     ticker: 'SPX',
-    strike: 7610,
+    strike: 5510,
     isCall: false,
     health: 48,
     expectedMove: '-15.4%',
@@ -484,7 +484,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7580-p',
     ticker: 'SPX',
-    strike: 7580,
+    strike: 5480,
     isCall: false,
     health: 41,
     expectedMove: '-24.0%',
@@ -574,7 +574,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7700-c',
     ticker: 'SPX',
-    strike: 7700,
+    strike: 5600,
     isCall: true,
     health: 94,
     expectedMove: '+62.4%',
@@ -662,7 +662,7 @@ const INITIAL_CONTRACTS = [
   {
     id: 'spx-7500-p',
     ticker: 'SPX',
-    strike: 7500,
+    strike: 5400,
     isCall: false,
     health: 85,
     expectedMove: '+52.0%',
@@ -712,11 +712,11 @@ let _feedLogSeq = 0;
 const nextFeedLogId = () => `feedlog-${++_feedLogSeq}`;
 
 const INITIAL_FEED_LOGS = [
-  { id: nextFeedLogId(), timestamp: '01:34:25 PM', ticker: 'SPX', strike: 7620, type: 'C', side: 'Sweep', size: '280 cons', premium: '$151,200', tag: 'BULLISH', action: 'SWEPT @ ASK' },
+  { id: nextFeedLogId(), timestamp: '01:34:25 PM', ticker: 'SPX', strike: 5520, type: 'C', side: 'Sweep', size: '280 cons', premium: '$151,200', tag: 'BULLISH', action: 'SWEPT @ ASK' },
   { id: nextFeedLogId(), timestamp: '01:34:10 PM', ticker: 'QQQ', strike: 448, type: 'C', side: 'Block', size: '1,200 cons', premium: '$504,000', tag: 'BULLISH', action: 'AT ASK' },
   { id: nextFeedLogId(), timestamp: '01:33:48 PM', ticker: 'NDX', strike: 18350, type: 'C', side: 'Block', size: '150 cons', premium: '$232,500', tag: 'BULLISH', action: 'ABOVE ASK' },
   { id: nextFeedLogId(), timestamp: '01:33:02 PM', ticker: 'SPY', strike: 508, type: 'P', side: 'Sweep', size: '2,500 cons', premium: '$337,500', tag: 'BEARISH', action: 'SWEPT @ ASK' },
-  { id: nextFeedLogId(), timestamp: '01:31:55 PM', ticker: 'SPX', strike: 7700, type: 'C', side: 'Block', size: '3,000 cons', premium: '$735,000', tag: 'BULLISH', action: 'OFF-EXCHANGE' },
+  { id: nextFeedLogId(), timestamp: '01:31:55 PM', ticker: 'SPX', strike: 5600, type: 'C', side: 'Block', size: '3,000 cons', premium: '$735,000', tag: 'BULLISH', action: 'OFF-EXCHANGE' },
   { id: nextFeedLogId(), timestamp: '01:30:22 PM', ticker: 'NDX', strike: 17800, type: 'P', side: 'Sweep', size: '400 cons', premium: '$496,000', tag: 'HEDGE', action: 'SWEPT @ ASK' },
   { id: nextFeedLogId(), timestamp: '01:29:15 PM', ticker: 'SPY', strike: 515, type: 'C', side: 'Sweep', size: '1,800 cons', premium: '$576,000', tag: 'BULLISH', action: 'SWEPT @ ASK' },
   { id: nextFeedLogId(), timestamp: '01:28:40 PM', ticker: 'QQQ', strike: 455, type: 'C', side: 'Sweep', size: '2,400 cons', premium: '$348,000', tag: 'BULLISH', action: 'ABOVE ASK' }
@@ -1542,7 +1542,7 @@ export function DiscoveryView({
                                   </span>
                                   <span className="text-[var(--text-tertiary)]">•</span>
                                   <span className={`text-[7.5px] uppercase tracking-wider font-extrabold ${actionColor}`}>
-                                    {c.action}
+                                    {c.action === 'ENTER' ? 'REVIEW' : c.action === 'SELL' ? 'AVOID' : c.action}
                                   </span>
                                   {isPrimaryPeak && (
                                     <>
