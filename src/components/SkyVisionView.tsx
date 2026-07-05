@@ -67,7 +67,11 @@ function OptionCard({ strikeLabel, health, move, price, action, isSelected, isCa
       whileHover={{ scale: 1.01 }}
       whileTap={{ scale: 0.99 }}
       onClick={onClick}
-      className={`p-3 border rounded-lg cursor-pointer transition-colors flex flex-col gap-2 text-left ${cardBgClass}`}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
+      aria-label={`Select ${strikeLabel} ${isCall ? 'call' : 'put'}, ${action}`}
+      className={`p-3 border rounded-lg cursor-pointer transition-colors flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${cardBgClass}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1 text-left">
@@ -308,6 +312,11 @@ export function SkyVisionView() {
   // model estimate and must be labelled as such (never presented as live data).
   const isConfidenceLive = serverTradeHealth !== null;
   const isExpectedMoveLive = serverExpectedMove !== null;
+  // The displayed mid is "live" only when it came from the server premium or a live
+  // chain bid/ask mid; the focused-strike estimate is modeled. Label it honestly.
+  const isPriceLive = (typeof serverState?.optionPremiumFloat === 'number' && serverState.optionPremiumFloat > 0) || activeChainMid != null;
+  // The price chart is live only when a real market-data provider is backing the feed.
+  const isChartLive = !!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC';
 
   // Greeks for the "Physics Grid" — honesty-first source of truth:
   //  1. REAL per-strike greeks from the server option_chain when present (the
@@ -575,7 +584,7 @@ export function SkyVisionView() {
                 </h1>
               </div>
               <div className="text-right bg-[var(--surface-2)] p-2.5 border border-[var(--border)] rounded-lg">
-                <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-wider">Live Mid</span>
+                <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-wider">{isPriceLive ? 'Live Mid' : 'Model Mid'}</span>
                 <span className="text-[var(--text-primary)] font-black block text-sm font-mono tabular-nums">${(activePrice ?? 0).toFixed(2)}</span>
               </div>
             </div>
@@ -1142,7 +1151,7 @@ export function SkyVisionView() {
         <div className="w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-xl space-y-3">
           <div className="flex justify-between items-center pb-2.5 border-b border-[var(--border)]">
             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
-              <Activity className="w-3.5 h-3.5 text-[var(--success)]" /> Live Chart
+              <Activity className={`w-3.5 h-3.5 ${isChartLive ? 'text-[var(--success)]' : 'text-[var(--info)]'}`} /> {isChartLive ? 'Live Chart' : 'Model Chart'}
             </span>
             <button
               onClick={() => setIsChartExpanded(!isChartExpanded)}
@@ -1169,7 +1178,7 @@ export function SkyVisionView() {
               showFVGs={true}
               showLiquiditySweeps={true}
               showDisplacementEvents={true}
-              watermarkText="LIVE CHART"
+              watermarkText={isChartLive ? 'LIVE CHART' : 'MODEL CHART'}
               gexLevels={serverState?.deep_intelligence?.dealer_metrics ? {
                 callWall: serverState.deep_intelligence.dealer_metrics.callWall,
                 putWall: serverState.deep_intelligence.dealer_metrics.putWall,

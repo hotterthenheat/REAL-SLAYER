@@ -10,6 +10,7 @@ import {
   TrendingUp,
   TrendingDown,
   Activity,
+  X,
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
 import { EmptyStatePanel } from './ui/EmptyStatePanel';
@@ -690,10 +691,18 @@ export function QuantAuditView({
         </div>
       </div>
 
-      {/* Split list — the server trade archive. The empty state only appears when nothing has
-          EVER been tracked (no live tracked setups above, no server archive here). */}
+      {/* Split list — the server trade archive. Distinguish three empty cases: filters
+          exclude everything (offer a reset), nothing ever tracked (onboarding CTA), or
+          tracked setups exist above with no archive rows yet (render nothing here). */}
       {filteredTrades.length === 0 ? (
-        trackedCount === 0 ? (
+        (assetFilter !== 'ALL' || outcomeFilter !== 'ALL' || searchQuery.trim() !== '') && trades.length > 0 ? (
+          <EmptyStatePanel
+            icon={<Search className="w-6 h-6" />}
+            title="No trades match these filters"
+            description="No logged trades fit the current asset, outcome, or search filter. Clear the filters to see the full session archive."
+            action={{ label: 'Clear filters', icon: <X className="w-3 h-3" />, onClick: () => { setAssetFilter('ALL'); setOutcomeFilter('ALL'); setSearchQuery(''); } }}
+          />
+        ) : trackedCount === 0 ? (
           <EmptyStatePanel
             icon={<Activity className="w-6 h-6" />}
             title="Nothing tracked yet"
@@ -711,7 +720,7 @@ export function QuantAuditView({
       {/* Footer */}
       <div className="text-center pt-4 border-t border-[var(--border)]">
         <span className="text-[var(--text-tertiary)] text-[10px] uppercase tracking-[0.28em] font-bold">
-          {stats.total} {stats.total === 1 ? 'Trade' : 'Trades'} · Logged This Session · as of {sessionAsOf}
+          {stats.total} {stats.total === 1 ? 'Trade' : 'Trades'} · Logged This Session · Last Updated {sessionAsOf}
         </span>
       </div>
     </div>

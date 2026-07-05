@@ -805,7 +805,7 @@ export function DealerFlowView() {
           <div className="flex items-center gap-2 justify-center">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] inline-block animate-pulse" />
             <span className="text-[8px] font-mono tracking-widest text-[var(--text-tertiary)] font-bold uppercase">
-              CONNECTING TO LIVE FEED...
+              AWAITING FIRST DATA FRAME...
             </span>
           </div>
         </div>
@@ -1110,11 +1110,11 @@ export function DealerFlowView() {
                           }}
                         >
                           <div className="flex flex-col">
-                            <span className="text-[12px] font-mono font-bold text-[var(--accent-color)]">FETCH [ {query.toUpperCase()} ]</span>
-                            <span className="text-[10px] font-sans text-[var(--accent-color)]/70">Initialize dynamic asset profile over network</span>
+                            <span className="text-[12px] font-mono font-bold text-[var(--accent-color)]">OPEN [ {query.toUpperCase()} ]</span>
+                            <span className="text-[10px] font-sans text-[var(--accent-color)]/70">Model profile — resolves to live chain if your feed covers this symbol</span>
                           </div>
-                          <span className="text-[8px] font-mono tracking-widest text-[var(--accent-color)]/90 border border-[var(--accent-color)]/30 px-1 py-0.5">
-                            Load
+                          <span className="text-[8px] font-mono tracking-widest text-[var(--info)] border border-[var(--info)]/40 bg-[var(--info)]/10 px-1 py-0.5">
+                            Model
                           </span>
                         </div>
                       )}

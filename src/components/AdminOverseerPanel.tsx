@@ -401,7 +401,7 @@ function UsersTab() {
                     <select aria-label={`Access tier for ${u.email}`} value={u.access_tier} onChange={(e) => changeTier(u.email, e.target.value)} className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] uppercase px-2 py-1 rounded outline-none focus:border-[var(--border-strong)]">
                       {['guest', 'discord', 'intraday', 'quant', 'enterprise', 'lifetime'].map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
-                    {u.role !== 'user' && <span className="text-[var(--warning)]" title={u.role}></span>}
+                    {u.role !== 'user' && <span className="text-[8px] font-black uppercase tracking-widest text-[var(--warning)] bg-[var(--warning)]/15 border border-[var(--warning)]/30 rounded px-1 py-0.5 leading-none" title={`Role: ${u.role}`}>{u.role}</span>}
                   </div>
                 </td>
                 <td className="p-3 text-[var(--success)] tabular-nums">{u.referral_tokens_pool}</td>
@@ -457,31 +457,76 @@ function UsersTab() {
 
 function AuditTab() {
   const [entries, setEntries] = useState<any[]>([]);
-  useEffect(() => { api('/api/admin/audit').then((d) => setEntries(d.entries || [])).catch(() => {}); }, []);
+  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [q, setQ] = useState('');
+  const load = useCallback(() => {
+    setStatus('loading');
+    api('/api/admin/audit').then((d) => { setEntries(d.entries || []); setStatus('ready'); }).catch(() => setStatus('error'));
+  }, []);
+  useEffect(() => { load(); }, [load]);
+  // Client-side filter across admin, action, target and IP — the audit log is capped at 200
+  // entries server-side, so filtering in the browser is cheap and keeps the trail responsive.
+  const filtered = entries.filter((e) => {
+    if (!q.trim()) return true;
+    const hay = `${e.admin_email} ${e.action_taken} ${e.target_id} ${e.ip_address} ${e.method}`.toLowerCase();
+    return hay.includes(q.trim().toLowerCase());
+  });
   return (
-    <div className={`${CARD} overflow-x-auto animate-fadeIn`}>
-      <table className="w-full text-[10.5px]">
-        <thead>
-          <tr className="border-b border-[var(--border)]">
-            <th className={TH}>Timestamp</th><th className={TH}>Admin</th>
-            <th className={TH}>Action</th><th className={TH}>Target</th>
-            <th className={TH}>Method</th><th className={TH}>IP</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entries.map((e) => (
-            <tr key={e.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
-              <td className="p-3 text-[var(--text-tertiary)] whitespace-nowrap">{formatDateTime(e.timestamp)}</td>
-              <td className="p-3 text-[var(--success)]">{e.admin_email}</td>
-              <td className="p-3 text-[var(--warning)] font-bold">{e.action_taken}</td>
-              <td className="p-3 text-[var(--text-secondary)]">{e.target_id}</td>
-              <td className="p-3 text-[var(--text-tertiary)]">{e.method}</td>
-              <td className="p-3 text-[var(--text-tertiary)] tabular-nums">{e.ip_address}</td>
+    <div className="space-y-3 animate-fadeIn">
+      <div className="flex items-center gap-2">
+        <SearchInput
+          id="admin-audit-search"
+          ariaLabel="Filter audit trail"
+          value={q}
+          onChange={setQ}
+          onClear={() => setQ('')}
+          placeholder="Filter by admin, action, target, IP…"
+          className="flex-1"
+        />
+        <button onClick={load} aria-label="Refresh audit trail" className="p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"><RefreshCw className={`w-4 h-4 ${status === 'loading' ? 'animate-spin' : ''}`} /></button>
+      </div>
+      <div className={`${CARD} overflow-x-auto`}>
+        <table className="w-full text-[10.5px]">
+          <thead>
+            <tr className="border-b border-[var(--border)]">
+              <th className={TH}>Timestamp</th><th className={TH}>Admin</th>
+              <th className={TH}>Action</th><th className={TH}>Target</th>
+              <th className={TH}>Method</th><th className={TH}>IP</th>
             </tr>
-          ))}
-          {entries.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[var(--text-tertiary)] text-[10px] leading-relaxed">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here automatically.</td></tr>}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {filtered.map((e) => (
+              <tr key={e.id} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
+                <td className="p-3 text-[var(--text-tertiary)] whitespace-nowrap">{formatDateTime(e.timestamp)}</td>
+                <td className="p-3 text-[var(--success)]">{e.admin_email}</td>
+                <td className="p-3 text-[var(--warning)] font-bold">{e.action_taken}</td>
+                <td className="p-3 text-[var(--text-secondary)]">{e.target_id}</td>
+                <td className="p-3 text-[var(--text-tertiary)]">{e.method}</td>
+                <td className="p-3 text-[var(--text-tertiary)] tabular-nums">{e.ip_address}</td>
+              </tr>
+            ))}
+            {filtered.length === 0 && (
+              <tr><td colSpan={6} className="p-8 text-center text-[10px] leading-relaxed">
+                {status === 'loading' ? (
+                  <span className="text-[var(--text-tertiary)] uppercase tracking-widest">Loading audit trail…</span>
+                ) : status === 'error' ? (
+                  <span className="inline-flex flex-col items-center gap-2 text-[var(--danger)]">
+                    <span className="uppercase tracking-widest font-bold">Could not load the audit trail.</span>
+                    <button onClick={load} className="px-3 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] tracking-widest font-bold transition-colors">Retry</button>
+                  </span>
+                ) : q.trim() ? (
+                  <span className="text-[var(--text-tertiary)]">No audit entries match “{q.trim()}”.</span>
+                ) : (
+                  <span className="text-[var(--text-tertiary)]">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here automatically.</span>
+                )}
+              </td></tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      {status === 'ready' && entries.length > 0 && (
+        <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest tabular-nums">{filtered.length} of {entries.length} entries</div>
+      )}
     </div>
   );
 }
@@ -492,8 +537,15 @@ function CouponsTab() {
   const [msg, setMsg] = useState('');
   const [errs, setErrs] = useState<{ code?: string | null; value?: string | null }>({});
   const [state, setState] = useState<SubmitState>('idle');
-  const load = () => api('/api/admin/coupons').then((d) => setCoupons(d.coupons || [])).catch(() => {});
-  useEffect(() => { load(); }, []);
+  const [listStatus, setListStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  // Today (YYYY-MM-DD) as the minimum selectable expiry so an admin can't mint a
+  // coupon that's already expired the moment it's created.
+  const today = new Date().toISOString().slice(0, 10);
+  const load = useCallback(() => {
+    setListStatus('loading');
+    api('/api/admin/coupons').then((d) => { setCoupons(d.coupons || []); setListStatus('ready'); }).catch(() => setListStatus('error'));
+  }, []);
+  useEffect(() => { load(); }, [load]);
   const create = async () => {
     setMsg('');
     // Validate before hitting the API so bad coupon values show inline instead of a silent
@@ -533,7 +585,7 @@ function CouponsTab() {
             className={FIELD} />
           <input aria-label="User restriction (email, optional)" placeholder="User restriction (email, optional)" value={form.user_restriction} onChange={(e) => setForm({ ...form, user_restriction: e.target.value })}
             className={FIELD} />
-          <input aria-label="Expiry date" type="date" value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
+          <input aria-label="Expiry date" type="date" min={today} value={form.expires_at} onChange={(e) => setForm({ ...form, expires_at: e.target.value })}
             className={FIELD} />
         </div>
         <div className="flex items-center gap-3">
@@ -542,6 +594,11 @@ function CouponsTab() {
           </button>
           {msg && <span role="status" className={`text-[10px] ${state === 'error' ? 'text-[var(--danger)]' : state === 'success' ? 'text-[var(--success)]' : 'text-[var(--text-secondary)]'}`}>{msg}</span>}
         </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest tabular-nums">{listStatus === 'ready' ? `${coupons.length} coupon${coupons.length === 1 ? '' : 's'}` : ''}</span>
+        <button onClick={load} aria-label="Refresh coupons" className="p-2 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"><RefreshCw className={`w-4 h-4 ${listStatus === 'loading' ? 'animate-spin' : ''}`} /></button>
       </div>
 
       <div className={`${CARD} overflow-x-auto`}>
@@ -559,7 +616,20 @@ function CouponsTab() {
                 <td className="p-3 text-[var(--text-tertiary)]">{c.expires_at || 'never'}</td>
               </tr>
             ))}
-            {coupons.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-[var(--text-tertiary)] text-[10px] leading-relaxed">No coupons created yet. Generate one above and it will appear here with its redemption status.</td></tr>}
+            {coupons.length === 0 && (
+              <tr><td colSpan={5} className="p-8 text-center text-[10px] leading-relaxed">
+                {listStatus === 'loading' ? (
+                  <span className="text-[var(--text-tertiary)] uppercase tracking-widest">Loading coupons…</span>
+                ) : listStatus === 'error' ? (
+                  <span className="inline-flex flex-col items-center gap-2 text-[var(--danger)]">
+                    <span className="uppercase tracking-widest font-bold">Could not load coupons.</span>
+                    <button onClick={load} className="px-3 py-1.5 bg-[var(--surface-2)] border border-[var(--border)] rounded text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] tracking-widest font-bold transition-colors">Retry</button>
+                  </span>
+                ) : (
+                  <span className="text-[var(--text-tertiary)]">No coupons created yet. Generate one above and it will appear here with its redemption status.</span>
+                )}
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
