@@ -26,6 +26,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Download, Maximize2, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { exportCanvasPng, exportCsv } from './quant/chartInteraction';
+import { DataStateBadge } from './ui/DataStateBadge';
 
 interface ExpiryStrike { strike: number; netGex: number; callGex?: number; putGex?: number }
 interface ExpirySlice { dte: number; expiration?: string; strikes: ExpiryStrike[] }
@@ -313,15 +314,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
           <button className={toolBtn} onClick={() => apiRef.current?.png()} title="Export PNG" aria-label="Export PNG"><Download className="w-3.5 h-3.5" /></button>
           <button className={toolBtn} onClick={dumpCsv} title="Export CSV" aria-label="Export CSV"><span className="text-[9px] font-bold tracking-wider">CSV</span></button>
           <button className={toolBtn} onClick={fullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 className="w-3.5 h-3.5" /></button>
-          <span
-            className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase ml-1"
-            style={live
-              ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
-              : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}
-            title={live ? 'Real per-expiry chains' : 'Per-expiry split modeled from the aggregate term structure'}
-          >
-            {live ? 'LIVE CHAIN' : 'MODEL MODE'}
-          </span>
+          <DataStateBadge state={live ? 'live' : 'model'} className="ml-1" title={live ? 'Real per-expiry chains' : 'Per-expiry split modeled from the aggregate term structure'} />
         </div>
       </div>
 
