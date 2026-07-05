@@ -12,6 +12,8 @@ interface Props {
   profile?: SurfaceProfile;
   ticker?: string;
   decimals?: number;
+  /** Encodes the current expiry selection so the surfaces recompute when it changes. */
+  selectionKey?: string;
 }
 
 type SurfaceKey = 'gamma' | 'iv' | 'montecarlo';
@@ -38,11 +40,15 @@ function fmtGamma(v: number | undefined): string {
  * responsive strip of the live dealer-physics scalars. No cinematic lighting, no gray
  * blob; the surface reads as a raw mathematical plot on the data-status palette.
  */
-export function DealerMechanicsDashboard({ profile: external, ticker, decimals = 2 }: Props) {
+export function DealerMechanicsDashboard({ profile: external, ticker, decimals = 2, selectionKey = '' }: Props) {
   const serverState = useContractStore((s) => s.serverState);
   const selectedAsset = useContractStore((s) => s.selectedAsset);
   const tkr = ticker ?? selectedAsset?.ticker ?? '—';
-  const profile: SurfaceProfile | undefined = (serverState?.gex_profile as SurfaceProfile) ?? external;
+  // Honor the profile the parent hands us (it has already resolved expiry-filtered vs
+  // aggregate) — falling back to the store only when no prop is supplied. Re-reading the
+  // store's unfiltered aggregate here would make these tiles contradict the rest of the
+  // page the moment a single expiry is selected.
+  const profile: SurfaceProfile | undefined = external ?? (serverState?.gex_profile as SurfaceProfile);
 
   const [surface, setSurface] = useState<SurfaceKey>('gamma');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -53,9 +59,9 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
   // rebuilt at 1Hz. `dataReady` flips false→true once (when gex_profile lands), which
   // triggers exactly one recompute off the live data, then stays stable.
   const dataReady = !!(profile?.spot && profile.spot > 0 && (profile.strikes?.length ?? 0) >= 4);
-  const gammaGrid = useMemo(() => gammaSurfaceGrid(profile), [tkr, refreshKey, dataReady]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ivGrid = useMemo(() => ivSurfaceGrid(profile), [tkr, refreshKey, dataReady]); // eslint-disable-line react-hooks/exhaustive-deps
-  const mcCloud = useMemo(() => monteCarloCloud(profile), [tkr, refreshKey, dataReady]); // eslint-disable-line react-hooks/exhaustive-deps
+  const gammaGrid = useMemo(() => gammaSurfaceGrid(profile), [tkr, refreshKey, dataReady, selectionKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const ivGrid = useMemo(() => ivSurfaceGrid(profile), [tkr, refreshKey, dataReady, selectionKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const mcCloud = useMemo(() => monteCarloCloud(profile), [tkr, refreshKey, dataReady, selectionKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const netGex = profile?.netGex;
   const metrics: { label: string; raw?: number; render: () => string; tone: string; signed?: boolean }[] = [

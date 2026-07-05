@@ -67,11 +67,20 @@ function rampColor(ramp: Ramp, t: number, out: THREE.Color) {
   else lerp3(AMBER, RED, (t - 0.5) / 0.5, out);
 }
 
+// Probe WebGL ONCE and cache it. The probe itself creates a GL context; running it on
+// every effect re-run (each surface switch) would leak throwaway contexts and undercut
+// the zero-growth guarantee, so we release the probe context immediately and memoize.
+let _webglOk: boolean | undefined;
 function webglAvailable(): boolean {
+  if (_webglOk !== undefined) return _webglOk;
   try {
     const c = document.createElement('canvas');
-    return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
-  } catch { return false; }
+    const ctx = (c.getContext('webgl') || c.getContext('experimental-webgl')) as WebGLRenderingContext | null;
+    _webglOk = !!(window.WebGLRenderingContext && ctx);
+    // Drop the probe's context so it doesn't count against the browser's context budget.
+    ctx?.getExtension('WEBGL_lose_context')?.loseContext();
+  } catch { _webglOk = false; }
+  return _webglOk;
 }
 
 const SPAN = 10;      // xz footprint

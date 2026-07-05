@@ -1410,6 +1410,7 @@ export function DealerFlowView() {
               profile={filteredProfile || profile}
               ticker={selectedAsset.ticker}
               decimals={selectedAsset.decimals}
+              selectionKey={isMultiExpiry ? `multi:${activeExpiries.join(',')}` : expiryTab}
             />
           </Suspense>
           {/* ============== ADVANCED QUANT MECHANICS PANELS ============== */}

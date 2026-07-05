@@ -9,7 +9,9 @@ import type { CloudPoint } from './QuantSurface3D';
  */
 
 export interface StrikeRow { strike: number; netGex: number; callGex?: number; putGex?: number }
-export interface ExpirySlice { dteDays?: number; date?: string; strikes: { strike: number; netGex: number }[] }
+// Mirror GexExpirySlice (types.ts): the tenor field is `dte`, the display/sort key is
+// `expiration` — NOT dteDays/date, or the near→far sort silently no-ops.
+export interface ExpirySlice { dte?: number; expiration?: string; strikes: { strike: number; netGex: number }[] }
 export interface SurfaceProfile {
   spot?: number;
   netGex?: number;
@@ -68,7 +70,7 @@ export function gammaSurfaceGrid(profile: SurfaceProfile | null | undefined): nu
   const grid: number[][] = [];
 
   if (expiries.length >= 2) {
-    const sorted = [...expiries].sort((a, b) => (a.dteDays ?? 0) - (b.dteDays ?? 0)).slice(0, ROWS);
+    const sorted = [...expiries].sort((a, b) => (a.dte ?? 0) - (b.dte ?? 0)).slice(0, ROWS);
     for (const e of sorted) {
       const byStrike = e.strikes;
       const row = axis.map((k) => {
