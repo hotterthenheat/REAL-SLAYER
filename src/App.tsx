@@ -926,7 +926,11 @@ export default function App() {
   // Determine if alert notifications are allowed to display.
   // Alert notifications are only allowed if purchasedTier > 1 (paid tiers).
   // Additionally, alerts are never allowed on the landing page ('home'), for any tier.
-  const showAlerts = purchasedTier > 1 && activeTab !== 'home';
+  // Flow-alert popups belong only on trading-analysis routes. Suppress them on Home and on
+  // content/config routes (Settings, Admin, Community, Trade History, Workspace) where a
+  // floating trade alert overlaps the page and reads as intrusive / demo-unsafe.
+  const ALERT_ROUTES = new Set(['skyvision', 'pinpoint', 'quant']);
+  const showAlerts = purchasedTier > 1 && ALERT_ROUTES.has(activeTab);
 
   return (
     <AppShell 

@@ -416,7 +416,7 @@ export function SkyseyeAlertHub() {
                       ? 'border-rose-500/30 bg-rose-500/10 text-[var(--danger)]'
                       : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-tertiary)]'
                 }`}>
-                  {toast.rating === 'GOOD' ? ' ENTER' : toast.rating === 'WEAK' ? ' AVOID' : ' HOLD'}
+                  {toast.rating === 'GOOD' ? ' REVIEW' : toast.rating === 'WEAK' ? ' AVOID' : ' HOLD'}
                 </div>
               </div>
 
@@ -485,7 +485,7 @@ export function SkyseyeAlertHub() {
                   </span>
                 ) : toast.rating === 'GOOD' ? (
                   <span className="text-[var(--success)] font-mono font-medium">
-                     <strong>Strong setup detected.</strong> Click to review. Dealers are holding heavy delta support.
+                     <strong>Setup flagged for review.</strong> Dealer positioning currently provides net support near this level.
                   </span>
                 ) : toast.rating === 'WEAK' ? (
                   <span className="text-[var(--danger)]/90 font-mono font-medium">

@@ -118,7 +118,7 @@ export default function SlayerIntro({
               {isLive ? 'Live dealer positioning' : 'Connecting to market data'}
             </span>
 
-            <h1 className="text-[clamp(40px,6vw,68px)] font-extrabold tracking-tight text-[var(--text-primary)] leading-[1.04]">
+            <h1 className="text-[clamp(34px,5vw,58px)] font-extrabold tracking-tight text-[var(--text-primary)] leading-[1.05]">
               Trade the data
               <br />
               market makers see.
