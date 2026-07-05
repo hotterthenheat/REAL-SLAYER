@@ -23,6 +23,8 @@ import { IntradayTargetsView } from './IntradayTargetsView';
 import { DealerDynamicsPanel } from './DealerDynamicsPanel';
 import { GexReadCard } from './GexReadCard';
 import { TerminalReadCard } from './TerminalReadCard';
+import { EdgeTrackRecord } from './EdgeTrackRecord';
+import { LevelAlerts } from './LevelAlerts';
 import { ZeroDtePanel } from './ZeroDtePanel';
 import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
@@ -1143,6 +1145,28 @@ export function DealerFlowView() {
               decimals={selectedAsset.decimals}
               isLive={!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC'}
             />
+          )}
+
+          {/* Edge track record (proves the dealer read's historical hit-rate; self-hides until
+              outcomes resolve) + level-cross alerts — both live off the same GEX profile + spot. */}
+          {(filteredProfile || profile) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+              <EdgeTrackRecord
+                profile={filteredProfile || profile}
+                candles={chartCandles}
+                ticker={selectedAsset.ticker}
+                provenance={serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC' ? 'live' : 'model'}
+              />
+              <LevelAlerts
+                ticker={selectedAsset.ticker}
+                decimals={selectedAsset.decimals}
+                spot={(filteredProfile || profile)?.spot}
+                callWall={(filteredProfile || profile)?.callWall}
+                putWall={(filteredProfile || profile)?.putWall}
+                gammaFlip={(filteredProfile || profile)?.gammaFlip}
+                magnet={(filteredProfile || profile)?.magnet}
+              />
+            </div>
           )}
 
           {/* ============== GEX PAGE HEADER (derived from real GEX profile) ============== */}
