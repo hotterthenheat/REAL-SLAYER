@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { UserProfile } from './UserProfile';
 import { TwoFactorFlow } from './TwoFactorFlow';
+import { Progress } from './ui/Progress';
 import { useContractStore, ContractStore } from '../lib/store';
 import { THEMES, applyTheme, applyTextSize, applyCompact, applyUltrawide } from '../lib/displayPrefs';
 import { formatTime, formatDateTime } from '../lib/timeUtils';
@@ -1129,9 +1130,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     <span className="text-[var(--text-secondary)]">Building your data export…</span>
                     <span className="text-[var(--accent-color)] font-bold">{exportProgress}%</span>
                   </div>
-                  <div className="w-full bg-[var(--surface-2)] h-2 rounded overflow-hidden border border-[var(--border)]">
-                    <div className="bg-[var(--accent-color)] h-full transition-all duration-300" style={{ width: `${exportProgress}%` }}></div>
-                  </div>
+                  <Progress value={exportProgress} tone="accent" ariaLabel="Data export progress" />
                 </div>
               ) : (
                 <div className="flex justify-end pt-1">
@@ -1492,12 +1491,12 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   <span className="text-xs font-bold text-[var(--text-primary)]">Tokens to Next Free Month</span>
                   <span className="text-xs font-mono text-[var(--success)]">{session?.referral_tokens_pool || 0} / 10</span>
                 </div>
-                <div className="w-full h-2.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--success)] rounded-full transition-all duration-1000"
-                    style={{ width: `${Math.min(100, ((session?.referral_tokens_pool || 0) / 10) * 100)}%` }}
-                  />
-                </div>
+                <Progress
+                  value={((session?.referral_tokens_pool || 0) / 10) * 100}
+                  tone="success"
+                  height={10}
+                  ariaLabel="Referral tokens to next free month"
+                />
               </div>
 
               {/* Referral Token Pool Dashboard metrics */}
