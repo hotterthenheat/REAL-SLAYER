@@ -67,9 +67,15 @@ import { ChainContract } from '../lib/v11Math';
 const GexSurface3D = lazy(() => import('./GexSurface3D').then(m => ({ default: m.GexSurface3D })));
 const IvSurface3D = lazy(() => import('./IvSurface3D').then(m => ({ default: m.IvSurface3D })));
 const QuantVizLab = lazy(() => import('./quant/QuantVizLab'));
+// Dealer Mechanics moved here from the Pinpoint GEX page — the brutalist 3D dealer
+// surfaces + advanced quant panels belong with the rest of the quant tooling.
+const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
+const DealerPositioningNetwork = lazy(() => import('./DealerPositioningNetwork').then(m => ({ default: m.DealerPositioningNetwork })));
 // Bounds live WebGL contexts: off-screen 3D surfaces unmount (and free their GL
 // context) so a page of surfaces never trips the browser's context limit → blank panels.
 import LazyMount from './quant/LazyMount';
+import { QuantEdgePanel } from './QuantEdgePanel';
+import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 
 type StrategyPreset = 'iron_condor' | 'straddle' | 'butterfly' | 'vertical';
 
@@ -125,7 +131,18 @@ export default function QuantSuiteView() {
   const serverState = useContractStore(s => s.serverState);
 
   // Tab control inside the suite
-  const [activeSubTab, setActiveSubTab] = useState<'rnd' | 'vol' | 'builder' | 'scenarios' | 'portfolio' | 'alerts' | 'calibration'>('rnd');
+  const [activeSubTab, setActiveSubTab] = useState<'rnd' | 'vol' | 'builder' | 'scenarios' | 'portfolio' | 'mechanics' | 'alerts' | 'calibration'>('rnd');
+
+  // Deep-link from the sidebar flyout: apply a `quant:<sub>` intent once, then clear it.
+  const subTabIntent = useContractStore((s) => s.subTabIntent);
+  const setSubTabIntent = useContractStore((s) => s.setSubTabIntent);
+  useEffect(() => {
+    if (!subTabIntent?.startsWith('quant:')) return;
+    const sub = subTabIntent.split(':')[1] as typeof activeSubTab;
+    const valid = ['rnd', 'vol', 'builder', 'scenarios', 'portfolio', 'mechanics', 'alerts', 'calibration'];
+    if (valid.includes(sub)) setActiveSubTab(sub);
+    setSubTabIntent(null);
+  }, [subTabIntent, setSubTabIntent]);
 
   // Asset defaults
   const activeAsset = useMemo(() => {
@@ -528,6 +545,7 @@ export default function QuantSuiteView() {
     { id: 'builder', label: 'Strategy' },
     { id: 'scenarios', label: 'Scenarios' },
     { id: 'portfolio', label: 'Book Greeks' },
+    { id: 'mechanics', label: 'Dealer Mechanics' },
     { id: 'alerts', label: 'Alerts' },
     { id: 'calibration', label: 'Journal' },
   ];
@@ -1109,6 +1127,21 @@ export default function QuantSuiteView() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* TAB: DEALER MECHANICS (moved here from Pinpoint GEX) */}
+            {activeSubTab === 'mechanics' && (
+              <div className="space-y-5">
+                <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
+                  <DealerPositioningNetwork profile={gexProfile as any} decimals={activeAsset.decimals} />
+                </Suspense>
+                <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
+                  <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} />
+                </Suspense>
+                {/* Advanced quant mechanics — RND / VRP / skew / Kelly, and the regime matrix */}
+                <QuantEdgePanel />
+                <RegimeMatrixPanel />
               </div>
             )}
 
