@@ -12,7 +12,10 @@
     "test:logic": "tsx tests/skyScore.test.ts && tsx tests/math.test.ts && tsx tests/quantEdge.test.ts && tsx tests/quantSuite.test.ts && tsx tests/skyVision.test.ts && tsx tests/skyQuantCore.test.ts && tsx tests/gexSummary.test.ts && tsx tests/criticalPaths.test.ts && tsx tests/indicators.test.ts && tsx tests/terminalRead.test.ts && tsx tests/dealerDynamics.test.ts && tsx tests/expirySlices.test.ts && tsx tests/readPipeline.test.ts && tsx tests/chartPanels.test.ts && tsx tests/historyCache.test.ts && tsx tests/watchlist.test.ts && tsx tests/edgeTracker.test.ts && tsx tests/dataIntegrity.test.ts && tsx tests/monteCarlo.test.ts && tsx tests/dealerHedging.test.ts && tsx tests/greekExposure.test.ts && tsx tests/ivSurface.test.ts && tsx tests/factorAnalysis.test.ts",
     "test:unit": "vitest run",
     "test:watch": "vitest",
-    "test": "npm run test:logic && npm run test:unit"
+    "test": "npm run test:logic && npm run test:unit",
+    "copy:scichart": "node scripts/copy-scichart-wasm.mjs",
+    "predev": "npm run copy:scichart",
+    "prebuild": "npm run copy:scichart"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.14",
@@ -36,6 +39,7 @@
     "react-dom": "^19.0.1",
     "react-grid-layout": "^1.5.3",
     "recharts": "^2.15.4",
+    "scichart": "^5.2.45",
     "stripe": "^22.2.1",
     "three": "^0.171.0",
     "vite": "^6.2.3",

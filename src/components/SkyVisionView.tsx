@@ -74,9 +74,20 @@ function OptionCard({ strikeLabel, health, move, price, action, isSelected, isCa
       className={`p-3 border rounded-lg cursor-pointer transition-colors flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${cardBgClass}`}
     >
       <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-1 text-left">
+        <div className="flex flex-col gap-1 text-left min-w-0">
           <span className="text-[13px] font-black font-sans text-[var(--text-primary)]">{strikeLabel}</span>
-          <span className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] tabular-nums">HEALTH {health}</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] tabular-nums">HEALTH {health}</span>
+            <span className="w-10 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden shrink-0">
+              <span
+                className="block h-full rounded-full"
+                style={{
+                  width: `${Math.max(0, Math.min(100, health))}%`,
+                  background: health >= 75 ? 'var(--success)' : health >= 60 ? 'var(--warning)' : 'var(--danger)',
+                }}
+              />
+            </span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex flex-col items-end gap-0.5 text-right">
