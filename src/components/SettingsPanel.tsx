@@ -26,6 +26,7 @@ import { TwoFactorFlow } from './TwoFactorFlow';
 import { Progress } from './ui/Progress';
 import { useContractStore, ContractStore } from '../lib/store';
 import { zodError } from './ui/Field';
+import { CopyButton } from './ui/CopyButton';
 import { emailSchema, referralCodeSchema } from '../lib/formSchemas';
 import { THEMES, applyTheme, applyTextSize, applyCompact, applyUltrawide } from '../lib/displayPrefs';
 import { formatTime, formatDateTime } from '../lib/timeUtils';
@@ -42,7 +43,6 @@ interface SettingsPanelProps {
 // [PREFIX]10OFF code and applies a referral/promo code at /api/billing/apply-coupon.
 function ReferralCodeBox() {
   const [code, setCode] = useState('');
-  const [copied, setCopied] = useState(false);
   const [applyInput, setApplyInput] = useState('');
   const [applyMsg, setApplyMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [applying, setApplying] = useState(false);
@@ -53,13 +53,6 @@ function ReferralCodeBox() {
       .then((d) => { if (d.referral_code) setCode(d.referral_code); })
       .catch(() => {});
   }, []);
-
-  const copy = () => {
-    if (!code) return;
-    navigator.clipboard?.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
 
   const apply = async () => {
     // Validate the code shape client-side so obviously-malformed input fails fast with a
@@ -91,7 +84,7 @@ function ReferralCodeBox() {
         <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">Your Referral Code</span>
         <div className="flex items-center gap-2 mt-1.5">
           <code className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm font-mono font-bold text-[var(--success)] tracking-widest">{code || '…'}</code>
-          <button onClick={copy} className="px-3 py-2.5 bg-[var(--surface)] border border-[var(--border)] rounded-lg text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">{copied ? 'Copied' : 'Copy'}</button>
+          <CopyButton content={code} size="md" label="Copy" className="py-2.5" />
         </div>
         <p className="text-[10px] text-[var(--text-tertiary)] mt-1.5">Share this code — referees get 10% off and you earn +1 token per use.</p>
       </div>
@@ -196,7 +189,6 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSimulatingInvoice, setIsSimulatingInvoice] = useState(false);
   const [invoiceLog, setInvoiceLog] = useState<any | null>(null);
-  const [referralCopied, setReferralCopied] = useState(false);
 
   // Security Vault & Compliance states
   const [sessions, setSessions] = useState<any[]>([]);
@@ -649,12 +641,6 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     } finally {
       setIsSimulatingInvoice(false);
     }
-  };
-
-  const copyReferralLink = () => {
-    navigator.clipboard.writeText(referralLink);
-    setReferralCopied(true);
-    setTimeout(() => setReferralCopied(false), 2000);
   };
 
   const tabs = [
@@ -1550,13 +1536,13 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-lg px-3 py-2 text-xs font-mono md:tracking-wider flex items-center">
                       <span className="break-all">{referralLink}</span>
                     </div>
-                    <button
-                      onClick={copyReferralLink}
-                      className="px-6 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] text-xs font-bold rounded-lg flex items-center justify-center cursor-pointer transition-colors sm:shrink-0"
+                    <CopyButton
+                      content={referralLink}
+                      variant="primary"
+                      label="Copy Link"
                       title="Copy full referral link to clipboard"
-                    >
-                      {referralCopied ? 'Copied!' : 'Copy Link'}
-                    </button>
+                      className="px-6 py-2 text-xs sm:shrink-0"
+                    />
                   </div>
                 </div>
               </div>

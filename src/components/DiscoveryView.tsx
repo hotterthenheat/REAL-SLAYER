@@ -20,6 +20,7 @@ import { formatTime } from '../lib/timeUtils';
 import { fmtNum } from '../lib/format';
 import { AssetSparkline } from './AssetSparkline';
 import { DataStateBadge } from './ui/DataStateBadge';
+import { SearchInput } from './ui/SearchInput';
 import { deriveSetup, SetupRow, SetupInspector, type ScannerContract } from './scanner/SetupQueue';
 
 interface DiscoveryViewProps {
@@ -1244,37 +1245,21 @@ export function DiscoveryView({
         </div>
 
         {/* Ticker / strike search box */}
-        <div
-          className="md:col-span-2 relative flex items-center rounded-lg px-3 py-1.5 border transition-colors bg-[var(--surface-2)] border-[var(--border)] focus-within:border-[var(--info)]/50"
-          ref={searchContainerRef}
-        >
-          <Search className="w-3.5 h-3.5 text-[var(--text-tertiary)] mr-2 shrink-0" />
-          <input 
-            type="text" 
+        <div className="md:col-span-2 relative" ref={searchContainerRef}>
+          <SearchInput
+            ariaLabel="Filter by ticker or strike"
             value={searchQuery}
+            onChange={setSearchQuery}
             onFocus={() => setIsSearchFocused(true)}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="FILTER BY TICKER OR STRIKE..." 
-            className={`w-full bg-transparent border-none text-[9.5px] font-black uppercase focus:outline-none placeholder-zinc-500 font-mono tracking-wider transition-all duration-200 ${
-              isLight ? 'text-zinc-900' : 'text-[var(--text-primary)]'
-            }`}
+            onClear={() => { setSearchQuery(''); setIsSearchFocused(false); }}
+            placeholder="Filter by ticker or strike…"
+            uppercase
+            size="sm"
+            inputClassName="text-[9.5px] font-black"
+            rightSlot={searchQuery.length === 0 ? (
+              <kbd className="hidden sm:inline-block bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border)] px-1 py-[1.5px] rounded-xs font-mono text-[7px] select-none">TXT</kbd>
+            ) : undefined}
           />
-          {searchQuery.length > 0 ? (
-            <button 
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setIsSearchFocused(false);
-              }} 
-              className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-[8px] uppercase font-bold pl-1 font-mono hover:underline shrink-0"
-            >
-              CLEAR
-            </button>
-          ) : (
-            <kbd className="hidden sm:inline-block bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border)] px-1 py-[1.5px] rounded-xs font-mono text-[7px] select-none shrink-0">
-              TXT
-            </kbd>
-          )}
 
           {/* Dynamic Search Combobox results list overlay */}
           <AnimatePresence>

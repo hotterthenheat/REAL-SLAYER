@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { formatDateTime } from '../lib/timeUtils';
 import { ConfirmDialog } from './ConfirmDialog';
 import { FieldError, zodError, type SubmitState } from './ui/Field';
+import { SearchInput } from './ui/SearchInput';
 import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
   ShieldAlert, Users, Activity, Key, MonitorPlay, Radio,
@@ -289,12 +290,15 @@ function UsersTab() {
         onCancel={() => setConfirmDialog(null)}
       />
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-          <label htmlFor="admin-user-search" className="sr-only">Search users</label>
-          <input id="admin-user-search" value={q} onChange={(e) => { setCursors({ current: null, history: [] }); setQ(e.target.value); }} placeholder="Search by email, username, name…"
-            className={`w-full ${FIELD} pl-9 py-2.5`} />
-        </div>
+        <SearchInput
+          id="admin-user-search"
+          ariaLabel="Search users"
+          value={q}
+          onChange={(v) => { setCursors({ current: null, history: [] }); setQ(v); }}
+          onClear={() => { setCursors({ current: null, history: [] }); setQ(''); }}
+          placeholder="Search by email, username, name…"
+          className="flex-1"
+        />
         <button onClick={() => load(cursors.current)} aria-label="Refresh users" className="p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-md text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)] transition-colors"><RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /></button>
       </div>
 
