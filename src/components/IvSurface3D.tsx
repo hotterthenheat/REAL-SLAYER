@@ -66,9 +66,7 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
     renderer.setSize(width, height);
     mount.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight(0x20242c, 1.6));
-    const key = new THREE.DirectionalLight(0xffffff, 1.9); key.position.set(120, 200, 120); scene.add(key);
-    const fill = new THREE.DirectionalLight(0x8891a5, 0.7); fill.position.set(-160, 70, -100); scene.add(fill);
+    // Directive 08: no lighting — the surface is a raw wireframe plot coloured by IV.
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.08;
@@ -102,7 +100,8 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2, side: THREE.DoubleSide });
+    // Directive 08: brutalist wireframe — MeshBasicMaterial, no lighting, colour = IV.
+    const mat = new THREE.MeshBasicMaterial({ wireframe: true, vertexColors: true, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geo, mat); scene.add(mesh);
     scene.add(new THREE.LineSegments(new THREE.WireframeGeometry(geo), new THREE.LineBasicMaterial({ color: 0x3a3f4a, transparent: true, opacity: 0.16 })));
 
@@ -173,7 +172,16 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
       renderer.domElement.removeEventListener('pointermove', onMove);
       renderer.domElement.removeEventListener('pointerleave', onLeave);
       apiRef.current = null; controls.dispose(); textures.forEach((t) => t.dispose());
-      geo.dispose(); mat.dispose(); renderer.dispose();
+      // Directive 08: dispose EVERY geometry/material, then release the GPU context.
+      scene.traverse((obj) => {
+        const m = obj as THREE.Mesh;
+        if (m.geometry) m.geometry.dispose();
+        const mm = (m as any).material;
+        if (Array.isArray(mm)) mm.forEach((x: THREE.Material) => x.dispose());
+        else if (mm) (mm as THREE.Material).dispose();
+      });
+      renderer.dispose();
+      renderer.forceContextLoss();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
   }, [model, spot, ticker, decimals]);

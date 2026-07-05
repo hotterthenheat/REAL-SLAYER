@@ -93,10 +93,8 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
     renderer.setSize(width, height);
     mount.appendChild(renderer.domElement);
 
-    // Three-point lighting for an engineering-viz feel (not gaming bloom).
-    scene.add(new THREE.AmbientLight(0x20242c, 1.5));
-    const key = new THREE.DirectionalLight(0xffffff, 2.0); key.position.set(120, 200, 120); scene.add(key);
-    const fill = new THREE.DirectionalLight(0x8891a5, 0.7); fill.position.set(-160, 70, -100); scene.add(fill);
+    // Directive 08: no lighting. The surface is a raw wireframe plot coloured by data,
+    // not a lit object — nothing to illuminate.
 
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -144,7 +142,8 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
     geo.computeVertexNormals();
 
-    const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.55, metalness: 0.2, side: THREE.DoubleSide });
+    // Directive 08: brutalist wireframe — MeshBasicMaterial, no lighting, colour = data.
+    const mat = new THREE.MeshBasicMaterial({ wireframe: true, vertexColors: true, transparent: true, opacity: 0.95, side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geo, mat);
     scene.add(mesh);
 
@@ -250,7 +249,16 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
       apiRef.current = null;
       controls.dispose();
       labelTextures.forEach((t) => t.dispose());
-      geo.dispose(); mat.dispose(); renderer.dispose();
+      // Directive 08: dispose EVERY geometry/material in the scene, then release the GPU context.
+      scene.traverse((obj) => {
+        const m = obj as THREE.Mesh;
+        if (m.geometry) m.geometry.dispose();
+        const mm = (m as any).material;
+        if (Array.isArray(mm)) mm.forEach((x: THREE.Material) => x.dispose());
+        else if (mm) (mm as THREE.Material).dispose();
+      });
+      renderer.dispose();
+      renderer.forceContextLoss();
       if (renderer.domElement.parentNode === mount) mount.removeChild(renderer.domElement);
     };
   }, [grid, spot, ticker]);
