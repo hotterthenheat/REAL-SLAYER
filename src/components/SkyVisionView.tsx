@@ -672,6 +672,42 @@ export function SkyVisionView() {
               </div>
             </div>
 
+            {/* NEXT IN THE FLOW — wire the one workflow the product is built around:
+                SkyVision (find) → Pinpoint (confirm dealer structure) → Quant Lab (prove the
+                math) → Trade History (track). The selected contract carries across via store. */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-[var(--border)] pt-3">
+              <button
+                onClick={() => useContractStore.getState().setActiveTab('pinpoint', true)}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+              >
+                <span className="text-left">
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-primary)]">Confirm in Pinpoint</span>
+                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Dealer structure</span>
+                </span>
+                <span className="text-[var(--text-tertiary)]">→</span>
+              </button>
+              <button
+                onClick={() => useContractStore.getState().setActiveTab('quant', true)}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+              >
+                <span className="text-left">
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-primary)]">Prove in Quant Lab</span>
+                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Does the math agree</span>
+                </span>
+                <span className="text-[var(--text-tertiary)]">→</span>
+              </button>
+              <button
+                onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 transition-colors hover:border-[var(--success)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
+              >
+                <span className="text-left">
+                  <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--success)]">Track setup</span>
+                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Log the outcome</span>
+                </span>
+                <span className="text-[var(--success)]">→</span>
+              </button>
+            </div>
+
           </div>
 
           {/* The real, reasoned target ladder lives in TradePlanCard (EMA / sweep / strike /

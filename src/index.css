@@ -82,6 +82,37 @@ html, body, #root {
   --accent-color: #FAFAFA;
 
   /* ====================================================================
+     SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
+     every primitive (card / popover / badge / input / sidebar / chart)
+     speaks one vocabulary. These do NOT change the look: each resolves to
+     an existing Slayer value above, and auto-follows light mode because it
+     references the base tokens (which the .light block overrides).
+     ==================================================================== */
+  --foreground: var(--text-primary);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-tertiary);
+  --card: var(--surface);
+  --card-foreground: var(--text-primary);
+  --popover: var(--surface-2);
+  --popover-foreground: var(--text-primary);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--text-primary);
+  --destructive: var(--danger);
+  --input: var(--border);
+  --ring: var(--accent-color);
+  --chart-1: var(--success);
+  --chart-2: var(--info);
+  --chart-3: var(--warning);
+  --chart-4: var(--danger);
+  --chart-5: var(--greek);
+  --sidebar: var(--surface);
+  --sidebar-foreground: var(--text-secondary);
+  --sidebar-primary: var(--accent-color);
+  --sidebar-accent: var(--surface-2);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--accent-color);
+
+  /* ====================================================================
      TYPOGRAPHY SCALE — responsive via clamp() so it scales cleanly from
      1080p → 1440p → 4K without stretching or blur. Metrics use tabular-nums
      for fast, aligned scanning of trading numbers.

@@ -85,14 +85,25 @@ export default function SlayerIntro({
   const tradesLogged = v8Trades.length;
   const compositeScore = Math.round(systemScore?.total ?? 0);
 
-  // Open the live workspace at the currently selected opportunity.
+  // Open the exact SkyVision setup DETAIL for this candidate (not the general scanner):
+  // selecting a strike flips SkyVision's isExpanded on, so the reviewer lands on the
+  // "why this contract / dealer confirmation / invalidation / liquidity" answer page.
+  const candidateStrike = (() => {
+    const n = parseInt(String(bestOpportunity?.ticker || '').replace(/[^0-9]/g, ''), 10);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  })();
   const handleLaunchToActiveOpportunity = () => {
-    useContractStore.getState().setSelectedStrike(null);
+    // onSelectOpportunity (App.handleSelectOpportunity) atomically selects the contract —
+    // which sets the strike so SkyVision opens the DETAIL view — and navigates. Do NOT
+    // re-navigate afterward: a second setActiveTab('skyvision') resets the selection back
+    // to the scanner.
     if (bestOpportunity?.asset) {
-      onSelectOpportunity(bestOpportunity.asset, bestOpportunity.isCall ? 'C' : 'P');
+      onSelectOpportunity(bestOpportunity.asset, bestOpportunity.isCall ? 'C' : 'P', candidateStrike ?? undefined);
     }
-    onEnterApp('skyvision');
   };
+  // Flow-strip / step navigation goes straight through the store so it isn't affected by
+  // App.onEnterApp's legacy 'quant' → 'auditor' remap.
+  const goToTab = (tab: string) => useContractStore.getState().setActiveTab(tab as any, true);
 
   return (
     <div
@@ -118,7 +129,7 @@ export default function SlayerIntro({
               {isLive ? 'Live dealer positioning' : 'Connecting to market data'}
             </span>
 
-            <h1 className="text-[clamp(34px,5vw,58px)] font-extrabold tracking-tight text-[var(--text-primary)] leading-[1.05]">
+            <h1 className="text-[clamp(30px,4.5vw,52px)] font-extrabold tracking-tight text-[var(--text-primary)] leading-[1.0]">
               Trade the data
               <br />
               market makers see.
@@ -142,6 +153,30 @@ export default function SlayerIntro({
               >
                 See how it works
               </button>
+            </div>
+
+            {/* Core workflow strip — the one path the whole product is organised around.
+                Equal-width pills (2×2 on small screens, 4-across on desktop); each jumps
+                straight to the page that owns the step. */}
+            <div className="mt-8 grid grid-cols-2 lg:grid-cols-4 gap-2 max-w-2xl">
+              {([
+                { n: 1, label: 'Scan', sub: 'SkyVision', tab: 'skyvision' },
+                { n: 2, label: 'Confirm', sub: 'Pinpoint', tab: 'pinpoint' },
+                { n: 3, label: 'Validate', sub: 'Quant Lab', tab: 'quant' },
+                { n: 4, label: 'Track', sub: 'History', tab: 'auditor' },
+              ] as const).map((s) => (
+                <button
+                  key={s.n}
+                  onClick={() => goToTab(s.tab)}
+                  className="group flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 text-left transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+                >
+                  <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[9px] font-black tabular-nums text-[var(--text-tertiary)] group-hover:text-[var(--accent-color)]">{s.n}</span>
+                  <span className="min-w-0 leading-tight">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-primary)]">{s.label}</span>
+                    <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">{s.sub}</span>
+                  </span>
+                </button>
+              ))}
             </div>
 
             {/* Honest, prop-derived stats */}
@@ -215,9 +250,9 @@ export default function SlayerIntro({
                   Top candidate
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-[var(--success)]' : 'bg-[var(--warning)]'}`} />
-                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${isLive ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
-                    {isLive ? 'Live' : 'Syncing'}
+                  <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-[var(--success)]' : 'bg-[var(--info)]'}`} />
+                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${isLive ? 'text-[var(--success)]' : 'text-[var(--info)]'}`}>
+                    {isLive ? 'Live chain' : 'Model mode'}
                   </span>
                 </span>
               </div>
@@ -262,6 +297,22 @@ export default function SlayerIntro({
                     <span className="uppercase tracking-wide text-[var(--text-tertiary)]">Entry zone</span>
                     <span className="font-semibold text-[var(--text-secondary)] tabular-nums">{bestOpportunity.entryZone ?? '—'}</span>
                   </div>
+
+                  {/* Why this setup exists — one plain-language reason line, plus the level
+                      that invalidates it, so the card explains itself and isn't just numbers. */}
+                  <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                    {dealerMetrics
+                      ? `Dealer ${dealerMetrics.bias === 'LONG GAMMA' ? 'support' : 'pressure'} near ${Number(bestOpportunity.isCall ? dealerMetrics.callWall : dealerMetrics.putWall).toFixed(0)} with ${String(dealerMetrics.volState || 'expanded').toLowerCase()} volatility and a defined entry zone.`
+                      : 'Model-ranked on dealer positioning and expected move — open the setup to confirm on the live chain.'}
+                  </p>
+                  {dealerMetrics && (
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="uppercase tracking-wide text-[var(--text-tertiary)]">Invalidation</span>
+                      <span className="font-semibold text-[var(--warning)] tabular-nums">
+                        {bestOpportunity.isCall ? 'below' : 'above'} {Number(bestOpportunity.isCall ? dealerMetrics.putWall : dealerMetrics.callWall).toFixed(0)}
+                      </span>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center gap-1 p-5 rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-2)]">
