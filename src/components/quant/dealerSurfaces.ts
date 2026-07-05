@@ -19,12 +19,42 @@ export interface SurfaceProfile {
   charmEx?: number;
   expectedMovePct?: number;
   gammaFlip?: number;
+  callWall?: number;
+  putWall?: number;
   strikes?: StrikeRow[];
   expiries?: ExpirySlice[];
 }
 
 const COLS = 30; // strike / moneyness resolution
 const ROWS = 16; // tenor / expiry resolution
+export const STRIKE_WINDOW = 0.08; // exposure surfaces plot spot ±8%
+export const IV_WINDOW = 0.2;      // the IV surface spans moneyness ±20%
+
+/** Real strike range the exposure surfaces map across their columns: spot ±8%. */
+export function strikeDomain(profile: SurfaceProfile | null | undefined): [number, number] | undefined {
+  const spot = profile?.spot;
+  if (!spot || spot <= 0) return undefined;
+  return [spot * (1 - STRIKE_WINDOW), spot * (1 + STRIKE_WINDOW)];
+}
+
+/** Real strike range the IV surface maps (moneyness ±20% → K/S 0.8..1.2). */
+export function ivStrikeDomain(profile: SurfaceProfile | null | undefined): [number, number] | undefined {
+  const spot = profile?.spot;
+  if (!spot || spot <= 0) return undefined;
+  return [spot * (1 - IV_WINDOW), spot * (1 + IV_WINDOW)];
+}
+
+/**
+ * Real tenor range in calendar days — only when the chain streams per-expiry slices (net
+ * gamma). Otherwise the tenor axis is a documented model and carries no day domain.
+ */
+export function tenorDomainDays(profile: SurfaceProfile | null | undefined, field: ExposureField): [number, number] | undefined {
+  if (field !== 'netGex') return undefined;
+  const expiries = (profile?.expiries ?? []).filter((e) => Array.isArray(e.strikes) && e.strikes.length > 0 && Number.isFinite(e.dte));
+  if (expiries.length < 2) return undefined;
+  const dtes = expiries.map((e) => e.dte as number).sort((a, b) => a - b).slice(0, ROWS);
+  return [dtes[0], dtes[dtes.length - 1]];
+}
 
 // Modelled term-structure weight per greek (real value is the front-chain column; the
 // shape across tenor is a documented model — permitted by rule #2). Gamma & charm

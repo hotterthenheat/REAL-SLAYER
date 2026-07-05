@@ -2,7 +2,8 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useContractStore } from '../lib/store';
 import { Boxes, Waves, Wind, Timer, Layers, RefreshCw, Zap } from 'lucide-react';
 import { LiveValue } from './ui/LiveValue';
-import { exposureSurfaceGrid, ivSurfaceGrid, type ExposureField, type SurfaceProfile } from './quant/dealerSurfaces';
+import { exposureSurfaceGrid, ivSurfaceGrid, strikeDomain, ivStrikeDomain, tenorDomainDays, type ExposureField, type SurfaceProfile } from './quant/dealerSurfaces';
+import type { SurfaceMarker, DataState } from './quant/QuantSurface3D';
 
 // Directive-08 renderer is lazy so three.js stays off the initial bundle and only one
 // WebGL context is ever live (the active surface).
@@ -14,6 +15,8 @@ interface Props {
   decimals?: number;
   /** Encodes the current expiry selection so the surfaces recompute when it changes. */
   selectionKey?: string;
+  /** True when the profile is the live streamed chain (drives the LIVE/MODEL data pill). */
+  live?: boolean;
 }
 
 type SurfaceKey = 'gamma' | 'vanna' | 'charm' | 'iv';
@@ -43,7 +46,7 @@ function fmtGamma(v: number | undefined): string {
  * responsive strip of the live dealer-physics scalars. Every surface is mathematically
  * defined from chain data; nothing is decorative. Raw plot on the data-status palette.
  */
-export function DealerMechanicsDashboard({ profile: external, ticker, decimals = 2, selectionKey = '' }: Props) {
+export function DealerMechanicsDashboard({ profile: external, ticker, decimals = 2, selectionKey = '', live = false }: Props) {
   const serverState = useContractStore((s) => s.serverState);
   const selectedAsset = useContractStore((s) => s.selectedAsset);
   const tkr = ticker ?? selectedAsset?.ticker ?? '—';
@@ -68,6 +71,29 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
     () => (active.field ? exposureSurfaceGrid(profile, active.field) : ivSurfaceGrid(profile)),
     [tkr, refreshKey, dataReady, selectionKey, surface], // eslint-disable-line react-hooks/exhaustive-deps
   );
+
+  // ── Spatial context handed to the renderer: real strike/tenor domains, market walls,
+  // ATM/front reference slices, per-surface value format, and a clean data-state pill. ──
+  const isIv = !active.field;
+  const xDomain = isIv ? ivStrikeDomain(profile) : strikeDomain(profile);
+  const zDomain = isIv ? undefined : tenorDomainDays(profile, active.field!);
+  const cols = grid[0]?.length ?? 0;
+  const rows = grid.length;
+  const spot = profile?.spot;
+  const sliceCol = xDomain && spot && cols > 0
+    ? Math.max(0, Math.min(cols - 1, Math.round(((spot - xDomain[0]) / (xDomain[1] - xDomain[0])) * (cols - 1))))
+    : null;
+  const sliceRow = rows > 0 ? 0 : null; // front-tenor smile
+  const markers: SurfaceMarker[] = [
+    spot != null ? { at: spot, kind: 'spot' as const, label: 'Spot' } : null,
+    profile?.gammaFlip != null ? { at: profile.gammaFlip, kind: 'flip' as const, label: 'γ-Flip' } : null,
+    profile?.callWall != null ? { at: profile.callWall, kind: 'callWall' as const, label: 'Call Wall' } : null,
+    profile?.putWall != null ? { at: profile.putWall, kind: 'putWall' as const, label: 'Put Wall' } : null,
+  ].filter(Boolean) as SurfaceMarker[];
+  const valueFormat = isIv ? (v: number) => `${(v * 100).toFixed(1)}%` : (v: number) => fmtGamma(v);
+  const xFormat = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const zFormat = (v: number) => `${Math.round(v)}d`;
+  const dataState: DataState = grid.length === 0 ? 'required' : live ? 'live' : 'model';
 
   const netGex = profile?.netGex;
   const metrics: { label: string; raw?: number; render: () => string; tone: string; signed?: boolean }[] = [
@@ -119,8 +145,24 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
 
       {/* The brutalist surface */}
       <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[#0a0a0b]">
-        <Suspense fallback={<div className="h-[380px] w-full animate-pulse bg-[var(--surface-2)]" />}>
-          <QuantSurface3D grid={grid} ramp={active.ramp} height={380} axisLabels={active.axes} />
+        <Suspense fallback={<div className="h-[460px] w-full animate-pulse bg-[var(--surface-2)]" />}>
+          <QuantSurface3D
+            grid={grid}
+            ramp={active.ramp}
+            height={460}
+            axisLabels={active.axes}
+            xDomain={xDomain}
+            zDomain={zDomain}
+            xFormat={xFormat}
+            zFormat={zFormat}
+            valueFormat={valueFormat}
+            markers={markers}
+            floorHeatmap
+            legend
+            dataState={dataState}
+            sliceCol={sliceCol}
+            sliceRow={sliceRow}
+          />
         </Suspense>
       </div>
 
