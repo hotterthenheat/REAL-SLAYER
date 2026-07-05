@@ -2828,6 +2828,9 @@ app.get('/api/admin/overview', requireAdmin(), async (req: any, res) => {
     coupons: ADMIN_COUPONS.length,
     audit_entries: AUDIT_LOG.length,
     admin_role: req.admin.role,
+    // Feed health for the Overview operational panel.
+    data_source: getDataSourceType(),
+    server_time: Date.now(),
   });
 });
 

@@ -3,11 +3,24 @@ import { formatDateTime } from '../lib/timeUtils';
 import { ConfirmDialog } from './ConfirmDialog';
 import { FieldError, zodError, type SubmitState } from './ui/Field';
 import { SearchInput } from './ui/SearchInput';
+import { DataStateBadge, type DataState } from './ui/DataStateBadge';
 import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
   ShieldAlert, Users, Activity, Key, MonitorPlay, Radio,
-  Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, Search, RefreshCw, ScrollText
+  Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, Search, RefreshCw, ScrollText, Wifi
 } from 'lucide-react';
+
+/**
+ * Map the server's provider identifier to a data-state + human label for the Feed Health card.
+ * Any live provider reads green; the synthetic sandbox reads as Model Mode.
+ */
+const FEED_META: Record<string, { state: DataState; label: string }> = {
+  THETADATA_LIVE: { state: 'live', label: 'ThetaData Live' },
+  TRADIER_POLYGON_COMPLEMENTARY: { state: 'live', label: 'Tradier + Polygon' },
+  TRADIER_LIVE: { state: 'live', label: 'Tradier Live' },
+  POLYGON_LIVE: { state: 'live', label: 'Polygon Live' },
+  SANDBOX_SYNTHETIC: { state: 'model', label: 'Sandbox Synthetic' },
+};
 
 interface AdminPanelProps {
   session: any;
@@ -136,6 +149,14 @@ function StatCard({ label, value, color = 'text-[var(--text-primary)]' }: { labe
 
 function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; reload: () => void; onSimulateTier: (s: string, n: number) => void }) {
   const [busy, setBusy] = useState(false);
+  const [recent, setRecent] = useState<any[]>([]);
+  const [recentLoaded, setRecentLoaded] = useState(false);
+  // Recent-activity preview: the five newest audit entries, refreshed whenever the overview
+  // reloads so operational actions surface here without leaving the Overview tab.
+  useEffect(() => {
+    let alive = true;
+    api('/api/admin/audit').then((d) => { if (alive) { setRecent((d.entries || []).slice(0, 5)); setRecentLoaded(true); } }).catch(() => { if (alive) setRecentLoaded(true); });
+  }, [overview?.audit_entries]);
   const toggleMaintenance = async () => {
     setBusy(true);
     try { await api('/api/admin/maintenance', { method: 'POST', body: JSON.stringify({ enabled: !overview?.maintenance_mode }) }); reload(); } finally { setBusy(false); }
@@ -145,13 +166,64 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
     reload();
   };
   const flags = overview?.feature_flags || {};
+  const feed = FEED_META[overview?.data_source] || { state: 'required' as DataState, label: overview?.data_source || 'Unknown' };
+  const serverTime = typeof overview?.server_time === 'number' ? overview.server_time : null;
   return (
     <div className="space-y-5 animate-fadeIn">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <StatCard label="Total Users" value={overview?.total_users ?? '—'} />
         <StatCard label="Live Connections" value={overview?.live_connections ?? '—'} color="text-[var(--success)]" />
         <StatCard label="Suspended" value={overview?.suspended ?? '—'} color="text-[var(--warning)]" />
         <StatCard label="Banned" value={overview?.banned ?? '—'} color="text-[var(--danger)]" />
+        <StatCard label="Audit Entries" value={overview?.audit_entries ?? '—'} />
+        <StatCard label="Coupons" value={overview?.coupons ?? '—'} />
+      </div>
+
+      {/* Feed health — the market-data provider currently backing every terminal read. */}
+      <div className={`${CARD} p-5`}>
+        <SectionHeader icon={Wifi} title="Feed Health" iconColor={feed.state === 'live' ? 'text-[var(--success)]' : 'text-[var(--info)]'} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Provider</div>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${feed.state === 'live' ? 'bg-[var(--success)] animate-pulse' : 'bg-[var(--info)]'}`}></span>
+              <span className="text-[12px] font-bold text-[var(--text-primary)]">{feed.label}</span>
+            </div>
+          </div>
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Mode</div>
+            <DataStateBadge state={feed.state} />
+          </div>
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Live Connections</div>
+            <div className="text-[13px] font-bold text-[var(--success)] tabular-nums">{overview?.live_connections ?? '—'}</div>
+          </div>
+          <div>
+            <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1.5">Server Time</div>
+            <div className="text-[13px] font-bold text-[var(--text-secondary)] tabular-nums">{serverTime ? formatDateTime(new Date(serverTime).toISOString()) : '—'}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Recent activity — the five newest audit-trail entries, previewed on Overview. */}
+      <div className={`${CARD} p-5`}>
+        <SectionHeader icon={ScrollText} title="Recent Activity" />
+        {!recentLoaded ? (
+          <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest py-2">Loading…</div>
+        ) : recent.length === 0 ? (
+          <div className="text-[10px] text-[var(--text-tertiary)] leading-relaxed py-2">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here as they happen.</div>
+        ) : (
+          <div className="divide-y divide-[var(--border)]">
+            {recent.map((e) => (
+              <div key={e.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                <span className="text-[10px] text-[var(--warning)] font-bold uppercase tracking-wide shrink-0 w-40 truncate" title={e.action_taken}>{e.action_taken}</span>
+                <span className="text-[10px] text-[var(--success)] truncate min-w-0 flex-1" title={e.admin_email}>{e.admin_email}</span>
+                {e.target_id && <span className="text-[10px] text-[var(--text-tertiary)] truncate max-w-[30%] hidden sm:inline" title={e.target_id}>{e.target_id}</span>}
+                <span className="text-[9px] text-[var(--text-tertiary)] tabular-nums whitespace-nowrap shrink-0">{formatDateTime(e.timestamp)}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Maintenance */}
