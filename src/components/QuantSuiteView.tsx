@@ -67,6 +67,9 @@ import { ChainContract } from '../lib/v11Math';
 const GexSurface3D = lazy(() => import('./GexSurface3D').then(m => ({ default: m.GexSurface3D })));
 const IvSurface3D = lazy(() => import('./IvSurface3D').then(m => ({ default: m.IvSurface3D })));
 const QuantVizLab = lazy(() => import('./quant/QuantVizLab'));
+// Bounds live WebGL contexts: off-screen 3D surfaces unmount (and free their GL
+// context) so a page of surfaces never trips the browser's context limit → blank panels.
+import LazyMount from './quant/LazyMount';
 
 type StrategyPreset = 'iron_condor' | 'straddle' | 'butterfly' | 'vertical';
 
@@ -1342,9 +1345,11 @@ export default function QuantSuiteView() {
         if (!(exps.length >= 1 && spotPrice > 0)) return null;
         return (
           <div className="border-t border-[var(--border)] pt-4" id="quant-suite-gex-surface">
-            <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-              <GexSurface3D expiries={exps} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
-            </Suspense>
+            <LazyMount minHeight={300}>
+              <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
+                <GexSurface3D expiries={exps} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
+              </Suspense>
+            </LazyMount>
           </div>
         );
       })()}
@@ -1352,9 +1357,11 @@ export default function QuantSuiteView() {
       {/* Implied volatility surface (3D) — real front smile + Heston forward-variance term MODEL over DTE */}
       {optionChain.length >= 4 && spotPrice > 0 && dteD > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-iv-surface">
-          <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-            <IvSurface3D chain={optionChain} spot={spotPrice} frontDteDays={dteD} decimals={activeAsset.decimals} ticker={activeTicker} />
-          </Suspense>
+          <LazyMount minHeight={300}>
+            <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
+              <IvSurface3D chain={optionChain} spot={spotPrice} frontDteDays={dteD} decimals={activeAsset.decimals} ticker={activeTicker} />
+            </Suspense>
+          </LazyMount>
         </div>
       )}
 

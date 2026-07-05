@@ -1118,33 +1118,6 @@ export function DiscoveryView({
           </div>
         </div>
 
-        {/* Sample cockpit statistics (illustrative, not a live market reading) */}
-        <div className="flex items-center gap-5 flex-wrap text-left text-[10px] md:border-l md:pl-5 border-[var(--border)]">
-          <div className="space-y-0.5">
-            <span className="text-[9.5px] text-[var(--text-tertiary)] uppercase block tracking-wider font-extrabold">Dealer Support</span>
-            <span className="text-[var(--success)] font-bold block font-mono">
-              +{globalGex.toFixed(1)}M
-            </span>
-          </div>
-          <div className="space-y-0.5">
-            <span className="text-[9.5px] text-[var(--text-tertiary)] uppercase block tracking-wider font-extrabold">Model Accuracy</span>
-            <span className={`font-mono font-bold block ${c_textWhite}`}>
-              {brierScore.toFixed(4)}
-            </span>
-          </div>
-          <div className="space-y-0.5">
-            <span className="text-[9.5px] text-[var(--text-tertiary)] uppercase block tracking-wider font-extrabold">Scan Rate</span>
-            <span className="text-[var(--info)] font-bold block font-mono">
-              {scanRate.toFixed(1)}/s
-            </span>
-          </div>
-          <div className="w-full md:w-auto md:basis-full">
-            <span className="text-[8.5px] text-[var(--text-tertiary)] uppercase tracking-wider font-bold tabular-nums">
-              Sample · as of {formatTime(metricsAsOf)}
-            </span>
-          </div>
-        </div>
-
       </div>
 
       {/* 2. CONTROLS BAR (Segmented Selection, Filters, Search) */}

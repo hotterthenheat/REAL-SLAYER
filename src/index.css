@@ -1,4 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght=0,300;0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:ital,wght=0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&family=Rubik:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800&display=swap');
+/* One family: JetBrains Mono. The terminal is intentionally mono-first — Inter,
+   Space Grotesk and Rubik were imported but never rendered (the @theme --font-sans
+   resolves to JetBrains Mono and wins the cascade), so they're dropped: 4 font
+   downloads → 1, a real first-paint win, with zero visual change. */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -82,7 +86,10 @@ html, body, #root {
      1080p → 1440p → 4K without stretching or blur. Metrics use tabular-nums
      for fast, aligned scanning of trading numbers.
      ==================================================================== */
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  /* Mono-first terminal identity: sans and mono are the same JetBrains Mono stack so
+     the .sv-h-* heading classes render exactly what ships (the @theme value already
+     wins the cascade; this just makes the token honest). */
+  --font-sans: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
   --fs-h-xl: clamp(1.5rem, 1.05rem + 1.3vw, 2.4rem);
   --fs-h-l:  clamp(1.25rem, 1.0rem + 0.8vw, 1.8rem);
@@ -214,7 +221,6 @@ body {
   --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --font-display: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-rubik: "Rubik", sans-serif;
 
   /* High Density Theme Custom Color Mappings — dark greys collapse to the deep-ink base
      (#0A0A0A), never pure #000000, so bg-black / bg-zinc-* utilities honor the theme rule. */
@@ -497,6 +503,21 @@ div:hover > svg > .animated-svg-border-rect {
 .animate-fadeIn {
   animation: fadeIn 0.65s var(--ease-out-expo) both;
 }
+
+/* Skeleton shimmer — a translucent highlight swept via transform (GPU-composited,
+   no per-frame repaint). Applied by the Skeleton primitive for a "premium loading"
+   read instead of a flat opacity pulse. Respects reduced-motion. */
+@keyframes skShimmer { 100% { transform: translateX(100%); } }
+.sk-shimmer { position: relative; overflow: hidden; }
+.sk-shimmer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text-primary) 8%, transparent), transparent);
+  animation: skShimmer 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .sk-shimmer::after { animation: none; } }
 
 /* Staggered children reveal — drop .stagger-children on any container */
 .stagger-children > * {

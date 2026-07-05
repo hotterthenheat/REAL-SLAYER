@@ -157,6 +157,10 @@ export default function App() {
   // We stamp every data frame and, if the stream goes quiet, flip to a distinct 'stale' state so the
   // UI can never keep flashing "Live" over frozen prices (a data-integrity failure, not just a UX one).
   const lastMsgRef = useRef<number>(0);
+  // Monotonic "a real SSE frame has arrived" flag. Stays false only while the backend
+  // is silent; a DEV/preview-only synthetic feed watches it and permanently stands down
+  // the instant a genuine frame lands (see the SSE effect below).
+  const realFrameSeenRef = useRef<boolean>(false);
   const [staleSec, setStaleSec] = useState(0);
 
   const handleSimulateTier = (targetTier: string, targetTierNum: number) => {
@@ -531,11 +535,13 @@ export default function App() {
 
   // Fetch session on load
   const fetchSession = async () => {
+    let gotSession = false;
     try {
       const res = await fetch('/api/auth/session');
       if (res.ok) {
         const data = await res.json();
-        
+        gotSession = true;
+
         // Restore avatar from local storage if server memory wiped it
         if (data.authenticated) {
           const localAvatar = localStorage.getItem('slayer_avatar');
@@ -572,6 +578,19 @@ export default function App() {
       if (e?.message !== 'Failed to fetch') {
         console.error('Failed to load session details', e);
       }
+    }
+    // DEV/preview only: if no real session was obtained (no backend → network reject, a
+    // 404, or an HTML SPA-fallback that isn't JSON), the app would hang forever on the
+    // auth loader. Seed a synthetic unlocked session so the frontend is fully explorable
+    // standalone. isLocalDevEnv() is false on any real deployment, so this can never
+    // fabricate auth in production; a real (even unauthenticated) session always wins.
+    if (!gotSession && isLocalDevEnv()) {
+      setSession(prev => prev ?? ({
+        authenticated: true,
+        access_tier: 'lifetime',
+        username: 'Sandbox Preview',
+        is_super_admin: false,
+      } as any));
     }
   };
 
@@ -640,6 +659,14 @@ export default function App() {
     eventSource.onopen = () => { setFeedStatus('live'); lastMsgRef.current = Date.now(); };
     let latestPayload: any = null;
     let flushInterval: any = null;
+    // DEV/preview-only synthetic-feed handles (armed further down). Declared up front so
+    // onmessage can permanently stand them down the instant a real frame lands.
+    let synthArm: any = null;
+    let synthInterval: any = null;
+    const stopSynthetic = () => {
+      if (synthArm) { clearTimeout(synthArm); synthArm = null; }
+      if (synthInterval) { clearInterval(synthInterval); synthInterval = null; }
+    };
 
     eventSource.onmessage = (event) => {
       try {
@@ -654,6 +681,10 @@ export default function App() {
           return;
         }
         latestPayload = data;
+        // A genuine frame arrived → the real feed owns the stream from here. Permanently
+        // retire the synthetic fallback (monotonic; a single real frame wins forever).
+        realFrameSeenRef.current = true;
+        stopSynthetic();
         // True heartbeat: a real data frame arrived → stamp it and clear any stale/offline state.
         lastMsgRef.current = Date.now();
         setFeedStatus(s => (s === 'live' ? s : 'live'));
@@ -685,6 +716,45 @@ export default function App() {
     };
     flushInterval = requestAnimationFrame(flushData);
 
+    // DEV/preview fallback: when no backend answers, no real frame ever lands and the app
+    // would sit on the "Loading live market data" gate forever. After a short silence we
+    // drive a browser-safe synthetic feed through the SAME updateFromSSE reducer, so every
+    // page renders with live-looking data. It yields permanently to the real feed via
+    // realFrameSeenRef (checked before every emit), and is dynamically imported so it is
+    // never bundled or executed on a real deployment (isLocalDevEnv() is false there).
+    if (isLocalDevEnv()) {
+      synthArm = setTimeout(async () => {
+        if (cancelled || realFrameSeenRef.current) return;
+        let feed: { nextFrame: (sel: any) => any };
+        try {
+          const mod = await import('./lib/syntheticFeed');
+          feed = mod.createSyntheticFeed();
+        } catch (err) {
+          console.error('[Synthetic feed] failed to load', err);
+          return;
+        }
+        if (cancelled || realFrameSeenRef.current) return;
+        const emit = () => {
+          if (cancelled || realFrameSeenRef.current) { stopSynthetic(); return; }
+          try {
+            updateFromSSE(feed.nextFrame({
+              asset: selectedAsset,
+              timeframe: selectedTimeframe,
+              isCall: selectedOptionType === 'C',
+              strike: selectedStrike,
+              positionOpen: isPositionOpen,
+            }));
+            // Deliberately do NOT flip feedStatus to 'live' — these frames are synthetic.
+            // The data_source badge (SANDBOX_SYNTHETIC) carries the honesty; the transport
+            // chip stays truthful about there being no live backend.
+          } catch (err) {
+            console.error('[Synthetic feed] frame error', err);
+          }
+        };
+        emit();
+        synthInterval = setInterval(emit, 1000);
+      }, 2500);
+    }
 
     eventSource.onerror = (err) => {
       console.error('[SkyVision Client] Stream Connection Error', err);
@@ -693,6 +763,7 @@ export default function App() {
 
     return () => {
       cancelled = true;
+      stopSynthetic();
       eventSource.close();
       if (flushInterval) cancelAnimationFrame(flushInterval);
       clearInterval(heartbeat);

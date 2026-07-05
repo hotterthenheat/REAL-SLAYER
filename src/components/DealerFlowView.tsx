@@ -11,7 +11,6 @@
 import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore } from '../lib/store';
-import { SlayerScoreWidget, VolatilityStateWidget } from './WorkspaceWidgets';
 import PinpointChart from './PinpointChart';
 import { Term } from './ui/Tooltip';
 import { ToggleGroup } from './ui/ToggleGroup';
@@ -29,6 +28,7 @@ import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 import { DealerDynamicsPanel } from './DealerDynamicsPanel';
 import { GexReadCard } from './GexReadCard';
+import { TerminalReadCard } from './TerminalReadCard';
 import { ZeroDtePanel } from './ZeroDtePanel';
 import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
@@ -1138,6 +1138,17 @@ export function DealerFlowView() {
 
       {activeEngineView === 'profile' ? (
         <>
+          {/* ============== PRE-CALCULATED READ (the conclusion, up top) ============== */}
+          {(filteredProfile || profile) && (
+            <TerminalReadCard
+              profile={filteredProfile || profile}
+              candles={chartCandles}
+              ticker={selectedAsset.ticker}
+              decimals={selectedAsset.decimals}
+              isLive={!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC'}
+            />
+          )}
+
           {/* ============== GEX PAGE HEADER (derived from real GEX profile) ============== */}
           <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-2 font-mono">
             <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
@@ -1221,56 +1232,17 @@ export function DealerFlowView() {
                 </div>
               </div>
 
-              {/* Multi-Expiry Toggle segment controller */}
-              <div className="flex items-center gap-3" id="multi-expiry-toggle-control">
-                {isMultiExpiry ? (
-                  <div className="flex items-center gap-2 bg-[var(--success)]/10 border border-[var(--success)]/20 px-2.5 py-1 rounded-md">
-                    <span className="text-[7.5px] font-black text-[var(--success)] uppercase tracking-widest animate-pulse">
-                       MULTI-EXPIRY ACTIVE ({activeExpiries.length} DATES)
-                    </span>
-                    <button
-                      onClick={() => {
-                        setIsMultiExpiry(false);
-                        const firstActive = activeExpiries[0] || 'mon';
-                        setExpiryTab(firstActive as any);
-                      }}
-                      className="text-[7px] font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] uppercase tracking-widest bg-[var(--surface-2)] px-1.5 py-0.5 rounded cursor-pointer border border-[var(--border)] transition-all ml-1"
-                    >
-                      Disable
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <span className="text-[7.5px] font-black text-zinc-500 uppercase tracking-widest hidden md:inline">
-                      EXPIRY SELECTION:
-                    </span>
-                    <div className="flex bg-[var(--surface-2)] border border-[var(--border)] p-0.5 rounded-md text-[9px] font-bold tracking-widest uppercase">
-                      {[
-                        { label: selectedAsset.optionsStyle === 'weekly' ? 'FRONT WEEKLY' : '0DTE', value: selectedAsset.optionsStyle === 'weekly' ? 'weekly-front' : 'mon' },
-                        { label: 'WEEKLY OPEX', value: 'weekly' },
-                        { label: 'AGGREGATED', value: 'aggregated' },
-                      ].map((item) => {
-                        const isActive = expiryTab === item.value;
-                        return (
-                          <button
-                            key={item.label}
-                            onClick={() => {
-                              setExpiryTab(item.value as any);
-                              setShowCustomDropdown(false);
-                            }}
-                            className={`px-3 py-1 rounded cursor-pointer transition-all duration-150 ${
-                              isActive
-                                ? 'bg-[var(--surface-3)] text-[var(--text-primary)] font-black shadow-sm border border-[var(--border-strong)]'
-                                : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                            }`}
-                          >
-                            {item.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
+              {/* Read-only "what's shown" status — the expiry Popover/Sheet up top is the single
+                  control; this only reflects the current selection so the chart header has context. */}
+              <div className="flex items-center gap-2" id="gamma-map-expiry-status">
+                <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] hidden md:inline">Showing</span>
+                <Badge tone={isMultiExpiry ? 'accent' : expiryTab === 'aggregated' ? 'success' : 'warning'} size="sm">
+                  {isMultiExpiry
+                    ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'EXPIRY' : 'EXPIRIES'}`
+                    : expiryTab === 'aggregated'
+                      ? 'ALL DATES'
+                      : (() => { const t = tickerExpirations.find(x => x.id === expiryTab); return t ? `${t.date} · ${t.dteDays}DTE` : 'SELECT'; })()}
+                </Badge>
               </div>
             </div>
             <DealerFlowMap profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
@@ -1393,12 +1365,6 @@ export function DealerFlowView() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" id="hedging-side-insights">
             <GexReadCard />
             <ZeroDtePanel />
-          </div>
-
-          {/* ============== INSTITUTIONAL MICRO-STRUCTURE METRICS ============== */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 overflow-hidden" id="dealerflow-displacement-row">
-            <SlayerScoreWidget />
-            <VolatilityStateWidget />
           </div>
 
           {/* ============== DEALER DYNAMICS (Supplementary details for profile view) ============== */}

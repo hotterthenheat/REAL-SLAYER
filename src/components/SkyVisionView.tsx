@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore, ContractState } from '../lib/store';
-import PinpointTerminal from './PinpointTerminal';
-import PinpointChart from './PinpointChart';
+import { InteractiveChart } from './InteractiveChart';
 import { StrikeGravityPanel } from './StrikeGravityPanel';
 import { TradePlanCard } from './TradePlanCard';
 import { ASSET_LIST, optionExpiryLabel } from '../data';
@@ -375,21 +374,28 @@ export function SkyVisionView() {
     }
   }, [activeRecommendation, selectedOptionType]);
 
-  // Real-time custom targets list
-  const profitTargetsList = useMemo(() => {
-    return [
-      { id: 't1', label: 'Take Profit 1', optionValue: activePrice * 1.3, expectedPnL: '+30%', status: tradeHealthValue > 70 ? 'HIT TP 1' : 'IN PROGRESS' },
-      { id: 't2', label: 'Take Profit 2', optionValue: activePrice * 1.8, expectedPnL: '+80%', status: tradeHealthValue > 85 ? 'HIT TP 2' : 'IN PROGRESS' },
-      { id: 't3', label: 'Take Profit 3', optionValue: activePrice * 2.5, expectedPnL: '+150%', status: tradeHealthValue > 95 ? 'HIT TP 3' : 'PENDING' },
-      { id: 't4', label: 'Take Profit 4', optionValue: activePrice * 3.5, expectedPnL: '+250%', status: 'PENDING' },
-    ];
-  }, [activePrice, tradeHealthValue]);
 
   if (!isExpanded) {
-    // SkyVision's first page is the PinPoint GEX Flow Map (candles + GEX-node
-    // heatmap, the strike x expiry heatmap, and the multi-ticker flow board),
-    // reusing the same self-contained component as the terminal chart.
-    return <PinpointTerminal ticker={selectedAsset.ticker} />;
+    return (
+      <div className="w-full text-[var(--text-secondary)] font-mono select-none antialiased pt-2 relative flex flex-col xl:flex-row xl:items-start gap-4">
+        {/* Main: the opportunity scanner. Sky Vision moves to a sticky side rail (right on wide
+            screens, top on mobile) so its dense intel reads as a vertical card, not a wide strip. */}
+        <div className="flex-1 min-w-0 order-2 xl:order-1">
+          <DiscoveryView
+            systemScore={serverState?.system_score}
+            discovery={serverState?.discovery}
+            onSelectContract={(asset, strike, isCall) => {
+              setSelectedAsset(asset);
+              setSelectedStrike(strike);
+              setSelectedOptionType(isCall ? 'C' : 'P');
+            }}
+          />
+        </div>
+        <aside className="w-full xl:w-[380px] shrink-0 order-1 xl:order-2 xl:sticky xl:top-2 xl:self-start">
+          <SkyVisionV2Panel compact />
+        </aside>
+      </div>
+    );
   }
 
   return (
@@ -622,28 +628,9 @@ export function SkyVisionView() {
 
           </div>
 
-          {/* PROFIT TARGETS */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-            {profitTargetsList.map((tgt) => {
-              const isHit = tgt.status.includes('HIT TP');
-              return (
-                <div
-                  key={tgt.id}
-                  className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg flex items-center justify-between text-left"
-                >
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-[var(--text-tertiary)] tracking-wider block font-black uppercase">{tgt.label}</span>
-                    <h4 className={`text-[10px] font-black uppercase ${isHit ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>{tgt.status}</h4>
-                    <span className="text-[10px] text-[var(--text-secondary)] block font-mono">Target <span className="font-bold text-[var(--text-primary)] tabular-nums">${tgt.optionValue.toFixed(2)}</span></span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-lg font-black text-[var(--success)] block tabular-nums">{tgt.expectedPnL}</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-mono tracking-wider">Expected</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          {/* The real, reasoned target ladder lives in TradePlanCard (EMA / sweep / strike /
+              GEX-wall derived). The old fixed-multiple "Take Profit 1–4" PnL cards were
+              formulaic filler and were removed. */}
 
           {/* STRIKE GRAVITY MAP — dealer-pressure ranking & zones */}
           <StrikeGravityPanel />
@@ -1022,7 +1009,25 @@ export function SkyVisionView() {
             transition={{ duration: 0.3, ease: "easeInOut" }}
             className="w-full relative"
           >
-            <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={isChartExpanded ? 480 : 190} />
+            <InteractiveChart
+              candles={chartCandles}
+              displacementZones={chartDisplacementZones}
+              fvgs={chartFvgs}
+              liquidityEvents={chartLiquidityEvents}
+              tape={chartTape}
+              timeframe={selectedTimeframe}
+              selectedTicker={selectedAsset.ticker}
+              showFVGs={true}
+              showLiquiditySweeps={true}
+              showDisplacementEvents={true}
+              watermarkText="LIVE CHART"
+              gexLevels={serverState?.deep_intelligence?.dealer_metrics ? {
+                callWall: serverState.deep_intelligence.dealer_metrics.callWall,
+                putWall: serverState.deep_intelligence.dealer_metrics.putWall,
+                gammaFlip: serverState.deep_intelligence.dealer_metrics.flipLevel,
+                magnet: serverState.deep_intelligence.dealer_metrics.magnetStrike,
+              } : undefined}
+            />
           </motion.div>
         </div>
 

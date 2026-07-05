@@ -51,12 +51,13 @@ export function Switch({ checked, onChange, label, ariaLabel, tone = 'accent', s
       }}
     >
       <span
-        className="absolute top-1/2 rounded-full shadow-sm transition-[left] duration-200"
+        className="absolute top-1/2 rounded-full shadow-sm transition-transform duration-200"
         style={{
           width: dims.knob,
           height: dims.knob,
-          left: checked ? dims.on : dims.off,
-          transform: 'translateY(-50%)',
+          left: dims.off,
+          // GPU-composited slide (translateX) instead of animating the layout `left`.
+          transform: `translateY(-50%) translateX(${checked ? dims.on - dims.off : 0}px)`,
           background: checked ? on : 'var(--text-tertiary)',
         }}
       />

@@ -11,7 +11,7 @@ export function Skeleton({ className = '', style }: { className?: string; style?
     <div
       aria-hidden="true"
       style={style}
-      className={`animate-pulse rounded-md bg-[var(--surface-2)] ${className}`}
+      className={`sk-shimmer rounded-md bg-[var(--surface-2)] ${className}`}
     />
   );
 }
