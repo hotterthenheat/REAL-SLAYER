@@ -62,15 +62,16 @@ import {
 } from '../lib/quantSuite';
 import { ChainContract } from '../lib/v11Math';
 
-// Lazy-loaded: pulls in three.js. Only fetched when a multi-expiry GEX surface
-// is actually rendered, keeping the heavy 3D vendor chunk off the page's load.
-const IvSurface3D = lazy(() => import('./IvSurface3D').then(m => ({ default: m.IvSurface3D })));
+// Lazy-loaded: pulls in three.js only when a 3D surface actually renders, keeping the
+// heavy 3D vendor chunk off the page's initial load. The canonical brutalist renderer
+// fronts the always-on MODEL-MODE IV surface hero so Volatility Geometry never opens on a
+// blank panel, live chain or not.
+const QuantSurface3D = lazy(() => import('./quant/QuantSurface3D'));
 // Dealer Mechanics moved here from the Pinpoint GEX page — the brutalist 3D dealer
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
-// Bounds live WebGL contexts: off-screen 3D surfaces unmount (and free their GL
-// context) so a page of surfaces never trips the browser's context limit → blank panels.
-import LazyMount from './quant/LazyMount';
+import { ivSurfaceGrid, ivStrikeDomain, type SurfaceProfile } from './quant/dealerSurfaces';
+import type { SurfaceMarker } from './quant/QuantSurface3D';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 
@@ -361,6 +362,29 @@ export default function QuantSuiteView() {
   const expectedMovePts = rndResult.stdDev;
   const expectedMovePct = (rndResult.stdDev / spotPrice) * 100;
 
+  // ── Volatility Geometry HERO: an always-available model IV surface (strike × tenor ×
+  // IV), anchored on the live expected move. It never blanks — with no live chain it is a
+  // clean MODEL-MODE surface; with a live chain it is anchored on live dispersion. ──
+  const ivHeroProfile: SurfaceProfile = useMemo(() => ({
+    spot: spotPrice,
+    expectedMovePct,
+    gammaFlip: gexProfile?.gammaFlip,
+    callWall: gexProfile?.callWall,
+    putWall: gexProfile?.putWall,
+  }), [spotPrice, expectedMovePct, gexProfile?.gammaFlip, gexProfile?.callWall, gexProfile?.putWall]);
+  const ivHeroGrid = useMemo(() => ivSurfaceGrid(ivHeroProfile), [ivHeroProfile]);
+  const ivHeroDomain = useMemo(() => ivStrikeDomain(ivHeroProfile), [ivHeroProfile]);
+  const ivHeroMarkers: SurfaceMarker[] = useMemo(() => ([
+    spotPrice ? { at: spotPrice, kind: 'spot' as const, label: 'Spot' } : null,
+    gexProfile?.callWall != null ? { at: gexProfile.callWall, kind: 'callWall' as const, label: 'Call Wall' } : null,
+    gexProfile?.putWall != null ? { at: gexProfile.putWall, kind: 'putWall' as const, label: 'Put Wall' } : null,
+  ].filter(Boolean) as SurfaceMarker[]), [spotPrice, gexProfile?.callWall, gexProfile?.putWall]);
+  const ivHeroSliceCol = useMemo(() => {
+    if (!ivHeroDomain || !spotPrice || !ivHeroGrid[0]) return null;
+    const cols = ivHeroGrid[0].length;
+    return Math.max(0, Math.min(cols - 1, Math.round(((spotPrice - ivHeroDomain[0]) / (ivHeroDomain[1] - ivHeroDomain[0])) * (cols - 1))));
+  }, [ivHeroDomain, spotPrice, ivHeroGrid]);
+
   // ===================================
   // 5. DETERMINISTIC SHOCK MATRIX
   // ===================================
@@ -626,6 +650,46 @@ export default function QuantSuiteView() {
           >
             {/* TAB 2: VOLATILITY */}
             {activeSubTab === 'volgeo' && (
+              <>
+              {/* HERO — the 3D implied-volatility surface (strike × tenor × IV). Always on,
+                  never blank: MODEL MODE with no live chain, live-anchored otherwise. */}
+              <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg overflow-hidden mb-4">
+                <div className="flex items-center justify-between px-4 pt-3 pb-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Layers className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />
+                    <span className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--text-primary)] truncate">Implied Volatility Surface · {activeTicker}</span>
+                    <span className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] shrink-0">3D · WebGL</span>
+                  </div>
+                  <span className="font-mono text-[8px] uppercase tracking-widest text-[var(--text-tertiary)] hidden sm:block">strike × expiry × σ</span>
+                </div>
+                <div className="px-3 pb-3">
+                  <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[#0a0a0b]">
+                    <Suspense fallback={<div className="h-[460px] w-full animate-pulse bg-[var(--surface-2)]" />}>
+                      <QuantSurface3D
+                        grid={ivHeroGrid}
+                        ramp="sequential"
+                        height={460}
+                        axisLabels={['strike', 'tenor', 'IV']}
+                        xDomain={ivHeroDomain}
+                        xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                        valueFormat={(v) => `${(v * 100).toFixed(1)}%`}
+                        markers={ivHeroMarkers}
+                        floorHeatmap
+                        legend
+                        dataState={isLiveData ? 'live' : 'model'}
+                        sliceCol={ivHeroSliceCol}
+                        sliceRow={0}
+                      />
+                    </Suspense>
+                  </div>
+                  <div className="mt-2 flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)]/50 px-3 py-2">
+                    <Activity className="mt-0.5 h-3 w-3 shrink-0 text-[var(--accent-color)]" />
+                    <p className="font-mono text-[10px] leading-relaxed text-[var(--text-tertiary)]">
+                      Model IV surface anchored on the live 1σ expected move (±{expectedMovePct.toFixed(2)}%). X = strike, Z = tenor (near → far), Y/colour = implied vol — blue calm, red stressed. Put-side lift is skew; the U across strikes is the smile. The lit ridge is the ATM term structure; the front row is the near-expiry smile. The real per-strike front smile is charted below.
+                    </p>
+                  </div>
+                </div>
+              </div>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col gap-4">
                   <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
@@ -660,13 +724,14 @@ export default function QuantSuiteView() {
                   <VolConePanel cone={volCone} atmIv={defaultIv} realizedVol={volSuite.yangZhang} ticker={activeTicker} live={isLiveData} />
                 </div>
               </div>
+              </>
             )}
 
             {/* §2 DEALER MECHANICS GEOMETRY — real exposure surfaces (Gamma/Vanna/Charm) + edge */}
             {activeSubTab === 'mechanics' && (
               <div className="space-y-5">
                 <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-                  <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} />
+                  <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} live={isLiveData} />
                 </Suspense>
                 {/* Quant edge — RND / VRP / skew / scenario / Kelly / dealer clock */}
                 <QuantEdgePanel />
@@ -730,16 +795,10 @@ export default function QuantSuiteView() {
       {/* GexSurface3D removed — the Dealer Mechanics Gamma surface (strike × tenor × netGEX)
           in DealerMechanicsDashboard is the single canonical gamma surface now. */}
 
-      {/* §1 Volatility Geometry — 3D IV surface: real front smile + Heston forward-variance term over DTE */}
-      {activeSubTab === 'volgeo' && optionChain.length >= 4 && spotPrice > 0 && dteD > 0 && (
-        <div className="border-t border-[var(--border)] pt-4" id="quant-suite-iv-surface">
-          <LazyMount minHeight={300}>
-            <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-              <IvSurface3D chain={optionChain} spot={spotPrice} frontDteDays={dteD} decimals={activeAsset.decimals} ticker={activeTicker} />
-            </Suspense>
-          </LazyMount>
-        </div>
-      )}
+      {/* The 3D IV surface is now the always-on hero at the top of Volatility Geometry
+          (QuantSurface3D + model IV grid); the real per-strike front smile stays as the
+          2D IvSmile above. The old below-fold IvSurface3D (which blanked in headless and
+          only mounted on scroll) is removed — a single canonical 3D IV surface. */}
 
       {/* §3 Distribution & Risk — Monte Carlo: real seeded paths under GBM / jump-diffusion / Heston */}
       {activeSubTab === 'distrib' && spotPrice > 0 && defaultIv > 0 && dteD > 0 && (
