@@ -401,7 +401,7 @@ function AuditTab() {
               <td className="p-3 text-[var(--text-tertiary)] tabular-nums">{e.ip_address}</td>
             </tr>
           ))}
-          {entries.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[var(--text-tertiary)] uppercase tracking-widest text-[10px]">No audit entries yet</td></tr>}
+          {entries.length === 0 && <tr><td colSpan={6} className="p-8 text-center text-[var(--text-tertiary)] text-[10px] leading-relaxed">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here automatically.</td></tr>}
         </tbody>
       </table>
     </div>
@@ -460,7 +460,7 @@ function CouponsTab() {
                 <td className="p-3 text-[var(--text-tertiary)]">{c.expires_at || 'never'}</td>
               </tr>
             ))}
-            {coupons.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-[var(--text-tertiary)] uppercase tracking-widest text-[10px]">No coupons yet</td></tr>}
+            {coupons.length === 0 && <tr><td colSpan={5} className="p-8 text-center text-[var(--text-tertiary)] text-[10px] leading-relaxed">No coupons created yet. Generate one above and it will appear here with its redemption status.</td></tr>}
           </tbody>
         </table>
       </div>
