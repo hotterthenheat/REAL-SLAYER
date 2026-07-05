@@ -144,6 +144,31 @@ export default function SlayerIntro({
               </button>
             </div>
 
+            {/* Core workflow strip — the one path the whole product is organised around, each
+                step jumps straight to the page that owns it. */}
+            <div className="mt-8 flex flex-wrap items-center gap-1.5">
+              {([
+                { n: 1, label: 'Scan', sub: 'SkyVision', tab: 'skyvision' },
+                { n: 2, label: 'Confirm dealer structure', sub: 'Pinpoint GEX', tab: 'pinpoint' },
+                { n: 3, label: 'Validate risk', sub: 'Quant Lab', tab: 'quant' },
+                { n: 4, label: 'Track result', sub: 'Trade History', tab: 'auditor' },
+              ] as const).map((s, i, arr) => (
+                <div key={s.n} className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => onEnterApp(s.tab)}
+                    className="group flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 text-left transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[9px] font-black tabular-nums text-[var(--text-tertiary)] group-hover:text-[var(--accent-color)]">{s.n}</span>
+                    <span className="leading-tight">
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-[var(--text-primary)]">{s.label}</span>
+                      <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">{s.sub}</span>
+                    </span>
+                  </button>
+                  {i < arr.length - 1 && <span className="text-[var(--text-tertiary)] text-[10px]">→</span>}
+                </div>
+              ))}
+            </div>
+
             {/* Honest, prop-derived stats */}
             <div className="grid grid-cols-3 gap-3 sm:gap-6 mt-12 w-full max-w-md border-t border-[var(--border)] pt-6">
               <div>
