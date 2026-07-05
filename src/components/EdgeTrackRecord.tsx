@@ -19,6 +19,7 @@ import { summarize, ScoredRead } from '../lib/edgeTracker';
 import { Candle } from '../types';
 import { Target, ChevronDown } from 'lucide-react';
 import { CalibrationCurve } from './CalibrationCurve';
+import { DataStateBadge } from './ui/DataStateBadge';
 
 interface Props {
   profile: GexProfileData;
@@ -70,9 +71,6 @@ export function EdgeTrackRecord({ profile, ticker, candles, provenance }: Props)
   }, [version, provenance]);
 
   const here = rec.byRegime.find(b => b.regime === outlook.regime);
-  const badge = provenance === 'live'
-    ? { t: 'LIVE', c: 'var(--success)' }
-    : { t: 'MODEL MODE', c: 'var(--warning)' };
 
   // Calibration chip — how reads in the LIVE read's confidence band have ACTUALLY resolved, so the
   // trader knows whether to trust this confidence number instead of taking it on faith. Verdict:
@@ -93,7 +91,12 @@ export function EdgeTrackRecord({ profile, ticker, candles, provenance }: Props)
       <div className="flex items-center gap-2 px-3 h-8 border-b border-[var(--border)]">
         <Target className="w-3.5 h-3.5" style={{ color: 'var(--accent-color)' }} />
         <span className="text-[10px] font-black tracking-wider uppercase text-[var(--text-primary)] min-w-0 truncate">Edge · Track Record</span>
-        <span className="ml-auto px-1.5 py-0.5 rounded text-[8px] font-mono font-black uppercase tracking-widest border" style={{ color: badge.c, borderColor: `color-mix(in srgb, ${badge.c} 40%, transparent)` }} title={provenance === 'model' ? 'Track record on simulated data — not a live record' : 'Track record on live data'}>{badge.t}</span>
+        <DataStateBadge
+          state={provenance === 'live' ? 'live' : 'model'}
+          label={provenance === 'live' ? 'Live' : undefined}
+          className="ml-auto"
+          title={provenance === 'model' ? 'Track record on simulated data — not a live record' : 'Track record on live data'}
+        />
         {scopedN > 0 && (
           <button onClick={() => setExpanded(e => !e)} className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors shrink-0" title={expanded ? 'Hide calibration curve' : 'Show calibration curve'} aria-label="Toggle calibration curve">
             <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? 'rotate-180' : ''}`} />

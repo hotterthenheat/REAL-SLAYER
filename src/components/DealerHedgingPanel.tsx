@@ -14,6 +14,7 @@ import { useMemo, useRef } from 'react';
 import { simulateDealerHedging, type HedgeStrike } from '../lib/dealerHedging';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
 import { useStrikeSync, StrikePublisher } from './quant/crosshairSync';
+import { DataStateBadge } from './ui/DataStateBadge';
 
 interface DealerHedgingPanelProps {
   strikes: HedgeStrike[];
@@ -79,9 +80,7 @@ export function DealerHedgingPanel({ strikes, spot, emPct, decimals = 0, ticker,
         <div className="flex items-center gap-2">
           <ChartTools name={`dealer-hedging-${ticker || 'spx'}`} svgRef={svgRef} fullscreenRef={wrapRef}
             csv={() => ({ headers: ['price', 'net_gamma_$', 'cum_hedge_$_per_pct', 'regime'], rows: r.nodes.map((n) => [n.price.toFixed(2), n.gammaDollar.toFixed(0), n.cumHedge.toFixed(0), n.regime]) })} />
-          <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={live
-            ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
-            : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}>{live ? 'LIVE γ' : 'MODEL MODE'}</span>
+          <DataStateBadge state={live ? 'live' : 'model'} label={live ? 'Live γ' : undefined} />
         </div>
       </div>
 
