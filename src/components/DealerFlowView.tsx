@@ -22,8 +22,10 @@ import { LiveValue } from './ui/LiveValue';
 // Lazy-loaded: this is the ONLY consumer of three.js (~470kb) + recharts (~248kb).
 // Deferring it keeps those vendor chunks out of the GEX page's initial load — they
 // fetch on demand the first time the 3D physics panel is actually opened.
-const InstitutionalPhysicsDashboard = lazy(() =>
-  import('./InstitutionalPhysicsDashboard').then(m => ({ default: m.InstitutionalPhysicsDashboard })));
+// Dealer Mechanics rebuilt to Directive 08 — brutalist Three.js surfaces, no cinematic
+// lighting. Lazy so three.js stays out of the initial bundle.
+const DealerMechanicsDashboard = lazy(() =>
+  import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
 // React Flow is only needed on the Dealer Mechanics sub-view — lazy so it (and its
 // CSS) stay out of the initial bundle.
 const DealerPositioningNetwork = lazy(() =>
@@ -1404,7 +1406,7 @@ export function DealerFlowView() {
             <DealerPositioningNetwork profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
           </Suspense>
           <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-            <InstitutionalPhysicsDashboard
+            <DealerMechanicsDashboard
               profile={filteredProfile || profile}
               ticker={selectedAsset.ticker}
               decimals={selectedAsset.decimals}
