@@ -27,6 +27,7 @@ import { ZeroDtePanel } from './ZeroDtePanel';
 import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
 import { PanelSkeleton } from './PanelSkeleton';
+import { PinpointTrackButton } from './PinpointTrackButton';
 import {
   Waves,
   Crosshair,
@@ -937,6 +938,11 @@ export function DealerFlowView() {
             <FeedChip feed={filteredProfile?.feed || profile?.feed} />
             <span className="hidden sm:inline text-[9px] font-mono font-black text-[var(--text-tertiary)] uppercase tracking-widest shrink-0">{selectedTimeframe}</span>
           </div>
+          <PinpointTrackButton
+            spot={filteredProfile?.spot}
+            gammaFlip={filteredProfile?.gammaFlip}
+            feedLive={(filteredProfile?.feed || profile?.feed) === 'LIVE_TRADIER' || (filteredProfile?.feed || profile?.feed) === 'LIVE_POLYGON'}
+          />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-nowrap lg:items-center gap-2">
