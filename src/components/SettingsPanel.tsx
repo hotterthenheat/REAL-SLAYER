@@ -1373,13 +1373,20 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                               applyTheme(t.id);
                               handleSaveSettings(selectedFont, compactMode, t.id);
                             }}
-                            className={`group relative aspect-square rounded-lg border-2 transition-all ${
+                            className={`group relative aspect-square rounded-lg border-2 overflow-hidden transition-all ${
                               activeTheme === t.id
                                 ? 'border-[var(--accent-color)] scale-110 z-10'
                                 : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
                             }`}
-                            style={{ background: `linear-gradient(135deg, ${t.surface} 0%, ${t.surface} 50%, ${t.accent} 50%, ${t.accent} 100%)` }}
+                            style={{ background: `color-mix(in srgb, ${t.surface} 74%, #000)` }}
                           >
+                            {/* Mini terminal-card preview: panel + accent header bar + text
+                                lines, so the swatch shows what the theme actually looks like. */}
+                            <span className="absolute inset-[3px] rounded-[3px]" style={{ background: t.surface }}>
+                              <span className="absolute left-1 right-1 top-1 h-[3px] rounded-full" style={{ background: t.accent }} />
+                              <span className="absolute left-1 top-[8px] w-1/2 h-[2px] rounded-full" style={{ background: `color-mix(in srgb, ${t.accent} 45%, transparent)` }} />
+                              <span className="absolute left-1 bottom-[3px] w-2/3 h-[2px] rounded-full bg-white/15" />
+                            </span>
                             {activeTheme === t.id && (
                               <span className="absolute inset-0 flex items-center justify-center">
                                 <Check className="w-4 h-4 text-[var(--text-primary)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
