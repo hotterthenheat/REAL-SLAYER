@@ -5,6 +5,7 @@ import {
   STATUS_LABEL, trackModeLabel, type TrackedSetup, type TrackStatus, type TrackStats,
 } from '../lib/trackedSetups';
 import { SectionHeader } from './ui/SectionHeader';
+import { TrackedPnlCurve } from './TrackedPnlCurve';
 
 /**
  * Tracked Setups — the live half of Trade History. Reads the tracking store and shows what
@@ -189,6 +190,9 @@ export function TrackedSetupsPanel() {
         ) : undefined}
       />
 
+      {/* Honest "if you took every callout" equity curve — realized returns only. */}
+      <TrackedPnlCurve live={live} modelSample={modelSample} />
+
       {/* Live vs model/sample — never mixed */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <StatBlock title="Live tracks" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
@@ -198,8 +202,10 @@ export function TrackedSetupsPanel() {
       {active.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Active</span>
-            <span className="text-[9px] font-mono text-[var(--text-tertiary)]">{active.length}</span>
+            <TrendingUp className="w-3 h-3 text-[var(--success)]" />
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Open Positions</span>
+            <span className="text-[9px] font-mono text-[var(--text-tertiary)] tabular-nums">{active.length}</span>
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">· contracts you're in</span>
           </div>
           {active.map(s => <SetupRow key={s.id} s={s} now={now} onCancel={cancel} />)}
         </div>
@@ -208,8 +214,8 @@ export function TrackedSetupsPanel() {
       {resolved.length > 0 && (
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Resolved</span>
-            <span className="text-[9px] font-mono text-[var(--text-tertiary)]">{resolved.length}</span>
+            <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Closed</span>
+            <span className="text-[9px] font-mono text-[var(--text-tertiary)] tabular-nums">{resolved.length}</span>
           </div>
           {resolved.map(s => <SetupRow key={s.id} s={s} now={now} onCancel={cancel} />)}
         </div>
