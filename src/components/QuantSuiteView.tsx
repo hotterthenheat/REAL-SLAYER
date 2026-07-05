@@ -75,6 +75,7 @@ import { ivSurfaceGrid, ivStrikeDomain, type SurfaceProfile } from './quant/deal
 import type { SurfaceMarker } from './quant/QuantSurface3D';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
+import { FactorLabPanel } from './FactorLabPanel';
 
 type StrategyPreset = 'iron_condor' | 'straddle' | 'butterfly' | 'vertical';
 
@@ -739,10 +740,15 @@ export default function QuantSuiteView() {
               </div>
             )}
 
-            {/* §4 FACTOR / STRUCTURE LAB — regime & factor state (HMM / Hurst / OU / vol regimes / PCA) */}
+            {/* §4 FACTOR / STRUCTURE LAB — real cross-asset correlation + PCA + IV smile factors,
+                then the market-state / regime signal grid. */}
             {activeSubTab === 'factor' && (
               <div className="space-y-5">
-                <RegimeMatrixPanel />
+                <FactorLabPanel chain={optionChain} spot={spotPrice} ticker={activeTicker} live={isLiveData} />
+                <div>
+                  <SectionHeader icon={<Activity className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Market State / Regime" />
+                  <RegimeMatrixPanel />
+                </div>
               </div>
             )}
 
