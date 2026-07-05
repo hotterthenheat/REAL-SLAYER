@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from './ui/Button';
 import { Shield, Key, Copy, CheckCircle2, ChevronRight, Download, Info } from 'lucide-react';
 
 export function TwoFactorFlow() {
@@ -125,12 +126,9 @@ export function TwoFactorFlow() {
           </div>
           <div className="text-xs text-[var(--text-tertiary)]">Secure options records and user sessions with MFA.</div>
         </div>
-        <button 
-          onClick={startSetup}
-          className="px-4 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] text-xs font-bold rounded-lg cursor-pointer transition-colors whitespace-nowrap"
-        >
+        <Button variant="primary" onClick={startSetup} className="rounded-lg px-4 whitespace-nowrap">
           Enable 2FA
-        </button>
+        </Button>
       </div>
     );
   }
@@ -162,13 +160,9 @@ export function TwoFactorFlow() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setStep(0)} className="px-4 py-2 text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer">Cancel</button>
-            <button 
-              onClick={handlePasswordSubmit} 
-              disabled={isLoading}
-              className="px-4 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
-            >
+            <Button variant="primary" onClick={handlePasswordSubmit} disabled={isLoading} className="rounded-lg px-4 gap-2">
               {isLoading ? 'Processing...' : 'Verify Password'} <ChevronRight className="w-3 h-3" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -206,12 +200,9 @@ export function TwoFactorFlow() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setStep(0)} className="px-4 py-2 text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer">Cancel Setup</button>
-            <button 
-              onClick={() => setStep(3)} 
-              className="px-4 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-2"
-            >
+            <Button variant="primary" onClick={() => setStep(3)} className="rounded-lg px-4 gap-2">
               Verify Code <ChevronRight className="w-3 h-3" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
@@ -234,13 +225,9 @@ export function TwoFactorFlow() {
           </div>
           <div className="flex justify-end gap-3 pt-2">
             <button onClick={() => setStep(2)} className="px-4 py-2 text-xs font-bold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer">Back</button>
-            <button 
-              onClick={handleVerifyHandshake} 
-              disabled={isLoading}
-              className="px-4 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold transition-colors cursor-pointer disabled:opacity-50 flex items-center gap-2"
-            >
+            <Button variant="primary" onClick={handleVerifyHandshake} disabled={isLoading} className="rounded-lg px-4 gap-2">
               {isLoading ? 'Verifying Handshake...' : 'Verify Pair Code'} <CheckCircle2 className="w-3 h-3" />
-            </button>
+            </Button>
           </div>
         </div>
       )}
