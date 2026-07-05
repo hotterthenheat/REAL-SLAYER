@@ -4,6 +4,7 @@ import { buildGexView } from '../pinpoint/data/gex';
 import StrikeChart from '../pinpoint/components/gex/StrikeChart';
 import type { OverlayMode, StrikeRange } from '../pinpoint/types/gex';
 import type { Timeframe } from '../pinpoint/data/timeframe';
+import { Spinner } from './ui/Spinner';
 
 /**
  * PinpointChart — the compact, chart-only cut of the PinPoint Flow Map: just the
@@ -41,7 +42,7 @@ function PinpointChartInner({ ticker, height = 200, timeframe = '1m', overlay = 
   if (!view || !marketData) {
     return (
       <div className="h-full w-full flex items-center justify-center rounded-md border border-borderSubtle bg-inset">
-        <div className="h-6 w-6 rounded-full border-t-2 border-textSecondary animate-spin" aria-label="Loading chart" />
+        <Spinner size="md" tone="secondary" label="Loading chart" />
       </div>
     );
   }

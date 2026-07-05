@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { ShieldCheck, Lock, Mail, User, Info, Check, X } from 'lucide-react';
 import { useLegal } from './LegalCenter';
+import { Spinner } from './ui/Spinner';
 
 interface ClerkGateProps {
   onSuccess: (userData: any) => void;
@@ -186,7 +187,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
             >
               {isLoading ? (
                 <>
-                  <div className="w-4 h-4 rounded-full border-t-2 border-r-2 border-[var(--surface)] animate-spin" />
+                  <Spinner size="sm" tone="onAccent" label="Verifying" />
                   <span>Verifying...</span>
                 </>
               ) : (
