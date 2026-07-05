@@ -24,6 +24,7 @@ import {
 import { useContractStore } from '../lib/store';
 import { ASSET_LIST } from '../data';
 import { RiskNeutralDistribution } from './RiskNeutralDistribution';
+import { TailRiskMap } from './TailRiskMap';
 import { IvSmile } from './IvSmile';
 import { GreekExposurePanel } from './GreekExposurePanel';
 import { VolConePanel } from './VolConePanel';
@@ -759,6 +760,24 @@ export default function QuantSuiteView() {
             dteDays={dteD}
             ivAtm={defaultIv}
             realizedVol={volSuite.yangZhang}
+            callWall={gexProfile?.callWall}
+            putWall={gexProfile?.putWall}
+            gammaFlip={gexProfile?.gammaFlip}
+            decimals={activeAsset.decimals}
+            ticker={activeTicker}
+            live={isLiveData}
+          />
+        </div>
+      )}
+
+      {/* §3 Distribution & Risk — tail risk read off the same RND: expected-move bands, tail
+          probability map, prob above/below key levels, tail imbalance, scenario cone. */}
+      {activeSubTab === 'distrib' && rndResult.density.length > 2 && spotPrice > 0 && (
+        <div className="border-t border-[var(--border)] pt-4" id="quant-suite-tail-risk">
+          <TailRiskMap
+            rnd={rndResult}
+            spot={spotPrice}
+            dteDays={dteD}
             callWall={gexProfile?.callWall}
             putWall={gexProfile?.putWall}
             gammaFlip={gexProfile?.gammaFlip}
