@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Bell, BellRing, Plus, Trash2, ArrowUp, ArrowDown } from 'lucide-react';
 import type { ArmedAlert, FiredAlert, AlertKind } from '../lib/levelAlerts';
 import { ALERT_LABEL } from '../lib/levelAlerts';
+import { SectionHeader } from './ui/SectionHeader';
 
 /**
  * Level Alerts — arm a chime/toast when spot crosses a dealer level (call wall / put wall / gamma flip
@@ -69,9 +70,12 @@ export function LevelAlertsPanel({ armed, levels, fired, decimals, onToggle, onA
       </div>
       {/* Fired log */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        <div className="flex items-center justify-between px-3 py-1.5 sticky top-0 bg-[var(--surface)]">
-          <span className="text-[8px] font-black tracking-widest uppercase text-[var(--text-tertiary)]">Triggered</span>
-          {fired.length > 0 && <button onClick={onClearFired} className="text-[8px] font-mono uppercase tracking-wider text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] focus:outline-none rounded transition-colors">Clear</button>}
+        <div className="px-3 py-1.5 sticky top-0 bg-[var(--surface)]">
+          <SectionHeader
+            size="sm"
+            label="Triggered"
+            right={fired.length > 0 ? <button onClick={onClearFired} className="text-[8px] font-mono uppercase tracking-wider text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] focus:outline-none rounded transition-colors">Clear</button> : undefined}
+          />
         </div>
         {fired.length === 0 ? (
           <div className="px-3 py-4 text-[9px] font-mono text-[var(--text-tertiary)] text-center">No crossings yet.</div>
