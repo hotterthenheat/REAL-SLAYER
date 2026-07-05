@@ -1,8 +1,8 @@
 import { lazy, Suspense, useMemo, useState } from 'react';
 import { useContractStore } from '../lib/store';
-import { Boxes, Layers, Activity, Waves, RefreshCw, Zap } from 'lucide-react';
+import { Boxes, Waves, Wind, Timer, Layers, RefreshCw, Zap } from 'lucide-react';
 import { LiveValue } from './ui/LiveValue';
-import { gammaSurfaceGrid, ivSurfaceGrid, monteCarloCloud, type SurfaceProfile } from './quant/dealerSurfaces';
+import { exposureSurfaceGrid, ivSurfaceGrid, type ExposureField, type SurfaceProfile } from './quant/dealerSurfaces';
 
 // Directive-08 renderer is lazy so three.js stays off the initial bundle and only one
 // WebGL context is ever live (the active surface).
@@ -16,12 +16,15 @@ interface Props {
   selectionKey?: string;
 }
 
-type SurfaceKey = 'gamma' | 'iv' | 'montecarlo';
+type SurfaceKey = 'gamma' | 'vanna' | 'charm' | 'iv';
 
-const SURFACES: { key: SurfaceKey; label: string; icon: typeof Boxes; axes: [string, string, string]; ramp: 'diverging' | 'sequential'; blurb: string }[] = [
-  { key: 'gamma', label: 'Dealer Gamma', icon: Boxes, axes: ['strike', 'tenor', 'net γ'], ramp: 'diverging', blurb: 'Net dealer gamma by strike × expiry. Red = short-gamma (dealers amplify moves); green = long-gamma (dealers dampen). The slate saddle is the flip.' },
+// Every surface is a real per-strike dealer exposure (or the IV surface) — no decorative
+// or duplicated renders. `field` names the real chain column the exposure surfaces plot.
+const SURFACES: { key: SurfaceKey; label: string; icon: typeof Boxes; field?: ExposureField; axes: [string, string, string]; ramp: 'diverging' | 'sequential'; blurb: string }[] = [
+  { key: 'gamma', label: 'Gamma', icon: Boxes, field: 'netGex', axes: ['strike', 'tenor', 'net γ'], ramp: 'diverging', blurb: 'Net dealer gamma by strike × expiry (real netGex). Red = short-gamma (dealers amplify moves); green = long-gamma (dealers dampen). The slate saddle is the γ-flip.' },
+  { key: 'vanna', label: 'Vanna', icon: Wind, field: 'netVex', axes: ['strike', 'tenor', 'net vanna'], ramp: 'diverging', blurb: 'Net dealer vanna by strike × expiry (real netVex; term structure modelled √t). Where a vol move forces delta re-hedging — the ridge is where a vol spike moves price hardest.' },
+  { key: 'charm', label: 'Charm', icon: Timer, field: 'charmEx', axes: ['strike', 'tenor', 'net charm'], ramp: 'diverging', blurb: 'Net dealer charm by strike × expiry (real charmEx; accelerates near-dated). Delta decay per day — where dealer hedges drift as time passes, strongest into expiry.' },
   { key: 'iv', label: 'Vol Surface', icon: Layers, axes: ['moneyness', 'tenor', 'IV'], ramp: 'sequential', blurb: 'Implied vol by moneyness × tenor. Blue = calm, red = stressed. Put-side lift is skew; the U across strikes is the smile.' },
-  { key: 'montecarlo', label: 'Monte Carlo', icon: Activity, axes: ['time', 'path', 'price'], ramp: 'diverging', blurb: 'GBM price-path cloud fanned over the session. Green finishes above spot, red below — the width is the risk-neutral cone.' },
 ];
 
 function fmtGamma(v: number | undefined): string {
@@ -34,11 +37,11 @@ function fmtGamma(v: number | undefined): string {
 }
 
 /**
- * Dealer Mechanics — rebuilt to Directive 08. One brutalist WebGL surface (the active
- * one only, so a single GPU context is live) fronting a switch across the three
- * whitelist targets — dealer gamma matrix, IV surface, Monte-Carlo cloud — over a clean,
- * responsive strip of the live dealer-physics scalars. No cinematic lighting, no gray
- * blob; the surface reads as a raw mathematical plot on the data-status palette.
+ * Dealer Mechanics — brutalist WebGL exposure geometry (Directive 08). One live GPU
+ * context fronting a switch across four real surfaces — dealer Gamma, Vanna, and Charm
+ * (each a real per-strike exposure by strike × tenor) plus the IV surface — over a clean,
+ * responsive strip of the live dealer-physics scalars. Every surface is mathematically
+ * defined from chain data; nothing is decorative. Raw plot on the data-status palette.
  */
 export function DealerMechanicsDashboard({ profile: external, ticker, decimals = 2, selectionKey = '' }: Props) {
   const serverState = useContractStore((s) => s.serverState);
@@ -59,9 +62,12 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
   // rebuilt at 1Hz. `dataReady` flips false→true once (when gex_profile lands), which
   // triggers exactly one recompute off the live data, then stays stable.
   const dataReady = !!(profile?.spot && profile.spot > 0 && (profile.strikes?.length ?? 0) >= 4);
-  const gammaGrid = useMemo(() => gammaSurfaceGrid(profile), [tkr, refreshKey, dataReady, selectionKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const ivGrid = useMemo(() => ivSurfaceGrid(profile), [tkr, refreshKey, dataReady, selectionKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const mcCloud = useMemo(() => monteCarloCloud(profile), [tkr, refreshKey, dataReady, selectionKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The active exposure grid (gamma/vanna/charm) or the IV grid — computed only for the
+  // surface on screen, snapshot-stable so the WebGL scene isn't rebuilt every tick.
+  const grid = useMemo(
+    () => (active.field ? exposureSurfaceGrid(profile, active.field) : ivSurfaceGrid(profile)),
+    [tkr, refreshKey, dataReady, selectionKey, surface], // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const netGex = profile?.netGex;
   const metrics: { label: string; raw?: number; render: () => string; tone: string; signed?: boolean }[] = [
@@ -114,11 +120,7 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
       {/* The brutalist surface */}
       <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[#0a0a0b]">
         <Suspense fallback={<div className="h-[380px] w-full animate-pulse bg-[var(--surface-2)]" />}>
-          {surface === 'montecarlo' ? (
-            <QuantSurface3D points={mcCloud} ramp={active.ramp} height={380} axisLabels={active.axes} />
-          ) : (
-            <QuantSurface3D grid={surface === 'gamma' ? gammaGrid : ivGrid} ramp={active.ramp} height={380} axisLabels={active.axes} />
-          )}
+          <QuantSurface3D grid={grid} ramp={active.ramp} height={380} axisLabels={active.axes} />
         </Suspense>
       </div>
 

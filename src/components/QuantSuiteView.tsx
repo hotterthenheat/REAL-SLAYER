@@ -70,7 +70,6 @@ const QuantVizLab = lazy(() => import('./quant/QuantVizLab'));
 // Dealer Mechanics moved here from the Pinpoint GEX page — the brutalist 3D dealer
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
-const DealerPositioningNetwork = lazy(() => import('./DealerPositioningNetwork').then(m => ({ default: m.DealerPositioningNetwork })));
 // Bounds live WebGL contexts: off-screen 3D surfaces unmount (and free their GL
 // context) so a page of surfaces never trips the browser's context limit → blank panels.
 import LazyMount from './quant/LazyMount';
@@ -1133,9 +1132,7 @@ export default function QuantSuiteView() {
             {/* TAB: DEALER MECHANICS (moved here from Pinpoint GEX) */}
             {activeSubTab === 'mechanics' && (
               <div className="space-y-5">
-                <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-                  <DealerPositioningNetwork profile={gexProfile as any} decimals={activeAsset.decimals} />
-                </Suspense>
+                {/* Real per-strike dealer exposure geometry: Gamma / Vanna / Charm surfaces + IV. */}
                 <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
                   <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} />
                 </Suspense>
