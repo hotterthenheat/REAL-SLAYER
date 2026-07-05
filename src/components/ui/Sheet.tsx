@@ -1,11 +1,12 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 
 /**
  * Slayer terminal Sheet — a portalled slide-in panel with a dimmed backdrop, for
  * heavier secondary surfaces (a full expiry ladder, filter stacks, detail drawers)
  * where a Popover would be too small. Slides from any edge; closes on Esc, backdrop
- * click, or the built-in header close. Locks body scroll while open.
+ * click, or the built-in header close. Locks body scroll while open, and animates
+ * out (rather than vanishing) when dismissed.
  */
 
 type SheetSide = 'right' | 'left' | 'bottom';
@@ -23,13 +24,32 @@ interface SheetProps {
   className?: string;
 }
 
-const anim: Record<SheetSide, { from: string; base: string; edge: React.CSSProperties }> = {
-  right: { from: 'translateX(16px)', base: 'top-0 right-0 h-full border-l', edge: {} },
-  left: { from: 'translateX(-16px)', base: 'top-0 left-0 h-full border-r', edge: {} },
-  bottom: { from: 'translateY(16px)', base: 'bottom-0 left-0 w-full border-t rounded-t-xl', edge: {} },
+const EXIT_MS = 190;
+
+const anim: Record<SheetSide, { from: string; base: string }> = {
+  right: { from: 'translateX(16px)', base: 'top-0 right-0 h-full border-l' },
+  left: { from: 'translateX(-16px)', base: 'top-0 left-0 h-full border-r' },
+  bottom: { from: 'translateY(16px)', base: 'bottom-0 left-0 w-full border-t rounded-t-xl' },
 };
 
 export function Sheet({ open, onClose, side = 'right', title, description, size, children, footer, className = '' }: SheetProps) {
+  // Keep the panel mounted through its exit animation: `mounted` controls DOM
+  // presence, `leaving` swaps enter → exit keyframes.
+  const [mounted, setMounted] = useState(open);
+  const [leaving, setLeaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setLeaving(false);
+      return;
+    }
+    if (!mounted) return;
+    setLeaving(true);
+    const t = window.setTimeout(() => { setMounted(false); setLeaving(false); }, EXIT_MS);
+    return () => window.clearTimeout(t);
+  }, [open, mounted]);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -39,22 +59,26 @@ export function Sheet({ open, onClose, side = 'right', title, description, size,
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
   }, [open, onClose]);
 
-  if (!open || typeof document === 'undefined') return null;
+  if (!mounted || typeof document === 'undefined') return null;
 
   const cfg = anim[side];
   const sizeStyle: React.CSSProperties = side === 'bottom'
     ? { height: size ?? '70vh', maxHeight: '90vh' }
     : { width: size ?? '380px', maxWidth: '92vw' };
 
+  const backdropAnim = leaving ? 'sheetfadeout 170ms ease-in forwards' : 'sheetfade 140ms ease-out';
+  const panelAnim = leaving ? `sheetout ${EXIT_MS}ms ease-in forwards` : 'sheetin 200ms cubic-bezier(.16,1,.3,1)';
+
   return createPortal(
     <div className="fixed inset-0 z-[9997]" role="dialog" aria-modal="true">
       <div
         onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[2px] animate-[sheetfade_140ms_ease-out]"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+        style={{ animation: backdropAnim }}
       />
       <div
-        style={sizeStyle}
-        className={`absolute ${cfg.base} flex flex-col border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_0_60px_-8px_rgba(0,0,0,0.85)] animate-[sheetin_200ms_cubic-bezier(.16,1,.3,1)] ${className}`}
+        style={{ ...sizeStyle, animation: panelAnim }}
+        className={`absolute ${cfg.base} flex flex-col border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_0_60px_-8px_rgba(0,0,0,0.85)] ${className}`}
       >
         {(title || description) && (
           <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
@@ -76,7 +100,10 @@ export function Sheet({ open, onClose, side = 'right', title, description, size,
       </div>
       <style>{`
         @keyframes sheetfade{from{opacity:0}to{opacity:1}}
+        @keyframes sheetfadeout{from{opacity:1}to{opacity:0}}
         @keyframes sheetin{from{opacity:.4;transform:${cfg.from}}to{opacity:1;transform:none}}
+        @keyframes sheetout{from{opacity:1;transform:none}to{opacity:0;transform:${cfg.from}}}
+        @media (prefers-reduced-motion: reduce){[role=dialog]>div{animation-duration:.01ms!important}}
       `}</style>
     </div>,
     document.body,
