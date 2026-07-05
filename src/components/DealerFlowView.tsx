@@ -29,6 +29,7 @@ import { DealerFlowMap } from './DealerFlowMap';
 import { PanelSkeleton } from './PanelSkeleton';
 import { PinpointTrackButton } from './PinpointTrackButton';
 import { SearchInput } from './ui/SearchInput';
+import { DataStateBadge } from './ui/DataStateBadge';
 import {
   Waves,
   Crosshair,
@@ -65,17 +66,9 @@ const fmtGreek = (v: number) => {
 
 function FeedChip({ feed }: { feed?: string }) {
   const live = feed === 'LIVE_TRADIER' || feed === 'LIVE_POLYGON';
-  return (
-    <span
-      className={`px-1.5 py-0.5 rounded-xs text-[7.5px] font-black tracking-widest uppercase border ${
-        live
-          ? 'bg-[var(--success)] text-black border-black'
-          : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
-      }`}
-    >
-      {live ? (feed === 'LIVE_TRADIER' ? 'LIVE TRADIER' : 'LIVE POLYGON') : 'MODEL MODE'}
-    </span>
-  );
+  // Unified onto the canonical DataStateBadge (MODEL MODE now reads blue like everywhere else);
+  // provider detail is preserved via the label override when a real feed is live.
+  return <DataStateBadge state={live ? 'live' : 'model'} label={live ? (feed === 'LIVE_TRADIER' ? 'Live Tradier' : 'Live Polygon') : undefined} />;
 }
 
 // ----------------------------------------------------------------
@@ -927,13 +920,15 @@ export function DealerFlowView() {
   return (
     <div className={`w-full tabular-data ${activeEngineView === 'terminal' ? 'h-full flex flex-col min-h-0' : 'space-y-6'}`} id="dealerflow-main-workspace-view">
       {/* ============== HEADER STRIP ============== */}
-      <div className={`${theme.cardBg} rounded-lg px-3 py-3 sm:px-5 sm:py-4 flex flex-col lg:flex-row lg:items-center gap-4 justify-between`} id="dealerflow-header-strip">
-        <div className="flex items-center gap-3.5">
-          <div className={`w-9 h-9 rounded-md flex items-center justify-center ${theme.headerIconBg}`}>
-            <Waves className={`w-4.5 h-4.5 ${theme.iconColor}`} />
-          </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <h1 className="text-sm font-black tracking-widest text-[var(--text-primary)] uppercase font-sans whitespace-nowrap">
+      <div className={`${theme.cardBg} rounded-lg px-3 py-3 sm:px-5 sm:py-4 flex flex-col gap-3`} id="dealerflow-header-strip">
+        {/* Row 1: identity + Track. flex-wrap so the data-state badge and the Track control
+            never collide (they overlapped on mobile in the single-row layout). */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${theme.headerIconBg}`}>
+              <Waves className={`w-4.5 h-4.5 ${theme.iconColor}`} />
+            </div>
+            <h1 className="text-sm font-black tracking-widest text-[var(--text-primary)] uppercase font-sans truncate">
               Pinpoint GEX · {selectedAsset.ticker}
             </h1>
             <FeedChip feed={filteredProfile?.feed || profile?.feed} />
@@ -946,7 +941,8 @@ export function DealerFlowView() {
           />
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-nowrap lg:items-center gap-2">
+        {/* Row 2: dealer-level metric rail */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
           {([
             { label: 'Net GEX', value: filteredProfile ? fmtBn(filteredProfile.netGex) : '—', raw: filteredProfile?.netGex, mode: 'directional', tone: (filteredProfile?.netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', term: 'netGex' },
             { label: 'Call Wall', value: filteredProfile?.callWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.callWall, mode: 'neutral', tone: 'var(--success)', term: 'callWall' },
@@ -996,6 +992,7 @@ export function DealerFlowView() {
             onFocus={() => setShowSearch(true)}
             onClick={() => setShowSearch(true)}
             onClear={() => { setSearchQuery(''); setShowSearch(false); }}
+            onKeyDown={(e) => { if (e.key === 'Escape') { setShowSearch(false); (e.target as HTMLInputElement).blur(); } }}
             placeholder="Search ticker or company…"
             variant="accent"
             pulseDot
@@ -1005,10 +1002,10 @@ export function DealerFlowView() {
           {showSearch && (
             <>
               <div 
-                className="fixed inset-0 z-40"
+                className="fixed inset-0 z-[55]"
                 onClick={() => setShowSearch(false)}
               />
-              <div className="absolute top-full mt-2 left-0 sm:left-auto right-0 w-full sm:w-[480px] bg-[var(--surface)] border border-[var(--accent-color)]/40 shadow-[0_0_30px_rgba(0,0,0,0.9)] z-50 max-h-[440px] overflow-y-auto python-scrollbar origin-top-right animate-in fade-in zoom-in-95 duration-150">
+              <div role="listbox" aria-label="Search securities" className="absolute top-full mt-2 left-0 sm:left-auto right-0 w-full sm:w-[480px] max-w-[calc(100vw-1.5rem)] bg-[var(--surface)] border border-[var(--accent-color)]/40 shadow-[0_0_30px_rgba(0,0,0,0.9)] z-[60] max-h-[440px] overflow-y-auto python-scrollbar origin-top-right animate-in fade-in zoom-in-95 duration-150">
                 <div className="sticky top-0 bg-[var(--surface)]/95 backdrop-blur-sm border-b border-[var(--accent-color)]/20 px-3 py-2 z-10 flex justify-between items-center">
                   <span className="text-[9px] font-mono text-[var(--accent-color)] tracking-widest uppercase opacity-80">Search securities</span>
                 </div>
