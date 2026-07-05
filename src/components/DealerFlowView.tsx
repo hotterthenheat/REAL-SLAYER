@@ -222,7 +222,12 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
 
             <div className="flex-1 flex items-center h-full">
               {/* Put side */}
-              <div className="relative group/put flex-1 flex justify-end items-center h-full pr-[1px]">
+              <div
+                tabIndex={0}
+                role="button"
+                aria-label={`Strike ${fmtNum(r.strike)} put — ${typeUpper} ${fmtGreek(r.putValue)}, Open Interest ${(r.putOi ?? 0).toLocaleString()}, Volume ${(r.putVolume ?? 0).toLocaleString()}`}
+                className="relative group/put flex-1 flex justify-end items-center h-full pr-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+              >
                 <div
                   className={`h-[11px] rounded-l-[2px] ${
                     isPutMax
@@ -233,7 +238,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                 />
                 
                 {/* Left Hover details for Put */}
-                <div className={`absolute left-0 top-full mt-0.5 z-30 hidden group-hover/put:block border rounded-[4px] p-2 text-[9px] font-mono whitespace-nowrap shadow-2xl backdrop-blur-md pointer-events-none ring-1 ${
+                <div className={`absolute left-0 top-full mt-0.5 z-30 hidden group-hover/put:block group-focus-within/put:block border rounded-[4px] p-2 text-[9px] font-mono whitespace-nowrap shadow-2xl backdrop-blur-md pointer-events-none ring-1 ${
                   isLight 
                     ? `bg-white text-zinc-650 ${type === 'gex' ? 'border-rose-200/80 ring-rose-500/5' : type === 'dex' ? 'border-amber-200/80 ring-amber-500/5' : 'border-fuchsia-200/80 ring-fuchsia-500/5'}` 
                     : `bg-black/95 text-[var(--success)] ${type === 'gex' ? 'border-rose-500/35 ring-rose-500/10' : type === 'dex' ? 'border-amber-500/35 ring-amber-500/10' : 'border-fuchsia-500/35 ring-fuchsia-500/10'}`
@@ -265,7 +270,12 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
               <div className={`w-px self-stretch ${isLight ? 'bg-[var(--border)]' : 'bg-[var(--border)]'}`} />
 
               {/* Call side */}
-              <div className="relative group/call flex-1 flex justify-start items-center h-full pl-[1px]">
+              <div
+                tabIndex={0}
+                role="button"
+                aria-label={`Strike ${fmtNum(r.strike)} call — ${typeUpper} ${fmtGreek(r.callValue)}, Open Interest ${(r.callOi ?? 0).toLocaleString()}, Volume ${(r.callVolume ?? 0).toLocaleString()}`}
+                className="relative group/call flex-1 flex justify-start items-center h-full pl-[1px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+              >
                 <div
                   className={`h-[11px] rounded-r-[2px] ${
                     isCallMax
@@ -276,7 +286,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                 />
 
                 {/* Right Hover details for Call */}
-                <div className={`absolute right-0 top-full mt-0.5 z-30 hidden group-hover/call:block border rounded-[4px] p-2 text-[9px] font-mono whitespace-nowrap shadow-2xl backdrop-blur-md pointer-events-none ring-1 ${
+                <div className={`absolute right-0 top-full mt-0.5 z-30 hidden group-hover/call:block group-focus-within/call:block border rounded-[4px] p-2 text-[9px] font-mono whitespace-nowrap shadow-2xl backdrop-blur-md pointer-events-none ring-1 ${
                   isLight 
                     ? 'bg-white border-black ring-zinc-550/5 text-zinc-650' 
                     : 'bg-black/95 border-black ring-zinc-850 text-[var(--success)]'
