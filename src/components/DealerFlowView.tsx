@@ -19,20 +19,7 @@ import { Sheet } from './ui/Sheet';
 import { Badge } from './ui/Badge';
 import { Switch } from './ui/Switch';
 import { LiveValue } from './ui/LiveValue';
-// Lazy-loaded: this is the ONLY consumer of three.js (~470kb) + recharts (~248kb).
-// Deferring it keeps those vendor chunks out of the GEX page's initial load — they
-// fetch on demand the first time the 3D physics panel is actually opened.
-// Dealer Mechanics rebuilt to Directive 08 — brutalist Three.js surfaces, no cinematic
-// lighting. Lazy so three.js stays out of the initial bundle.
-const DealerMechanicsDashboard = lazy(() =>
-  import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
-// React Flow is only needed on the Dealer Mechanics sub-view — lazy so it (and its
-// CSS) stay out of the initial bundle.
-const DealerPositioningNetwork = lazy(() =>
-  import('./DealerPositioningNetwork').then(m => ({ default: m.DealerPositioningNetwork })));
 import { IntradayTargetsView } from './IntradayTargetsView';
-import { QuantEdgePanel } from './QuantEdgePanel';
-import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 import { DealerDynamicsPanel } from './DealerDynamicsPanel';
 import { GexReadCard } from './GexReadCard';
 import { TerminalReadCard } from './TerminalReadCard';
@@ -400,7 +387,18 @@ export function DealerFlowView() {
     if (ticker !== selectedAsset.ticker) return null;
     return rawServerState;
   }, [rawServerState, selectedAsset.ticker]);
-  const [activeEngineView, setActiveEngineView] = useState<'profile' | 'physics' | 'targets' | 'terminal'>('profile');
+  // 'physics' (Dealer Mechanics) now lives on the Quant Lab page — see QuantSuiteView.
+  const [activeEngineView, setActiveEngineView] = useState<'profile' | 'targets' | 'terminal'>('profile');
+
+  // Deep-link from the sidebar flyout: apply a `pinpoint:<sub>` intent once, then clear.
+  const subTabIntent = useContractStore(s => s.subTabIntent);
+  const setSubTabIntent = useContractStore(s => s.setSubTabIntent);
+  useEffect(() => {
+    if (!subTabIntent?.startsWith('pinpoint:')) return;
+    const sub = subTabIntent.split(':')[1] as 'profile' | 'targets' | 'terminal';
+    if (['profile', 'targets', 'terminal'].includes(sub)) setActiveEngineView(sub);
+    setSubTabIntent(null);
+  }, [subTabIntent, setSubTabIntent]);
 
   // Trader Intent Expirations
   const [expiryTab, setExpiryTab] = useState<'aggregated' | 'mon' | 'tue' | 'wed' | 'thu' | 'weekly' | 'custom' | 'weekly-front' | 'weekly-2' | 'weekly-3' | 'monthly' | 'fomc-weekly' | 'leaps' | 'custom-fomc' | 'custom-cpi' | 'custom-monthly'>('aggregated');
@@ -969,7 +967,7 @@ export function DealerFlowView() {
       {/* ============== SUB-TABS & SEARCH ============== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-0.5" id="dealerflow-subtabs-bar">
         <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2.5 justify-start items-center">
-          <ToggleGroup<'profile' | 'physics' | 'targets' | 'terminal'>
+          <ToggleGroup<'profile' | 'targets' | 'terminal'>
             ariaLabel="Engine view"
             size="sm"
             value={activeEngineView}
@@ -977,7 +975,6 @@ export function DealerFlowView() {
             options={[
               { value: 'profile', label: 'Hedging Profile', icon: <Layers className="text-[var(--accent-color)]" /> },
               { value: 'targets', label: 'Ranked Targets', icon: <Target className="text-[var(--danger)]" /> },
-              { value: 'physics', label: 'Dealer Mechanics', icon: <Zap className="text-[var(--warning)]" /> },
               { value: 'terminal', label: 'Live Terminal Flow', icon: <Activity className="text-[var(--accent-color)]" /> },
             ]}
           />
@@ -1397,28 +1394,8 @@ export function DealerFlowView() {
         </>
       ) : activeEngineView === 'targets' ? (
         <IntradayTargetsView profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
-      ) : activeEngineView === 'terminal' ? (
-        <PinpointTerminal ticker={selectedAsset.ticker} />
       ) : (
-        <div className="space-y-5" id="institutional-physics-dash-wrapper">
-          {/* Live positioning network — spot ↔ key levels, animated pull edges */}
-          <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-            <DealerPositioningNetwork profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
-          </Suspense>
-          <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-            <DealerMechanicsDashboard
-              profile={filteredProfile || profile}
-              ticker={selectedAsset.ticker}
-              decimals={selectedAsset.decimals}
-              selectionKey={isMultiExpiry ? `multi:${activeExpiries.join(',')}` : expiryTab}
-            />
-          </Suspense>
-          {/* ============== ADVANCED QUANT MECHANICS PANELS ============== */}
-          {/* QUANT EDGE — RND / VRP / skew / scenario / Kelly / dealer clock */}
-          <QuantEdgePanel />
-          {/* REGIME MATRIX — HMM / Hurst / OU / vol regimes / VPIN / Kyle / PCA */}
-          <RegimeMatrixPanel />
-        </div>
+        <PinpointTerminal ticker={selectedAsset.ticker} />
       )}
     </div>
   );

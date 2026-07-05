@@ -1,4 +1,5 @@
-import React, { ReactNode, useEffect, useState } from 'react';
+import React, { ReactNode, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Building2, 
   TerminalSquare, 
@@ -49,32 +50,126 @@ const NavCtx = React.createContext<NavCtxValue>({
   activeTab: 'home', setActiveTab: () => {}, isSidebarExpanded: false, closeMobile: () => {}, session: null,
 });
 
+// Sub-tabs surfaced in the sidebar flyout. Ids MUST match each page's internal sub-tab
+// state; clicking sends the target page a `${tab}:${subId}` intent via the store.
+const SUBTABS: Record<string, { id: string; label: string }[]> = {
+  pinpoint: [
+    { id: 'profile', label: 'Hedging Profile' },
+    { id: 'targets', label: 'Ranked Targets' },
+    { id: 'terminal', label: 'Live Terminal Flow' },
+  ],
+  quant: [
+    { id: 'rnd', label: 'Price Distribution' },
+    { id: 'vol', label: 'Realized Vol' },
+    { id: 'builder', label: 'Strategy' },
+    { id: 'scenarios', label: 'Scenarios' },
+    { id: 'portfolio', label: 'Book Greeks' },
+    { id: 'mechanics', label: 'Dealer Mechanics' },
+    { id: 'alerts', label: 'Alerts' },
+    { id: 'calibration', label: 'Journal' },
+  ],
+};
+
+// Portal-rendered flyout, fixed-positioned off the hovered nav item (so the sidebar's
+// own overflow never clips it). Clamped to stay on-screen for long lists.
+function NavFlyout({ anchor, subTabs, pageId, activeSub, onPick, onEnter, onLeave }: {
+  anchor: DOMRect; subTabs: { id: string; label: string }[]; pageId: string; activeSub: string | null;
+  onPick: (subId: string) => void; onEnter: () => void; onLeave: () => void;
+}) {
+  const estH = subTabs.length * 30 + 16;
+  const top = Math.max(8, Math.min(anchor.top, window.innerHeight - estH - 8));
+  return createPortal(
+    <div
+      role="menu"
+      aria-label={`${pageId} sections`}
+      onMouseEnter={onEnter}
+      onMouseLeave={onLeave}
+      style={{ position: 'fixed', top, left: anchor.right + 8, zIndex: 10050 }}
+      className="min-w-[176px] rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] p-1 shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]"
+    >
+      {subTabs.map((s) => {
+        const on = activeSub === s.id;
+        return (
+          <button
+            key={s.id}
+            role="menuitem"
+            onClick={() => onPick(s.id)}
+            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-[11px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
+              on ? 'bg-[var(--accent-color)]/12 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+            }`}
+          >
+            <span className="h-1 w-1 shrink-0 rounded-full" style={{ background: on ? 'var(--accent-color)' : 'var(--border-strong)' }} />
+            {s.label}
+          </button>
+        );
+      })}
+    </div>,
+    document.body,
+  );
+}
+
 function NavItem({ id, label, icon: Icon, adminOnly = false, activeColor = 'text-[var(--text-primary)]', isMobile = false }: any) {
   const { activeTab, setActiveTab, isSidebarExpanded, closeMobile, session } = React.useContext(NavCtx);
+  const setSubTabIntent = useContractStore((s) => s.setSubTabIntent);
+  const subTabIntent = useContractStore((s) => s.subTabIntent);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const closeTimer = useRef<number | undefined>(undefined);
+
   if (adminOnly && !(session?.is_super_admin || ['super_admin', 'owner', 'admin'].includes(session?.admin_role || ''))) {
     return null;
   }
 
   const isActive = activeTab === id;
+  const subTabs = SUBTABS[id];
+  const hasFlyout = !isMobile && !!subTabs;
+  // Reflect the current page's live sub-tab selection in the flyout highlight.
+  const activeSub = isActive && subTabIntent && subTabIntent.startsWith(`${id}:`) ? subTabIntent.split(':')[1] : null;
+
+  const open = () => {
+    if (!hasFlyout) return;
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    if (btnRef.current) setAnchor(btnRef.current.getBoundingClientRect());
+  };
+  const scheduleClose = () => {
+    if (!hasFlyout) return;
+    closeTimer.current = window.setTimeout(() => setAnchor(null), 130);
+  };
+  const pick = (subId: string) => {
+    setActiveTab(id);
+    setSubTabIntent(`${id}:${subId}`);
+    setAnchor(null);
+    closeMobile();
+  };
 
   return (
-    <button
-      onClick={() => {
-        setActiveTab(id);
-        closeMobile();
-      }}
-      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
-        isActive
-          ? adminOnly
-            ? 'bg-rose-950/40 text-[var(--text-primary)] border-rose-500/50'
-            : 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)] shadow-[0_0_15px_rgba(255,255,255,0.03)]'
-          : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
-      } focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none`}
-    >
-      <Icon className={`w-4 h-4 shrink-0 ${isActive ? (adminOnly ? 'text-rose-500' : activeColor) : ''}`} />
-      <span className={`flex-1 text-left whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded || isMobile ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}`}>{label}</span>
-      {isActive && (isSidebarExpanded || isMobile) && <ChevronRight className="w-3 h-3 opacity-50 shrink-0" />}
-    </button>
+    <>
+      <button
+        ref={btnRef}
+        onClick={() => { setActiveTab(id); closeMobile(); }}
+        onMouseEnter={open}
+        onMouseLeave={scheduleClose}
+        onFocus={open}
+        onBlur={scheduleClose}
+        aria-haspopup={hasFlyout ? 'menu' : undefined}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
+          isActive
+            ? adminOnly
+              ? 'bg-rose-950/40 text-[var(--text-primary)] border-rose-500/50'
+              : 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)] shadow-[0_0_15px_rgba(255,255,255,0.03)]'
+            : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+        } focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none`}
+      >
+        <Icon className={`w-4 h-4 shrink-0 ${isActive ? (adminOnly ? 'text-rose-500' : activeColor) : ''}`} />
+        <span className={`flex-1 text-left whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded || isMobile ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}`}>{label}</span>
+        {hasFlyout && (isSidebarExpanded || isMobile)
+          ? <ChevronRight className="w-3 h-3 opacity-40 shrink-0" />
+          : isActive && (isSidebarExpanded || isMobile) && <ChevronRight className="w-3 h-3 opacity-50 shrink-0" />}
+      </button>
+      {hasFlyout && anchor && (
+        <NavFlyout anchor={anchor} subTabs={subTabs} pageId={id} activeSub={activeSub} onPick={pick} onEnter={open} onLeave={scheduleClose} />
+      )}
+    </>
   );
 }
 

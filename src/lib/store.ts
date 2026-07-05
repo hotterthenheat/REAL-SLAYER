@@ -39,6 +39,10 @@ export interface ContractStore {
   // Navigation & View Tabs
   activeTab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace';
   setActiveTab: (tab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace', keepContract?: boolean) => void;
+  // Deep-link a sub-tab from the sidebar flyout: the target page reads this once on
+  // mount/update, applies it to its local sub-tab, then clears it. `${tab}:${subId}`.
+  subTabIntent: string | null;
+  setSubTabIntent: (intent: string | null) => void;
 
   // Theme settings
   themeMode: 'light' | 'dark';
@@ -376,6 +380,9 @@ export const useContractStore = create<ContractStore>((set, get) => ({
 
   checkoutPlan: null,
   setCheckoutPlan: (plan) => set({ checkoutPlan: plan }),
+
+  subTabIntent: null,
+  setSubTabIntent: (intent) => set({ subTabIntent: intent }),
 
   globalKeybindsEnabled: typeof window !== 'undefined' ? localStorage.getItem('slayer_global_keybinds_enabled') !== 'false' : true,
   setGlobalKeybindsEnabled: (enabled) => {
