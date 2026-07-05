@@ -19,6 +19,9 @@ import { useContractStore } from '../lib/store';
 import { V8TradeRecord } from '../types';
 import { FieldError, zodError } from './ui/Field';
 import { supportRequestSchema } from '../lib/formSchemas';
+import { SectionHeader } from './ui/SectionHeader';
+import { MetricCard } from './ui/MetricCard';
+import { DataStateBadge } from './ui/DataStateBadge';
 
 type ChannelKey = 'verified' | 'research' | 'education' | 'support';
 
@@ -28,33 +31,6 @@ const CHANNELS: { key: ChannelKey; label: string; sub: string; Icon: typeof File
   { key: 'education', label: 'Options Education', sub: 'Greeks & risk framework', Icon: BookOpen },
   { key: 'support', label: 'Product Support', sub: 'Feature requests & feedback', Icon: HelpCircle },
 ];
-
-// Section header used across every channel for a consistent institutional look.
-function SectionHeader({
-  icon,
-  title,
-  meta,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  meta?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] pb-3">
-      <div className="flex items-center gap-2">
-        {icon}
-        <h3 className="text-[11px] font-black uppercase tracking-[0.18em] text-[var(--text-primary)]">
-          {title}
-        </h3>
-      </div>
-      {meta != null && (
-        <span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)] shrink-0">
-          {meta}
-        </span>
-      )}
-    </div>
-  );
-}
 
 const WIN_OUTCOMES = ['Target 1 Winner', 'Target 2 Winner', 'Target 3 Winner', 'Stretch Winner'];
 
@@ -130,6 +106,13 @@ export default function ArborCapital() {
     () => ((trades || []) as V8TradeRecord[]).slice(0, 8),
     [trades],
   );
+
+  // Trade-ledger provenance. Reuses the app-wide data_source convention (synthetic
+  // sandbox feed = model-derived, any real vendor feed = live). null when absent.
+  const ledgerSource =
+    serverState?.data_source && serverState.data_source !== 'undefined'
+      ? serverState.data_source
+      : null;
 
   // Static, clearly-labeled reference content. No fabricated "live" statistics,
   // dates, or hit rates — these describe how the platform's tools work.
@@ -305,41 +288,36 @@ export default function ArborCapital() {
           {activeChannel === 'verified' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
+                className="border-b border-[var(--border)] pb-3"
                 icon={<ShieldCheck className="w-4 h-4 text-[var(--success)]" />}
-                title="Trade Ledger"
-                meta={serverState?.data_source && serverState.data_source !== 'undefined' ? `Source · ${serverState.data_source}` : undefined}
+                label="Trade Ledger"
+                right={
+                  ledgerSource ? (
+                    <DataStateBadge state={ledgerSource === 'SANDBOX_SYNTHETIC' ? 'model' : 'live'} />
+                  ) : undefined
+                }
               />
 
               {/* Stat strip from real archive */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { label: 'Logged Trades', value: String(ledgerStats.total), tone: 'var(--text-primary)' },
-                  {
-                    label: 'Win Rate',
-                    value: fmtPct(ledgerStats.winRate),
-                    tone:
-                      ledgerStats.winRate == null
-                        ? 'var(--text-primary)'
-                        : ledgerStats.winRate >= 50
-                        ? '#4ADE80'
-                        : '#F87171',
-                  },
-                  {
-                    label: 'Avg Max Gain',
-                    value: fmtPct(ledgerStats.avgGain, true),
-                    tone: (ledgerStats.avgGain ?? 0) >= 0 ? '#4ADE80' : '#F87171',
-                  },
-                  { label: 'Active Now', value: String(ledgerStats.active), tone: '#FBBF24' },
-                ].map((s) => (
-                  <div key={s.label} className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3.5">
-                    <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] block">
-                      {s.label}
-                    </span>
-                    <span className="text-lg font-bold tabular-nums mt-0.5 block" style={{ color: s.tone }}>
-                      {s.value}
-                    </span>
-                  </div>
-                ))}
+                <MetricCard label="Logged Trades" value={String(ledgerStats.total)} />
+                <MetricCard
+                  label="Win Rate"
+                  value={fmtPct(ledgerStats.winRate)}
+                  tone={
+                    ledgerStats.winRate == null
+                      ? 'default'
+                      : ledgerStats.winRate >= 50
+                      ? 'success'
+                      : 'danger'
+                  }
+                />
+                <MetricCard
+                  label="Avg Max Gain"
+                  value={fmtPct(ledgerStats.avgGain, true)}
+                  tone={(ledgerStats.avgGain ?? 0) >= 0 ? 'success' : 'danger'}
+                />
+                <MetricCard label="Active Now" value={String(ledgerStats.active)} tone="warning" />
               </div>
 
               {/* Recent entries */}
@@ -424,9 +402,10 @@ export default function ArborCapital() {
           {activeChannel === 'research' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
+                className="border-b border-[var(--border)] pb-3"
                 icon={<FileText className="w-4 h-4 text-[var(--success)]" />}
-                title="Research Library"
-                meta="Methodology"
+                label="Research Library"
+                right={<span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Methodology</span>}
               />
               <p className="text-xs text-[var(--text-tertiary)] leading-relaxed -mt-1">
                 Reference notes on how the platform reads flow, structure and positioning. These describe
@@ -457,9 +436,10 @@ export default function ArborCapital() {
           {activeChannel === 'education' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
+                className="border-b border-[var(--border)] pb-3"
                 icon={<GraduationCap className="w-4 h-4 text-[var(--success)]" />}
-                title="Options Education"
-                meta="Core curriculum"
+                label="Options Education"
+                right={<span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Core curriculum</span>}
               />
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {educationModules.map((m) => {
@@ -495,9 +475,10 @@ export default function ArborCapital() {
           {activeChannel === 'support' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
+                className="border-b border-[var(--border)] pb-3"
                 icon={<HelpCircle className="w-4 h-4 text-[var(--success)]" />}
-                title="Support & Feature Requests"
-                meta="Product roadmap"
+                label="Support & Feature Requests"
+                right={<span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Product roadmap</span>}
               />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">

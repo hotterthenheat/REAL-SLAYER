@@ -3,23 +3,14 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Activity,
   Layers,
-  Gauge,
   TrendingUp,
-  RadioTower,
   Calculator,
-  Bell,
-  Scale,
-  Brain,
-  History,
-  X,
   BarChart3,
-  Target,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
 import { ASSET_LIST } from '../data';
@@ -38,29 +29,13 @@ import {
   calculateRealizedVolSuite,
   calculateVolatilityCone,
   computeSkewAnalytics,
-  buildStrategySuite,
-  generatePayoffCoordinates,
-  computeScenarioShockMatrix,
-  aggregatePortfolioGreeks,
   aggregateExpiryGexCurve,
-  evaluateAlertRules,
-  calculateCalibrationLoop,
-  bsmPrice,
-  type OptionLeg,
-  type PortfolioPosition,
-  type AlertRule,
-  type JournalTradeRecord,
   type Candle,
   type BreedenLitzenbergerResult,
   type RealizedVolSuite,
   type VolConePoint,
   type SkewMetrics,
-  type StrategyMetrics,
-  type ShockNode,
-  type PortfolioGreeksGroup,
   type ExpiryGexNode,
-  type AlertDispatch,
-  type CalibrationResult,
 } from '../lib/quantSuite';
 import { ChainContract } from '../lib/v11Math';
 
@@ -89,15 +64,6 @@ function Surface3DLoading({ label }: { label: string }) {
     </div>
   );
 }
-
-type StrategyPreset = 'iron_condor' | 'straddle' | 'butterfly' | 'vertical';
-
-const PRESET_LABELS: Record<StrategyPreset, string> = {
-  iron_condor: 'Iron Condor',
-  straddle: 'ATM Straddle',
-  butterfly: 'Call Butterfly',
-  vertical: 'Call Vertical',
-};
 
 /** Shared section header: icon + uppercase tracked label, optional right slot. */
 function SectionHeader({
@@ -266,9 +232,6 @@ export default function QuantSuiteView() {
     return list;
   }, [serverState, spotPrice]);
 
-  const strikeStep = activeTicker === 'SPX' ? 25 : activeTicker === 'NDX' ? 100 : 5;
-  const atmStrike = useMemo(() => Math.round(spotPrice / strikeStep) * strikeStep, [spotPrice, strikeStep]);
-
   // Real dealer GEX profile streamed from the server (when present).
   const gexProfile = serverState?.gex_profile;
 
@@ -279,28 +242,6 @@ export default function QuantSuiteView() {
   const rndResult: BreedenLitzenbergerResult = useMemo(() => {
     return solveImpliedRND(optionChain, spotPrice, defaultIv, dteD / 365, 0.051);
   }, [optionChain, spotPrice, defaultIv]);
-
-  // Probability target — auto-derived from the chain's own 1σ implied move
-  // (no manual entry). Reads the risk-neutral std-dev straight from the RND.
-  const probStrike = useMemo(
-    () => Math.round(spotPrice + rndResult.stdDev),
-    [spotPrice, rndResult.stdDev]
-  );
-
-  const probabilityPricingText = useMemo(() => {
-    const sorted = [...rndResult.density].sort((a, b) => b.strike - a.strike);
-    let runSum = 0;
-    let foundProb = 0;
-    for (const node of sorted) {
-      runSum += node.probability;
-      if (node.strike <= probStrike) { foundProb = runSum; break; }
-    }
-    const percent = Math.round(Math.max(0, Math.min(100, foundProb * 100)));
-    return {
-      percent,
-      statement: `The chain is pricing a ${percent}% probability of ${activeTicker} settling above ${probStrike.toLocaleString(undefined, { maximumFractionDigits: 0 })} within ${dteD} days.`,
-    };
-  }, [rndResult, probStrike, activeTicker]);
 
   // ===================================
   // 2. REALIZED VOL SUITE & VRP SPREAD
@@ -320,61 +261,7 @@ export default function QuantSuiteView() {
     return computeSkewAnalytics(optionChain, spotPrice, defaultIv);
   }, [optionChain, spotPrice, defaultIv]);
 
-  // ===================================
-  // 4. AUTO-BUILT PRESET STRATEGY (no manual entry)
-  // Legs are derived from the live ATM strike + chain IV. Switching the preset
-  // re-derives every leg; there are no typed inputs.
-  // ===================================
-  const [activePreset, setActivePreset] = useState<StrategyPreset>('iron_condor');
-
-  const strategyLegs = useMemo<OptionLeg[]>(() => {
-    const step = strikeStep;
-    const center = atmStrike;
-    const t = Math.max(1, dteD) / 365.25;
-    const price = (K: number, ivVal: number, oType: 'call' | 'put') =>
-      Math.round(Math.max(0.01, bsmPrice(spotPrice, K, t, ivVal, oType, 0.05, 0.0)) * 100) / 100;
-
-    if (activePreset === 'iron_condor') {
-      const k1 = center - 2 * step, k2 = center - step, k3 = center + step, k4 = center + 2 * step;
-      return [
-        { id: 'ic1', strike: k1, type: 'put', action: 'buy', qty: 1, iv: defaultIv * 1.1, entryPrice: price(k1, defaultIv * 1.1, 'put') },
-        { id: 'ic2', strike: k2, type: 'put', action: 'sell', qty: 1, iv: defaultIv * 1.02, entryPrice: price(k2, defaultIv * 1.02, 'put') },
-        { id: 'ic3', strike: k3, type: 'call', action: 'sell', qty: 1, iv: defaultIv * 0.98, entryPrice: price(k3, defaultIv * 0.98, 'call') },
-        { id: 'ic4', strike: k4, type: 'call', action: 'buy', qty: 1, iv: defaultIv * 1.05, entryPrice: price(k4, defaultIv * 1.05, 'call') },
-      ];
-    }
-    if (activePreset === 'straddle') {
-      return [
-        { id: 'st1', strike: center, type: 'call', action: 'buy', qty: 1, iv: defaultIv, entryPrice: price(center, defaultIv, 'call') },
-        { id: 'st2', strike: center, type: 'put', action: 'buy', qty: 1, iv: defaultIv * 1.05, entryPrice: price(center, defaultIv * 1.05, 'put') },
-      ];
-    }
-    if (activePreset === 'butterfly') {
-      const k1 = center - step, k2 = center, k3 = center + step;
-      return [
-        { id: 'bf1', strike: k1, type: 'call', action: 'buy', qty: 1, iv: defaultIv * 1.02, entryPrice: price(k1, defaultIv * 1.02, 'call') },
-        { id: 'bf2', strike: k2, type: 'call', action: 'sell', qty: 2, iv: defaultIv, entryPrice: price(k2, defaultIv, 'call') },
-        { id: 'bf3', strike: k3, type: 'call', action: 'buy', qty: 1, iv: defaultIv * 0.98, entryPrice: price(k3, defaultIv * 0.98, 'call') },
-      ];
-    }
-    // vertical (bull call spread, 1σ wide)
-    const kLong = center, kShort = Math.round((center + rndResult.stdDev) / step) * step;
-    return [
-      { id: 'vt1', strike: kLong, type: 'call', action: 'buy', qty: 1, iv: defaultIv, entryPrice: price(kLong, defaultIv, 'call') },
-      { id: 'vt2', strike: kShort, type: 'call', action: 'sell', qty: 1, iv: defaultIv * 0.97, entryPrice: price(kShort, defaultIv * 0.97, 'call') },
-    ];
-  }, [activePreset, atmStrike, strikeStep, spotPrice, defaultIv, rndResult.stdDev]);
-
-  const strategySuite: StrategyMetrics = useMemo(() => {
-    return buildStrategySuite(strategyLegs, spotPrice, dteD, 0.05, rndResult);
-  }, [strategyLegs, spotPrice, rndResult]);
-
-  const payoffChartCoordinates = useMemo(() => {
-    return generatePayoffCoordinates(strategyLegs, spotPrice, rndResult);
-  }, [strategyLegs, spotPrice, rndResult]);
-
-  // 1σ expected move (in points and %) read straight off the RND dispersion.
-  const expectedMovePts = rndResult.stdDev;
+  // 1σ expected move (%) read straight off the RND dispersion.
   const expectedMovePct = (rndResult.stdDev / spotPrice) * 100;
 
   // ── Volatility Geometry HERO: an always-available model IV surface (strike × tenor ×
@@ -401,182 +288,11 @@ export default function QuantSuiteView() {
   }, [ivHeroDomain, spotPrice, ivHeroGrid]);
 
   // ===================================
-  // 5. DETERMINISTIC SHOCK MATRIX
-  // ===================================
-  const spotShocks = [-0.04, -0.02, 0, 0.02, 0.04];
-  const volShocks = [-0.04, -0.02, 0, 0.02, 0.04];
-  const scenarioMatrix: ShockNode[] = useMemo(() => {
-    return computeScenarioShockMatrix(strategyLegs, spotPrice, spotShocks, volShocks, [dteD, Math.round(dteD / 2), 0], 0.05);
-  }, [strategyLegs, spotPrice]);
-
-  const [selectedDteScenario, setSelectedDteScenario] = useState<number>(dteD);
-
-  // Worst / best cell across the currently selected DTE slice (real, from the matrix).
-  const scenarioExtremes = useMemo(() => {
-    const slice = scenarioMatrix.filter(n => n.dteRemaining === selectedDteScenario);
-    if (slice.length === 0) return { worst: null as ShockNode | null, best: null as ShockNode | null };
-    let worst = slice[0], best = slice[0];
-    for (const n of slice) {
-      if (n.pnl < worst.pnl) worst = n;
-      if (n.pnl > best.pnl) best = n;
-    }
-    return { worst, best };
-  }, [scenarioMatrix, selectedDteScenario]);
-
-  // ===================================
-  // 6. PORTFOLIO BOOK MANAGER
-  // ===================================
-  const [portfolio, setPortfolio] = useState<PortfolioPosition[]>([]);
-
-  const portfolioResult: PortfolioGreeksGroup = useMemo(() => {
-    return aggregatePortfolioGreeks(portfolio, spotPrice, 0.05);
-  }, [portfolio, spotPrice]);
-
-  const handleAddPortfolioStock = () => {
-    setPortfolio(prev => [
-      ...prev,
-      { id: Math.random().toString(36).substring(7), symbol: `${activeTicker} Shares`, type: 'stock', qty: 100, entryPrice: spotPrice, currentPrice: spotPrice },
-    ]);
-  };
-
-  const handleAddPortfolioOption = (optionType: 'call' | 'put') => {
-    const t = Math.max(1, dteD) / 365.25;
-    const px = Math.round(Math.max(0.01, bsmPrice(spotPrice, atmStrike, t, defaultIv, optionType, 0.05, 0.0)) * 100) / 100;
-    setPortfolio(prev => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substring(7),
-        symbol: `${activeTicker} ${optionType.toUpperCase()} ${atmStrike}`,
-        type: optionType,
-        qty: 1,
-        entryPrice: px,
-        currentPrice: px,
-        strike: atmStrike,
-        iv: defaultIv,
-        dte: dteD,
-      },
-    ]);
-  };
-
-  const handleRemovePortfolioItem = (id: string) => {
-    setPortfolio(prev => prev.filter(p => p.id !== id));
-  };
-
-  // ===================================
   // 7. EXPIRY GEX ENGINE
   // ===================================
   const expiryGex: ExpiryGexNode[] = useMemo(() => {
     return aggregateExpiryGexCurve(optionChain, spotPrice);
   }, [optionChain, spotPrice]);
-
-  // ===================================
-  // 8. REAL ALERTS TRIGGER ENGINE
-  // ===================================
-  const [alertsRules, setAlertsRules] = useState<AlertRule[]>([
-    { id: '1', name: `${activeTicker} Crosses Gamma Flip`, metric: 'gex_flip', operator: 'crosses', isActive: true },
-    { id: '2', name: 'Dealers Short Gamma', metric: 'gex_negative', operator: 'is_negative', isActive: true },
-    { id: '3', name: 'IV Richness (variance risk premium ≥ 5 pts)', metric: 'vrp_high', operator: 'above', thresholdValue: 5, isActive: true },
-  ]);
-
-  const [alertsLog, setAlertsLog] = useState<AlertDispatch[]>([]);
-
-  const handleToggleRule = (id: string) => {
-    setAlertsRules(prev => prev.map(r => r.id === id ? { ...r, isActive: !r.isActive } : r));
-  };
-
-  const handleAddSpotRule = (threshold: number) => {
-    setAlertsRules(prev => [
-      ...prev,
-      {
-        id: Math.random().toString(36).substring(7),
-        name: `${activeTicker} Spot Crosses ${threshold.toLocaleString()}`,
-        metric: 'spot',
-        operator: 'crosses',
-        thresholdValue: threshold,
-        isActive: true,
-      },
-    ]);
-  };
-
-  // Keep the latest inputs in a ref so the evaluation interval is created ONCE and
-  // reads fresh values, instead of being torn down/recreated on every SSE frame.
-  const alertCtxRef = useRef({ alertsRules, spotPrice, gexProfile, volSuite, skewMetrics });
-  alertCtxRef.current = { alertsRules, spotPrice, gexProfile, volSuite, skewMetrics };
-  // Previous-tick spot so "crosses" rules can actually detect a crossing
-  // (passing the same value for spot and prevSpot made them permanently dead).
-  const prevAlertSpotRef = useRef(spotPrice);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const { alertsRules, spotPrice, gexProfile, volSuite, skewMetrics } = alertCtxRef.current;
-      // Evaluate against the REAL dealer GEX profile + flip when the server provides
-      // them; if absent, skip GEX-dependent rules rather than fabricate a value.
-      const netGexVal = typeof gexProfile?.netGex === 'number' ? gexProfile.netGex : 0;
-      const gammaFlip = typeof gexProfile?.gammaFlip === 'number' ? gexProfile.gammaFlip : spotPrice;
-
-      const triggered = evaluateAlertRules(
-        alertsRules,
-        spotPrice,
-        prevAlertSpotRef.current,
-        netGexVal,
-        gammaFlip,
-        // Honest underlying values (vol, decimal) — not fabricated percentiles.
-        volSuite.varianceRiskPremium,
-        skewMetrics.riskReversal25D
-      );
-      prevAlertSpotRef.current = spotPrice;
-
-      if (triggered.length > 0) {
-        setAlertsLog(prev => [...triggered, ...prev].slice(0, 30));
-      }
-    }, 12000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // ===================================
-  // 9. TRADE JOURNAL & CALIBRATION (user-recorded)
-  // Starts empty — no fabricated history. Predictions logged from the live setup
-  // use the strategy's real RND-derived probability of profit.
-  // ===================================
-  const [journal, setJournal] = useState<JournalTradeRecord[]>([]);
-
-  const closedCount = useMemo(() => journal.filter(t => t.outcome !== 'OPEN').length, [journal]);
-
-  const calibrationLoop: CalibrationResult = useMemo(() => {
-    return calculateCalibrationLoop(journal);
-  }, [journal]);
-
-  const handleLogCurrentSetup = () => {
-    const newRecord: JournalTradeRecord = {
-      id: Math.random().toString(36).substring(7),
-      ticker: activeTicker,
-      setup: PRESET_LABELS[activePreset],
-      entryTime: new Date().toISOString().split('T')[0],
-      entryPrice: spotPrice,
-      expectedMovePct: expectedMovePct / 100,
-      pop: strategySuite.pop,
-      outcome: 'OPEN',
-    };
-    setJournal(prev => [newRecord, ...prev]);
-  };
-
-  const handleResolveTrade = (id: string, outcome: 'WIN' | 'LOSS') => {
-    setJournal(prev => prev.map(t => {
-      if (t.id !== id) return t;
-      // Mark against the live spot at resolution time (a real value). P&L is the
-      // realized move applied to one contract's notional move — not a hardcoded figure.
-      const finalPrice = spotPrice;
-      const move = (finalPrice - t.entryPrice) * 100;
-      const pnl = Math.round(outcome === 'WIN' ? Math.abs(move) : -Math.abs(move));
-      return { ...t, outcome, finalPrice, pnl };
-    }));
-  };
-
-  const handleRemoveTrade = (id: string) => {
-    setJournal(prev => prev.filter(t => t.id !== id));
-  };
-
-  const fmtMoney = (n: number) => (n >= 0 ? `+$${n.toLocaleString()}` : `-$${Math.abs(n).toLocaleString()}`);
 
   const tabs: { id: typeof activeSubTab; label: string }[] = [
     { id: 'volgeo', label: 'Volatility Geometry' },
