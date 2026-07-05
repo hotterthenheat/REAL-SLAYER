@@ -85,7 +85,7 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
                 <div className="bg-[var(--surface-2)] p-3.5 border border-[var(--border)] rounded-xl flex justify-between items-center font-mono">
                   <div className="space-y-0.5">
                     <span className="text-[8px] text-[var(--text-tertiary)] uppercase block tracking-wider">Active Analytical Asset</span>
-                    <span className="text-sm font-black text-[var(--text-primary)] block">SPX 7640 CALL</span>
+                    <span className="text-sm font-black text-[var(--text-primary)] block">SPX 5540 CALL</span>
                   </div>
                   <div className="text-right space-y-0.5">
                     <span className="text-[8px] text-[var(--text-tertiary)] uppercase block">Decision Score</span>
@@ -266,15 +266,15 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
                 {/* Spot Price tracker */}
                 <div className="flex justify-between items-center text-[8.5px] border-b border-[var(--border)] pb-2">
                   <span className="text-[var(--text-tertiary)] uppercase font-black text-[7.5px]">ATM Spot Target:</span>
-                  <span className="text-[var(--text-secondary)] font-black">7620.42 oscillating</span>
+                  <span className="text-[var(--text-secondary)] font-black">5520.42 oscillating</span>
                 </div>
 
                 {/* Histogram bars */}
                 <div className="space-y-2.5">
                   {[
-                    { strike: '7640 [CALL WALL]', gex: '+28.4M', pct: '92%', type: 'HEAVY CEILING', color: 'border-[var(--text-secondary)]', bg: 'bg-[var(--success)]/20', txt: 'text-[var(--text-secondary)]' },
-                    { strike: '7630 [ATM SPOT AREA]', gex: '+4.5M', pct: '40%', type: 'SPOT PIN RISK', color: 'border-[var(--accent-color)]', bg: 'bg-[var(--accent-color)]/10', txt: 'text-[var(--text-tertiary)]' },
-                    { strike: '7610 [GAMMA FLIP]', gex: '-11.8M', pct: '65%', type: 'VOL TRANSITION', color: 'border-rose-400', bg: 'bg-rose-500/10', txt: 'text-[var(--danger)]' }
+                    { strike: '5540 [CALL WALL]', gex: '+28.4M', pct: '92%', type: 'HEAVY CEILING', color: 'border-[var(--text-secondary)]', bg: 'bg-[var(--success)]/20', txt: 'text-[var(--text-secondary)]' },
+                    { strike: '5530 [ATM SPOT AREA]', gex: '+4.5M', pct: '40%', type: 'SPOT PIN RISK', color: 'border-[var(--accent-color)]', bg: 'bg-[var(--accent-color)]/10', txt: 'text-[var(--text-tertiary)]' },
+                    { strike: '5510 [GAMMA FLIP]', gex: '-11.8M', pct: '65%', type: 'VOL TRANSITION', color: 'border-rose-400', bg: 'bg-rose-500/10', txt: 'text-[var(--danger)]' }
                   ].map((row, idx) => (
                     <div 
                       key={idx}
@@ -297,7 +297,7 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
                 </div>
 
                 <div className="bg-[var(--surface-2)] p-2 text-[8px] text-[var(--text-tertiary)] text-center uppercase tracking-wide border border-[var(--border)] rounded">
-                  Magnet Strike: <strong className="text-[var(--text-primary)]">7620.00</strong> | Net positioning score: <span className="text-[var(--success)] font-bold">68 / Bullish long-gamma</span>
+                  Magnet Strike: <strong className="text-[var(--text-primary)]">5520.00</strong> | Net positioning score: <span className="text-[var(--success)] font-bold">68 / Bullish long-gamma</span>
                 </div>
               </div>
             </div>
@@ -334,7 +334,7 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
 
                 <div className="space-y-1.5">
                   {[
-                    { contract: 'SPX 7620C', enter: '$11.20', result: '+38.2% Exit', rColor: 'text-[var(--text-secondary)]' },
+                    { contract: 'SPX 5520C', enter: '$11.20', result: '+38.2% Exit', rColor: 'text-[var(--text-secondary)]' },
                     { contract: 'QQQ 515C', enter: '$2.10', result: '+22.4% Exit', rColor: 'text-[var(--text-secondary)]' },
                     { contract: 'NDX 18300C', enter: '$165.40', result: '-12.5% Out', rColor: 'text-[var(--danger)]' }
                   ].map((row, idx) => (
@@ -499,7 +499,7 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
                   <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-[var(--border)] font-mono text-[9.5px]">
                     <div>
                       <span className="text-[var(--text-tertiary)] block text-[7.5px] uppercase">Option target</span>
-                      <span className="text-[var(--text-primary)] font-extrabold">SPX 7620 CALL</span>
+                      <span className="text-[var(--text-primary)] font-extrabold">SPX 5520 CALL</span>
                     </div>
                     <div>
                       <span className="text-[var(--text-tertiary)] block text-[7.5px] uppercase">Entry threshold</span>
@@ -543,9 +543,9 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
               {/* Simulated live sweeps ticker flow */}
               <div className="space-y-2 pt-1 font-mono">
                 {[
-                  { time: '10:48:12', strike: 'SPX 7620 C', type: 'SWEEP', value: '$1.24M', impact: 'HEAVY GEX SWEEP', isGreen: true },
+                  { time: '10:48:12', strike: 'SPX 5520 C', type: 'SWEEP', value: '$1.24M', impact: 'HEAVY GEX SWEEP', isGreen: true },
                   { time: '10:48:05', strike: 'QQQ 515 C', type: 'BLOCK', value: '$580K', impact: 'MEDIUM IMPACT', isGreen: true },
-                  { time: '10:47:51', strike: 'SPX 7600 P', type: 'SWEEP', value: '$2.15M', impact: 'SEVERE SHIFT', isGreen: false },
+                  { time: '10:47:51', strike: 'SPX 5500 P', type: 'SWEEP', value: '$2.15M', impact: 'SEVERE SHIFT', isGreen: false },
                   { time: '10:47:32', strike: 'RUT 2020 C', type: 'BLOCK', value: '$310K', impact: 'LOCAL TRIGGER', isGreen: true }
                 ].map((sweep, idx) => (
                   <div 

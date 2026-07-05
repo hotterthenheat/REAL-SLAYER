@@ -103,7 +103,7 @@ export function SkyseyeAlertHub() {
         // Also pre-register existing items' keys to avoid repeating initial backlog
         const parts = item.contract.split(' ');
         let ticker = item.asset || parts[1] || 'SPX';
-        let strike = 7600;
+        let strike = 5500;
         let optionType: 'C' | 'P' = 'C';
         if (parts[2]) {
           const match = parts[2].match(/^(\d+)([CP])$/);
@@ -129,11 +129,11 @@ export function SkyseyeAlertHub() {
         // Register ID so we don't trigger it again
         knownFlowIdsRef.current.add(flow.id);
 
-        // Parse contract (e.g. "4500 SPX 7615P")
+        // Parse contract (e.g. "4500 SPX 5515P")
         const parts = flow.contract.split(' ');
         const sizeVal = parseInt(parts[0]) || 0;
         let ticker = flow.asset || parts[1] || 'SPX';
-        let strike = 7600;
+        let strike = 5500;
         let optionType: 'C' | 'P' = 'C';
 
         if (parts[2]) {
