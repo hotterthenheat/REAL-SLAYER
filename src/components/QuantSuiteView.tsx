@@ -64,9 +64,7 @@ import { ChainContract } from '../lib/v11Math';
 
 // Lazy-loaded: pulls in three.js. Only fetched when a multi-expiry GEX surface
 // is actually rendered, keeping the heavy 3D vendor chunk off the page's load.
-const GexSurface3D = lazy(() => import('./GexSurface3D').then(m => ({ default: m.GexSurface3D })));
 const IvSurface3D = lazy(() => import('./IvSurface3D').then(m => ({ default: m.IvSurface3D })));
-const QuantVizLab = lazy(() => import('./quant/QuantVizLab'));
 // Dealer Mechanics moved here from the Pinpoint GEX page — the brutalist 3D dealer
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
@@ -130,7 +128,10 @@ export default function QuantSuiteView() {
   const serverState = useContractStore(s => s.serverState);
 
   // Tab control inside the suite
-  const [activeSubTab, setActiveSubTab] = useState<'rnd' | 'vol' | 'builder' | 'scenarios' | 'portfolio' | 'mechanics' | 'alerts' | 'calibration'>('rnd');
+  // The Quant Lab is a "visual mathematics lab" collapsed to four sections, each a set
+  // of real, mathematically-defined renders (no generic/retail charts): Volatility
+  // Geometry, Dealer Mechanics Geometry, Distribution & Risk, Factor / Structure Lab.
+  const [activeSubTab, setActiveSubTab] = useState<'volgeo' | 'mechanics' | 'distrib' | 'factor'>('volgeo');
 
   // Deep-link from the sidebar flyout: apply a `quant:<sub>` intent once, then clear it.
   const subTabIntent = useContractStore((s) => s.subTabIntent);
@@ -138,7 +139,7 @@ export default function QuantSuiteView() {
   useEffect(() => {
     if (!subTabIntent?.startsWith('quant:')) return;
     const sub = subTabIntent.split(':')[1] as typeof activeSubTab;
-    const valid = ['rnd', 'vol', 'builder', 'scenarios', 'portfolio', 'mechanics', 'alerts', 'calibration'];
+    const valid = ['volgeo', 'mechanics', 'distrib', 'factor'];
     if (valid.includes(sub)) setActiveSubTab(sub);
     setSubTabIntent(null);
   }, [subTabIntent, setSubTabIntent]);
@@ -539,14 +540,10 @@ export default function QuantSuiteView() {
   const fmtMoney = (n: number) => (n >= 0 ? `+$${n.toLocaleString()}` : `-$${Math.abs(n).toLocaleString()}`);
 
   const tabs: { id: typeof activeSubTab; label: string }[] = [
-    { id: 'rnd', label: 'Price Distribution' },
-    { id: 'vol', label: 'Realized Vol' },
-    { id: 'builder', label: 'Strategy' },
-    { id: 'scenarios', label: 'Scenarios' },
-    { id: 'portfolio', label: 'Book Greeks' },
+    { id: 'volgeo', label: 'Volatility Geometry' },
     { id: 'mechanics', label: 'Dealer Mechanics' },
-    { id: 'alerts', label: 'Alerts' },
-    { id: 'calibration', label: 'Journal' },
+    { id: 'distrib', label: 'Distribution & Risk' },
+    { id: 'factor', label: 'Factor Lab' },
   ];
 
   return (
@@ -611,11 +608,6 @@ export default function QuantSuiteView() {
               }`}
             >
               {t.label}
-              {t.id === 'alerts' && alertsLog.length > 0 && (
-                <span className="rounded-full bg-[var(--success)]/15 text-[var(--success)] text-[10px] font-bold px-1.5 leading-4 tabular-nums">
-                  {alertsLog.length}
-                </span>
-              )}
             </button>
           );
         })}
@@ -633,7 +625,7 @@ export default function QuantSuiteView() {
             className="w-full flex flex-col gap-4"
           >
             {/* TAB 1: RISK-NEUTRAL DENSITY */}
-            {activeSubTab === 'rnd' && (
+            {false /* Price Distribution → merged into Distribution & Risk */ && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
                   <SectionHeader
@@ -751,7 +743,7 @@ export default function QuantSuiteView() {
             )}
 
             {/* TAB 2: VOLATILITY */}
-            {activeSubTab === 'vol' && (
+            {activeSubTab === 'volgeo' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col gap-4">
                   <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
@@ -789,7 +781,7 @@ export default function QuantSuiteView() {
             )}
 
             {/* TAB 3: AUTO STRATEGY BUILDER */}
-            {activeSubTab === 'builder' && (
+            {false /* Strategy builder (retail payoff) removed */ && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-4">
                   <SectionHeader
@@ -890,7 +882,7 @@ export default function QuantSuiteView() {
                     />
                     <StatTile
                       label="Max Loss"
-                      value={typeof strategySuite.maxLoss === 'number' ? `$${Math.abs(strategySuite.maxLoss).toLocaleString()}` : strategySuite.maxLoss}
+                      value={typeof strategySuite.maxLoss === 'number' ? `$${Math.abs(strategySuite.maxLoss as number).toLocaleString()}` : strategySuite.maxLoss}
                       tone="text-[var(--danger)]"
                     />
                   </div>
@@ -921,7 +913,7 @@ export default function QuantSuiteView() {
             )}
 
             {/* TAB 4: SCENARIOS */}
-            {activeSubTab === 'scenarios' && (
+            {false /* Scenarios removed */ && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
                   <SectionHeader
@@ -1054,7 +1046,7 @@ export default function QuantSuiteView() {
             )}
 
             {/* TAB 5: PORTFOLIO BOOK */}
-            {activeSubTab === 'portfolio' && (
+            {false /* Book Greeks (position P&L) removed */ && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-4">
                   <SectionHeader
@@ -1129,21 +1121,26 @@ export default function QuantSuiteView() {
               </div>
             )}
 
-            {/* TAB: DEALER MECHANICS (moved here from Pinpoint GEX) */}
+            {/* §2 DEALER MECHANICS GEOMETRY — real exposure surfaces (Gamma/Vanna/Charm) + edge */}
             {activeSubTab === 'mechanics' && (
               <div className="space-y-5">
-                {/* Real per-strike dealer exposure geometry: Gamma / Vanna / Charm surfaces + IV. */}
                 <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
                   <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} />
                 </Suspense>
-                {/* Advanced quant mechanics — RND / VRP / skew / Kelly, and the regime matrix */}
+                {/* Quant edge — RND / VRP / skew / scenario / Kelly / dealer clock */}
                 <QuantEdgePanel />
+              </div>
+            )}
+
+            {/* §4 FACTOR / STRUCTURE LAB — regime & factor state (HMM / Hurst / OU / vol regimes / PCA) */}
+            {activeSubTab === 'factor' && (
+              <div className="space-y-5">
                 <RegimeMatrixPanel />
               </div>
             )}
 
             {/* TAB 6: ALERTS */}
-            {activeSubTab === 'alerts' && (
+            {false /* Alerts removed */ && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-3">
                   <SectionHeader
@@ -1209,7 +1206,7 @@ export default function QuantSuiteView() {
             )}
 
             {/* TAB 7: JOURNAL & CALIBRATION */}
-            {activeSubTab === 'calibration' && (
+            {false /* Journal removed */ && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-3">
                   <SectionHeader
@@ -1317,18 +1314,9 @@ export default function QuantSuiteView() {
         </AnimatePresence>
       </div>
 
-      {/* ECharts / echarts-gl visual analytics — intraday price, equity curve, and
-          GL vol surface / risk cloud / dealer flow field. Live-looking mock now,
-          pluggable to the real feed via echartOptions.ts. */}
-      <div className="border-t border-[var(--border)] pt-4" id="quant-suite-echarts">
-        <Suspense fallback={<div className="h-64 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-          <QuantVizLab />
-        </Suspense>
-      </div>
-
-      {/* Risk-neutral probability distribution — the market's own forward distribution (Breeden-Litzenberger),
+      {/* §3 Distribution & Risk — the market's own forward distribution (Breeden-Litzenberger),
           with the CDF + every probability (above/below/between/touch/ITM), expected move, CIs, and IV-vs-RV. */}
-      {rndResult.density.length > 2 && spotPrice > 0 && (
+      {activeSubTab === 'distrib' && rndResult.density.length > 2 && spotPrice > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-rnd-distribution">
           <RiskNeutralDistribution
             rnd={rndResult}
@@ -1346,15 +1334,15 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Implied volatility smile/skew — real front-expiry per-strike IV */}
-      {optionChain.length >= 4 && spotPrice > 0 && (
+      {/* §1 Volatility Geometry — implied vol smile/skew, real front-expiry per-strike IV */}
+      {activeSubTab === 'volgeo' && optionChain.length >= 4 && spotPrice > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-iv-smile">
           <IvSmile chain={optionChain} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
         </div>
       )}
 
-      {/* Dealer Greek exposure profiles — per-strike Γ/Δ/vanna/charm/vega from the real chain */}
-      {optionChain.length >= 4 && spotPrice > 0 && (
+      {/* §2 Dealer Mechanics — per-strike Γ/Δ/vanna/charm/vega exposure from the real chain */}
+      {activeSubTab === 'mechanics' && optionChain.length >= 4 && spotPrice > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-greek-exposure">
           <GreekExposurePanel
             chain={optionChain}
@@ -1369,23 +1357,11 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Dealer gamma exposure surface (3D) — real per-(strike,expiry) netGEX over the chain */}
-      {(() => {
-        const exps = ((gexProfile as any)?.expiries || []) as any[];
-        if (!(exps.length >= 1 && spotPrice > 0)) return null;
-        return (
-          <div className="border-t border-[var(--border)] pt-4" id="quant-suite-gex-surface">
-            <LazyMount minHeight={300}>
-              <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-                <GexSurface3D expiries={exps} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
-              </Suspense>
-            </LazyMount>
-          </div>
-        );
-      })()}
+      {/* GexSurface3D removed — the Dealer Mechanics Gamma surface (strike × tenor × netGEX)
+          in DealerMechanicsDashboard is the single canonical gamma surface now. */}
 
-      {/* Implied volatility surface (3D) — real front smile + Heston forward-variance term MODEL over DTE */}
-      {optionChain.length >= 4 && spotPrice > 0 && dteD > 0 && (
+      {/* §1 Volatility Geometry — 3D IV surface: real front smile + Heston forward-variance term over DTE */}
+      {activeSubTab === 'volgeo' && optionChain.length >= 4 && spotPrice > 0 && dteD > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-iv-surface">
           <LazyMount minHeight={300}>
             <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
@@ -1395,15 +1371,15 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Monte Carlo simulation — real seeded paths under GBM / jump-diffusion / Heston */}
-      {spotPrice > 0 && defaultIv > 0 && dteD > 0 && (
+      {/* §3 Distribution & Risk — Monte Carlo: real seeded paths under GBM / jump-diffusion / Heston */}
+      {activeSubTab === 'distrib' && spotPrice > 0 && defaultIv > 0 && dteD > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-monte-carlo">
           <MonteCarloPanel spot={spotPrice} r={0.05} sigma={defaultIv} tYears={Math.max(1, dteD) / 365} ticker={activeTicker} decimals={activeAsset.decimals} />
         </div>
       )}
 
-      {/* Dealer hedging simulator — net-gamma landscape as spot moves, from real per-strike GEX */}
-      {(gexProfile?.strikes?.length ?? 0) >= 2 && spotPrice > 0 && expectedMovePct > 0 && (
+      {/* §2 Dealer Mechanics — hedging simulator: net-gamma landscape as spot moves, real per-strike GEX */}
+      {activeSubTab === 'mechanics' && (gexProfile?.strikes?.length ?? 0) >= 2 && spotPrice > 0 && expectedMovePct > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-hedging">
           <DealerHedgingPanel
             strikes={(gexProfile!.strikes as any[]).map((s) => ({ strike: s.strike, netGex: s.netGex }))}
@@ -1416,14 +1392,15 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Market regime — measurable-feature classifier over the candle series */}
-      {candles.length >= 30 && (
+      {/* §4 Factor Lab — market-regime classifier (measurable features over the candle series) */}
+      {activeSubTab === 'factor' && candles.length >= 30 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-regime">
           <RegimeDetectionPanel candles={candles} ticker={activeTicker} />
         </div>
       )}
 
       {/* Footer: REAL dealer GEX (when streamed) + per-expiry GEX breakdown */}
+      {activeSubTab === 'mechanics' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 border-t border-[var(--border)] pt-4 gap-4" id="quant-suite-gex-footer">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-lg flex flex-col gap-2">
           <SectionHeader icon={<Layers className="w-3.5 h-3.5 text-[var(--accent-color)]" />} label="Dealer GEX Profile" />
@@ -1482,6 +1459,7 @@ export default function QuantSuiteView() {
           )}
         </div>
       </div>
+      )}
     </div>
     </StrikeSyncProvider>
   );
