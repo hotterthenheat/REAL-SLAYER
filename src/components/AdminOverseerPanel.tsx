@@ -4,6 +4,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { FieldError, zodError, type SubmitState } from './ui/Field';
 import { SearchInput } from './ui/SearchInput';
 import { DataStateBadge, type DataState } from './ui/DataStateBadge';
+import { ConversionCard } from './admin/ConversionCard';
 import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
   ShieldAlert, Users, Activity, Key, MonitorPlay, Radio,
@@ -204,6 +205,9 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
           </div>
         </div>
       </div>
+
+      {/* Visitors vs buyers — real conversion snapshot from access-tier counts. */}
+      <ConversionCard overview={overview} />
 
       {/* Recent activity — the five newest audit-trail entries, previewed on Overview. */}
       <div className={`${CARD} p-5`}>

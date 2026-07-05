@@ -120,3 +120,90 @@ export function equityCurveOption(echarts: any) {
     }],
   };
 }
+
+// ── HONEST cumulative P&L equity curve (real tracked-callout returns) ─────────
+// Unlike equityCurveOption above, this generates NOTHING — it plots the exact
+// cumulative series passed in (running sum of realized per-callout % returns,
+// equal-weight). Baseline at 0; the line + area are tinted by the sign of the
+// final cumulative value (green up / red down), with a dashed zero rule so the
+// sign is also read by position, not colour alone.
+export interface PnlPoint { date: string; cum: number }
+export interface PnlColors {
+  line: string; areaTop: string; areaBottom: string;
+  axis: string; grid: string; text: string; zero: string;
+}
+export function cumulativePnlOption(points: PnlPoint[], colors: PnlColors, echarts: any) {
+  const dates = points.map(p => p.date);
+  const data = points.map(p => +p.cum.toFixed(2));
+  return {
+    animation: false,
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: { type: 'line', lineStyle: { color: colors.axis } },
+      valueFormatter: (v: number) => `${v >= 0 ? '+' : ''}${Number(v).toFixed(1)}%`,
+    },
+    grid: { left: 52, right: 16, top: 16, bottom: 28 },
+    xAxis: {
+      type: 'category', boundaryGap: false, data: dates,
+      axisLabel: { color: colors.text, fontSize: 9 },
+      axisLine: { lineStyle: { color: colors.axis } },
+      axisTick: { show: false },
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: { formatter: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(0)}%`, color: colors.text, fontSize: 9 },
+      splitLine: { lineStyle: { color: colors.grid } },
+    },
+    series: [{
+      name: 'Cumulative return', type: 'line', symbol: 'none', smooth: true, sampling: 'lttb',
+      lineStyle: { width: 2, color: colors.line },
+      itemStyle: { color: colors.line },
+      areaStyle: {
+        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          { offset: 0, color: colors.areaTop },
+          { offset: 1, color: colors.areaBottom },
+        ]),
+      },
+      markLine: {
+        silent: true, symbol: 'none',
+        lineStyle: { color: colors.zero, type: 'dashed', width: 1 },
+        data: [{ yAxis: 0 }], label: { show: false },
+      },
+      data,
+    }],
+  };
+}
+
+// ── HONEST tier conversion snapshot (real user counts) ───────────────────────
+// Horizontal bar: unpaid "guest" visitors in a muted tone, each paid tier in a
+// blue step. No time axis (the user store has no signup timestamps) — a snapshot
+// of who visits vs who buys, straight from access_tier counts.
+export interface TierBar { label: string; count: number; color: string }
+export function tierConversionOption(
+  bars: TierBar[],
+  colors: { text: string; axis: string; grid: string },
+) {
+  return {
+    animation: false,
+    tooltip: { trigger: 'item', valueFormatter: (v: number) => `${v} user${v === 1 ? '' : 's'}` },
+    grid: { left: 78, right: 40, top: 8, bottom: 24 },
+    xAxis: {
+      type: 'value', minInterval: 1,
+      axisLabel: { color: colors.text, fontSize: 9 },
+      splitLine: { lineStyle: { color: colors.grid } },
+    },
+    yAxis: {
+      type: 'category', inverse: true,
+      data: bars.map(b => b.label),
+      axisLabel: { color: colors.text, fontSize: 10 },
+      axisLine: { lineStyle: { color: colors.axis } },
+      axisTick: { show: false },
+    },
+    series: [{
+      type: 'bar', barWidth: 16,
+      itemStyle: { borderRadius: [0, 4, 4, 0] },
+      label: { show: true, position: 'right', color: colors.text, fontSize: 10, fontFamily: 'JetBrains Mono, monospace' },
+      data: bars.map(b => ({ value: b.count, itemStyle: { color: b.color } })),
+    }],
+  };
+}

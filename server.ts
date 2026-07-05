@@ -2818,9 +2818,22 @@ function logAudit(req: any, action: string, targetId: string) {
 }
 
 app.get('/api/admin/overview', requireAdmin(), async (req: any, res) => {
+  const allUsers = await dbGetAllUsers();
+  // Real conversion snapshot from the user store — a "buyer" is any account whose
+  // access_tier is not the free 'guest' default. We do NOT synthesize a time series:
+  // UserAccount has no signup/last-seen timestamp, so only a current snapshot is honest.
+  const tierBreakdown: Record<string, number> = {};
+  let paidUsers = 0;
+  for (const u of allUsers) {
+    const tier = (u as any).access_tier || 'guest';
+    tierBreakdown[tier] = (tierBreakdown[tier] || 0) + 1;
+    if (tier !== 'guest') paidUsers++;
+  }
   res.json({
     live_connections: sse.clients.length,
-    total_users: (await dbGetAllUsers()).length,
+    total_users: allUsers.length,
+    paid_users: paidUsers,
+    tier_breakdown: tierBreakdown,
     suspended: SUSPENDED_USERS.size,
     banned: BANNED_USERS.size,
     maintenance_mode: MAINTENANCE_MODE,
