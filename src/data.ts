@@ -857,7 +857,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7620-c',
     ticker: 'SPX',
-    strike: 7620,
+    strike: 5520,
     isCall: true,
     health: 96,
     expectedMove: '+42.5%',
@@ -945,7 +945,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7600-c',
     ticker: 'SPX',
-    strike: 7600,
+    strike: 5500,
     isCall: true,
     health: 95,
     expectedMove: '+39.1%',
@@ -1056,7 +1056,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7660-c',
     ticker: 'SPX',
-    strike: 7660,
+    strike: 5560,
     isCall: true,
     health: 86,
     expectedMove: '+45.0%',
@@ -1100,7 +1100,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7640-c',
     ticker: 'SPX',
-    strike: 7640,
+    strike: 5540,
     isCall: true,
     health: 88,
     expectedMove: '+30.2%',
@@ -1145,7 +1145,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7650-c',
     ticker: 'SPX',
-    strike: 7650,
+    strike: 5550,
     isCall: true,
     health: 83,
     expectedMove: '+18.5%',
@@ -1189,7 +1189,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7590-p',
     ticker: 'SPX',
-    strike: 7590,
+    strike: 5490,
     isCall: false,
     health: 84,
     expectedMove: '+27.0%',
@@ -1256,7 +1256,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7610-p',
     ticker: 'SPX',
-    strike: 7610,
+    strike: 5510,
     isCall: false,
     health: 48,
     expectedMove: '-15.4%',
@@ -1300,7 +1300,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7580-p',
     ticker: 'SPX',
-    strike: 7580,
+    strike: 5480,
     isCall: false,
     health: 41,
     expectedMove: '-24.0%',
@@ -1389,7 +1389,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7700-c',
     ticker: 'SPX',
-    strike: 7700,
+    strike: 5600,
     isCall: true,
     health: 94,
     expectedMove: '+62.4%',
@@ -1477,7 +1477,7 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
   {
     id: 'spx-7500-p',
     ticker: 'SPX',
-    strike: 7500,
+    strike: 5400,
     isCall: false,
     health: 85,
     expectedMove: '+52.0%',
@@ -1531,11 +1531,11 @@ export const INITIAL_DISCOVERY_CONTRACTS = [
 export function buildInitialDiscoveryFeedLogs() {
   const now = Date.now();
   const rows = [
-    { ticker: 'SPX', strike: 7620, type: 'C', side: 'Sweep', size: 280, prem: 151200, tag: 'BULLISH', action: 'SWEPT @ ASK' },
+    { ticker: 'SPX', strike: 5520, type: 'C', side: 'Sweep', size: 280, prem: 151200, tag: 'BULLISH', action: 'SWEPT @ ASK' },
     { ticker: 'QQQ', strike: 448, type: 'C', side: 'Block', size: 1200, prem: 504000, tag: 'BULLISH', action: 'AT ASK' },
     { ticker: 'NDX', strike: 18350, type: 'C', side: 'Block', size: 150, prem: 232500, tag: 'BULLISH', action: 'ABOVE ASK' },
     { ticker: 'SPY', strike: 508, type: 'P', side: 'Sweep', size: 2500, prem: 337500, tag: 'BEARISH', action: 'SWEPT @ ASK' },
-    { ticker: 'SPX', strike: 7700, type: 'C', side: 'Block', size: 3000, prem: 735000, tag: 'BULLISH', action: 'OFF-EXCHANGE' },
+    { ticker: 'SPX', strike: 5600, type: 'C', side: 'Block', size: 3000, prem: 735000, tag: 'BULLISH', action: 'OFF-EXCHANGE' },
     { ticker: 'NDX', strike: 17800, type: 'P', side: 'Sweep', size: 400, prem: 496000, tag: 'HEDGE', action: 'SWEPT @ ASK' },
     { ticker: 'SPY', strike: 515, type: 'C', side: 'Sweep', size: 1800, prem: 576000, tag: 'BULLISH', action: 'SWEPT @ ASK' },
     { ticker: 'QQQ', strike: 455, type: 'C', side: 'Sweep', size: 2400, prem: 348000, tag: 'BULLISH', action: 'ABOVE ASK' },

@@ -18,6 +18,8 @@ import { useContractStore } from '../lib/store';
 import { formatTime } from '../lib/timeUtils';
 import { fmtNum } from '../lib/format';
 import { AssetSparkline } from './AssetSparkline';
+import { DataStateBadge } from './ui/DataStateBadge';
+import { deriveSetup, SetupRow, SetupInspector, type ScannerContract } from './scanner/SetupQueue';
 
 interface DiscoveryViewProps {
   systemScore: any;
@@ -579,7 +581,7 @@ const INITIAL_CONTRACTS = [
     health: 94,
     expectedMove: '+62.4%',
     action: 'ENTER' as const,
-    narrative: 'Block institutional trades sweep SPX 7700 strike, representing $14.2M notional.',
+    narrative: 'Block institutional trades sweep SPX 5600 strike, representing $14.2M notional.',
     tagText: 'WHALE',
     shelf: 'whale',
     delta: 0.35,
@@ -768,8 +770,12 @@ export function DiscoveryView({
   const [flashDirection, setFlashDirection] = useState<'up' | 'down'>('up');
   const [metricsPulse, setMetricsPulse] = useState(false);
 
-  // Strategy Manual & target logic reasons dictionary (explanations in simple words why they are the best)
-  const [isStrategyExpanded, setIsStrategyExpanded] = useState(true);
+  // Strategy Manual & target logic reasons dictionary (explanations in simple words why they are the best).
+  // Collapsed by default per the redesign — education must not dominate the scanner page.
+  const [isStrategyExpanded, setIsStrategyExpanded] = useState(false);
+  const [isSupportingOpen, setIsSupportingOpen] = useState(false);
+  // The row the right-rail inspector describes; defaults to the top-ranked setup.
+  const [selectedSetupId, setSelectedSetupId] = useState<string | null>(null);
   const [isMockScanning, setIsMockScanning] = useState(false);
   const [lastScanMessage, setLastScanMessage] = useState('Ready. Scan complete.');
   const [scanHistoryCount, setScanHistoryCount] = useState(0);
@@ -1097,27 +1103,79 @@ export function DiscoveryView({
   const c_innerWellBg = "bg-[var(--surface)] border-[var(--border)]";
   const c_glassBg = "bg-[var(--surface)] border border-[var(--border)] shadow-md text-[var(--text-primary)]";
 
+  // Ranked queue: the filtered setups flattened and sorted strongest-first, each enriched with
+  // the row/inspector display fields. This is the core of the redesigned scanner.
+  const rankedSetups = useMemo(
+    () => [...filteredContracts]
+      .sort((a, b) => b.health - a.health)
+      .map(c => deriveSetup(c as ScannerContract)),
+    [filteredContracts],
+  );
+  const selectedSetup = useMemo(
+    () => rankedSetups.find(s => s.c.id === selectedSetupId) ?? rankedSetups[0] ?? null,
+    [rankedSetups, selectedSetupId],
+  );
+  // "Review Setup" routes the contract into the SkyVision detail page (the confirm/prove/track flow).
+  const reviewSetup = (s: { c: ScannerContract; side: 'C' | 'P' }) => {
+    const asset = ASSET_LIST.find(a => a.ticker === s.c.ticker);
+    if (asset) onSelectContract(asset, s.c.strike, s.side === 'C');
+  };
+
+  // Symbol group for the command header — the index/ETF universe the scanner covers.
+  const SYMBOL_GROUP = ['SPX', 'NDX', 'QQQ', 'SPY', 'RUT'];
+  const activeTicker = useContractStore.getState().selectedAsset.ticker;
+
   return (
     <div className={`w-full flex flex-col font-mono select-none antialiased space-y-6 max-w-6xl mx-auto pt-2 pb-12 ${c_textColor}`}>
       
-      {/* 1. TOP STATUS BAR */}
-      <div className={`flex flex-col md:flex-row justify-between items-stretch md:items-center p-3 sm:p-4 rounded-xl gap-4 md:gap-2 border ${c_cardBg}`}>
-
-        <div className="flex items-center gap-2.5">
+      {/* 1. COMMAND HEADER — title · symbol group · data state · last updated · refresh */}
+      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 sm:px-4 rounded-xl border ${c_cardBg}`}>
+        <div className="flex items-center gap-2.5 min-w-0">
           <Target className="w-4 h-4 text-[var(--success)] shrink-0" />
-          <div>
-            <h1 className={`text-xs font-black tracking-widest uppercase ${c_textWhite}`}>
-              Trade Finder <span className="text-[var(--text-tertiary)]">/ Options Scanner</span>
-              <span className="ml-2 align-middle text-[8px] font-bold px-1.5 py-0.5 rounded bg-[var(--info)]/15 text-[var(--info)] border border-[var(--info)]/30 tracking-wider">
-                SAMPLE MODE
-              </span>
+          <div className="min-w-0">
+            <h1 className={`text-xs font-black tracking-widest uppercase ${c_textWhite} truncate`}>
+              SkyVision <span className="text-[var(--text-tertiary)]">· Options Scanner</span>
             </h1>
-            <p className="text-[9.5px] text-[var(--text-tertiary)] mt-0.5 uppercase tracking-wide">
-              Illustrative setups — demo data, not a live scan
+            <p className="text-[9px] text-[var(--text-tertiary)] mt-0.5 uppercase tracking-widest truncate">
+              {activeTicker} · 0DTE / 1D / 3D · Updated {formatTime(new Date(metricsAsOf))}
             </p>
           </div>
         </div>
 
+        <div className="flex flex-wrap items-center gap-2">
+          {/* symbol group */}
+          <div className="flex items-center p-0.5 rounded-md border bg-[var(--surface-2)] border-[var(--border)]">
+            {SYMBOL_GROUP.map(sym => {
+              const asset = ASSET_LIST.find(a => a.ticker === sym);
+              const on = activeTicker === sym;
+              return (
+                <button
+                  key={sym}
+                  onClick={() => asset && useContractStore.getState().setSelectedAsset(asset)}
+                  aria-label={`Focus ${sym}`}
+                  aria-pressed={on}
+                  className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
+                    on ? 'bg-[var(--surface-3)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {sym}
+                </button>
+              );
+            })}
+          </div>
+          <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
+          <button
+            onClick={triggerManualScannerRefresh}
+            disabled={isMockScanning}
+            aria-label="Refresh scan"
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
+              isMockScanning ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)] hover:bg-[var(--surface-3)]'
+            }`}
+          >
+            <RefreshCw className={`w-3 h-3 ${isMockScanning ? 'animate-spin text-[var(--success)]' : ''}`} />
+            {isMockScanning ? 'Scanning…' : 'Refresh scan'}
+          </button>
+        </div>
       </div>
 
       {/* 2. CONTROLS BAR (Segmented Selection, Filters, Search) */}
@@ -1126,7 +1184,7 @@ export function DiscoveryView({
         {/* Navigation Categories Tabs */}
         <div className="md:col-span-8 flex items-center p-0.5 border rounded-md overflow-x-auto scrollbar-none gap-0.5 bg-[var(--surface-2)] border-[var(--border)]">
           {[
-            { id: 'conviction', label: 'TOP OPPORTUNITIES', count: contracts.filter(c => c.shelf === 'conviction').length },
+            { id: 'conviction', label: 'Top Setups', count: contracts.filter(c => c.shelf === 'conviction').length },
             { id: 'improved', label: 'Quick Scalp', count: contracts.filter(c => c.shelf === 'improved').length },
             { id: 'mispriced', label: 'DISCOUNTED', count: contracts.filter(c => c.shelf === 'mispriced').length },
             { id: 'invalidation', label: 'REBOUNDS', count: contracts.filter(c => c.shelf === 'invalidation').length },
@@ -1407,484 +1465,197 @@ export function DiscoveryView({
         </button>
       </div>
 
-      {/* 3. CORE DUAL-COLUMN WORKSPACE */}
+      {/* 3. MAIN SETUP QUEUE + SELECTED-SETUP INSPECTOR */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
 
-        {/* LEFT COLUMN: GROUPED PER TICKER (8 COLS) */}
-        <div className="lg:col-span-8 flex flex-col gap-5 w-full">
-
-          <div className="flex justify-between items-center px-1">
+        {/* LEFT: ranked setup queue — larger horizontal rows, strongest elevated */}
+        <div className="lg:col-span-8 flex flex-col gap-3 w-full">
+          <div className="flex items-center justify-between px-1">
             <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-secondary)]">
-              Showing {filteredContracts.length} of {contracts.length} setups
+              {rankedSetups.length} {rankedSetups.length === 1 ? 'setup' : 'setups'} · strongest first
             </span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Sample model ranking</span>
           </div>
 
-          <div className="flex flex-col gap-6 w-full">
-            <AnimatePresence mode="popLayout">
-              {sortedTickers.map((ticker) => {
-                const tickerContracts = groupedByTickerAndSorted[ticker];
-                return (
-                  <div key={ticker} className="space-y-3 p-3 sm:p-4 rounded-xl text-left border bg-[var(--surface)] border-[var(--border)]">
+          {rankedSetups.length === 0 ? (
+            <div className="border p-8 rounded-xl text-center uppercase text-xs space-y-2 bg-[var(--surface)] border-[var(--border)]">
+              <ShieldAlert className="w-8 h-8 text-[var(--text-tertiary)] mx-auto" />
+              <p className={`font-extrabold tracking-widest text-[10px] ${c_textWhite}`}>No setups match your filters.</p>
+              <p className="text-[9px] text-[var(--text-tertiary)] leading-snug font-sans">Try clearing the filters or modifying your search terms above.</p>
+              <button
+                type="button"
+                onClick={() => { setActiveShelf('all'); setOptionTypeFilter('all'); setSearchQuery(''); }}
+                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border font-mono text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer bg-transparent border-[var(--border-strong)] text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)]"
+              >
+                <RefreshCw className="w-3 h-3" />
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2.5">
+              {rankedSetups.map((s, i) => (
+                <SetupRow
+                  key={s.c.id}
+                  s={s}
+                  selected={selectedSetup?.c.id === s.c.id}
+                  elevated={i === 0}
+                  onSelect={() => setSelectedSetupId(s.c.id)}
+                  onReview={() => reviewSetup(s)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-                    {/* Ticker Section Title segment */}
-                    <div className="flex items-center justify-between gap-2 border-b pb-2.5 mb-1 border-[var(--border)] flex-wrap">
-                      <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-xs font-black tracking-widest uppercase font-mono ${c_textWhite}`}>{ticker}</span>
-                          <span className="bg-[var(--info)]/10 border border-[var(--info)]/20 text-[var(--info)] text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                            {tickerContracts.length} found
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2.5 bg-[var(--surface-2)]/60 px-2 py-0.5 rounded border border-[var(--border)]/40">
-                          <AssetSparkline ticker={ticker} width={50} height={12} strokeWidth={1.25} />
-                          <span className="text-[9px] font-mono font-bold text-[var(--text-secondary)] opacity-90">
-                            ${(useContractStore.getState().serverState?.liveSpotPrices?.[ticker] || ASSET_LIST.find(a => a.ticker === ticker)?.defaultPrice || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        </div>
-                      </div>
-                      <span className="text-[7.5px] text-[var(--text-tertiary)] uppercase tracking-widest font-black shrink-0">
-                        Strongest → Weakest
-                      </span>
+        {/* RIGHT: selected-setup inspector */}
+        <div className="lg:col-span-4 w-full">
+          <SetupInspector s={selectedSetup} onReview={reviewSetup} />
+        </div>
+
+      </div>
+
+      {/* 4. SUPPORTING MARKET CONTEXT — secondary evidence, collapsed by default so it never
+          competes with the setup queue. */}
+      <div className={`w-full rounded-xl border ${c_cardBg}`}>
+        <button
+          type="button"
+          onClick={() => setIsSupportingOpen(v => !v)}
+          aria-expanded={isSupportingOpen}
+          className="w-full flex items-center justify-between px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] rounded-xl"
+        >
+          <div className="flex items-center gap-2">
+            <Flame className="w-4 h-4 text-[var(--danger)]" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">Supporting evidence</span>
+            <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">Largest trades · Sample flow</span>
+          </div>
+          {isSupportingOpen ? <ChevronUp className="w-3.5 h-3.5 text-[var(--text-tertiary)]" /> : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
+        </button>
+
+        <AnimatePresence initial={false}>
+          {isSupportingOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 pt-0">
+
+                {/* Largest trades (derived from the sample tape) */}
+                <div className="border rounded-xl p-3 sm:p-4 text-left flex flex-col gap-3 bg-[var(--surface-2)] border-[var(--border)]">
+                  <div className="flex items-center gap-2 border-b pb-2 border-[var(--border)]">
+                    <Flame className="w-3.5 h-3.5 text-[var(--danger)]" />
+                    <h2 className={`text-[10px] font-black uppercase tracking-widest ${c_textWhite}`}>Largest Trades</h2>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface)] border-[var(--border)]">
+                      {topFlows.bullish ? (
+                        <>
+                          <div className="space-y-0.5">
+                            <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Bullish</span>
+                            <span className="text-[var(--success)] font-bold block">{topFlows.bullish.ticker} {fmtNum(topFlows.bullish.strike)}{topFlows.bullish.type}</span>
+                            <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.bullish.size}</span>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
+                            <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.bullish.premium}</span>
+                          </div>
+                        </>
+                      ) : (<span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting bullish flow…</span>)}
                     </div>
+                    <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface)] border-[var(--border)]">
+                      {topFlows.hedge ? (
+                        <>
+                          <div className="space-y-0.5">
+                            <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Hedge</span>
+                            <span className="text-[var(--danger)] font-bold block">{topFlows.hedge.ticker} {fmtNum(topFlows.hedge.strike)}{topFlows.hedge.type}</span>
+                            <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.hedge.size}</span>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
+                            <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.hedge.premium}</span>
+                          </div>
+                        </>
+                      ) : (<span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting hedge flow…</span>)}
+                    </div>
+                    <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface)] border-[var(--border)]">
+                      {topFlows.largestOverall ? (
+                        <>
+                          <div className="space-y-0.5">
+                            <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Overall</span>
+                            <span className="text-[var(--info)] font-bold block">{topFlows.largestOverall.ticker} {fmtNum(topFlows.largestOverall.strike)}{topFlows.largestOverall.type}</span>
+                            <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.largestOverall.side}</span>
+                          </div>
+                          <div className="text-right space-y-0.5">
+                            <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
+                            <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.largestOverall.premium}</span>
+                          </div>
+                        </>
+                      ) : (<span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting flow…</span>)}
+                    </div>
+                  </div>
+                </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-                      {tickerContracts.map((c, idx) => {
-                        const actionColor = c.action === 'ENTER'
-                          ? 'text-[var(--success)] border-[var(--success)]/20 bg-[var(--success)]/5'
-                          : c.action === 'SELL'
-                            ? 'text-[var(--danger)] border-[var(--danger)]/20 bg-[var(--danger)]/5'
-                            : 'text-[var(--warning)] border-[var(--warning)]/20 bg-[var(--warning)]/5';
-
-                        const isFlashing = lastFlashingId === c.id;
-
-                        // Classification tags: Core vs Fast Scalps vs Rebound Recoveries
-                        let classBadgeLabel = "TOP OPPORTUNITY";
-                        let classBadgeStyle = "bg-[var(--info)]/10 text-[var(--info)] border-[var(--info)]/20";
-                        if (c.shelf === 'improved') {
-                          classBadgeLabel = "QUICKSCALP";
-                          classBadgeStyle = "bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/20";
-                        } else if (c.shelf === 'invalidation') {
-                          classBadgeLabel = "REBOUND";
-                          classBadgeStyle = "bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--danger)]/20";
-                        } else if (c.shelf === 'mispriced') {
-                          classBadgeLabel = "DISCOUNTED";
-                          classBadgeStyle = "bg-[var(--surface-3)] text-[var(--text-secondary)] border-[var(--border)]";
-                        } else if (c.shelf === 'whale') {
-                          classBadgeLabel = "WHALE";
-                          classBadgeStyle = "bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/20";
-                        }
-
-                        // Strongest indicator of this group (top sorted card is ALWAYS idx === 0 within its ticker)
-                        const isPrimaryPeak = idx === 0;
-
-                        // Parameters Price Targets calculation (Institutional Swing Target vs Quick Volatility Scalp)
-                        const coreSwingTarget = c.t1 != null ? c.t1 : c.price * 1.35;
-                        const coreSwingGain = c.p1 != null ? c.p1 : 35;
-                        const quickScalpTarget = c.price * 1.18;
-                        const quickScalpGain = 18;
-
-                        const isCardExpanded = !!expandedContracts[c.id];
-
+                {/* Sample option flow tape */}
+                <div className="border rounded-xl p-3 sm:p-4 text-left flex flex-col gap-3 bg-[var(--surface-2)] border-[var(--border)]">
+                  <div className="flex items-center justify-between border-b pb-2 border-[var(--border)]">
+                    <div className="flex items-center gap-2">
+                      <Database className="w-3.5 h-3.5 text-[var(--info)]" />
+                      <h2 className={`text-[10px] font-black uppercase tracking-widest ${c_textWhite}`}>Sample Option Flow</h2>
+                    </div>
+                    {feedError && (
+                      <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/30" role="status" aria-live="polite">
+                        <RefreshCw className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />
+                        Reconnecting…
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-[260px] overflow-y-auto scrollbar-thin pr-1 select-none flex flex-col gap-1.5">
+                    <AnimatePresence initial={false}>
+                      {feedLogs.map((log, index) => {
+                        const isSweep = log.side === 'Sweep';
+                        const isBullish = log.tag === 'BULLISH';
                         return (
                           <motion.div
-                            layout
-                            key={c.id}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95 }}
-                            transition={{ duration: 0.25 }}
-                            role="button"
-                            tabIndex={0}
-                            aria-expanded={isCardExpanded}
-                            aria-label={`${c.ticker} ${c.strike}${c.isCall ? 'C' : 'P'} — ${isCardExpanded ? 'collapse' : 'expand'} details`}
-                            className={`p-4 border rounded-xl flex flex-col gap-2.5 text-left transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
-                              isFlashing
-                                ? (flashDirection === 'up' ? 'bg-[var(--success)]/5 border-[var(--success)]/30' : 'bg-[var(--danger)]/5 border-[var(--danger)]/30')
-                                : isCardExpanded
-                                  ? 'bg-[var(--surface-2)] border-[var(--border-strong)]'
-                                  : 'bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border-[var(--border)]'
-                            }`}
-                            onClick={() => {
-                              setExpandedContracts(prev => ({
-                                ...prev,
-                                [c.id]: !prev[c.id]
-                              }));
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' || e.key === ' ') {
-                                e.preventDefault();
-                                setExpandedContracts(prev => ({
-                                  ...prev,
-                                  [c.id]: !prev[c.id]
-                                }));
-                              }
-                            }}
+                            key={(log as any).id ?? `${log.timestamp}-${log.ticker}-${log.strike}-${index}`}
+                            initial={{ opacity: 0, x: 20, height: 0 }}
+                            animate={{ opacity: 1, x: 0, height: 'auto' }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="py-2.5 border rounded-lg px-2.5 transition-colors flex flex-col gap-1 text-[9.5px] bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-3)]"
                           >
-
-                            {/* Top Contract Badge & Header */}
-                            <div className="flex justify-between items-start">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className={`text-xs font-black font-sans px-2.5 py-0.5 rounded-md border uppercase inline-block ${
-                                    c.isCall
-                                      ? 'bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/25'
-                                      : 'bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--danger)]/25'
-                                  }`}>
-                                    {c.ticker} {fmtNum(c.strike)}{c.isCall ? 'C' : 'P'}
-                                  </span>
-                                  <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold uppercase tracking-widest border ${classBadgeStyle}`}>
-                                    {classBadgeLabel}
-                                  </span>
-                                </div>
-                                <div className="flex items-center gap-1.5 pt-0.5">
-                                  <span className="text-[7.5px] uppercase tracking-wider text-[var(--text-tertiary)] font-extrabold font-mono">
-                                    Score {c.health}
-                                  </span>
-                                  <span className="text-[var(--text-tertiary)]">•</span>
-                                  <span className={`text-[7.5px] uppercase tracking-wider font-extrabold ${actionColor}`}>
-                                    {c.action === 'ENTER' ? 'REVIEW' : c.action === 'SELL' ? 'AVOID' : c.action}
-                                  </span>
-                                  {isPrimaryPeak && (
-                                    <>
-                                      <span className="text-[var(--text-tertiary)]">•</span>
-                                      <span className="text-[7px] text-[var(--success)] font-bold bg-[var(--success)]/10 border border-[var(--success)]/20 px-1 rounded uppercase tracking-wider">
-                                        Top Rated
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
+                            <div className="flex justify-between items-center text-[9px]">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-[var(--text-tertiary)]">{log.timestamp}</span>
+                                <span className={`px-1 py-0.5 rounded font-black text-[7.5px] ${isSweep ? 'bg-[var(--warning)]/10 border border-[var(--warning)]/25 text-[var(--warning)]' : 'bg-[var(--info)]/10 border border-[var(--info)]/25 text-[var(--info)]'}`}>
+                                  {log.side.toUpperCase()}
+                                </span>
                               </div>
-
-                              {/* Expected Return */}
-                              <div className="text-right flex items-start gap-3">
-                                <div className="space-y-0.5">
-                                  <span className="text-[7.5px] text-[var(--text-tertiary)] tracking-wider block font-bold uppercase">Expected Move</span>
-                                  <span className={`text-sm font-black tracking-tight font-mono ${c.health >= 55 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                                    {c.expectedMove}
-                                  </span>
-                                </div>
-                                <div className="pt-1 select-none text-[var(--text-tertiary)]">
-                                  {isCardExpanded ? (
-                                    <ChevronUp className="w-4 h-4" />
-                                  ) : (
-                                    <ChevronDown className="w-4 h-4" />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* EXPANDED DETAIL */}
-                            {isCardExpanded && (
-                              <div className="space-y-3 mt-1 pt-3 border-t border-[var(--border)] animate-fadeIn">
-                                {/* Targets: swing vs scalp */}
-                                <div className="grid grid-cols-2 gap-2 p-2 rounded-lg text-center text-[10px] border bg-[var(--surface)] border-[var(--border)]">
-                                  <div className="border-r text-left pl-1 border-[var(--border)]">
-                                    <div className="text-[7.5px] text-[var(--text-tertiary)] uppercase tracking-widest font-black block">Swing Target</div>
-                                    <span className={`font-extrabold font-mono block text-xs ${c_textWhite}`}>
-                                      ${coreSwingTarget.toFixed(2)}
-                                    </span>
-                                    <span className="text-[7.5px] text-[var(--success)] font-bold font-mono">
-                                      +{coreSwingGain}%
-                                    </span>
-                                  </div>
-                                  <div className="text-left pl-2">
-                                    <div className="text-[7.5px] text-[var(--text-tertiary)] uppercase tracking-widest font-black block">Scalp Exit</div>
-                                    <span className="text-[var(--warning)] font-extrabold font-mono block text-xs">
-                                      ${quickScalpTarget.toFixed(2)}
-                                    </span>
-                                    <span className="text-[7.5px] text-[var(--warning)] font-bold font-mono">
-                                      +{quickScalpGain}%
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* Plain-English reasoning */}
-                                <div className="p-2.5 rounded-lg text-[9.5px]/[14.5px] tracking-wide text-left flex gap-1.5 items-start font-sans border bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)]">
-                                  <Info className="w-3.5 h-3.5 text-[var(--info)] shrink-0 mt-0.5" />
-                                  <div className="font-medium tracking-wide">
-                                    <span className="text-[var(--info)] font-extrabold mr-1 uppercase">Why:</span>
-                                    {getSimpleWordReason(c)}
-                                  </div>
-                                </div>
-
-                                {/* Narrative */}
-                                <p className="text-[10px] font-sans tracking-wide leading-relaxed border-t pt-2.5 border-[var(--border)] text-[var(--text-secondary)]">
-                                  {c.narrative}
-                                </p>
-
-                                {/* Greeks */}
-                                <div className="border rounded-lg p-2.5 grid grid-cols-4 gap-2 text-center text-[10px] font-mono bg-[var(--surface)] border-[var(--border)] text-[var(--text-secondary)]">
-                                  <div>
-                                    <span className="block text-[7.5px] text-[var(--text-tertiary)] mb-0.5 tracking-wider uppercase">Delta</span>
-                                    <span className={`font-bold block ${c.isCall ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{c.delta}</span>
-                                  </div>
-                                  <div>
-                                    <span className="block text-[7.5px] text-[var(--text-tertiary)] mb-0.5 tracking-wider uppercase">Gamma</span>
-                                    <span className="font-bold block text-[var(--text-primary)]">{c.gamma}</span>
-                                  </div>
-                                  <div>
-                                    <span className="block text-[7.5px] text-[var(--text-tertiary)] mb-0.5 tracking-wider uppercase">Theta</span>
-                                    <span className="text-[var(--warning)] font-bold block">{c.theta}</span>
-                                  </div>
-                                  <div>
-                                    <span className="block text-[7.5px] text-[var(--text-tertiary)] mb-0.5 tracking-wider uppercase">IV</span>
-                                    <span className="font-bold block text-[var(--text-secondary)]">{(c.vega * 100).toFixed(1)}%</span>
-                                  </div>
-                                </div>
-
-                                {/* Pricing */}
-                                <div className="flex justify-between items-center pt-2.5 border-t border-[var(--border)] text-[10.5px]">
-                                  <div className="space-y-0.5">
-                                    <span className="text-[7.5px] text-[var(--text-tertiary)] uppercase block tracking-wider font-bold">Bid / Ask</span>
-                                    <span className="text-[var(--text-secondary)] font-mono font-bold block">
-                                      ${c.bid.toFixed(2)} – ${c.ask.toFixed(2)}
-                                    </span>
-                                  </div>
-                                  <div className="text-right">
-                                    <span className="text-[7.5px] text-[var(--text-tertiary)] uppercase block tracking-wider font-bold">Sample Mid</span>
-                                    <motion.span
-                                      animate={isFlashing ? { scale: [1, 1.1, 1] } : {}}
-                                      className={`text-xs font-black block font-mono ${
-                                        isFlashing
-                                          ? (flashDirection === 'up' ? 'text-[var(--success)]' : 'text-[var(--danger)]')
-                                          : 'text-[var(--text-primary)]'
-                                      }`}
-                                    >
-                                      ${c.price.toFixed(2)}
-                                    </motion.span>
-                                  </div>
-                                </div>
-
-                                {/* Action: open deep assessment */}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSelectWithMatch(c.ticker, c.strike, c.isCall);
-                                  }}
-                                  className="w-full py-2.5 bg-[var(--success)] hover:bg-[#3fce72] border border-[var(--success)] text-[8.5px] text-[#04140A] font-extrabold uppercase tracking-widest rounded-md mt-1 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                                >
-                                  <span>Open Full Analysis</span>
-                                  <ArrowRight className="w-2.5 h-2.5" />
-                                </button>
-                              </div>
-                            )}
-
-                            {/* Expand/collapse hint */}
-                            <div className="flex justify-end items-center text-[7.5px] font-sans text-[var(--text-tertiary)] uppercase tracking-wider pt-2 border-t border-[var(--border)] w-full mt-2.5 select-none">
-                              <span className="flex items-center gap-0.5 font-bold">
-                                {isCardExpanded ? "Collapse" : "Details"}
-                                <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-300 ${isCardExpanded ? 'rotate-180' : ''}`} />
+                              <span className={`font-mono font-extrabold flex items-center gap-1 ${isBullish ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
+                                <span aria-hidden="true">{isBullish ? '▲' : '▼'}</span>
+                                {log.action}
                               </span>
                             </div>
-
+                            <div className="flex justify-between items-baseline font-mono font-bold">
+                              <span className={`text-[10.5px] ${c_textWhite}`}>{log.ticker} {fmtNum(log.strike)}{log.type}</span>
+                              <span className={isBullish ? 'text-[var(--success)]' : 'text-[var(--warning)]'}><span aria-hidden="true">{isBullish ? '+' : '−'}</span>{log.premium}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-[8.5px] text-[var(--text-tertiary)] pt-1 border-t border-[var(--border)]">
+                              <span>Size {log.size}</span>
+                              <span>Bias <span className={isBullish ? 'text-[var(--success)] font-bold' : 'text-[var(--text-secondary)] font-bold'}>{log.tag}</span></span>
+                            </div>
                           </motion.div>
                         );
                       })}
-                    </div>
+                    </AnimatePresence>
                   </div>
-                );
-              })}
-            </AnimatePresence>
+                </div>
 
-            {filteredContracts.length === 0 && (
-              <div className="border p-8 rounded-xl text-center uppercase text-xs space-y-2 bg-[var(--surface)] border-[var(--border)]">
-                <ShieldAlert className="w-8 h-8 text-[var(--text-tertiary)] mx-auto" />
-                <p className={`font-extrabold tracking-widest text-[10px] ${c_textWhite}`}>No setups match your filters.</p>
-                <p className="text-[9px] text-[var(--text-tertiary)] leading-snug font-sans">
-                  Try clearing the filters or modifying your search terms above.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveShelf('all');
-                    setOptionTypeFilter('all');
-                    setSearchQuery('');
-                  }}
-                  className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border font-mono text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer bg-transparent border-[var(--border-strong)] text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)]"
-                >
-                  <RefreshCw className="w-3 h-3" />
-                  Clear filters
-                </button>
               </div>
-            )}
-
-          </div>
-
-          {/* GRID SUMMARY */}
-          <div className={`w-full rounded-xl p-3 sm:p-5 text-left flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border ${c_cardBg}`}>
-            <div className="space-y-1">
-              <span className="text-[8.5px] text-[var(--info)] tracking-widest uppercase font-black block">How This Works</span>
-              <p className="text-[10px] tracking-wide leading-relaxed font-sans font-medium text-[var(--text-secondary)]">
-                This is a sample layout illustrating how dealer positioning, expected moves, and option pricing would be ranked. It is demo data, not a live scan. Tap any contract above to see its illustrative price targets.
-              </p>
-            </div>
-            <div className="flex gap-5 shrink-0 text-left border-t md:border-t-0 md:border-l pt-3 md:pt-0 md:pl-5 border-[var(--border)]">
-              <div>
-                <span className="text-[7.5px] text-[var(--text-tertiary)] uppercase font-black tracking-widest block">Buy Signals</span>
-                <span className={`text-sm font-black font-mono ${c_textWhite}`}>{(metricsOverview.totalCount > 0 ? (metricsOverview.enterCount / metricsOverview.totalCount) * 100 : 0).toFixed(1)}%</span>
-              </div>
-              <div>
-                <span className="text-[7.5px] text-[var(--text-tertiary)] uppercase font-black tracking-widest block">High Conviction</span>
-                <span className="text-sm font-black text-[var(--success)] font-mono">{metricsOverview.extremeEV}</span>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        {/* RIGHT COLUMN: FLOW FEED & LARGEST TRADES (4 COLS) */}
-        <div className="lg:col-span-4 flex flex-col gap-4 w-full">
-
-          {/* A. LARGEST TRADES (derived from live tape) */}
-          <div className={`border rounded-xl p-3 sm:p-4.5 text-left flex flex-col gap-3.5 ${c_cardBg}`}>
-
-            <div className="flex items-center gap-2 border-b pb-2.5 border-[var(--border)]">
-              <Flame className="w-4 h-4 text-[var(--danger)]" />
-              <h2 className={`text-[10.5px] font-black uppercase tracking-widest ${c_textWhite}`}>
-                Largest Trades
-              </h2>
-            </div>
-
-            <div className="space-y-2.5">
-
-              {/* Largest bullish */}
-              <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface-2)] border-[var(--border)]">
-                {topFlows.bullish ? (
-                  <>
-                    <div className="space-y-0.5">
-                      <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Bullish</span>
-                      <span className="text-[var(--success)] font-bold block">{topFlows.bullish.ticker} {fmtNum(topFlows.bullish.strike)}{topFlows.bullish.type}</span>
-                      <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.bullish.size}</span>
-                    </div>
-                    <div className="text-right space-y-0.5">
-                      <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
-                      <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.bullish.premium}</span>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting bullish flow…</span>
-                )}
-              </div>
-
-              {/* Largest hedge / bearish */}
-              <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface-2)] border-[var(--border)]">
-                {topFlows.hedge ? (
-                  <>
-                    <div className="space-y-0.5">
-                      <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Hedge</span>
-                      <span className="text-[var(--danger)] font-bold block">{topFlows.hedge.ticker} {fmtNum(topFlows.hedge.strike)}{topFlows.hedge.type}</span>
-                      <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.hedge.size}</span>
-                    </div>
-                    <div className="text-right space-y-0.5">
-                      <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
-                      <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.hedge.premium}</span>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting hedge flow…</span>
-                )}
-              </div>
-
-              {/* Largest overall */}
-              <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface-2)] border-[var(--border)]">
-                {topFlows.largestOverall ? (
-                  <>
-                    <div className="space-y-0.5">
-                      <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Overall</span>
-                      <span className="text-[var(--info)] font-bold block">{topFlows.largestOverall.ticker} {fmtNum(topFlows.largestOverall.strike)}{topFlows.largestOverall.type}</span>
-                      <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.largestOverall.side}</span>
-                    </div>
-                    <div className="text-right space-y-0.5">
-                      <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
-                      <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.largestOverall.premium}</span>
-                    </div>
-                  </>
-                ) : (
-                  <span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting flow…</span>
-                )}
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* B. LIVE FLOW FEED */}
-          <div className={`border rounded-xl p-3 sm:p-4.5 text-left flex flex-col gap-3.5 ${c_cardBg}`}>
-
-            <div className="flex items-center justify-between border-b pb-2.5 border-[var(--border)]">
-              <div className="flex items-center gap-2">
-                <Database className="w-4 h-4 text-[var(--info)]" />
-                <h2 className={`text-[10.5px] font-black uppercase tracking-widest ${c_textWhite}`}>
-                  Sample Option Flow
-                </h2>
-              </div>
-              {feedError && (
-                <span
-                  className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/30"
-                  role="status"
-                  aria-live="polite"
-                >
-                  <RefreshCw className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />
-                  Reconnecting…
-                </span>
-              )}
-            </div>
-
-            {/* Scrolling Tape Container */}
-            <div className="h-[285px] overflow-y-auto scrollbar-thin pr-1 select-none flex flex-col gap-1.5">
-              <AnimatePresence initial={false}>
-                {feedLogs.map((log, index) => {
-                  const isSweep = log.side === 'Sweep';
-                  const isBullish = log.tag === 'BULLISH';
-
-                  return (
-                    <motion.div
-                      key={(log as any).id ?? `${log.timestamp}-${log.ticker}-${log.strike}-${index}`}
-                      initial={{ opacity: 0, x: 20, height: 0 }}
-                      animate={{ opacity: 1, x: 0, height: 'auto' }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.3 }}
-                      className="py-2.5 border rounded-lg px-2.5 transition-colors flex flex-col gap-1 text-[9.5px] bg-[var(--surface-2)] border-[var(--border)] hover:bg-[var(--surface-3)]"
-                    >
-                      <div className="flex justify-between items-center text-[9px]">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-mono font-bold text-[var(--text-tertiary)]">{log.timestamp}</span>
-                          <span className={`px-1 py-0.5 rounded font-black text-[7.5px] ${
-                            isSweep ? 'bg-[var(--warning)]/10 border border-[var(--warning)]/25 text-[var(--warning)]' : 'bg-[var(--info)]/10 border border-[var(--info)]/25 text-[var(--info)]'
-                          }`}>
-                            {log.side.toUpperCase()}
-                          </span>
-                        </div>
-                        <span className={`font-mono font-extrabold flex items-center gap-1 ${isBullish ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
-                          <span aria-hidden="true">{isBullish ? '▲' : '▼'}</span>
-                          {log.action}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-baseline font-mono font-bold">
-                        <span className={`text-[10.5px] ${c_textWhite}`}>
-                          {log.ticker} {fmtNum(log.strike)}{log.type}
-                        </span>
-                        <span className={isBullish ? 'text-[var(--success)]' : 'text-[var(--warning)]'}>
-                          <span aria-hidden="true">{isBullish ? '+' : '−'}</span>{log.premium}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-center text-[8.5px] text-[var(--text-tertiary)] pt-1 border-t border-[var(--border)]">
-                        <span>Size {log.size}</span>
-                        <span>Bias <span className={isBullish ? 'text-[var(--success)] font-bold' : 'text-[var(--text-secondary)] font-bold'}>{log.tag}</span></span>
-                      </div>
-                    </motion.div>
-                  );
-                })}
-              </AnimatePresence>
-            </div>
-
-          </div>
-
-        </div>
-
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
     </div>

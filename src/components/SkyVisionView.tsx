@@ -448,21 +448,21 @@ export function SkyVisionView() {
 
   if (!isExpanded) {
     return (
-      <div className="w-full text-[var(--text-secondary)] font-mono select-none antialiased pt-2 relative flex flex-col xl:flex-row xl:items-start gap-4">
-        {/* Main: the opportunity scanner. Sky Vision moves to a sticky side rail (right on wide
-            screens, top on mobile) so its dense intel reads as a vertical card, not a wide strip. */}
-        <div className="flex-1 min-w-0 order-2 xl:order-1">
-          <DiscoveryView
-            systemScore={serverState?.system_score}
-            discovery={serverState?.discovery}
-            onSelectContract={(asset, strike, isCall) => {
-              setSelectedAsset(asset);
-              setSelectedStrike(strike);
-              setSelectedOptionType(isCall ? 'C' : 'P');
-            }}
-          />
-        </div>
-        <aside className="w-full xl:w-[380px] shrink-0 order-1 xl:order-2 xl:sticky xl:top-2 xl:self-start">
+      <div className="w-full text-[var(--text-secondary)] font-mono select-none antialiased pt-2 relative flex flex-col gap-4">
+        {/* The scanner is the page: command header → ranked setup queue → selected-setup
+            inspector (its own right rail inside DiscoveryView). SkyVision's dense intel
+            (rotation, EMA ladder, factor bars) drops BELOW as supporting market context so
+            it no longer competes with the queue. */}
+        <DiscoveryView
+          systemScore={serverState?.system_score}
+          discovery={serverState?.discovery}
+          onSelectContract={(asset, strike, isCall) => {
+            setSelectedAsset(asset);
+            setSelectedStrike(strike);
+            setSelectedOptionType(isCall ? 'C' : 'P');
+          }}
+        />
+        <aside className="w-full">
           <SkyVisionV2Panel compact />
         </aside>
       </div>
