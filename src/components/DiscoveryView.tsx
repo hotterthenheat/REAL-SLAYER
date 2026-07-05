@@ -10,7 +10,8 @@ import {
   ChevronDown,
   ChevronUp,
   Target,
-  Info
+  Info,
+  X
 } from 'lucide-react';
 import { AssetInfo } from '../types';
 import { ASSET_LIST } from '../data';
@@ -19,6 +20,7 @@ import { formatTime } from '../lib/timeUtils';
 import { fmtNum } from '../lib/format';
 import { AssetSparkline } from './AssetSparkline';
 import { DataStateBadge } from './ui/DataStateBadge';
+import { SearchInput } from './ui/SearchInput';
 import { deriveSetup, SetupRow, SetupInspector, type ScannerContract } from './scanner/SetupQueue';
 
 interface DiscoveryViewProps {
@@ -1164,6 +1166,19 @@ export function DiscoveryView({
             })}
           </div>
           <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
+          {/* Scanner status — folded into the header so it no longer takes a full panel row. */}
+          <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)]" title={lastScanMessage}>
+            <span className={`w-1.5 h-1.5 rounded-full ${isMockScanning ? 'bg-[var(--warning)] animate-pulse' : 'bg-[var(--success)]'}`} aria-hidden="true" />
+            {isMockScanning ? 'Scanning' : 'Ready'}
+          </span>
+          {/* Method — education on demand, out of the queue's vertical space. */}
+          <button
+            onClick={() => setIsStrategyExpanded(true)}
+            aria-label="How this scan works"
+            className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+          >
+            <Info className="w-3 h-3" />Method
+          </button>
           <button
             onClick={triggerManualScannerRefresh}
             disabled={isMockScanning}
@@ -1230,37 +1245,21 @@ export function DiscoveryView({
         </div>
 
         {/* Ticker / strike search box */}
-        <div
-          className="md:col-span-2 relative flex items-center rounded-lg px-3 py-1.5 border transition-colors bg-[var(--surface-2)] border-[var(--border)] focus-within:border-[var(--info)]/50"
-          ref={searchContainerRef}
-        >
-          <Search className="w-3.5 h-3.5 text-[var(--text-tertiary)] mr-2 shrink-0" />
-          <input 
-            type="text" 
+        <div className="md:col-span-2 relative" ref={searchContainerRef}>
+          <SearchInput
+            ariaLabel="Filter by ticker or strike"
             value={searchQuery}
+            onChange={setSearchQuery}
             onFocus={() => setIsSearchFocused(true)}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="FILTER BY TICKER OR STRIKE..." 
-            className={`w-full bg-transparent border-none text-[9.5px] font-black uppercase focus:outline-none placeholder-zinc-500 font-mono tracking-wider transition-all duration-200 ${
-              isLight ? 'text-zinc-900' : 'text-[var(--text-primary)]'
-            }`}
+            onClear={() => { setSearchQuery(''); setIsSearchFocused(false); }}
+            placeholder="Filter by ticker or strike…"
+            uppercase
+            size="sm"
+            inputClassName="text-[9.5px] font-black"
+            rightSlot={searchQuery.length === 0 ? (
+              <kbd className="hidden sm:inline-block bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border)] px-1 py-[1.5px] rounded-xs font-mono text-[7px] select-none">TXT</kbd>
+            ) : undefined}
           />
-          {searchQuery.length > 0 ? (
-            <button 
-              type="button"
-              onClick={() => {
-                setSearchQuery('');
-                setIsSearchFocused(false);
-              }} 
-              className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] text-[8px] uppercase font-bold pl-1 font-mono hover:underline shrink-0"
-            >
-              CLEAR
-            </button>
-          ) : (
-            <kbd className="hidden sm:inline-block bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border)] px-1 py-[1.5px] rounded-xs font-mono text-[7px] select-none shrink-0">
-              TXT
-            </kbd>
-          )}
 
           {/* Dynamic Search Combobox results list overlay */}
           <AnimatePresence>
@@ -1356,114 +1355,58 @@ export function DiscoveryView({
 
       </div>
 
-      {/* 2B. EXPANDABLE STRATEGY EXPLANATION */}
-      <div className={`w-full p-4 rounded-xl text-left border ${c_cardBg}`}>
-
-        <button
-          type="button"
-          onClick={() => setIsStrategyExpanded(!isStrategyExpanded)}
-          aria-expanded={isStrategyExpanded}
-          className="w-full text-left flex justify-between items-center cursor-pointer select-none pb-2.5 border-b border-[var(--border)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
-        >
-          <div className="flex items-center gap-2">
-            <Info className="w-4 h-4 text-[var(--info)]" />
-            <span className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--text-primary)]">
-              How This Category Works
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 py-1 px-2 rounded border bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)]">
-            <span className="text-[8px] font-black tracking-widest uppercase">
-              {isStrategyExpanded ? 'Hide' : 'Show'}
-            </span>
-            {isStrategyExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-          </div>
-        </button>
-
-        <AnimatePresence initial={false}>
-          {isStrategyExpanded && (
+      {/* Method modal — the "How this category works" education, on demand via the header
+          Method button, so it never occupies vertical space above the setup queue. */}
+      <AnimatePresence>
+        {isStrategyExpanded && (
+          <motion.div
+            className="fixed inset-0 z-[9000] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="How this scan category works"
+          >
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsStrategyExpanded(false)} />
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="overflow-hidden pt-3.5"
+              initial={{ scale: 0.97, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.97, opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              className="relative w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl text-left"
             >
-              <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch text-[10.5px]">
-
-                {/* Justification Column */}
-                <div className="md:col-span-8 space-y-2.5">
-                  <div className="p-3 rounded-xl border bg-[var(--surface-2)] border-[var(--border)]">
-                    <span className={`font-extrabold text-sm block mb-1.5 uppercase tracking-tight ${c_textWhite}`}>
-                      {currentManualText.title}
-                    </span>
-                    <p className="leading-relaxed font-sans text-[13px] text-[var(--text-primary)] font-medium">
-                      {currentManualText.whyItsBest}
-                    </p>
-                  </div>
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Info className="w-4 h-4 text-[var(--info)] shrink-0" />
+                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--text-primary)] truncate">Method · {currentManualText.title}</span>
                 </div>
-
-                {/* Targets & Threshold Metrics Column */}
-                <div className="md:col-span-4 p-3 rounded-xl flex flex-col justify-between gap-3 border bg-[var(--surface-2)] border-[var(--border)]">
-                  <div className="space-y-1.5 text-left">
-                    <span className="text-[8px] text-[var(--text-tertiary)] tracking-wider uppercase block font-black">Parameters</span>
-                    <div className="flex justify-between items-baseline font-mono">
-                      <span className="text-[var(--text-tertiary)]">Horizon</span>
-                      <span className={`font-bold ${c_textWhite}`}>{currentManualText.horizon}</span>
-                    </div>
-                    <div className="flex justify-between items-baseline font-mono border-t pt-1.5 border-[var(--border)] gap-2">
-                      <span className="text-[var(--text-tertiary)] shrink-0">Signal</span>
-                      <span className="text-[var(--info)] font-bold text-[9px] uppercase text-right">{currentManualText.mathTracking}</span>
-                    </div>
-                    <div className="flex justify-between items-baseline font-mono border-t pt-1.5 border-[var(--border)]">
-                      <span className="text-[var(--text-tertiary)]">Confidence</span>
-                      <span className="text-[var(--success)] font-bold text-[9px]">{currentManualText.confidenceTier}</span>
-                    </div>
-                  </div>
-                  <div className="text-[8px] text-[var(--text-tertiary)] border-t pt-1.5 tracking-wide border-[var(--border)]">
-                    Sample data — illustrative, not a live scan.
-                  </div>
-                </div>
-
+                <button onClick={() => setIsStrategyExpanded(false)} aria-label="Close" className="shrink-0 rounded p-1 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
+              <p className="mt-3 leading-relaxed font-sans text-[12px] text-[var(--text-secondary)] font-medium">
+                {currentManualText.whyItsBest}
+              </p>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
+                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Horizon</span>
+                  <span className={`block text-[10px] font-mono font-bold ${c_textWhite}`}>{currentManualText.horizon}</span>
+                </div>
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
+                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Signal</span>
+                  <span className="block text-[9px] font-mono font-bold text-[var(--info)] uppercase leading-tight">{currentManualText.mathTracking}</span>
+                </div>
+                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
+                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Confidence</span>
+                  <span className="block text-[9px] font-mono font-bold text-[var(--success)] leading-tight">{currentManualText.confidenceTier}</span>
+                </div>
+              </div>
+              <p className="mt-3 border-t border-[var(--border)] pt-2 text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest">Sample data — illustrative, not a live scan.</p>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* 2C. SCANNER CONTROL */}
-      <div className={`w-full p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 text-xs border ${c_glassBg}`}>
-        <div className="flex items-center gap-3">
-          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${isMockScanning ? 'bg-[var(--warning)]' : 'bg-[var(--success)]'}`} />
-          <div className="text-left">
-            <span className="text-[10px] text-[var(--text-tertiary)] block font-bold uppercase tracking-wider">Scanner</span>
-            <span className={`text-[10.5px] font-black ${isMockScanning ? 'text-[var(--warning)]' : 'text-[var(--text-secondary)]'}`}>
-              {lastScanMessage}
-            </span>
-          </div>
-        </div>
-
-        <button
-          onClick={triggerManualScannerRefresh}
-          disabled={isMockScanning}
-          className={`px-5 py-2.5 rounded-lg border text-[10px] font-extrabold uppercase tracking-widest cursor-pointer transition-colors flex items-center gap-2 ${
-            isMockScanning
-              ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)]'
-              : 'bg-[var(--surface-2)] text-[var(--text-primary)] hover:bg-[var(--surface-3)] border-[var(--border-strong)]'
-          }`}
-        >
-          {isMockScanning ? (
-            <>
-              <RefreshCw className="w-3.5 h-3.5 animate-spin text-[var(--success)]" />
-              <span>Scanning…</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Scan ({scanHistoryCount})</span>
-            </>
-          )}
-        </button>
-      </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 3. MAIN SETUP QUEUE + SELECTED-SETUP INSPECTOR */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">

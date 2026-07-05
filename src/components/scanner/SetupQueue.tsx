@@ -166,7 +166,7 @@ function Metric({ label, value, tone }: { label: string; value: string; tone?: s
   return (
     <div className="min-w-0">
       <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
-      <span className={`block font-mono font-bold tabular-nums truncate ${tone ?? 'text-[var(--text-secondary)]'}`}>{value}</span>
+      <span className={`block text-[11px] font-mono font-black tabular-nums truncate ${tone ?? 'text-[var(--text-primary)]'}`}>{value}</span>
     </div>
   );
 }
@@ -219,12 +219,15 @@ export function SetupInspector({ s, onReview }: { s: DerivedSetup | null; onRevi
 
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5 lg:sticky lg:top-2">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
+      <div className="flex items-start justify-between gap-2 border-b border-[var(--border)] pb-3">
         <div className="flex items-center gap-2 min-w-0">
-          <DirIcon className={`w-4 h-4 shrink-0 ${dirColor}`} />
-          <span className="font-black text-[15px] text-[var(--text-primary)] truncate">{s.label}</span>
+          <DirIcon className={`w-5 h-5 shrink-0 ${dirColor}`} />
+          <div className="min-w-0">
+            <span className="block font-black text-[20px] leading-none text-[var(--text-primary)] truncate">{s.label}</span>
+            <span className={`mt-1 block text-[9px] font-black uppercase tracking-widest ${dirColor}`}>{s.direction} · {s.conviction}</span>
+          </div>
         </div>
-        <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
+        <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." className="shrink-0" />
       </div>
 
       {/* headline stats */}

@@ -28,6 +28,7 @@ import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
 import { PanelSkeleton } from './PanelSkeleton';
 import { PinpointTrackButton } from './PinpointTrackButton';
+import { SearchInput } from './ui/SearchInput';
 import {
   Waves,
   Crosshair,
@@ -988,34 +989,18 @@ export function DealerFlowView() {
 
         {/* Global Market Search */}
         <div className="relative w-full sm:w-[360px] shrink-0 group">
-          <div 
-            className="bg-[var(--surface)] border border-[var(--accent-color)]/30 rounded-none flex items-center px-3 py-2 cursor-text transition-all group-hover:border-[var(--accent-color)] focus-within:border-[var(--border-strong)] h-[36px] relative overflow-hidden"
+          <SearchInput
+            ariaLabel="Search ticker or company"
+            value={searchQuery}
+            onChange={(v) => { setSearchQuery(v); setShowSearch(true); }}
+            onFocus={() => setShowSearch(true)}
             onClick={() => setShowSearch(true)}
-          >
-            <div className="absolute top-0 left-0 w-1 h-full bg-[var(--accent-color)]/50" />
-            <span className="w-2.5 h-2.5 bg-[var(--accent-color)] animate-pulse mr-2 shrink-0 rounded-sm opacity-80" />
-            <input
-              type="text"
-              placeholder="Search ticker or company…"
-              className="bg-transparent border-none outline-none text-[11px] font-mono tracking-widest text-[var(--accent-color)] w-full placeholder:text-[var(--accent-color)]/40"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setShowSearch(true);
-              }}
-              onFocus={() => setShowSearch(true)}
-            />
-            {searchQuery && (
-              <button
-                onClick={(e) => { e.stopPropagation(); setSearchQuery(''); setShowSearch(false); }}
-                className="text-[var(--accent-color)]/50 hover:text-[var(--accent-color)] ml-2 font-mono text-[14px]"
-                aria-label="Clear search"
-                title="Clear search"
-              >
-                ×
-              </button>
-            )}
-          </div>
+            onClear={() => { setSearchQuery(''); setShowSearch(false); }}
+            placeholder="Search ticker or company…"
+            variant="accent"
+            pulseDot
+            className="w-full cursor-text"
+          />
 
           {showSearch && (
             <>
