@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { formatDateTime } from '../lib/timeUtils';
 import { ConfirmDialog } from './ConfirmDialog';
+import { FieldError, zodError, type SubmitState } from './ui/Field';
+import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
   ShieldAlert, Users, Activity, Key, MonitorPlay, Radio,
   Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, Search, RefreshCw, ScrollText
@@ -412,26 +414,45 @@ function CouponsTab() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [form, setForm] = useState({ code: '', discount_type: 'PERCENT', discount_value: 10, redemption_limit: 100, user_restriction: '', expires_at: '' });
   const [msg, setMsg] = useState('');
+  const [errs, setErrs] = useState<{ code?: string | null; value?: string | null }>({});
+  const [state, setState] = useState<SubmitState>('idle');
   const load = () => api('/api/admin/coupons').then((d) => setCoupons(d.coupons || [])).catch(() => {});
   useEffect(() => { load(); }, []);
   const create = async () => {
     setMsg('');
-    try { await api('/api/admin/coupons', { method: 'POST', body: JSON.stringify(form) }); setMsg('Coupon created.'); setForm({ ...form, code: '' }); load(); }
-    catch (e: any) { setMsg(e.message); }
+    // Validate before hitting the API so bad coupon values show inline instead of a silent
+    // or opaque server error.
+    const codeErr = zodError(couponCodeSchema, form.code);
+    const valueErr = form.discount_type === 'PERCENT'
+      ? zodError(couponPercentSchema, form.discount_value)
+      : (form.discount_value > 0 ? null : 'Enter a dollar amount above 0');
+    setErrs({ code: codeErr, value: valueErr });
+    if (codeErr || valueErr) { setState('error'); return; }
+    setState('loading');
+    try {
+      await api('/api/admin/coupons', { method: 'POST', body: JSON.stringify(form) });
+      setMsg('Coupon created.'); setState('success'); setForm({ ...form, code: '' }); load();
+    } catch (e: any) { setMsg(e.message || 'Could not create coupon.'); setState('error'); }
   };
   return (
     <div className="space-y-4 animate-fadeIn">
       <div className={`${CARD} p-5 space-y-4`}>
         <SectionHeader icon={Ticket} title="Generate Coupon" />
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <input aria-label="Coupon code" placeholder="CODE (A-Z 0-9)" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '') })}
-            className={`${FIELD} uppercase`} />
+          <div>
+            <input aria-label="Coupon code" aria-invalid={!!errs.code} placeholder="CODE (A-Z 0-9)" value={form.code} onChange={(e) => { setForm({ ...form, code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') }); if (errs.code) setErrs({ ...errs, code: null }); }}
+              className={`${FIELD} uppercase ${errs.code ? 'border-[var(--danger)]/60' : ''}`} />
+            <FieldError>{errs.code}</FieldError>
+          </div>
           <select aria-label="Discount type" value={form.discount_type} onChange={(e) => setForm({ ...form, discount_type: e.target.value })}
             className={FIELD}>
             <option value="PERCENT">Percent %</option><option value="FIXED">Fixed $</option>
           </select>
-          <input aria-label="Discount value" type="number" placeholder="Value" value={form.discount_value} onChange={(e) => setForm({ ...form, discount_value: Number(e.target.value) })}
-            className={FIELD} />
+          <div>
+            <input aria-label="Discount value" aria-invalid={!!errs.value} type="number" placeholder="Value" value={form.discount_value} onChange={(e) => { setForm({ ...form, discount_value: Number(e.target.value) }); if (errs.value) setErrs({ ...errs, value: null }); }}
+              className={`${FIELD} ${errs.value ? 'border-[var(--danger)]/60' : ''}`} />
+            <FieldError>{errs.value}</FieldError>
+          </div>
           <input aria-label="Redemption limit" type="number" placeholder="Redemption limit" value={form.redemption_limit} onChange={(e) => setForm({ ...form, redemption_limit: Number(e.target.value) })}
             className={FIELD} />
           <input aria-label="User restriction (email, optional)" placeholder="User restriction (email, optional)" value={form.user_restriction} onChange={(e) => setForm({ ...form, user_restriction: e.target.value })}
@@ -440,8 +461,10 @@ function CouponsTab() {
             className={FIELD} />
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={create} className="px-4 py-2 bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-[var(--success)]/20 transition-colors">Generate</button>
-          {msg && <span role="status" className="text-[10px] text-[var(--text-secondary)]">{msg}</span>}
+          <button onClick={create} disabled={state === 'loading'} className="px-4 py-2 bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] rounded-md text-[11px] font-bold uppercase tracking-widest hover:bg-[var(--success)]/20 disabled:opacity-50 transition-colors">
+            {state === 'loading' ? 'Generating…' : 'Generate'}
+          </button>
+          {msg && <span role="status" className={`text-[10px] ${state === 'error' ? 'text-[var(--danger)]' : state === 'success' ? 'text-[var(--success)]' : 'text-[var(--text-secondary)]'}`}>{msg}</span>}
         </div>
       </div>
 

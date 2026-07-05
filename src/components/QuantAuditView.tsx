@@ -12,6 +12,7 @@ import {
   Activity,
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
+import { EmptyStatePanel } from './ui/EmptyStatePanel';
 import { ASSET_LIST } from '../data';
 import { AssetInfo, SystemScore, V8TradeRecord } from '../types';
 import { fmtNum } from '../lib/format';
@@ -709,21 +710,12 @@ export function QuantAuditView({
 
       {/* Split list */}
       {filteredTrades.length === 0 ? (
-        <div className="text-center py-20 border border-dashed border-[var(--border)] bg-[var(--surface)] rounded-xl">
-          <Activity className="w-6 h-6 text-[var(--text-tertiary)] mx-auto mb-3" />
-          <span className="text-[12px] text-[var(--text-secondary)] font-bold uppercase tracking-widest block">
-            No tracked setups have resolved yet
-          </span>
-          <span className="text-[10px] text-[var(--text-tertiary)] font-medium tracking-wide block mt-1.5 max-w-sm mx-auto leading-relaxed normal-case">
-            Review a contract in SkyVision or Pinpoint and mark it as tracked. Resolved outcomes appear here automatically to build your trade record.
-          </span>
-          <button
-            onClick={() => useContractStore.getState().setActiveTab('skyvision', true)}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
-          >
-            <Activity className="w-3 h-3" /> Open SkyVision
-          </button>
-        </div>
+        <EmptyStatePanel
+          icon={<Activity className="w-6 h-6" />}
+          title="No tracked setups have resolved yet"
+          description="Review a contract in SkyVision or Pinpoint and mark it as tracked. Resolved outcomes appear here automatically to build your trade record."
+          action={{ label: 'Open SkyVision', icon: <Activity className="w-3 h-3" />, onClick: () => useContractStore.getState().setActiveTab('skyvision', true) }}
+        />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {renderColumn(bullishTrades, 'Bullish · Calls', C.success, TrendingUp)}

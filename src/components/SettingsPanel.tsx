@@ -25,6 +25,8 @@ import { UserProfile } from './UserProfile';
 import { TwoFactorFlow } from './TwoFactorFlow';
 import { Progress } from './ui/Progress';
 import { useContractStore, ContractStore } from '../lib/store';
+import { zodError } from './ui/Field';
+import { emailSchema, referralCodeSchema } from '../lib/formSchemas';
 import { THEMES, applyTheme, applyTextSize, applyCompact, applyUltrawide } from '../lib/displayPrefs';
 import { formatTime, formatDateTime } from '../lib/timeUtils';
 
@@ -60,7 +62,10 @@ function ReferralCodeBox() {
   };
 
   const apply = async () => {
-    if (!applyInput.trim()) return;
+    // Validate the code shape client-side so obviously-malformed input fails fast with a
+    // clear message instead of a silent no-op or an opaque server round-trip.
+    const codeErr = zodError(referralCodeSchema, applyInput);
+    if (codeErr) { setApplyMsg({ ok: false, text: codeErr }); return; }
     setApplying(true);
     setApplyMsg(null);
     try {
@@ -544,8 +549,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     e.preventDefault();
     setEmailError('');
     setEmailSuccess('');
-    if (!newEmail || !newEmail.includes('@')) {
-      setEmailError('Please specify a valid email syntax.');
+    const emailErr = zodError(emailSchema, newEmail);
+    if (emailErr) {
+      setEmailError(emailErr);
       return;
     }
 

@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
 import { V8TradeRecord } from '../types';
+import { FieldError, zodError } from './ui/Field';
+import { supportRequestSchema } from '../lib/formSchemas';
 
 type ChannelKey = 'verified' | 'research' | 'education' | 'support';
 
@@ -78,12 +80,16 @@ export default function ArborCapital() {
   const [newRequestTitle, setNewRequestTitle] = useState('');
   const [newRequestType, setNewRequestType] = useState('Feature Request');
   const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
 
   const handleAddRequest = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newRequestTitle.trim()) return;
+    // Validate instead of silently returning on junk/empty input.
+    const err = zodError(supportRequestSchema, { title: newRequestTitle, type: newRequestType });
+    setRequestError(err);
+    if (err) return;
     setUserRequests([
-      { id: `req-${Date.now()}`, title: newRequestTitle, type: newRequestType, votes: 1, status: 'Open', example: false },
+      { id: `req-${Date.now()}`, title: newRequestTitle.trim(), type: newRequestType, votes: 1, status: 'Open', example: false },
       ...userRequests,
     ]);
     setNewRequestTitle('');
@@ -525,11 +531,12 @@ export default function ArborCapital() {
                         <input
                           type="text"
                           value={newRequestTitle}
-                          onChange={(e) => setNewRequestTitle(e.target.value)}
+                          onChange={(e) => { setNewRequestTitle(e.target.value); if (requestError) setRequestError(null); }}
+                          aria-invalid={!!requestError}
                           placeholder="e.g. Alert when IV drops below 15%"
-                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus:outline-none focus:border-[var(--success)]/60"
-                          required
+                          className={`w-full rounded-lg border bg-[var(--surface)] p-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] ${requestError ? 'border-[var(--danger)]/60' : 'border-[var(--border)] focus:border-[var(--success)]/60'}`}
                         />
+                        <FieldError>{requestError}</FieldError>
                       </div>
                       <div className="space-y-1">
                         <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] block">
