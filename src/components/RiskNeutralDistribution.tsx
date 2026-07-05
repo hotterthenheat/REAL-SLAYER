@@ -141,7 +141,7 @@ export function RiskNeutralDistribution({
               ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
               : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}
           >
-            {live ? 'LIVE' : 'MODEL'}
+            {live ? 'LIVE CHAIN' : 'MODEL MODE'}
           </span>
         </div>
       </div>

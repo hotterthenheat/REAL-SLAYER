@@ -105,8 +105,38 @@ const DEFAULT_LAYOUT: PaneLayout[] = [
   { i: 'def-regime', widget: 'market_regime', x: 8, y: 6, w: 4, h: 4 },
 ];
 
+/** Dealer Flow Focus — the full dealer-positioning desk: flow + GEX/VEX/charm + levels. */
+const TEMPLATE_DEALER: PaneLayout[] = [
+  { i: 'b-flow', widget: 'dealer_flow_analysis', x: 0, y: 0, w: 8, h: 4 },
+  { i: 'b-keys', widget: 'key_levels', x: 8, y: 0, w: 4, h: 4 },
+  { i: 'b-gex', widget: 'gex', x: 0, y: 4, w: 4, h: 4 },
+  { i: 'b-vex', widget: 'vex', x: 4, y: 4, w: 4, h: 4 },
+  { i: 'b-charm', widget: 'charm', x: 8, y: 4, w: 4, h: 4 },
+  { i: 'b-dpos', widget: 'dealer_positioning', x: 0, y: 8, w: 6, h: 4 },
+  { i: 'b-loaded', widget: 'loaded_strikes', x: 6, y: 8, w: 6, h: 4 },
+];
+
+/** Volatility & Regime — market state, institutional positioning, exposure and confidence. */
+const TEMPLATE_VOL: PaneLayout[] = [
+  { i: 'v-regime', widget: 'market_regime', x: 0, y: 0, w: 8, h: 4 },
+  { i: 'v-inst', widget: 'institutional_positioning', x: 8, y: 0, w: 4, h: 6 },
+  { i: 'v-gex', widget: 'gex', x: 0, y: 4, w: 4, h: 4 },
+  { i: 'v-flow', widget: 'dealer_flow_analysis', x: 4, y: 4, w: 4, h: 4 },
+  { i: 'v-conf', widget: 'skysvision_confidence', x: 8, y: 6, w: 4, h: 3 },
+  { i: 'v-keys', widget: 'key_levels', x: 0, y: 8, w: 6, h: 3 },
+];
+
+/** Scanner Desk — SkysVision scanner + active setups + setup detail and confidence. */
+const TEMPLATE_SCANNER: PaneLayout[] = [
+  { i: 's-scan', widget: 'skysvision_scanner', x: 0, y: 0, w: 8, h: 6 },
+  { i: 's-setups', widget: 'skysvision_setups', x: 8, y: 0, w: 4, h: 6 },
+  { i: 's-detail', widget: 'skysvision_setup_details', x: 0, y: 6, w: 5, h: 4 },
+  { i: 's-thesis', widget: 'skysvision_trade_thesis', x: 5, y: 6, w: 4, h: 4 },
+  { i: 's-conf', widget: 'skysvision_confidence', x: 9, y: 6, w: 3, h: 4 },
+];
+
 /** Template C — System Admin (God Mode): server health row, then CRM + financials. */
-const TEMPLATE_C: PaneLayout[] = [
+const TEMPLATE_ADMIN: PaneLayout[] = [
   { i: 'c-health', widget: 'server_health', x: 0, y: 0, w: 12, h: 4 },
   { i: 'c-crm', widget: 'user_crm', x: 0, y: 4, w: 7, h: 6 },
   { i: 'c-fin', widget: 'financials', x: 7, y: 4, w: 5, h: 6 },
@@ -114,10 +144,10 @@ const TEMPLATE_C: PaneLayout[] = [
 
 export const TEMPLATES: Record<'A' | 'B' | 'C' | 'D' | 'E', { name: string; adminOnly?: boolean; layout: PaneLayout[] }> = {
   A: { name: 'Standard Terminal', layout: DEFAULT_LAYOUT },
-  B: { name: 'Empty Workspace', layout: [] },
-  C: { name: 'Empty Workspace', layout: [] },
-  D: { name: 'Empty Workspace', layout: [] },
-  E: { name: 'System Admin (God Mode)', adminOnly: true, layout: TEMPLATE_C },
+  B: { name: 'Dealer Flow Focus', layout: TEMPLATE_DEALER },
+  C: { name: 'Volatility & Regime', layout: TEMPLATE_VOL },
+  D: { name: 'Scanner Desk', layout: TEMPLATE_SCANNER },
+  E: { name: 'System Admin (God Mode)', adminOnly: true, layout: TEMPLATE_ADMIN },
 };
 
 /** Deep clone a template layout so callers never mutate the source. */

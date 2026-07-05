@@ -50,7 +50,7 @@ export function TerminalReadCard({
       <div className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] pb-3">
         <Crosshair className="h-4 w-4 text-[var(--accent-color)]" />
         <span className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--text-primary)]">Terminal Read · {ticker}</span>
-        <Badge tone={isLive ? 'success' : 'warning'} size="sm" dot pulse={isLive}>{isLive ? 'LIVE' : 'MODEL'}</Badge>
+        <Badge tone={isLive ? 'success' : 'warning'} size="sm" dot pulse={isLive}>{isLive ? 'LIVE CHAIN' : 'MODEL MODE'}</Badge>
         <span className="mx-1 h-3.5 w-px bg-[var(--border-strong)]" />
         <Badge tone={read.regime === 'PIN' ? 'info' : 'warning'} size="sm">
           <Term id={read.regime === 'PIN' ? 'netGex' : 'gammaFlip'}>{read.regimeLabel}</Term>
@@ -72,7 +72,7 @@ export function TerminalReadCard({
       {read.noTrade || read.bias === 'NEUTRAL' ? (
         <div className="flex items-center gap-2 rounded-md border border-[var(--warning)]/25 bg-[var(--warning)]/5 px-3 py-2">
           <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-[var(--warning)]" />
-          <span className="font-mono text-[11px] font-bold text-[var(--warning)]">STAND DOWN · {read.entry}</span>
+          <span className="font-mono text-[11px] font-bold text-[var(--warning)]">No trade · {read.entry}</span>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

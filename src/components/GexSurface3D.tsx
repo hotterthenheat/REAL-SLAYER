@@ -320,7 +320,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
               : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}
             title={live ? 'Real per-expiry chains' : 'Per-expiry split modeled from the aggregate term structure'}
           >
-            {live ? 'LIVE' : 'MODEL'}
+            {live ? 'LIVE CHAIN' : 'MODEL MODE'}
           </span>
         </div>
       </div>

@@ -839,9 +839,14 @@ export default function App() {
   const discovery = serverState?.discovery;
   const bestOpportunity = useMemo(() => {
     const topMispriced = discovery?.mispricedCalls?.[0];
+    // Fallback demo contract must be plausible near-spot (a 7,6xx strike next to a ~5,4xx
+    // SPX reads as broken data). Derive a slightly-OTM call strike off the asset's price.
+    const fbAsset = topMispriced?.asset || ASSET_LIST[0];
+    const fbStep = fbAsset.defaultPrice >= 1000 ? 25 : fbAsset.defaultPrice >= 100 ? 5 : 1;
+    const fbStrike = topMispriced?.strike || Math.round((fbAsset.defaultPrice * 1.005) / fbStep) * fbStep;
     return {
-      asset: topMispriced?.asset || ASSET_LIST[0],
-      ticker: `${topMispriced?.asset?.ticker || 'SPX'} ${topMispriced?.strike || 7640}C`,
+      asset: fbAsset,
+      ticker: `${fbAsset.ticker} ${fbStrike}C`,
       confidence: topMispriced?.health || 91,
       isCall: true,
       currentPrice: `$${(topMispriced?.marketPrice || 4.2).toFixed(2)}`,
@@ -921,7 +926,11 @@ export default function App() {
   // Determine if alert notifications are allowed to display.
   // Alert notifications are only allowed if purchasedTier > 1 (paid tiers).
   // Additionally, alerts are never allowed on the landing page ('home'), for any tier.
-  const showAlerts = purchasedTier > 1 && activeTab !== 'home';
+  // Flow-alert popups belong only on trading-analysis routes. Suppress them on Home and on
+  // content/config routes (Settings, Admin, Community, Trade History, Workspace) where a
+  // floating trade alert overlaps the page and reads as intrusive / demo-unsafe.
+  const ALERT_ROUTES = new Set(['skyvision', 'pinpoint', 'quant']);
+  const showAlerts = purchasedTier > 1 && ALERT_ROUTES.has(activeTab);
 
   return (
     <AppShell 

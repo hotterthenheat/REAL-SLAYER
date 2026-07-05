@@ -234,8 +234,15 @@ export default function QuantSurface3D({
         idx.push(a, b, d, b, e, d);
       }
       geo.setIndex(idx);
-      // THE brutalist surface: wireframe mesh, coloured per-vertex by data intensity.
-      const mat = new THREE.MeshBasicMaterial({ wireframe: true, vertexColors: true, transparent: true, opacity: 0.95 });
+      // Hybrid surface (still brutalist — MeshBasicMaterial, no lighting): a translucent
+      // SOLID fill reads the surface as a continuous sheet and gives real depth occlusion,
+      // then a crisp WIREFRAME rides on top for the lattice. depthWrite:false on the fill
+      // keeps the wire and points from z-fighting through it. This is the default so the
+      // plot looks finished rather than skeletal.
+      const fillMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
+      const fillMesh = new THREE.Mesh(geo, fillMat);
+      group.add(fillMesh);
+      const mat = new THREE.MeshBasicMaterial({ wireframe: true, vertexColors: true, transparent: true, opacity: 0.75 });
       const mesh = new THREE.Mesh(geo, mat);
       group.add(mesh);
       // Vertex nodes as points give the plot definition without any lighting.
@@ -243,7 +250,7 @@ export default function QuantSurface3D({
       const pts = new THREE.Points(geo, ptsMat);
       group.add(pts);
       surfacePoints = pts;
-      disposables.push(geo, mat, ptsMat);
+      disposables.push(geo, fillMat, mat, ptsMat);
 
       // ── Floor heatmap: the same field projected flat, filled (not wireframe). ──
       if (floorHeatmap) {

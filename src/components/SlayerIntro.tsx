@@ -118,7 +118,7 @@ export default function SlayerIntro({
               {isLive ? 'Live dealer positioning' : 'Connecting to market data'}
             </span>
 
-            <h1 className="text-[clamp(40px,6vw,68px)] font-extrabold tracking-tight text-[var(--text-primary)] leading-[1.04]">
+            <h1 className="text-[clamp(34px,5vw,58px)] font-extrabold tracking-tight text-[var(--text-primary)] leading-[1.05]">
               Trade the data
               <br />
               market makers see.
@@ -212,7 +212,7 @@ export default function SlayerIntro({
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-[var(--border)]">
                 <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[var(--text-tertiary)]">
-                  Best opportunity
+                  Top candidate
                 </span>
                 <span className="flex items-center gap-1.5">
                   <span className={`w-1.5 h-1.5 rounded-full ${isLive ? 'bg-[var(--success)]' : 'bg-[var(--warning)]'}`} />
@@ -316,7 +316,7 @@ export default function SlayerIntro({
                 }}
                 className="w-full py-3 mt-1 bg-[var(--text-primary)] hover:bg-white text-black font-semibold text-xs tracking-wide rounded-lg transition-colors duration-200 flex items-center justify-center gap-2 focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
               >
-                Launch live workspace
+                Review setup
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>

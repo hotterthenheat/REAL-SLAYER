@@ -98,8 +98,10 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
   const netGex = profile?.netGex;
   const metrics: { label: string; raw?: number; render: () => string; tone: string; signed?: boolean }[] = [
     { label: 'Net Gamma', raw: netGex, render: () => fmtGamma(netGex), tone: (netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', signed: true },
-    { label: 'Net Vanna', raw: profile?.netVex, render: () => fmtGamma(profile?.netVex), tone: 'var(--accent-color)' },
-    { label: 'Net Charm', raw: profile?.charmEx, render: () => fmtGamma(profile?.charmEx), tone: 'var(--warning)' },
+    // When the aggregate isn't on the chain (some feeds omit net vanna/charm), a bare dash
+    // reads as broken next to a rendering surface — say why it's absent instead.
+    { label: 'Net Vanna', raw: profile?.netVex, render: () => (profile?.netVex != null ? fmtGamma(profile.netVex) : 'model'), tone: 'var(--accent-color)' },
+    { label: 'Net Charm', raw: profile?.charmEx, render: () => (profile?.charmEx != null ? fmtGamma(profile.charmEx) : 'model'), tone: 'var(--warning)' },
     { label: 'γ-Flip', raw: profile?.gammaFlip, render: () => (profile?.gammaFlip != null ? profile.gammaFlip.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'), tone: 'var(--text-primary)' },
     { label: 'Exp. Move', raw: profile?.expectedMovePct, render: () => (profile?.expectedMovePct != null ? `±${profile.expectedMovePct.toFixed(2)}%` : '—'), tone: 'var(--info)' },
     { label: 'Spot', raw: profile?.spot, render: () => (profile?.spot != null ? profile.spot.toLocaleString(undefined, { maximumFractionDigits: decimals }) : '—'), tone: 'var(--text-primary)' },

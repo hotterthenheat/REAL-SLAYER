@@ -251,7 +251,7 @@ const LiveOptionsFlow = React.memo(() => {
         <span className="flex items-center gap-1.5">
           Options Flow
           <Badge tone={isLiveData ? 'success' : 'warning'} size="sm" dot pulse={isLiveData}>
-            {isLiveData ? 'LIVE' : 'MODEL'}
+            {isLiveData ? 'LIVE CHAIN' : 'MODEL MODE'}
           </Badge>
         </span>
       </SubHead>

@@ -104,6 +104,22 @@ function NavFlyout({ anchor, subTabs, pageId, activeSub, onPick, onEnter, onLeav
   );
 }
 
+// Identity avatar with an initials fallback — a broken/blocked avatar image next to the
+// signed-in identity is a trust leak, so we never render a broken <img>. Falls back to
+// initials on missing src OR load error.
+function IdentityAvatar({ name, avatar }: { name?: string; avatar?: string }) {
+  const [failed, setFailed] = React.useState(false);
+  const initials = ((name || '?').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('') || '?').toUpperCase();
+  if (avatar && !failed) {
+    return <img src={avatar} onError={() => setFailed(true)} alt="" className="w-6 h-6 shrink-0 rounded-xs border border-[var(--border)] object-cover" referrerPolicy="no-referrer" />;
+  }
+  return (
+    <div className="w-6 h-6 shrink-0 rounded-xs border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center text-[9px] font-bold text-[var(--text-secondary)]" aria-hidden="true">
+      {initials}
+    </div>
+  );
+}
+
 function NavItem({ id, label, icon: Icon, adminOnly = false, activeColor = 'text-[var(--text-primary)]', isMobile = false }: any) {
   const { activeTab, setActiveTab, isSidebarExpanded, closeMobile, session } = React.useContext(NavCtx);
   const setSubTabIntent = useContractStore((s) => s.setSubTabIntent);
@@ -298,9 +314,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
            {session?.authenticated ? (
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 overflow-hidden flex-1">
-                   {session.avatar && (
-                     <img src={session.avatar} alt="Avatar" className="w-6 h-6 shrink-0 rounded-xs border border-[var(--border)]" referrerPolicy="no-referrer" />
-                   )}
+                   <IdentityAvatar name={session.name} avatar={session.avatar} />
                    <span className={`text-[12px] font-semibold truncate text-[var(--text-tertiary)] transition-all duration-300 ${isSidebarExpanded ? 'opacity-100 max-w-[120px]' : 'opacity-0 max-w-0'}`}>{session.name}</span>
                 </div>
                 {isSidebarExpanded && (

@@ -286,7 +286,7 @@ export function SkyVisionV11Cockpit({
             <div className="px-4 py-2 bg-[var(--surface)] border-b border-[var(--border)] flex justify-between items-center text-xs font-black text-[var(--success)] uppercase">
               <span className="flex items-center gap-2">
                 T6 // FEATURE SIMILARITY ENGINE (KNN)
-                <span className="text-[10px] text-[var(--warning)] font-black tracking-widest border border-[var(--warning)]/40 px-1.5 py-0.5 rounded">MODEL</span>
+                <span className="text-[10px] text-[var(--warning)] font-black tracking-widest border border-[var(--warning)]/40 px-1.5 py-0.5 rounded">MODEL MODE</span>
               </span>
               <span className="text-[10px] text-[var(--text-tertiary)]">{metrics.similarTrades.length} Closest Matches</span>
             </div>
