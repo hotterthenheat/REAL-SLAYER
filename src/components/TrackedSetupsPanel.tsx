@@ -5,7 +5,6 @@ import {
   STATUS_LABEL, trackModeLabel, type TrackedSetup, type TrackStatus, type TrackStats,
 } from '../lib/trackedSetups';
 import { SectionHeader } from './ui/SectionHeader';
-import { TrackedPnlCurve } from './TrackedPnlCurve';
 
 /**
  * Tracked Setups — the live half of Trade History. Reads the tracking store and shows what
@@ -189,9 +188,6 @@ export function TrackedSetupsPanel() {
           </button>
         ) : undefined}
       />
-
-      {/* Honest "if you took every callout" equity curve — realized returns only. */}
-      <TrackedPnlCurve live={live} modelSample={modelSample} />
 
       {/* Live vs model/sample — never mixed */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

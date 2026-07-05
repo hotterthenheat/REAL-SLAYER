@@ -121,59 +121,6 @@ export function equityCurveOption(echarts: any) {
   };
 }
 
-// ── HONEST cumulative P&L equity curve (real tracked-callout returns) ─────────
-// Unlike equityCurveOption above, this generates NOTHING — it plots the exact
-// cumulative series passed in (running sum of realized per-callout % returns,
-// equal-weight). Baseline at 0; the line + area are tinted by the sign of the
-// final cumulative value (green up / red down), with a dashed zero rule so the
-// sign is also read by position, not colour alone.
-export interface PnlPoint { date: string; cum: number }
-export interface PnlColors {
-  line: string; areaTop: string; areaBottom: string;
-  axis: string; grid: string; text: string; zero: string;
-}
-export function cumulativePnlOption(points: PnlPoint[], colors: PnlColors, echarts: any) {
-  const dates = points.map(p => p.date);
-  const data = points.map(p => +p.cum.toFixed(2));
-  return {
-    animation: false,
-    tooltip: {
-      trigger: 'axis',
-      axisPointer: { type: 'line', lineStyle: { color: colors.axis } },
-      valueFormatter: (v: number) => `${v >= 0 ? '+' : ''}${Number(v).toFixed(1)}%`,
-    },
-    grid: { left: 52, right: 16, top: 16, bottom: 28 },
-    xAxis: {
-      type: 'category', boundaryGap: false, data: dates,
-      axisLabel: { color: colors.text, fontSize: 9 },
-      axisLine: { lineStyle: { color: colors.axis } },
-      axisTick: { show: false },
-    },
-    yAxis: {
-      type: 'value',
-      axisLabel: { formatter: (v: number) => `${v > 0 ? '+' : ''}${v.toFixed(0)}%`, color: colors.text, fontSize: 9 },
-      splitLine: { lineStyle: { color: colors.grid } },
-    },
-    series: [{
-      name: 'Cumulative return', type: 'line', symbol: 'none', smooth: true, sampling: 'lttb',
-      lineStyle: { width: 2, color: colors.line },
-      itemStyle: { color: colors.line },
-      areaStyle: {
-        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: colors.areaTop },
-          { offset: 1, color: colors.areaBottom },
-        ]),
-      },
-      markLine: {
-        silent: true, symbol: 'none',
-        lineStyle: { color: colors.zero, type: 'dashed', width: 1 },
-        data: [{ yAxis: 0 }], label: { show: false },
-      },
-      data,
-    }],
-  };
-}
-
 // ── HONEST tier conversion snapshot (real user counts) ───────────────────────
 // Horizontal bar: unpaid "guest" visitors in a muted tone, each paid tier in a
 // blue step. No time axis (the user store has no signup timestamps) — a snapshot
