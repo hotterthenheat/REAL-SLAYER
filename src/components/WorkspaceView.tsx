@@ -235,7 +235,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
                           <button onClick={() => { commit(customLayouts[name].map(p => ({...p}))); setLoadOpen(false); setMaximized(null); }} className="flex-1 text-[var(--text-secondary)] font-medium text-left truncate hover:text-[var(--text-primary)]">
                             {name}
                           </button>
-                          <button onClick={(e) => deleteCustomLayout(name, e)} title="Delete" className="text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={(e) => deleteCustomLayout(name, e)} title="Delete" aria-label={`Delete saved layout ${name}`} className="text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]">
                             <X className="w-3 h-3" />
                           </button>
                         </div>
