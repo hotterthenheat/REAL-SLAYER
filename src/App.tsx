@@ -16,6 +16,7 @@ import { CelebrationOverlay } from './components/CelebrationOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette } from './components/CommandPalette';
 import { Toaster } from './components/ui/toast';
+import { useTrackingResolver } from './lib/useTrackingResolver';
 import { Spinner } from './components/ui/Spinner';
 import { LegalCenter, useLegal } from './components/LegalCenter';
 // Eagerly imported because SlayerIntro (also eager, on the landing path) imports it
@@ -97,6 +98,9 @@ export default function App() {
   const serverState = useContractStore(s => s.serverState);
   const updateFromSSE = useContractStore(s => s.updateFromSSE);
   const tickMarketState = useContractStore(s => s.tickMarketState);
+
+  // Keep tracked setups (Trade History) re-priced from the live feed.
+  useTrackingResolver();
   const isContractLocked = useContractStore(s => s.isContractLocked);
   const purchasedTier = useContractStore(s => s.purchasedTier);
 

@@ -14,6 +14,7 @@ import {
 import { useContractStore } from '../lib/store';
 import { EmptyStatePanel } from './ui/EmptyStatePanel';
 import { MetricCard } from './ui/MetricCard';
+import { TrackedSetupsPanel, useTrackedCount } from './TrackedSetupsPanel';
 import { ASSET_LIST } from '../data';
 import { AssetInfo, SystemScore, V8TradeRecord } from '../types';
 import { fmtNum } from '../lib/format';
@@ -77,6 +78,7 @@ export function QuantAuditView({
   const searchQuery = useContractStore(s => s.auditSearchQuery);
   const setSearchQuery = useContractStore(s => s.setAuditSearchQuery);
   const prismKeybind = useContractStore(s => s.keybinds).prismMenu;
+  const trackedCount = useTrackedCount();
 
   const [assetFilter, setAssetFilter] = useState<string>('ALL');
   const [outcomeFilter, setOutcomeFilter] = useState<'ALL' | 'WINS' | 'LOSSES'>('ALL');
@@ -576,9 +578,14 @@ export function QuantAuditView({
         </div>
       </div>
 
-      {/* Performance summary — dimmed until there is real history so the zero-data cards
-          don't dominate an empty page. */}
-      <div className={`grid grid-cols-2 md:grid-cols-5 gap-3 transition-opacity ${stats.total === 0 ? 'opacity-45' : ''}`}>
+      {/* Tracked setups — the live half of Trade History. Renders itself only when the user
+          has actually tracked something, and carries its own live-vs-model/sample stats. */}
+      <TrackedSetupsPanel />
+
+      {/* Server performance summary — only shown once the server archive has real resolved
+          trades; the tracked-setups panel above owns the empty-to-first-track experience. */}
+      {stats.total > 0 && (
+      <div className={`grid grid-cols-2 md:grid-cols-5 gap-3 transition-opacity`}>
         <MetricCard
           label="WIN RATE"
           icon={<ShieldCheck className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
@@ -614,6 +621,7 @@ export function QuantAuditView({
           className="col-span-2 md:col-span-1"
         />
       </div>
+      )}
 
       {/* Controls: search + filters */}
       <div className="flex flex-col lg:flex-row gap-3">
@@ -682,14 +690,17 @@ export function QuantAuditView({
         </div>
       </div>
 
-      {/* Split list */}
+      {/* Split list — the server trade archive. The empty state only appears when nothing has
+          EVER been tracked (no live tracked setups above, no server archive here). */}
       {filteredTrades.length === 0 ? (
-        <EmptyStatePanel
-          icon={<Activity className="w-6 h-6" />}
-          title="No tracked setups have resolved yet"
-          description="Review a contract in SkyVision or Pinpoint and mark it as tracked. Resolved outcomes appear here automatically to build your trade record."
-          action={{ label: 'Open SkyVision', icon: <Activity className="w-3 h-3" />, onClick: () => useContractStore.getState().setActiveTab('skyvision', true) }}
-        />
+        trackedCount === 0 ? (
+          <EmptyStatePanel
+            icon={<Activity className="w-6 h-6" />}
+            title="Nothing tracked yet"
+            description="Review a contract in SkyVision or Pinpoint and hit Track Setup. It appears here immediately and updates over time — premium, max gain/drawdown, and whether it hits target or invalidation."
+            action={{ label: 'Open SkyVision', icon: <Activity className="w-3 h-3" />, onClick: () => useContractStore.getState().setActiveTab('skyvision', true) }}
+          />
+        ) : null
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {renderColumn(bullishTrades, 'Bullish · Calls', C.success, TrendingUp)}

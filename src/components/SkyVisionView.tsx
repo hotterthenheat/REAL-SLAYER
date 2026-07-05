@@ -14,6 +14,8 @@ import { AssetSparkline } from './AssetSparkline';
 // is unavailable. `ChainContract` mirrors the server's per-strike chain shape.
 import { calculateAnalyticGreeks, type ChainContract } from '../lib/v11Math';
 import { Table, THead, TBody, TR, TH, TD } from './ui/Table';
+import { useTrackingStore, setupKey, isTerminal, type TrackDataMode } from '../lib/trackedSetups';
+import { toast } from './ui/toast';
 
 // OptionCard Component for selection - strictly no Delta/Gamma clutter (Bug #4, Bug #7)
 // Hoisted to module scope so its identity is stable across renders (prevents remounting
@@ -393,6 +395,56 @@ export function SkyVisionView() {
     }
   }, [activeRecommendation, selectedOptionType]);
 
+  // ── Track Result: turn the selected setup into a persisted tracked record (the "Track"
+  // half of Scan → Confirm → Validate → Track). Built entirely from data already on screen;
+  // deduped so a contract can't be double-tracked. ──
+  const trackingSetups = useTrackingStore(s => s.setups);
+  const track = useTrackingStore(s => s.track);
+  const optionSide: 'C' | 'P' = selectedOptionType === 'C' ? 'C' : 'P';
+  const thisSetupKey = setupKey({ ticker: selectedAsset.ticker, strike: activeStrike, optionType: optionSide, kind: 'contract' });
+  const isThisTracked = trackingSetups.some(s => !isTerminal(s.status) && setupKey(s) === thisSetupKey);
+
+  const handleTrackSetup = () => {
+    const dataMode: TrackDataMode = isChainLive ? 'live' : serverState ? 'model' : 'sample';
+    const expiryLabel = optionExpiryLabel(selectedAsset);
+    const dteMatch = /(\d+)\s*DTE/i.exec(expiryLabel);
+    const dteDays = dteMatch ? Number(dteMatch[1]) : 0;
+    const dealerReason = setupRationale.support
+      ? `${setupRationale.support}${setupRationale.flip != null ? ` · flip ${setupRationale.flip.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : ''}`
+      : 'Awaiting dealer flip';
+    const volatilityReason = `Expected move ±${expectedMoveField}% · IV ${(atmIv * 100).toFixed(0)}%`;
+    const result = track({
+      source: 'skyvision',
+      dataMode,
+      ticker: selectedAsset.ticker,
+      contract: `${selectedAsset.ticker} ${activeStrike}${optionSide}`,
+      direction: optionSide === 'C' ? 'BULLISH' : 'BEARISH',
+      strike: activeStrike,
+      expiry: expiryLabel,
+      optionType: optionSide,
+      setupScore: Math.round(serverState?.system_score ?? tradeHealthValue),
+      confidence: Math.round(tradeHealthValue),
+      premiumAtTrack: activePrice,
+      spotAtTrack: spotPrice,
+      fairValue: null,
+      expectedMovePct: expectedMoveField,
+      invalidationLevel: setupRationale.flip,
+      dealerReason,
+      volatilityReason,
+      liquidityGrade: setupRationale.liquidity ?? '—',
+      entryDelta: derivedGreeks.delta,
+      entryThetaPerDay: derivedGreeks.theta,
+      dteDays,
+    }, Date.now());
+    if (result.duplicate) {
+      toast.info('Already tracking this setup', { description: 'It’s in Trade History.' });
+    } else {
+      toast.success('Setup tracked', {
+        description: `${selectedAsset.ticker} ${activeStrike}${optionSide} · now in Trade History`,
+      });
+    }
+  };
+
 
   if (!isExpanded) {
     return (
@@ -696,16 +748,31 @@ export function SkyVisionView() {
                 </span>
                 <span className="text-[var(--text-tertiary)]">→</span>
               </button>
-              <button
-                onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 transition-colors hover:border-[var(--success)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
-              >
-                <span className="text-left">
-                  <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--success)]">Track setup</span>
-                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Log the outcome</span>
-                </span>
-                <span className="text-[var(--success)]">→</span>
-              </button>
+              {isThisTracked ? (
+                <button
+                  onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
+                  aria-label="This setup is tracked — open Trade History"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--success)]/50 bg-[var(--success)]/10 px-3 py-2 transition-colors hover:border-[var(--success)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
+                >
+                  <span className="text-left">
+                    <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--success)]"><CheckCircle2 className="w-3 h-3" />Tracking</span>
+                    <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">View in Trade History</span>
+                  </span>
+                  <span className="text-[var(--success)]">→</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleTrackSetup}
+                  aria-label="Track this setup in Trade History"
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 transition-colors hover:border-[var(--success)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
+                >
+                  <span className="text-left">
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--success)]">Track setup</span>
+                    <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Log the outcome</span>
+                  </span>
+                  <span className="text-[var(--success)]">+</span>
+                </button>
+              )}
             </div>
 
           </div>
