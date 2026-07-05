@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
 import { EmptyStatePanel } from './ui/EmptyStatePanel';
+import { MetricCard } from './ui/MetricCard';
 import { ASSET_LIST } from '../data';
 import { AssetInfo, SystemScore, V8TradeRecord } from '../types';
 import { fmtNum } from '../lib/format';
@@ -578,67 +579,40 @@ export function QuantAuditView({
       {/* Performance summary — dimmed until there is real history so the zero-data cards
           don't dominate an empty page. */}
       <div className={`grid grid-cols-2 md:grid-cols-5 gap-3 transition-opacity ${stats.total === 0 ? 'opacity-45' : ''}`}>
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-xl">
-          <div className="flex justify-between items-center">
-            <span className={sectionLabel}>WIN RATE</span>
-            <ShieldCheck className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-          </div>
-          <h3 className="text-2xl font-black text-[var(--text-primary)] mt-2 tabular-nums">{stats.winRate}%</h3>
-          <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wide mt-1">
-            {stats.resolved} closed
-          </p>
-        </div>
-
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-xl">
-          <div className="flex justify-between items-center">
-            <span className={sectionLabel}>AVG HOLD</span>
-            <Clock className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-          </div>
-          <h3 className="text-2xl font-black text-[var(--text-primary)] mt-2 tabular-nums">
-            {stats.avgHold}
-            <span className="text-sm font-bold text-[var(--text-tertiary)]"> min</span>
-          </h3>
-          <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wide mt-1">
-            per trade
-          </p>
-        </div>
-
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-xl">
-          <div className="flex justify-between items-center">
-            <span className={sectionLabel}>AVG WINNER</span>
-            <TrendingUp className="w-3.5 h-3.5 text-[var(--success)]" />
-          </div>
-          <h3 className="text-2xl font-black text-[var(--success)] mt-2 tabular-nums">
-            {stats.wins > 0 ? `+${stats.avgWinner.toFixed(1)}%` : '—'}
-          </h3>
-          <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wide mt-1">
-            gain on wins
-          </p>
-        </div>
-
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-xl">
-          <div className="flex justify-between items-center">
-            <span className={sectionLabel}>AVG LOSER</span>
-            <TrendingDown className="w-3.5 h-3.5 text-[var(--danger)]" />
-          </div>
-          <h3 className="text-2xl font-black text-[var(--danger)] mt-2 tabular-nums">
-            {stats.losses > 0 ? `${stats.avgLoser.toFixed(1)}%` : '—'}
-          </h3>
-          <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wide mt-1">
-            loss on losses
-          </p>
-        </div>
-
-        <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-xl col-span-2 md:col-span-1">
-          <div className="flex justify-between items-center">
-            <span className={sectionLabel}>OPEN NOW</span>
-            <Activity className="w-3.5 h-3.5 text-[var(--warning)]" />
-          </div>
-          <h3 className="text-2xl font-black text-[var(--text-primary)] mt-2 tabular-nums">{stats.active}</h3>
-          <p className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold tracking-wide mt-1">
-            live positions
-          </p>
-        </div>
+        <MetricCard
+          label="WIN RATE"
+          icon={<ShieldCheck className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
+          value={`${stats.winRate}%`}
+          footnote={`${stats.resolved} closed`}
+        />
+        <MetricCard
+          label="AVG HOLD"
+          icon={<Clock className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
+          value={stats.avgHold}
+          unit="min"
+          footnote="per trade"
+        />
+        <MetricCard
+          label="AVG WINNER"
+          icon={<TrendingUp className="w-3.5 h-3.5 text-[var(--success)]" />}
+          tone="success"
+          value={stats.wins > 0 ? `+${stats.avgWinner.toFixed(1)}%` : '—'}
+          footnote="gain on wins"
+        />
+        <MetricCard
+          label="AVG LOSER"
+          icon={<TrendingDown className="w-3.5 h-3.5 text-[var(--danger)]" />}
+          tone="danger"
+          value={stats.losses > 0 ? `${stats.avgLoser.toFixed(1)}%` : '—'}
+          footnote="loss on losses"
+        />
+        <MetricCard
+          label="OPEN NOW"
+          icon={<Activity className="w-3.5 h-3.5 text-[var(--warning)]" />}
+          value={stats.active}
+          footnote="live positions"
+          className="col-span-2 md:col-span-1"
+        />
       </div>
 
       {/* Controls: search + filters */}
