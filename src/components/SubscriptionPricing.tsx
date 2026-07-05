@@ -186,18 +186,22 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
         </div>
 
         <div className="flex justify-center mb-10 sm:mb-12 w-full">
-          <div className="inline-flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] p-1 rounded-full">
+          <div role="radiogroup" aria-label="Billing cycle" className="inline-flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] p-1 rounded-full">
             <button
+              role="radio"
+              aria-checked={billingCycle === 'monthly'}
               onClick={() => setBillingCycle('monthly')}
-              className={`px-5 sm:px-6 py-2 min-h-[40px] rounded-full text-[12px] font-semibold tracking-wide transition-all ${
+              className={`px-5 sm:px-6 py-2 min-h-[40px] rounded-full text-[12px] font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/40 ${
                 billingCycle === 'monthly' ? 'bg-[var(--surface-3)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
               }`}
             >
               Monthly
             </button>
             <button
+              role="radio"
+              aria-checked={billingCycle === 'annual'}
               onClick={() => setBillingCycle('annual')}
-              className={`px-5 sm:px-6 py-2 min-h-[40px] rounded-full text-[12px] font-semibold tracking-wide transition-all flex items-center gap-2 ${
+              className={`px-5 sm:px-6 py-2 min-h-[40px] rounded-full text-[12px] font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)]/40 flex items-center gap-2 ${
                 billingCycle === 'annual' ? 'bg-[var(--surface-3)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
               }`}
             >

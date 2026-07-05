@@ -16,6 +16,7 @@ import { CelebrationOverlay } from './components/CelebrationOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette } from './components/CommandPalette';
 import { Toaster } from './components/ui/toast';
+import { Spinner } from './components/ui/Spinner';
 import { LegalCenter, useLegal } from './components/LegalCenter';
 // Eagerly imported because SlayerIntro (also eager, on the landing path) imports it
 // statically — a lazy() wrapper here can't code-split it and only warns at build.
@@ -885,7 +886,7 @@ export default function App() {
   if (session === null) {
     return (
       <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-tertiary)] flex flex-col justify-center items-center font-mono select-none antialiased">
-        <div className="w-8 h-8 border-t-2 border-[var(--text-primary)] rounded-full animate-spin mb-4"></div>
+        <Spinner size="lg" tone="primary" label="Connecting to your workspace" className="mb-4" />
         <div className="tracking-widest uppercase text-xs text-[var(--text-primary)]">Connecting to your workspace…</div>
         <div className="text-[10px] text-[var(--text-tertiary)] mt-2 uppercase font-mono font-bold">Verifying your secure session</div>
       </div>
@@ -899,7 +900,7 @@ export default function App() {
   if (!serverState) {
     return (
       <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-tertiary)] flex flex-col justify-center items-center font-mono select-none antialiased">
-        <div className="w-8 h-8 border-t-2 border-[var(--text-primary)] rounded-full animate-spin mb-4"></div>
+        <Spinner size="lg" tone="primary" label="Loading live market data" className="mb-4" />
         <div className="tracking-widest uppercase text-xs text-[var(--text-primary)]">Loading live market data…</div>
         <div className="text-[10px] text-[var(--text-tertiary)] mt-2 uppercase font-mono">Syncing the analytics engine</div>
       </div>

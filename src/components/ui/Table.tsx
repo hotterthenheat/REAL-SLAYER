@@ -54,12 +54,27 @@ interface TRProps extends React.HTMLAttributes<HTMLTableRowElement> {
   active?: boolean;
 }
 
-export function TR({ className = '', interactive, active, children, ...rest }: TRProps) {
+export function TR({ className = '', interactive, active, children, onClick, onKeyDown, tabIndex, ...rest }: TRProps) {
+  // Clickable rows must be keyboard-operable: make them focusable and fire the
+  // click on Enter/Space, with a visible focus ring. Non-interactive rows are
+  // untouched (no tabIndex, no key handling).
+  const handleKeyDown = interactive
+    ? (e: React.KeyboardEvent<HTMLTableRowElement>) => {
+        onKeyDown?.(e);
+        if (!e.defaultPrevented && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onClick?.(e as unknown as React.MouseEvent<HTMLTableRowElement>);
+        }
+      }
+    : onKeyDown;
   return (
     <tr
       className={`border-b border-[var(--border)] last:border-0 transition-colors ${
         active ? 'bg-[color-mix(in_srgb,var(--accent-color)_10%,transparent)]' : ''
-      } ${interactive ? 'cursor-pointer hover:bg-[var(--surface-2)]' : ''} ${className}`}
+      } ${interactive ? 'cursor-pointer hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)]/50' : ''} ${className}`}
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={interactive ? tabIndex ?? 0 : tabIndex}
       {...rest}
     >
       {children}
