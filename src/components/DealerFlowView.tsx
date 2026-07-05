@@ -18,11 +18,16 @@ import { Popover } from './ui/Popover';
 import { Sheet } from './ui/Sheet';
 import { Badge } from './ui/Badge';
 import { Switch } from './ui/Switch';
+import { LiveValue } from './ui/LiveValue';
 // Lazy-loaded: this is the ONLY consumer of three.js (~470kb) + recharts (~248kb).
 // Deferring it keeps those vendor chunks out of the GEX page's initial load — they
 // fetch on demand the first time the 3D physics panel is actually opened.
 const InstitutionalPhysicsDashboard = lazy(() =>
   import('./InstitutionalPhysicsDashboard').then(m => ({ default: m.InstitutionalPhysicsDashboard })));
+// React Flow is only needed on the Dealer Mechanics sub-view — lazy so it (and its
+// CSS) stay out of the initial bundle.
+const DealerPositioningNetwork = lazy(() =>
+  import('./DealerPositioningNetwork').then(m => ({ default: m.DealerPositioningNetwork })));
 import { IntradayTargetsView } from './IntradayTargetsView';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
@@ -936,20 +941,24 @@ export function DealerFlowView() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-nowrap lg:items-center gap-2">
           {([
-            { label: 'Net GEX', value: filteredProfile ? fmtBn(filteredProfile.netGex) : '—', tone: (filteredProfile?.netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', term: 'netGex' },
-            { label: 'Call Wall', value: filteredProfile?.callWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--success)', term: 'callWall' },
-            { label: 'Put Wall', value: filteredProfile?.putWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--danger)', term: 'putWall' },
-            { label: 'γ-Flip', value: filteredProfile?.gammaFlip?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--warning)', term: 'gammaFlip' },
-            { label: 'Pin Magnet', value: filteredProfile?.magnet?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', tone: 'var(--info)', def: 'Strike acting as the strongest price magnet/pin into expiration.' },
-            { label: 'Dist to Flip', value: filteredProfile?.gammaFlip ? `${Math.abs(filteredProfile.spot - filteredProfile.gammaFlip).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}` : '—', tone: 'var(--text-primary)', def: 'Distance from spot to the gamma-flip level — how far price must travel to change the dealer-hedging regime.' },
-          ] as Array<{ label: string; value: string; tone: string; term?: string; def?: string }>).map(card => (
+            { label: 'Net GEX', value: filteredProfile ? fmtBn(filteredProfile.netGex) : '—', raw: filteredProfile?.netGex, mode: 'directional', tone: (filteredProfile?.netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', term: 'netGex' },
+            { label: 'Call Wall', value: filteredProfile?.callWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.callWall, mode: 'neutral', tone: 'var(--success)', term: 'callWall' },
+            { label: 'Put Wall', value: filteredProfile?.putWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.putWall, mode: 'neutral', tone: 'var(--danger)', term: 'putWall' },
+            { label: 'γ-Flip', value: filteredProfile?.gammaFlip?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.gammaFlip, mode: 'neutral', tone: 'var(--warning)', term: 'gammaFlip' },
+            { label: 'Pin Magnet', value: filteredProfile?.magnet?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.magnet, mode: 'neutral', tone: 'var(--info)', def: 'Strike acting as the strongest price magnet/pin into expiration.' },
+            { label: 'Dist to Flip', value: filteredProfile?.gammaFlip ? `${Math.abs(filteredProfile.spot - filteredProfile.gammaFlip).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}` : '—', raw: filteredProfile?.gammaFlip ? Math.abs(filteredProfile.spot - filteredProfile.gammaFlip) : undefined, mode: 'neutral', tone: 'var(--text-primary)', def: 'Distance from spot to the gamma-flip level — how far price must travel to change the dealer-hedging regime.' },
+          ] as Array<{ label: string; value: string; raw?: number; mode: 'directional' | 'neutral'; tone: string; term?: string; def?: string }>).map(card => (
             <div key={card.label} className="relative overflow-hidden bg-[var(--surface-2)] border border-[var(--border)] rounded-md pl-3 pr-3 py-1.5 min-w-0 lg:min-w-[88px] shrink-0" id={`card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
               {/* tone spine — each level carries its semantic colour as a left rail (instrument-panel read) */}
               <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: card.tone, opacity: 0.75 }} />
               <div className="text-[8px] font-black tracking-widest text-[var(--text-tertiary)] uppercase truncate">
                 {card.term ? <Term id={card.term as any}>{card.label}</Term> : card.def ? <Term def={card.def}>{card.label}</Term> : card.label}
               </div>
-              <div className="text-[13px] sm:text-[14px] font-mono font-bold tabular-nums truncate leading-tight" style={{ color: card.tone }}>{card.value}</div>
+              <div className="text-[13px] sm:text-[14px] font-mono font-bold tabular-nums truncate leading-tight" style={{ color: card.tone }}>
+                {card.raw != null
+                  ? <LiveValue value={card.raw} mode={card.mode} format={() => card.value} />
+                  : card.value}
+              </div>
             </div>
           ))}
         </div>
@@ -1153,7 +1162,7 @@ export function DealerFlowView() {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-2 font-mono">
             <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
               <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Asset</span>
-              <span className="text-sm font-black text-[var(--text-primary)] tabular-nums">{selectedAsset.ticker} <span className="text-[var(--text-tertiary)] font-medium">({profile?.spot != null ? profile.spot.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'})</span></span>
+              <span className="text-sm font-black text-[var(--text-primary)] tabular-nums">{selectedAsset.ticker} <span className="text-[var(--text-tertiary)] font-medium">(<LiveValue value={profile?.spot} format={(v) => (v as number).toLocaleString(undefined, { maximumFractionDigits: 0 })} />)</span></span>
             </div>
             <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
               <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Regime</span>
@@ -1175,7 +1184,7 @@ export function DealerFlowView() {
             <div className="flex flex-col p-3 rounded-lg border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/10 justify-center">
               <span className="text-[10px] uppercase tracking-widest text-[var(--accent-color)] font-bold mb-1">Market Control</span>
               <div className="flex items-end gap-2">
-                <span className="text-sm font-black text-[var(--text-primary)] tabular-nums">{headerAnalytics?.controlScore ?? '—'}<span className="text-[10px] text-[var(--text-tertiary)] font-medium">/100</span></span>
+                <span className="text-sm font-black text-[var(--text-primary)] tabular-nums"><LiveValue value={headerAnalytics?.controlScore} />{<span className="text-[10px] text-[var(--text-tertiary)] font-medium">/100</span>}</span>
               </div>
             </div>
           </div>
@@ -1390,6 +1399,10 @@ export function DealerFlowView() {
         <PinpointTerminal ticker={selectedAsset.ticker} />
       ) : (
         <div className="space-y-5" id="institutional-physics-dash-wrapper">
+          {/* Live positioning network — spot ↔ key levels, animated pull edges */}
+          <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
+            <DealerPositioningNetwork profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
+          </Suspense>
           <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
             <InstitutionalPhysicsDashboard
               profile={filteredProfile || profile}

@@ -636,6 +636,29 @@ button:active, a:active, [role="button"]:active {
 .ladder-flash-up { animation: ladderFlashUp 0.7s ease-out; }
 .ladder-flash-down { animation: ladderFlashDown 0.7s ease-out; }
 
+/* LiveValue flash — the shared "this number just moved" pulse used across every
+   live metric (GEX walls, scores, prices). A brief directional tint on the glyph
+   plus a faint background wash so the eye catches motion without strobing. Reduced-
+   motion users get the color, not the animation. Powers the app's "alive" feel. */
+@keyframes slvFlashUp {
+  0% { color: var(--success); background-color: color-mix(in srgb, var(--success) 20%, transparent); }
+  100% { color: inherit; background-color: transparent; }
+}
+@keyframes slvFlashDown {
+  0% { color: var(--danger); background-color: color-mix(in srgb, var(--danger) 20%, transparent); }
+  100% { color: inherit; background-color: transparent; }
+}
+@keyframes slvFlashNeutral {
+  0% { background-color: color-mix(in srgb, var(--accent-color) 22%, transparent); }
+  100% { background-color: transparent; }
+}
+.slv-flash-up { animation: slvFlashUp 0.62s ease-out; }
+.slv-flash-down { animation: slvFlashDown 0.62s ease-out; }
+.slv-flash-neutral { animation: slvFlashNeutral 0.62s ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .slv-flash-up, .slv-flash-down, .slv-flash-neutral { animation: none; }
+}
+
 /* Slow ambient float for hero/branding elements */
 @keyframes ambientFloat {
   0%, 100% { transform: translateY(0); }

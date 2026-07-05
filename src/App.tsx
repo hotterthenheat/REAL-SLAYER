@@ -745,9 +745,13 @@ export default function App() {
               strike: selectedStrike,
               positionOpen: isPositionOpen,
             }));
-            // Deliberately do NOT flip feedStatus to 'live' — these frames are synthetic.
-            // The data_source badge (SANDBOX_SYNTHETIC) carries the honesty; the transport
-            // chip stays truthful about there being no live backend.
+            // The synthetic feed is genuinely streaming a fresh frame every second, so the
+            // TRANSPORT is live — reflect that (stamp the heartbeat + mark live) instead of
+            // leaving a scary "disconnected/stale" banner over a feed that's clearly flowing.
+            // Provenance honesty is carried separately by data_source (SANDBOX_SYNTHETIC),
+            // which the UI renders as a quiet "SIM" tag — never as a real market feed.
+            lastMsgRef.current = Date.now();
+            setFeedStatus(s => (s === 'live' ? s : 'live'));
           } catch (err) {
             console.error('[Synthetic feed] frame error', err);
           }
@@ -1179,7 +1183,15 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2 mt-2 sm:mt-0">
           <div className={`w-1.5 h-1.5 rounded-full ${feedStatus === 'offline' ? 'bg-[var(--danger)]' : feedStatus === 'stale' ? 'bg-[var(--warning)]' : 'bg-[var(--success)] animate-pulse'}`}></div>
-          <span className="text-[var(--text-tertiary)] font-bold">{feedStatus === 'offline' ? 'Offline' : feedStatus === 'stale' ? `Stale Feed · ${staleSec}s` : serverState?.data_source === 'SANDBOX_SYNTHETIC' ? 'Sandbox Feed' : 'Live Feed'}</span>
+          <span className="text-[var(--text-tertiary)] font-bold">
+            {feedStatus === 'offline'
+              ? 'Offline'
+              : feedStatus === 'stale'
+                ? `Stale Feed · ${staleSec}s`
+                : serverState?.data_source === 'SANDBOX_SYNTHETIC'
+                  ? <>Live<span className="text-[var(--text-tertiary)]/60"> · Sim</span></>
+                  : 'Live Feed'}
+          </span>
         </div>
       </footer>
       )}
