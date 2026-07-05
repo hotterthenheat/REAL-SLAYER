@@ -121,8 +121,8 @@ export function computeTerminalRead(profile: GexProfileData, recentCloses: numbe
   let target: number | undefined, stop: number | undefined, entry: string, play: string, noTrade = false;
   if (biasDir === 0) {
     target = undefined; stop = undefined;
-    entry = `Trade the break of γ-flip ${r0(flip)}`;
-    play = `Undecided — confluence is mixed. ${flip ? `γ-flip ${r0(flip)} is the line in the sand; let it pick the direction.` : 'Wait for structure to resolve.'}`;
+    entry = `Wait for break/hold of gamma flip ${r0(flip)}`;
+    play = `Bias mixed. ${flip ? `Gamma flip near ${r0(flip)} is the key control level — wait for confirmation above or below before acting.` : 'Wait for structure to resolve before acting.'}`;
   } else if (regime === 'PIN') {
     const cand = (magnet && biasDir * (magnet - spot) > tiny) ? magnet : (biasDir > 0 ? cw : pw);
     target = cand; stop = biasDir > 0 ? pw : cw;

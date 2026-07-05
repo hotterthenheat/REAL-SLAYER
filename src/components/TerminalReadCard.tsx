@@ -72,7 +72,7 @@ export function TerminalReadCard({
       {read.noTrade || read.bias === 'NEUTRAL' ? (
         <div className="flex items-center gap-2 rounded-md border border-[var(--warning)]/25 bg-[var(--warning)]/5 px-3 py-2">
           <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-[var(--warning)]" />
-          <span className="font-mono text-[11px] font-bold text-[var(--warning)]">STAND DOWN · {read.entry}</span>
+          <span className="font-mono text-[11px] font-bold text-[var(--warning)]">No trade · {read.entry}</span>
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">

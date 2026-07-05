@@ -183,15 +183,16 @@ export default function ArborCapital() {
           <div className="flex items-center gap-2 mb-1.5">
             <Users className="w-4 h-4 text-[var(--success)]" />
             <span className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--text-tertiary)]">
-              Arbor Capital
+              Arbor Capital · Research
             </span>
           </div>
           <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
             Community &amp; Education
           </h2>
           <p className="text-xs text-[var(--text-tertiary)] mt-1 leading-relaxed max-w-2xl">
-            Research, education and a logged trade ledger for options day traders. Built around
-            measurable results — not alerts.
+            Arbor Capital is the research &amp; education arm behind Slayer Terminal — a logged
+            trade ledger, methodology write-ups and options education for day traders. Built
+            around measurable results, not alerts.
           </p>
         </div>
         <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 shrink-0">
