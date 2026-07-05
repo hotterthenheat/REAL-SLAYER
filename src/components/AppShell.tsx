@@ -59,14 +59,10 @@ const SUBTABS: Record<string, { id: string; label: string }[]> = {
     { id: 'terminal', label: 'Live Terminal Flow' },
   ],
   quant: [
-    { id: 'rnd', label: 'Price Distribution' },
-    { id: 'vol', label: 'Realized Vol' },
-    { id: 'builder', label: 'Strategy' },
-    { id: 'scenarios', label: 'Scenarios' },
-    { id: 'portfolio', label: 'Book Greeks' },
+    { id: 'volgeo', label: 'Volatility Geometry' },
     { id: 'mechanics', label: 'Dealer Mechanics' },
-    { id: 'alerts', label: 'Alerts' },
-    { id: 'calibration', label: 'Journal' },
+    { id: 'distrib', label: 'Distribution & Risk' },
+    { id: 'factor', label: 'Factor Lab' },
   ],
 };
 

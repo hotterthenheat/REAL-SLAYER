@@ -64,9 +64,7 @@ import { ChainContract } from '../lib/v11Math';
 
 // Lazy-loaded: pulls in three.js. Only fetched when a multi-expiry GEX surface
 // is actually rendered, keeping the heavy 3D vendor chunk off the page's load.
-const GexSurface3D = lazy(() => import('./GexSurface3D').then(m => ({ default: m.GexSurface3D })));
 const IvSurface3D = lazy(() => import('./IvSurface3D').then(m => ({ default: m.IvSurface3D })));
-const QuantVizLab = lazy(() => import('./quant/QuantVizLab'));
 // Dealer Mechanics moved here from the Pinpoint GEX page — the brutalist 3D dealer
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
@@ -130,7 +128,10 @@ export default function QuantSuiteView() {
   const serverState = useContractStore(s => s.serverState);
 
   // Tab control inside the suite
-  const [activeSubTab, setActiveSubTab] = useState<'rnd' | 'vol' | 'builder' | 'scenarios' | 'portfolio' | 'mechanics' | 'alerts' | 'calibration'>('rnd');
+  // The Quant Lab is a "visual mathematics lab" collapsed to four sections, each a set
+  // of real, mathematically-defined renders (no generic/retail charts): Volatility
+  // Geometry, Dealer Mechanics Geometry, Distribution & Risk, Factor / Structure Lab.
+  const [activeSubTab, setActiveSubTab] = useState<'volgeo' | 'mechanics' | 'distrib' | 'factor'>('volgeo');
 
   // Deep-link from the sidebar flyout: apply a `quant:<sub>` intent once, then clear it.
   const subTabIntent = useContractStore((s) => s.subTabIntent);
@@ -138,7 +139,7 @@ export default function QuantSuiteView() {
   useEffect(() => {
     if (!subTabIntent?.startsWith('quant:')) return;
     const sub = subTabIntent.split(':')[1] as typeof activeSubTab;
-    const valid = ['rnd', 'vol', 'builder', 'scenarios', 'portfolio', 'mechanics', 'alerts', 'calibration'];
+    const valid = ['volgeo', 'mechanics', 'distrib', 'factor'];
     if (valid.includes(sub)) setActiveSubTab(sub);
     setSubTabIntent(null);
   }, [subTabIntent, setSubTabIntent]);
@@ -539,14 +540,10 @@ export default function QuantSuiteView() {
   const fmtMoney = (n: number) => (n >= 0 ? `+$${n.toLocaleString()}` : `-$${Math.abs(n).toLocaleString()}`);
 
   const tabs: { id: typeof activeSubTab; label: string }[] = [
-    { id: 'rnd', label: 'Price Distribution' },
-    { id: 'vol', label: 'Realized Vol' },
-    { id: 'builder', label: 'Strategy' },
-    { id: 'scenarios', label: 'Scenarios' },
-    { id: 'portfolio', label: 'Book Greeks' },
+    { id: 'volgeo', label: 'Volatility Geometry' },
     { id: 'mechanics', label: 'Dealer Mechanics' },
-    { id: 'alerts', label: 'Alerts' },
-    { id: 'calibration', label: 'Journal' },
+    { id: 'distrib', label: 'Distribution & Risk' },
+    { id: 'factor', label: 'Factor Lab' },
   ];
 
   return (
@@ -611,11 +608,6 @@ export default function QuantSuiteView() {
               }`}
             >
               {t.label}
-              {t.id === 'alerts' && alertsLog.length > 0 && (
-                <span className="rounded-full bg-[var(--success)]/15 text-[var(--success)] text-[10px] font-bold px-1.5 leading-4 tabular-nums">
-                  {alertsLog.length}
-                </span>
-              )}
             </button>
           );
         })}
@@ -632,126 +624,8 @@ export default function QuantSuiteView() {
             transition={{ duration: 0.14 }}
             className="w-full flex flex-col gap-4"
           >
-            {/* TAB 1: RISK-NEUTRAL DENSITY */}
-            {activeSubTab === 'rnd' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
-                  <SectionHeader
-                    icon={<BarChart3 className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
-                    label="Market-Implied Price Distribution f(K)"
-                    right={<span className="text-[10px] text-[var(--text-tertiary)] tracking-wide">BREEDEN-LITZENBERGER</span>}
-                  />
-
-                  <div className="w-full relative" style={{ height: 280 }}>
-                    {(() => {
-                      const pts = rndResult.density;
-                      if (!pts.length) return <div className="flex items-center justify-center h-full text-[11px] font-mono text-[var(--text-tertiary)]">Awaiting option chain…</div>;
-                      const W = 500, H = 280;
-                      const minS = pts[0].strike, maxS = pts[pts.length - 1].strike, span = (maxS - minS) || 1;
-                      let maxProb = 1e-9; for (const p of pts) if (p.probability > maxProb) maxProb = p.probability;
-                      const xOf = (s: number) => ((s - minS) / span) * W;
-                      const yOf = (p: number) => H - (p / maxProb) * 0.82 * H;
-                      const mean = rndResult.mean, sd = rndResult.stdDev || (spotPrice * 0.05);
-                      const lo1 = mean - sd, hi1 = mean + sd, spotX = xOf(spotPrice);
-                      const line = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xOf(p.strike).toFixed(1)} ${yOf(p.probability).toFixed(1)}`).join(' ');
-                      const area = `${line} L ${xOf(maxS).toFixed(1)} ${H} L ${xOf(minS).toFixed(1)} ${H} Z`;
-                      // Reference symmetric bell (peak-matched) → the implied curve's deviation from it IS the skew/fat-tails.
-                      const norm = pts.map(p => { const z = (p.strike - mean) / (sd || 1); return `${xOf(p.strike).toFixed(1)} ${(H - Math.exp(-0.5 * z * z) * 0.82 * H).toFixed(1)}`; });
-                      const normPath = norm.map((n, i) => `${i === 0 ? 'M' : 'L'} ${n}`).join(' ');
-                      const tail = (arr: typeof pts) => arr.length < 2 ? '' : arr.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xOf(p.strike).toFixed(1)} ${yOf(p.probability).toFixed(1)}`).join(' ') + ` L ${xOf(arr[arr.length - 1].strike).toFixed(1)} ${H} L ${xOf(arr[0].strike).toFixed(1)} ${H} Z`;
-                      const down = tail(pts.filter(p => p.strike <= lo1)), up = tail(pts.filter(p => p.strike >= hi1));
-                      return (
-                        <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-full overflow-visible" xmlns="http://www.w3.org/2000/svg">
-                          <defs>
-                            <linearGradient id="qpdf" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--success)" stopOpacity="0.22" /><stop offset="100%" stopColor="var(--success)" stopOpacity="0" /></linearGradient>
-                            <linearGradient id="qdown" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--danger)" stopOpacity="0.5" /><stop offset="100%" stopColor="var(--danger)" stopOpacity="0.04" /></linearGradient>
-                            <linearGradient id="qup" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--success)" stopOpacity="0.55" /><stop offset="100%" stopColor="var(--success)" stopOpacity="0.05" /></linearGradient>
-                          </defs>
-                          {[0.25, 0.5, 0.75].map(r => <line key={r} x1="0" y1={H * r} x2={W} y2={H * r} stroke="var(--border)" strokeWidth="1" opacity="0.5" />)}
-                          <path d={area} fill="url(#qpdf)" />
-                          {down && <path d={down} fill="url(#qdown)" />}
-                          {up && <path d={up} fill="url(#qup)" />}
-                          {/* reference normal (what a symmetric bell would look like) */}
-                          <path d={normPath} fill="none" stroke="var(--text-tertiary)" strokeWidth="1" strokeDasharray="3,3" opacity="0.55" vectorEffect="non-scaling-stroke" />
-                          {/* implied density */}
-                          <path d={line} fill="none" stroke="var(--success)" strokeWidth="2" vectorEffect="non-scaling-stroke" style={{ filter: 'drop-shadow(0 0 5px color-mix(in srgb, var(--success) 50%, transparent))' }} />
-                          {/* ±1σ boundaries */}
-                          {[lo1, hi1].map((b, i) => <line key={i} x1={xOf(b)} y1={H * 0.12} x2={xOf(b)} y2={H} stroke="var(--warning)" strokeWidth="1" strokeDasharray="2,3" opacity="0.5" vectorEffect="non-scaling-stroke" />)}
-                          {/* spot */}
-                          <line x1={spotX} y1="0" x2={spotX} y2={H} stroke="var(--accent-color)" strokeWidth="1.25" strokeDasharray="3,2" opacity="0.8" vectorEffect="non-scaling-stroke" />
-                        </svg>
-                      );
-                    })()}
-                    {/* overlaid labels (non-scaling, in real px) */}
-                    {rndResult.density.length > 0 && (() => {
-                      const pts = rndResult.density, minS = pts[0].strike, maxS = pts[pts.length - 1].strike, span = (maxS - minS) || 1;
-                      const sd = rndResult.stdDev || spotPrice * 0.05;
-                      const pct = (s: number) => `${(((s - minS) / span) * 100).toFixed(1)}%`;
-                      const tag = (s: number, txt: string, color: string, top = false) => (
-                        <span className="absolute -translate-x-1/2 text-[8.5px] font-mono font-black uppercase tracking-wider whitespace-nowrap px-1 rounded-sm" style={{ left: pct(s), [top ? 'top' : 'bottom']: top ? 2 : 22, color, background: 'color-mix(in srgb, var(--bg-base) 70%, transparent)' }}>{txt}</span>
-                      );
-                      return (<>
-                        {tag(spotPrice, `Spot ${spotPrice.toLocaleString(undefined, { maximumFractionDigits: 0 })}`, 'var(--accent-color)', true)}
-                        {tag(rndResult.mean - sd, '−1σ', 'var(--warning)')}
-                        {tag(rndResult.mean + sd, '+1σ', 'var(--warning)')}
-                      </>);
-                    })()}
-                  </div>
-
-                  <div className="flex items-center justify-between text-[9px] text-[var(--text-tertiary)] border-t border-[var(--border)] pt-2 px-1 font-mono font-bold tabular-nums">
-                    {rndResult.density.length > 0 ? <>
-                      <span style={{ color: 'var(--danger)' }}>{rndResult.density[0].strike.toLocaleString(undefined, { maximumFractionDigits: 0 })} <span className="text-[var(--text-tertiary)]">DOWNSIDE</span></span>
-                      <span className="flex items-center gap-3 normal-case tracking-normal"><span className="flex items-center gap-1"><span className="w-3 h-[2px] inline-block" style={{ background: 'var(--success)' }} />Implied</span><span className="flex items-center gap-1"><span className="w-3 border-t border-dashed inline-block" style={{ borderColor: 'var(--text-tertiary)' }} />Normal</span></span>
-                      <span style={{ color: 'var(--success)' }}><span className="text-[var(--text-tertiary)]">UPSIDE</span> {rndResult.density[rndResult.density.length - 1].strike.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                    </> : <><span>DOWNSIDE</span><span>ATM</span><span>UPSIDE</span></>}
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-4">
-                  <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
-                    <SectionHeader icon={<Brain className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Distribution Stats" />
-                    <div className="flex flex-col gap-2.5">
-                      {[
-                        { l: 'Implied 1σ Spread', v: `${(rndResult.stdDev / spotPrice * 100).toFixed(2)}%`, t: 'text-[var(--text-primary)]' },
-                        { l: 'Risk-Neutral Mean', v: rndResult.mean.toFixed(2), t: 'text-[var(--text-primary)]' },
-                        { l: 'PDF Skewness', v: rndResult.skewness.toFixed(4), t: rndResult.skewness < 0 ? 'text-[var(--danger)]' : 'text-[var(--success)]' },
-                        { l: 'Excess Kurtosis', v: rndResult.kurtosis.toFixed(4), t: 'text-[var(--text-secondary)]' },
-                      ].map((row, i) => (
-                        <div key={i} className="flex justify-between border-b border-[var(--border)] pb-1.5">
-                          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">{row.l}</span>
-                          <span className={`text-[11px] font-bold tabular-nums ${row.t}`}>{row.v}</span>
-                        </div>
-                      ))}
-                      <div className="flex justify-between items-center">
-                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">Tail Regime</span>
-                        <span className={`text-[10px] font-bold uppercase tracking-wide ${rndResult.isFatTailed ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'}`}>
-                          {rndResult.isFatTailed ? 'Fat Tails' : 'Normal'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
-                    <SectionHeader icon={<Scale className="w-3.5 h-3.5 text-[var(--warning)]" />} label="Probability Pricer" />
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">1σ Move Strike</span>
-                      <span className="text-[14px] font-bold text-[var(--warning)] tabular-nums">{probStrike.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
-                    </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] p-2.5 rounded-md">
-                      <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                        {probabilityPricingText.statement}
-                      </p>
-                    </div>
-                    <p className="text-[10px] text-[var(--text-tertiary)] leading-snug mt-1.5">
-                      Model estimate — risk-neutral, excludes slippage/commissions; not investment advice
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* TAB 2: VOLATILITY */}
-            {activeSubTab === 'vol' && (
+            {activeSubTab === 'volgeo' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 <div className="lg:col-span-2 flex flex-col gap-4">
                   <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
@@ -788,547 +662,31 @@ export default function QuantSuiteView() {
               </div>
             )}
 
-            {/* TAB 3: AUTO STRATEGY BUILDER */}
-            {activeSubTab === 'builder' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-4">
-                  <SectionHeader
-                    icon={<Layers className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
-                    label="Auto-Built Strategy"
-                    right={
-                      <span className="text-[10px] text-[var(--text-tertiary)] tracking-wide">
-                        ATM {atmStrike.toLocaleString()} · EM (expected move) ±{expectedMovePts.toFixed(0)} pts ({expectedMovePct.toFixed(1)}%)
-                      </span>
-                    }
-                  />
-
-                  {/* Preset selector — strategies are derived from live ATM + expected move */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {(Object.keys(PRESET_LABELS) as StrategyPreset[]).map(p => (
-                      <button
-                        key={p}
-                        onClick={() => setActivePreset(p)}
-                        className={`px-2 py-2 text-[10px] font-bold uppercase tracking-wide rounded-md border cursor-pointer transition-colors ${
-                          activePreset === p
-                            ? 'border-[var(--success)]/50 bg-[var(--success)]/10 text-[var(--success)]'
-                            : 'border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]'
-                        }`}
-                      >
-                        {PRESET_LABELS[p]}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Derived legs (read-only) */}
-                  <div className="flex flex-col gap-1.5">
-                    <div className="grid grid-cols-12 gap-2 px-2 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide font-semibold">
-                      <span className="col-span-3">Side</span>
-                      <span className="col-span-2 text-center">Type</span>
-                      <span className="col-span-3 text-right">Strike</span>
-                      <span className="col-span-2 text-right">Qty</span>
-                      <span className="col-span-2 text-right">Prem</span>
-                    </div>
-                    {strategyLegs.map(leg => (
-                      <div key={leg.id} className="grid grid-cols-12 gap-2 items-center bg-[var(--surface-2)] border border-[var(--border)] rounded-md px-2 py-2 text-[11px]">
-                        <span className={`col-span-3 font-bold uppercase ${leg.action === 'buy' ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                          {leg.action === 'buy' ? 'Long' : 'Short'}
-                        </span>
-                        <span className={`col-span-2 text-center font-bold uppercase ${leg.type === 'call' ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                          {leg.type}
-                        </span>
-                        <span className="col-span-3 text-right font-bold tabular-nums text-[var(--text-primary)]">{leg.strike.toLocaleString()}</span>
-                        <span className="col-span-2 text-right tabular-nums text-[var(--text-secondary)]">×{leg.qty}</span>
-                        <span className="col-span-2 text-right tabular-nums text-[var(--text-secondary)]">${leg.entryPrice.toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Payoff curve */}
-                  <div>
-                    <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide font-semibold">P&amp;L Payoff at Expiry</span>
-                    <div className="h-32 w-full bg-[var(--surface-2)] border border-[var(--border)] relative rounded-md overflow-hidden mt-1.5">
-                      <svg viewBox="0 0 260 120" preserveAspectRatio="none" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-                        <line x1="0" y1="60" x2="260" y2="60" stroke="rgba(255,255,255,0.1)" strokeDasharray="2,3" />
-                        <path
-                          d={(() => {
-                            const h = 120;
-                            if (payoffChartCoordinates.length === 0) return '';
-                            const pnls = payoffChartCoordinates.map(c => c.pnl);
-                            const maxPl = Math.max(10, ...pnls);
-                            const minPl = Math.min(-10, ...pnls);
-                            const range = maxPl - minPl || 1;
-                            return payoffChartCoordinates.map((c, idx) => {
-                              const x = (idx / (payoffChartCoordinates.length - 1)) * 260;
-                              const pnlRatio = (c.pnl - minPl) / range;
-                              const y = h - (pnlRatio * h * 0.86) - 8;
-                              return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
-                            }).join(' ');
-                          })()}
-                          fill="none"
-                          stroke="#D9A15C"
-                          strokeWidth="1.5"
-                          vectorEffect="non-scaling-stroke"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-4">
-                  <SectionHeader icon={<Gauge className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Payoff & Risk" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <StatTile
-                      label="Net Debit / Credit"
-                      value={strategySuite.netPremium >= 0 ? `Dr $${Math.abs(strategySuite.netPremium).toLocaleString()}` : `Cr $${Math.abs(strategySuite.netPremium).toLocaleString()}`}
-                      tone={strategySuite.netPremium >= 0 ? 'text-[var(--warning)]' : 'text-[var(--success)]'}
-                    />
-                    <StatTile label="Prob. of Profit" value={`${(strategySuite.pop * 100).toFixed(1)}%`} tone="text-[var(--warning)]" />
-                    <StatTile
-                      label="Max Profit"
-                      value={typeof strategySuite.maxProfit === 'number' ? `$${strategySuite.maxProfit.toLocaleString()}` : strategySuite.maxProfit}
-                      tone="text-[var(--success)]"
-                    />
-                    <StatTile
-                      label="Max Loss"
-                      value={typeof strategySuite.maxLoss === 'number' ? `$${Math.abs(strategySuite.maxLoss).toLocaleString()}` : strategySuite.maxLoss}
-                      tone="text-[var(--danger)]"
-                    />
-                  </div>
-                  <p className="text-[10px] text-[var(--text-tertiary)] leading-snug">
-                    Prob. of profit is a model estimate — risk-neutral, excludes slippage/commissions; not investment advice
-                  </p>
-
-                  <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-md">
-                    <span className="text-[10px] text-[var(--success)] font-semibold uppercase tracking-wide block">Half-Kelly Size</span>
-                    <span className="text-[16px] font-bold text-[var(--text-primary)] block mt-1 tabular-nums">{(strategySuite.kellySizing * 100).toFixed(1)}% of capital</span>
-                    <p className="text-[10px] text-[var(--text-tertiary)] mt-1 leading-relaxed">
-                      Sized from the RND-implied edge. Capped at 20% to bound drawdowns.
-                    </p>
-                  </div>
-
-                  {strategySuite.breakevens.length > 0 && (
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-md">
-                      <span className="text-[10px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wide block mb-1">Breakevens</span>
-                      <div className="flex flex-wrap gap-2">
-                        {strategySuite.breakevens.map((b, i) => (
-                          <span key={i} className="text-[12px] font-bold text-[var(--text-primary)] tabular-nums">{b.toLocaleString()}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 4: SCENARIOS */}
-            {activeSubTab === 'scenarios' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
-                  <SectionHeader
-                    icon={<SlidersHorizontal className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
-                    label="Scenario Stress (Spot × Vol)"
-                    right={
-                      <div className="flex gap-1">
-                        {[
-                          { v: dteD, l: `${dteD}d` },
-                          { v: Math.round(dteD / 2), l: `${Math.round(dteD / 2)}d` },
-                          { v: 0, l: '0d' },
-                        ].map(opt => (
-                          <button
-                            key={opt.v}
-                            onClick={() => setSelectedDteScenario(opt.v)}
-                            className={`px-2 py-0.5 text-[10px] rounded cursor-pointer font-semibold border ${
-                              selectedDteScenario === opt.v
-                                ? 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)]'
-                                : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-                            }`}
-                          >
-                            {opt.l}
-                          </button>
-                        ))}
-                      </div>
-                    }
-                  />
-
-                  {/* Full matrix — sm and up (horizontal scroll only when truly needed) */}
-                  <div className="hidden sm:block overflow-x-auto">
-                    <div className="min-w-[420px] grid grid-cols-6 gap-1 text-center text-[11px] font-semibold">
-                      <span className="border-b border-[var(--border)] pb-1.5 text-[var(--text-tertiary)] uppercase text-[10px]">Spot ↓ / Vol →</span>
-                      {volShocks.map((vol, vIdx) => (
-                        <span key={vIdx} className="border-b border-[var(--border)] pb-1.5 text-[var(--text-secondary)]">{(vol * 100).toFixed(0)}%</span>
-                      ))}
-
-                      {spotShocks.map((spotScr, sIdx) => (
-                        <React.Fragment key={sIdx}>
-                          <span className="bg-[var(--surface-2)] border border-[var(--border)] p-2 text-[var(--text-secondary)] flex items-center justify-center font-semibold rounded">
-                            {(spotScr * 100).toFixed(0)}%
-                          </span>
-                          {volShocks.map((volScr, vIdx) => {
-                            const matchNode = scenarioMatrix.find(n =>
-                              Math.abs(n.spotChange - spotScr) < 1e-4 &&
-                              Math.abs(n.volChange - volScr) < 1e-4 &&
-                              n.dteRemaining === selectedDteScenario
-                            );
-                            const pnlValue = matchNode ? matchNode.pnl : 0;
-                            let bg = 'rgba(255,255,255,0.04)';
-                            let bd = 'var(--border)';
-                            if (pnlValue > 50) {
-                              bg = `rgba(74, 222, 128, ${Math.min(0.7, 0.12 + pnlValue / 4000)})`;
-                              bd = 'rgba(74, 222, 128, 0.3)';
-                            } else if (pnlValue < -50) {
-                              bg = `rgba(248, 113, 113, ${Math.min(0.7, 0.12 + Math.abs(pnlValue) / 4000)})`;
-                              bd = 'rgba(248, 113, 113, 0.3)';
-                            }
-                            return (
-                              <div
-                                key={vIdx}
-                                className="p-2 border rounded font-mono font-bold tabular-nums flex items-center justify-center h-11"
-                                style={{ backgroundColor: bg, borderColor: bd }}
-                                title={`Spot ${(spotScr * 100).toFixed(0)}% · Vol ${(volScr * 100).toFixed(0)}%`}
-                              >
-                                <span className={`text-[10px] ${pnlValue > 0 ? 'text-[var(--success)]' : pnlValue < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'}`}>
-                                  {pnlValue === 0 ? '$0' : pnlValue > 0 ? `+$${pnlValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `-$${Math.abs(pnlValue).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </React.Fragment>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Stacked-card fallback — below sm (no horizontal scroll on phones).
-                      One card per spot shock; each lists the P&L across vol shocks. */}
-                  <div className="sm:hidden flex flex-col gap-2">
-                    {spotShocks.map((spotScr, sIdx) => (
-                      <div key={sIdx} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-md p-2.5">
-                        <div className="flex items-center justify-between border-b border-[var(--border)] pb-1.5 mb-1.5">
-                          <span className="text-[10px] uppercase tracking-wide text-[var(--text-tertiary)] font-semibold">Spot Shock</span>
-                          <span className="text-[11px] font-bold tabular-nums text-[var(--text-secondary)]">{(spotScr * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          {volShocks.map((volScr, vIdx) => {
-                            const matchNode = scenarioMatrix.find(n =>
-                              Math.abs(n.spotChange - spotScr) < 1e-4 &&
-                              Math.abs(n.volChange - volScr) < 1e-4 &&
-                              n.dteRemaining === selectedDteScenario
-                            );
-                            const pnlValue = matchNode ? matchNode.pnl : 0;
-                            return (
-                              <div key={vIdx} className="flex items-center justify-between text-[11px] tabular-nums">
-                                <span className="text-[var(--text-tertiary)]">Vol {(volScr * 100).toFixed(0)}%</span>
-                                <span className={`font-bold ${pnlValue > 0 ? 'text-[var(--success)]' : pnlValue < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'}`}>
-                                  {pnlValue === 0 ? '$0' : pnlValue > 0 ? `+$${pnlValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : `-$${Math.abs(pnlValue).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
-                                </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-3">
-                  <SectionHeader icon={<Target className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Slice Summary" />
-                  <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
-                    Each cell is a full Black-Scholes re-price of the open strategy under that exact spot and IV shock — not a delta approximation. Switch DTE to see theta and vega bleed over time.
-                  </p>
-
-                  {scenarioExtremes.worst && scenarioExtremes.best && (
-                    <div className="grid grid-cols-1 gap-2">
-                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-md p-3">
-                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide block">Worst Case ({selectedDteScenario}d)</span>
-                        <span className="text-[15px] font-bold text-[var(--danger)] tabular-nums block mt-1">{fmtMoney(scenarioExtremes.worst.pnl)}</span>
-                        <span className="text-[10px] text-[var(--text-tertiary)]">at spot {(scenarioExtremes.worst.spotChange * 100).toFixed(0)}% · vol {(scenarioExtremes.worst.volChange * 100).toFixed(0)}%</span>
-                      </div>
-                      <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-md p-3">
-                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide block">Best Case ({selectedDteScenario}d)</span>
-                        <span className="text-[15px] font-bold text-[var(--success)] tabular-nums block mt-1">{fmtMoney(scenarioExtremes.best.pnl)}</span>
-                        <span className="text-[10px] text-[var(--text-tertiary)]">at spot {(scenarioExtremes.best.spotChange * 100).toFixed(0)}% · vol {(scenarioExtremes.best.volChange * 100).toFixed(0)}%</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 5: PORTFOLIO BOOK */}
-            {activeSubTab === 'portfolio' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-4">
-                  <SectionHeader
-                    icon={<Scale className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
-                    label="Position Book"
-                    right={
-                      <div className="flex gap-1.5">
-                        <button onClick={handleAddPortfolioStock} aria-label="Add shares to book" className="px-2 py-1 min-h-[40px] inline-flex items-center justify-center border border-[var(--border)] text-[10px] rounded font-semibold hover:bg-[var(--surface-2)] uppercase tracking-wide cursor-pointer text-[var(--text-secondary)]">+ Shares</button>
-                        <button onClick={() => handleAddPortfolioOption('call')} aria-label="Add call option to book" className="px-2 py-1 min-h-[40px] inline-flex items-center justify-center border border-[var(--border)] text-[10px] rounded font-semibold hover:bg-[var(--surface-2)] uppercase tracking-wide cursor-pointer text-[var(--success)]">+ Call</button>
-                        <button onClick={() => handleAddPortfolioOption('put')} aria-label="Add put option to book" className="px-2 py-1 min-h-[40px] inline-flex items-center justify-center border border-[var(--border)] text-[10px] rounded font-semibold hover:bg-[var(--surface-2)] uppercase tracking-wide cursor-pointer text-[var(--danger)]">+ Put</button>
-                      </div>
-                    }
-                  />
-
-                  <div className="space-y-1.5">
-                    {portfolio.length === 0 ? (
-                      <div className="text-center py-12 text-[var(--text-tertiary)] text-[11px] uppercase tracking-wide border border-dashed border-[var(--border)] rounded-md">
-                        Book is empty — add shares or option contracts above. Options are priced at the live ATM strike.
-                      </div>
-                    ) : (
-                      portfolio.map(p => (
-                        <div key={p.id} className="flex items-center justify-between bg-[var(--surface-2)] border border-[var(--border)] p-2.5 rounded-md text-[11px]">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`w-9 text-[10px] text-center font-bold px-1 py-0.5 rounded uppercase ${p.type === 'stock' ? 'bg-[var(--surface-3)] text-[var(--text-secondary)]' : p.type === 'call' ? 'bg-[var(--success)]/10 text-[var(--success)]' : 'bg-[var(--danger)]/10 text-[var(--danger)]'}`}>
-                              {p.type === 'stock' ? 'eq' : p.type}
-                            </span>
-                            <span className="font-semibold text-[var(--text-primary)] truncate">{p.symbol}</span>
-                          </div>
-                          <div className="flex items-center gap-4">
-                            <div className="flex flex-col text-right">
-                              <span className="text-[10px] text-[var(--text-tertiary)]">Basis</span>
-                              <span className="font-semibold text-[var(--text-secondary)] tabular-nums">${p.entryPrice.toFixed(2)}</span>
-                            </div>
-                            <div className="flex flex-col text-right">
-                              <span className="text-[10px] text-[var(--text-tertiary)]">Qty</span>
-                              <span className="font-semibold text-[var(--text-primary)] tabular-nums">{p.qty > 0 ? `+${p.qty}` : p.qty}</span>
-                            </div>
-                            <button onClick={() => handleRemovePortfolioItem(p.id)} className="p-1 border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--danger)] hover:border-[var(--danger)]/40 rounded cursor-pointer">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg flex flex-col">
-                  <SectionHeader icon={<Gauge className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Book Greeks (Totals)" />
-                  <div className="flex flex-col gap-2.5">
-                    {[
-                      { l: 'Net Delta', v: portfolioResult.delta.toFixed(2), t: portfolioResult.delta >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]' },
-                      { l: 'Net Gamma', v: portfolioResult.gamma.toFixed(4), t: 'text-[var(--text-primary)]' },
-                      { l: 'Total Vega', v: `$${portfolioResult.vega.toFixed(1)}`, t: 'text-[var(--success)]' },
-                      { l: 'Daily Theta', v: `$${portfolioResult.theta.toFixed(1)}`, t: 'text-[var(--danger)]' },
-                      { l: 'Vanna', v: portfolioResult.vanna.toFixed(3), t: 'text-[var(--warning)]' },
-                      { l: 'Charm', v: portfolioResult.charm.toFixed(3), t: 'text-[var(--text-secondary)]' },
-                    ].map((row, i) => (
-                      <div key={i} className="flex justify-between border-b border-[var(--border)] pb-1.5 text-[11px]">
-                        <span className="text-[var(--text-tertiary)] uppercase tracking-wide text-[10px]">{row.l}</span>
-                        <span className={`font-bold tabular-nums ${row.t}`}>{row.v}</span>
-                      </div>
-                    ))}
-                    <div className="mt-3 bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-md flex items-center justify-between">
-                      <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">Net P&amp;L</span>
-                      <span className={`text-[14px] font-bold tabular-nums ${portfolioResult.totalProfit >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                        {fmtMoney(Math.round(portfolioResult.totalProfit))}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB: DEALER MECHANICS (moved here from Pinpoint GEX) */}
+            {/* §2 DEALER MECHANICS GEOMETRY — real exposure surfaces (Gamma/Vanna/Charm) + edge */}
             {activeSubTab === 'mechanics' && (
               <div className="space-y-5">
-                {/* Real per-strike dealer exposure geometry: Gamma / Vanna / Charm surfaces + IV. */}
                 <Suspense fallback={<div className="h-[460px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
                   <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} />
                 </Suspense>
-                {/* Advanced quant mechanics — RND / VRP / skew / Kelly, and the regime matrix */}
+                {/* Quant edge — RND / VRP / skew / scenario / Kelly / dealer clock */}
                 <QuantEdgePanel />
+              </div>
+            )}
+
+            {/* §4 FACTOR / STRUCTURE LAB — regime & factor state (HMM / Hurst / OU / vol regimes / PCA) */}
+            {activeSubTab === 'factor' && (
+              <div className="space-y-5">
                 <RegimeMatrixPanel />
               </div>
             )}
 
-            {/* TAB 6: ALERTS */}
-            {activeSubTab === 'alerts' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-3">
-                  <SectionHeader
-                    icon={<RadioTower className="w-3.5 h-3.5 text-[var(--accent-color)]" />}
-                    label="Active Alert Rules"
-                    right={
-                      <button
-                        onClick={() => handleAddSpotRule(Math.round((spotPrice * 1.03) / strikeStep) * strikeStep)}
-                        className="px-2 py-1 border border-[var(--border)] text-[10px] rounded font-semibold uppercase tracking-wide text-[var(--success)] hover:bg-[var(--surface-2)] cursor-pointer"
-                      >
-                        + Spot Rule
-                      </button>
-                    }
-                  />
-                  <div className="space-y-1.5 flex-1">
-                    {alertsRules.map(rule => (
-                      <div key={rule.id} className="flex justify-between items-center bg-[var(--surface-2)] border border-[var(--border)] p-2.5 rounded-md text-[11px]">
-                        <div className="flex flex-col gap-0.5 min-w-0">
-                          <span className="font-semibold text-[var(--text-primary)] truncate">{rule.name}</span>
-                          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
-                            {rule.metric} · {rule.operator}{rule.thresholdValue ? ` ${rule.thresholdValue.toLocaleString()}` : ''}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => handleToggleRule(rule.id)}
-                          className={`px-2 py-1 text-[10px] font-bold border uppercase tracking-wide rounded cursor-pointer ${rule.isActive ? 'bg-[var(--success)]/10 border-[var(--success)]/50 text-[var(--success)]' : 'bg-[var(--surface-3)] border-[var(--border)] text-[var(--text-tertiary)]'}`}
-                        >
-                          {rule.isActive ? 'Active' : 'Muted'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-[10px] text-[var(--text-tertiary)] leading-relaxed">
-                    Rules evaluate every 12s against live spot, the dealer GEX profile, VRP and skew percentiles. GEX-based rules stay dormant until a dealer profile is streamed.
-                  </p>
-                </div>
-
-                <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg flex flex-col">
-                  <SectionHeader icon={<Bell className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Dispatch Log" />
-                  <div className="flex-1 overflow-y-auto max-h-[320px] space-y-2 pr-1">
-                    {alertsLog.length === 0 ? (
-                      <div className="text-center py-12 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
-                        Monitoring — no alerts triggered yet.
-                      </div>
-                    ) : (
-                      alertsLog.map((log, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-[var(--surface-2)] border border-[var(--border)] p-2.5 rounded-md text-[11px] flex flex-col gap-1 border-l-2"
-                          style={{ borderLeftColor: log.type === 'danger' ? 'var(--danger)' : log.type === 'warning' ? 'var(--warning)' : 'var(--success)' }}
-                        >
-                          <div className="flex justify-between text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
-                            <span className="truncate">{log.ruleName}</span>
-                            <span>{log.timestamp}</span>
-                          </div>
-                          <p className="text-[var(--text-secondary)] leading-snug">{log.message}</p>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 7: JOURNAL & CALIBRATION */}
-            {activeSubTab === 'calibration' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <div className="lg:col-span-2 flex flex-col bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg gap-3">
-                  <SectionHeader
-                    icon={<History className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
-                    label="Trade Journal"
-                    right={
-                      <button
-                        onClick={handleLogCurrentSetup}
-                        className="px-2 py-1 border border-[var(--border)] text-[10px] rounded font-semibold uppercase tracking-wide text-[var(--warning)] hover:bg-[var(--surface-2)] cursor-pointer"
-                      >
-                        + Log {PRESET_LABELS[activePreset]}
-                      </button>
-                    }
-                  />
-                  <div className="space-y-1.5 overflow-y-auto max-h-[360px] pr-1">
-                    {journal.length === 0 ? (
-                      <div className="text-center py-12 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide border border-dashed border-[var(--border)] rounded-md">
-                        No trades logged. Use "Log" to record the current setup with its live RND probability of profit.
-                      </div>
-                    ) : (
-                      journal.map(trade => (
-                        <div key={trade.id} className="bg-[var(--surface-2)] border border-[var(--border)] p-2.5 rounded-md flex justify-between items-center text-[11px]">
-                          <div className="flex flex-col gap-0.5 min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-[var(--text-primary)] uppercase">{trade.ticker}</span>
-                              <span className="text-[10px] text-[var(--text-tertiary)]">{trade.entryTime}</span>
-                              <span className="text-[var(--text-secondary)] truncate">{trade.setup}</span>
-                            </div>
-                            <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">
-                              Entry {trade.entryPrice.toFixed(1)} · PoP {(trade.pop * 100).toFixed(0)}%
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {trade.outcome === 'OPEN' ? (
-                              <>
-                                <button onClick={() => handleResolveTrade(trade.id, 'WIN')} className="px-2 py-0.5 bg-[var(--success)]/10 text-[var(--success)] border border-[var(--success)]/40 text-[10px] font-bold rounded cursor-pointer">WIN</button>
-                                <button onClick={() => handleResolveTrade(trade.id, 'LOSS')} className="px-2 py-0.5 bg-[var(--danger)]/10 text-[var(--danger)] border border-[var(--danger)]/40 text-[10px] font-bold rounded cursor-pointer">LOSS</button>
-                              </>
-                            ) : (
-                              <div className="flex items-center gap-3 text-right">
-                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${trade.outcome === 'WIN' ? 'bg-[var(--success)]/10 text-[var(--success)]' : 'bg-[var(--danger)]/10 text-[var(--danger)]'}`}>{trade.outcome}</span>
-                                <span className={`font-bold tabular-nums ${trade.pnl && trade.pnl >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                                  {typeof trade.pnl === 'number' ? fmtMoney(trade.pnl) : ''}
-                                </span>
-                              </div>
-                            )}
-                            <button onClick={() => handleRemoveTrade(trade.id)} className="p-1 border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--danger)] hover:border-[var(--danger)]/40 rounded cursor-pointer">
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-
-                <div className="bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg flex flex-col gap-4">
-                  <SectionHeader icon={<Brain className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />} label="Calibration & Edge" />
-                  {closedCount === 0 ? (
-                    <div className="text-center py-12 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide border border-dashed border-[var(--border)] rounded-md">
-                      Resolve at least one logged trade to compute calibration, win rate and expectancy.
-                    </div>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-2 gap-2">
-                        <StatTile label="Win Rate" value={`${(calibrationLoop.winRate * 100).toFixed(1)}%`} tone="text-[var(--success)]" />
-                        <StatTile label="Avg P&L" value={`$${calibrationLoop.averageReturn.toLocaleString(undefined, { maximumFractionDigits: 0 })}`} tone="text-[var(--text-primary)]" />
-                        <StatTile label="Max Drawdown" value={`-${calibrationLoop.maxDrawdown.toFixed(1)}%`} tone="text-[var(--danger)]" />
-                        <StatTile label="Sharpe" value={calibrationLoop.sharpeRatio.toFixed(2)} tone="text-[var(--warning)]" />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-md text-center">
-                          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide block">Brier Score</span>
-                          <span className="text-[15px] font-bold text-[var(--warning)] mt-1 block tabular-nums">{calibrationLoop.brierScore.toFixed(4)}</span>
-                          <p className="text-[10px] text-[var(--text-tertiary)] mt-1">0.00 = perfect</p>
-                        </div>
-                        <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-md text-center">
-                          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide block">ECE</span>
-                          <span className="text-[15px] font-bold text-[var(--warning)] mt-1 block tabular-nums">{(calibrationLoop.expectedCalibrationError * 100).toFixed(2)}%</span>
-                          <p className="text-[10px] text-[var(--text-tertiary)] mt-1">confidence drift</p>
-                        </div>
-                      </div>
-
-                      <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-md">
-                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide block border-b border-[var(--border)] pb-1.5 mb-2">Expectancy by Setup</span>
-                        <div className="space-y-2">
-                          {calibrationLoop.expectancyBySetup.map((s, idx) => (
-                            <div key={idx} className="flex justify-between items-center text-[11px]">
-                              <span className="text-[var(--text-secondary)] truncate">{s.setup}</span>
-                              <div className="flex gap-3 text-right tabular-nums">
-                                <span className="text-[var(--text-tertiary)]">{(s.winRate * 100).toFixed(0)}%</span>
-                                <span className={`font-bold ${s.expectancy >= 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{fmtMoney(s.expectancy)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-            )}
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* ECharts / echarts-gl visual analytics — intraday price, equity curve, and
-          GL vol surface / risk cloud / dealer flow field. Live-looking mock now,
-          pluggable to the real feed via echartOptions.ts. */}
-      <div className="border-t border-[var(--border)] pt-4" id="quant-suite-echarts">
-        <Suspense fallback={<div className="h-64 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-          <QuantVizLab />
-        </Suspense>
-      </div>
-
-      {/* Risk-neutral probability distribution — the market's own forward distribution (Breeden-Litzenberger),
+      {/* §3 Distribution & Risk — the market's own forward distribution (Breeden-Litzenberger),
           with the CDF + every probability (above/below/between/touch/ITM), expected move, CIs, and IV-vs-RV. */}
-      {rndResult.density.length > 2 && spotPrice > 0 && (
+      {activeSubTab === 'distrib' && rndResult.density.length > 2 && spotPrice > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-rnd-distribution">
           <RiskNeutralDistribution
             rnd={rndResult}
@@ -1346,15 +704,15 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Implied volatility smile/skew — real front-expiry per-strike IV */}
-      {optionChain.length >= 4 && spotPrice > 0 && (
+      {/* §1 Volatility Geometry — implied vol smile/skew, real front-expiry per-strike IV */}
+      {activeSubTab === 'volgeo' && optionChain.length >= 4 && spotPrice > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-iv-smile">
           <IvSmile chain={optionChain} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
         </div>
       )}
 
-      {/* Dealer Greek exposure profiles — per-strike Γ/Δ/vanna/charm/vega from the real chain */}
-      {optionChain.length >= 4 && spotPrice > 0 && (
+      {/* §2 Dealer Mechanics — per-strike Γ/Δ/vanna/charm/vega exposure from the real chain */}
+      {activeSubTab === 'mechanics' && optionChain.length >= 4 && spotPrice > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-greek-exposure">
           <GreekExposurePanel
             chain={optionChain}
@@ -1369,23 +727,11 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Dealer gamma exposure surface (3D) — real per-(strike,expiry) netGEX over the chain */}
-      {(() => {
-        const exps = ((gexProfile as any)?.expiries || []) as any[];
-        if (!(exps.length >= 1 && spotPrice > 0)) return null;
-        return (
-          <div className="border-t border-[var(--border)] pt-4" id="quant-suite-gex-surface">
-            <LazyMount minHeight={300}>
-              <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
-                <GexSurface3D expiries={exps} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
-              </Suspense>
-            </LazyMount>
-          </div>
-        );
-      })()}
+      {/* GexSurface3D removed — the Dealer Mechanics Gamma surface (strike × tenor × netGEX)
+          in DealerMechanicsDashboard is the single canonical gamma surface now. */}
 
-      {/* Implied volatility surface (3D) — real front smile + Heston forward-variance term MODEL over DTE */}
-      {optionChain.length >= 4 && spotPrice > 0 && dteD > 0 && (
+      {/* §1 Volatility Geometry — 3D IV surface: real front smile + Heston forward-variance term over DTE */}
+      {activeSubTab === 'volgeo' && optionChain.length >= 4 && spotPrice > 0 && dteD > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-iv-surface">
           <LazyMount minHeight={300}>
             <Suspense fallback={<div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] animate-pulse" />}>
@@ -1395,15 +741,15 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Monte Carlo simulation — real seeded paths under GBM / jump-diffusion / Heston */}
-      {spotPrice > 0 && defaultIv > 0 && dteD > 0 && (
+      {/* §3 Distribution & Risk — Monte Carlo: real seeded paths under GBM / jump-diffusion / Heston */}
+      {activeSubTab === 'distrib' && spotPrice > 0 && defaultIv > 0 && dteD > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-monte-carlo">
           <MonteCarloPanel spot={spotPrice} r={0.05} sigma={defaultIv} tYears={Math.max(1, dteD) / 365} ticker={activeTicker} decimals={activeAsset.decimals} />
         </div>
       )}
 
-      {/* Dealer hedging simulator — net-gamma landscape as spot moves, from real per-strike GEX */}
-      {(gexProfile?.strikes?.length ?? 0) >= 2 && spotPrice > 0 && expectedMovePct > 0 && (
+      {/* §2 Dealer Mechanics — hedging simulator: net-gamma landscape as spot moves, real per-strike GEX */}
+      {activeSubTab === 'mechanics' && (gexProfile?.strikes?.length ?? 0) >= 2 && spotPrice > 0 && expectedMovePct > 0 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-hedging">
           <DealerHedgingPanel
             strikes={(gexProfile!.strikes as any[]).map((s) => ({ strike: s.strike, netGex: s.netGex }))}
@@ -1416,14 +762,15 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* Market regime — measurable-feature classifier over the candle series */}
-      {candles.length >= 30 && (
+      {/* §4 Factor Lab — market-regime classifier (measurable features over the candle series) */}
+      {activeSubTab === 'factor' && candles.length >= 30 && (
         <div className="border-t border-[var(--border)] pt-4" id="quant-suite-regime">
           <RegimeDetectionPanel candles={candles} ticker={activeTicker} />
         </div>
       )}
 
       {/* Footer: REAL dealer GEX (when streamed) + per-expiry GEX breakdown */}
+      {activeSubTab === 'mechanics' && (
       <div className="grid grid-cols-1 lg:grid-cols-3 border-t border-[var(--border)] pt-4 gap-4" id="quant-suite-gex-footer">
         <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-lg flex flex-col gap-2">
           <SectionHeader icon={<Layers className="w-3.5 h-3.5 text-[var(--accent-color)]" />} label="Dealer GEX Profile" />
@@ -1482,6 +829,7 @@ export default function QuantSuiteView() {
           )}
         </div>
       </div>
+      )}
     </div>
     </StrikeSyncProvider>
   );
