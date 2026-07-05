@@ -205,11 +205,11 @@ function Warming({ samples, min }: { samples: number; min: number }) {
   const pct = Math.min(100, (samples / min) * 100);
   return (
     <div className="h-[150px] flex flex-col items-center justify-center gap-2 text-center px-4">
-      <div className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">Collecting live returns</div>
+      <div className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">Warming up live return history</div>
       <div className="w-40 h-1.5 rounded-full bg-[var(--surface)] overflow-hidden border border-[var(--border)]">
         <div className="h-full bg-[var(--accent-color)] transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <div className="text-[9px] tabular-nums text-[var(--text-tertiary)]">{samples}/{min} snapshots · correlations compute from real returns only</div>
+      <div className="text-[9px] tabular-nums text-[var(--text-tertiary)]">Correlation and PCA unlock after {min} return snapshots ({samples}/{min}). IV smile factors are available below now.</div>
     </div>
   );
 }

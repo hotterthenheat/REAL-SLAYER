@@ -711,10 +711,10 @@ export function QuantAuditView({
         <div className="text-center py-20 border border-dashed border-[var(--border)] bg-[var(--surface)] rounded-xl">
           <Activity className="w-6 h-6 text-[var(--text-tertiary)] mx-auto mb-3" />
           <span className="text-[12px] text-[var(--text-secondary)] font-bold uppercase tracking-widest block">
-            No trades recorded yet
+            No tracked setups have resolved yet
           </span>
-          <span className="text-[10px] text-[var(--text-tertiary)] font-medium uppercase tracking-wide block mt-1.5">
-            Logged trades will appear here as they resolve
+          <span className="text-[10px] text-[var(--text-tertiary)] font-medium tracking-wide block mt-1.5 max-w-sm mx-auto leading-relaxed normal-case">
+            Review a contract in SkyVision or Pinpoint and mark it as tracked. Resolved outcomes appear here automatically to build your trade record.
           </span>
         </div>
       ) : (

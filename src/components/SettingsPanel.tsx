@@ -287,10 +287,14 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     }
   };
 
-  // Link for copy
-  const referralLink = typeof window !== 'undefined' 
-    ? `${window.location.origin}/join/${session?.custom_referral_code || 'SLAYERX'}` 
-    : `/join/${session?.custom_referral_code || 'SLAYERX'}`;
+  // Link for copy. Never expose a localhost/dev origin in a customer-facing referral link —
+  // fall back to the production domain (overridable via VITE_PUBLIC_URL) whenever the current
+  // origin is a local/dev host.
+  const PUBLIC_BASE = ((import.meta as any).env?.VITE_PUBLIC_URL as string) || 'https://app.slayerterminal.com';
+  const referralBase = typeof window !== 'undefined' && !/^(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(:\d+)?$/.test(window.location.host) && !/\.local(:|$)/.test(window.location.host)
+    ? window.location.origin
+    : PUBLIC_BASE;
+  const referralLink = `${referralBase}/join/${session?.custom_referral_code || 'SLAYERX'}`;
 
   const handleSaveSettings = async (font: 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL', compact: boolean, theme: string) => {
     setIsUpdating(true);

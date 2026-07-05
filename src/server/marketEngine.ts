@@ -1160,24 +1160,35 @@ const buildPayload = (params: PayloadParams) => {
     };
   };
 
+  // Demo strikes must track each underlying's CURRENT spot — a hardcoded SPX 7630 next to
+  // a ~5,4xx tape reads as broken data. Derive a strike at the given moneyness off the live
+  // spot (falling back to the asset's reference price), rounded to a realistic increment.
+  const strikeFor = (ticker: string, moneyness: number): number => {
+    const asset = ASSET_LIST.find(a => a.ticker === ticker);
+    const live = db.liveSpotPrices[ticker];
+    const spot = (typeof live === 'number' && live > 0) ? live : (asset?.defaultPrice || 100);
+    const step = spot >= 1000 ? 25 : spot >= 100 ? 5 : 1;
+    return Math.max(step, Math.round((spot * moneyness) / step) * step);
+  };
+
   const discovery = {
     mispricedCalls: [
-      shelfRow('SPX', 7630, true, 91, 1.4, 'Extreme Call Wall Support'),
-      shelfRow('QQQ', 448, true, 86, 1.4, 'Accumulating Buy Flow'),
-      shelfRow('SPY', 515, true, 89, 1.4, 'Dealer Squeeze Vector'),
+      shelfRow('SPX', strikeFor('SPX', 1.010), true, 91, 1.4, 'Extreme Call Wall Support'),
+      shelfRow('QQQ', strikeFor('QQQ', 1.012), true, 86, 1.4, 'Accumulating Buy Flow'),
+      shelfRow('SPY', strikeFor('SPY', 1.008), true, 89, 1.4, 'Dealer Squeeze Vector'),
     ],
     mispricedPuts: [
-      shelfRow('SPX', 7615, false, 93, 1.4, 'Dealer Gamma Support Hedge'),
-      shelfRow('NDX', 18200, false, 90, 1.4, 'Block Bid Concentration'),
-      shelfRow('QQQ', 442, false, 85, 1.4, 'Put Wall Over-extension'),
+      shelfRow('SPX', strikeFor('SPX', 0.990), false, 93, 1.4, 'Dealer Gamma Support Hedge'),
+      shelfRow('NDX', strikeFor('NDX', 0.988), false, 90, 1.4, 'Block Bid Concentration'),
+      shelfRow('QQQ', strikeFor('QQQ', 0.988), false, 85, 1.4, 'Put Wall Over-extension'),
     ],
     mostImproved: [
-      shelfRow('SPY', 512, true, 88, 1.25, 'Momentum Influx Shift'),
-      shelfRow('NDX', 18270, true, 89, 1.25, 'Institutional Flow Build'),
+      shelfRow('SPY', strikeFor('SPY', 1.004), true, 88, 1.25, 'Momentum Influx Shift'),
+      shelfRow('NDX', strikeFor('NDX', 1.012), true, 89, 1.25, 'Institutional Flow Build'),
     ],
     nearInvalidation: [
-      shelfRow('SPX', 7610, false, 48, 0.7, 'Below Dealer GEX Support Floor'),
-      shelfRow('QQQ', 440, false, 51, 0.7, 'Liquidity Void Invalidation'),
+      shelfRow('SPX', strikeFor('SPX', 0.982), false, 48, 0.7, 'Below Dealer GEX Support Floor'),
+      shelfRow('QQQ', strikeFor('QQQ', 0.978), false, 51, 0.7, 'Liquidity Void Invalidation'),
     ],
     feed: feedLabel,
     chainLive: isChainLive,

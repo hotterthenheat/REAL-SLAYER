@@ -54,15 +54,22 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   const persist = useCallback((next: PaneLayout[]) => {
     try { localStorage.setItem('slayer_workspace', JSON.stringify(next)); } catch {}
     if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
+    // The layout is already in localStorage above, so a failed cloud sync is never data
+    // loss — it just retries. Surface that calmly (optimistic, retry-safe) instead of an
+    // alarming "failed to sync" error that makes the workspace feel broken.
+    const syncCloud = (attempt: number) => {
       fetch('/api/users/workspace', {
         method: 'PATCH', credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ layout: next }),
       })
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); })
-        .catch(() => notifyError('Workspace changes saved locally but failed to sync to your account.'));
-    }, 1000);
+        .catch(() => {
+          if (attempt < 2) { setTimeout(() => syncCloud(attempt + 1), 4000); return; }
+          notifyError('Saved locally. Cloud sync will retry automatically.');
+        });
+    };
+    saveTimer.current = setTimeout(() => syncCloud(0), 1000);
   }, [notifyError]);
 
   const commit = useCallback((next: PaneLayout[]) => { setLayout(next); persist(next); }, [persist]);

@@ -71,7 +71,7 @@ function FeedChip({ feed }: { feed?: string }) {
           : 'bg-amber-500/10 border-amber-500/30 text-amber-500'
       }`}
     >
-      {live ? (feed === 'LIVE_TRADIER' ? 'LIVE TRADIER' : 'LIVE POLYGON') : 'MODEL'}
+      {live ? (feed === 'LIVE_TRADIER' ? 'LIVE TRADIER' : 'LIVE POLYGON') : 'MODEL MODE'}
     </span>
   );
 }

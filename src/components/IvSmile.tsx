@@ -124,7 +124,7 @@ export function IvSmile({ chain, spot, decimals = 0, ticker, live, windowPct = 0
           <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={{ color: biasColor, background: `color-mix(in srgb, ${biasColor} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${biasColor} 30%, transparent)` }}>{bias}</span>
           <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={live
             ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
-            : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}>{live ? 'LIVE' : 'MODEL'}</span>
+            : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}>{live ? 'LIVE CHAIN' : 'MODEL MODE'}</span>
         </div>
       </div>
 

@@ -118,7 +118,7 @@ export function VolConePanel({ cone: coneRaw, atmIv, realizedVol, ticker, live }
             csv={() => ({ headers: ['window', 'min', 'p25', 'median', 'p75', 'max', 'current'], rows: cone.map((c) => [c.window, c.min.toFixed(4), c.p25.toFixed(4), c.p50.toFixed(4), c.p75.toFixed(4), c.max.toFixed(4), c.current.toFixed(4)]) })} />
           <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={live
             ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
-            : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}>{live ? 'LIVE' : 'MODEL'}</span>
+            : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}>{live ? 'LIVE CHAIN' : 'MODEL MODE'}</span>
         </div>
       </div>
 

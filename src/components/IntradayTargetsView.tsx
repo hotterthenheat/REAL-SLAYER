@@ -324,7 +324,7 @@ export function IntradayTargetsView({ profile, ticker, decimals }: IntradayTarge
           {highestScoreObj && (
             <div className="bg-[var(--surface-2)] border border-[var(--border)] px-3 py-1.5 rounded-lg hidden sm:flex items-center gap-3 shrink-0">
               <span className="text-[10px] text-[var(--text-tertiary)] uppercase font-black tracking-widest flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[var(--warning)]" /> HEAVYWEIGHT:
+                <Sparkles className="w-3.5 h-3.5 text-[var(--warning)]" /> PRIMARY LEVEL:
               </span>
               <span className="text-[11px] font-mono font-black text-[var(--warning)] tabular-nums">
                 ${fmtNum(highestScoreObj.strike, decimals)}
@@ -575,7 +575,7 @@ export function IntradayTargetsView({ profile, ticker, decimals }: IntradayTarge
                         {cellStyle.type === 'GOLD' && !isActiveSpot && (
                           <div className="flex items-center gap-1 text-[var(--warning)] text-[10px] font-black tracking-widest uppercase mb-1">
                             <Sparkles className="w-3 h-3 text-[var(--warning)]" />
-                            SUPREME HIGHEST RANKED
+                            TOP RANKED STRIKE
                           </div>
                         )}
                         <h3 className={`${titleSize} font-mono font-black text-[var(--text-primary)] leading-tight flex items-center gap-1 tabular-nums`}>

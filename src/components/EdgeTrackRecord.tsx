@@ -72,7 +72,7 @@ export function EdgeTrackRecord({ profile, ticker, candles, provenance }: Props)
   const here = rec.byRegime.find(b => b.regime === outlook.regime);
   const badge = provenance === 'live'
     ? { t: 'LIVE', c: 'var(--success)' }
-    : { t: 'MODEL', c: 'var(--warning)' };
+    : { t: 'MODEL MODE', c: 'var(--warning)' };
 
   // Calibration chip — how reads in the LIVE read's confidence band have ACTUALLY resolved, so the
   // trader knows whether to trust this confidence number instead of taking it on faith. Verdict:

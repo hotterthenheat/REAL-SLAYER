@@ -94,7 +94,7 @@ export function SkyVisionV2Panel({ compact = false }: { compact?: boolean }) {
             }
             title={isLiveChain ? 'Computed from the live option chain streamed from the server.' : 'No live chain on this tick — computed from the deterministic model.'}
           >
-            {isLiveChain ? 'LIVE CHAIN' : 'MODEL'}
+            {isLiveChain ? 'LIVE CHAIN' : 'MODEL MODE'}
           </span>
         </div>
         <div className={compact ? 'flex flex-wrap items-center gap-x-1 gap-y-1' : 'flex items-center divide-x divide-[var(--border)]'}>

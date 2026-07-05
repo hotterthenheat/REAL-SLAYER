@@ -147,8 +147,8 @@ export function TailRiskMap({ rnd, spot, dteDays, callWall, putWall, gammaFlip, 
       {/* Tail probability map + expected-move bands over the density */}
       <div className="px-1 pt-2">
         <div className="flex items-center gap-3 px-3 pb-1 text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">
-          <span className="flex items-center gap-1"><span className="w-2.5 h-[2px] bg-[var(--success)]" /> P(above K)</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-[2px] bg-[var(--danger)]" /> P(below K)</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-[2px] bg-[var(--success)]" /> P(close above K)</span>
+          <span className="flex items-center gap-1"><span className="w-2.5 h-[2px] bg-[var(--danger)]" /> P(close below K)</span>
           <span className="flex items-center gap-1"><span className="w-2.5 h-2 rounded-sm" style={{ background: 'color-mix(in srgb, var(--accent-color) 18%, transparent)' }} /> density</span>
           <span className="ml-auto tabular-nums normal-case">±1σ&nbsp;{pctMove(m.bands.s1[1])} · ±2σ&nbsp;{pctMove(m.bands.s2[1])}</span>
         </div>
@@ -222,7 +222,7 @@ export function TailRiskMap({ rnd, spot, dteDays, callWall, putWall, gammaFlip, 
             <div className="h-full bg-[var(--success)]" style={{ width: `${((1 - downShare) * 100).toFixed(1)}%` }} />
           </div>
           <p className="mt-2 text-[10px] leading-snug text-[var(--text-tertiary)]">
-            {downShare > 0.58 ? 'Fatter downside — the chain prices more crash risk than melt-up risk.' : downShare < 0.42 ? 'Fatter upside — the chain prices more melt-up than crash risk.' : 'Roughly balanced extreme tails.'}
+            {downShare > 0.58 ? 'Options chain implies heavier downside tail risk than upside tail risk.' : downShare < 0.42 ? 'Options chain implies heavier upside tail risk than downside tail risk.' : 'Options chain implies roughly balanced tail risk.'}
             {rnd.isFatTailed ? ' ⚠ fat-tailed (excess kurtosis high).' : ''}
           </p>
         </div>

@@ -50,7 +50,7 @@ export function TerminalReadCard({
       <div className="flex flex-wrap items-center gap-2.5 border-b border-[var(--border)] pb-3">
         <Crosshair className="h-4 w-4 text-[var(--accent-color)]" />
         <span className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--text-primary)]">Terminal Read · {ticker}</span>
-        <Badge tone={isLive ? 'success' : 'warning'} size="sm" dot pulse={isLive}>{isLive ? 'LIVE' : 'MODEL'}</Badge>
+        <Badge tone={isLive ? 'success' : 'warning'} size="sm" dot pulse={isLive}>{isLive ? 'LIVE CHAIN' : 'MODEL MODE'}</Badge>
         <span className="mx-1 h-3.5 w-px bg-[var(--border-strong)]" />
         <Badge tone={read.regime === 'PIN' ? 'info' : 'warning'} size="sm">
           <Term id={read.regime === 'PIN' ? 'netGex' : 'gammaFlip'}>{read.regimeLabel}</Term>

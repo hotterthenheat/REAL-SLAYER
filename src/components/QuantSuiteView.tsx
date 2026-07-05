@@ -588,13 +588,13 @@ export default function QuantSuiteView() {
                 className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border shrink-0 ${
                   isLiveData
                     ? 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10'
-                    : 'text-[var(--warning)] border-[var(--warning)]/40 bg-[var(--warning)]/10'
+                    : 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10'
                 }`}
                 title={isLiveData
                   ? 'Computing on the live option chain streamed from the server.'
-                  : 'No live chain connected — computing on a high-fidelity simulated chain. Connect a data API key to go live.'}
+                  : 'No live chain connected — computing on a high-fidelity model chain. Connect a data API key to go live.'}
               >
-                {isLiveData ? 'LIVE CHAIN' : 'SIMULATED'}
+                {isLiveData ? 'LIVE CHAIN' : 'MODEL MODE'}
               </span>
             </div>
             <p className="text-[9px] text-[var(--text-tertiary)] mt-0.5 uppercase tracking-widest">
@@ -640,7 +640,9 @@ export default function QuantSuiteView() {
       </div>
 
       {/* View panel area */}
-      <div className="min-h-[280px]" id="quant-suite-view-canvas">
+      {/* Only reserve canvas height for tabs that render 3D/panels here. `distrib` renders
+          its panels below this block, so a fixed min-height would leave a dead 280px gap. */}
+      <div className={activeSubTab === 'distrib' ? '' : 'min-h-[280px]'} id="quant-suite-view-canvas">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeSubTab}

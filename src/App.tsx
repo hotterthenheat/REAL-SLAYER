@@ -839,9 +839,14 @@ export default function App() {
   const discovery = serverState?.discovery;
   const bestOpportunity = useMemo(() => {
     const topMispriced = discovery?.mispricedCalls?.[0];
+    // Fallback demo contract must be plausible near-spot (a 7,6xx strike next to a ~5,4xx
+    // SPX reads as broken data). Derive a slightly-OTM call strike off the asset's price.
+    const fbAsset = topMispriced?.asset || ASSET_LIST[0];
+    const fbStep = fbAsset.defaultPrice >= 1000 ? 25 : fbAsset.defaultPrice >= 100 ? 5 : 1;
+    const fbStrike = topMispriced?.strike || Math.round((fbAsset.defaultPrice * 1.005) / fbStep) * fbStep;
     return {
-      asset: topMispriced?.asset || ASSET_LIST[0],
-      ticker: `${topMispriced?.asset?.ticker || 'SPX'} ${topMispriced?.strike || 7640}C`,
+      asset: fbAsset,
+      ticker: `${fbAsset.ticker} ${fbStrike}C`,
       confidence: topMispriced?.health || 91,
       isCall: true,
       currentPrice: `$${(topMispriced?.marketPrice || 4.2).toFixed(2)}`,

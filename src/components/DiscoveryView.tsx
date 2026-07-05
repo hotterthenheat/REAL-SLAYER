@@ -1108,8 +1108,8 @@ export function DiscoveryView({
           <div>
             <h1 className={`text-xs font-black tracking-widest uppercase ${c_textWhite}`}>
               Trade Finder <span className="text-[var(--text-tertiary)]">/ Options Scanner</span>
-              <span className="ml-2 align-middle text-[8px] font-bold px-1.5 py-0.5 rounded bg-[var(--warning)]/15 text-[var(--warning)] border border-[var(--warning)]/30 tracking-wider">
-                SAMPLE DATA
+              <span className="ml-2 align-middle text-[8px] font-bold px-1.5 py-0.5 rounded bg-[var(--info)]/15 text-[var(--info)] border border-[var(--info)]/30 tracking-wider">
+                SAMPLE MODE
               </span>
             </h1>
             <p className="text-[9.5px] text-[var(--text-tertiary)] mt-0.5 uppercase tracking-wide">

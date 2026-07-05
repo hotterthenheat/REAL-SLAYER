@@ -58,7 +58,7 @@ export function DealerDynamicsPanel() {
       <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
         <Activity className="w-4 h-4 text-[#C084FC]" />
         <h2 className="text-xs font-black tracking-widest uppercase text-[var(--text-primary)]">Dealer Dynamics — {selectedAsset?.ticker}</h2>
-        <span className="px-1 py-0.5 rounded-[2px] text-[8px] font-bold tracking-wider" style={{ color: isLive ? C.success : C.warning, background: `color-mix(in srgb, ${isLive ? C.success : C.warning} 14%, transparent)` }}>{isLive ? 'LIVE' : 'MODEL'}</span>
+        <span className="px-1 py-0.5 rounded-[2px] text-[8px] font-bold tracking-wider" style={{ color: isLive ? C.success : C.warning, background: `color-mix(in srgb, ${isLive ? C.success : C.warning} 14%, transparent)` }}>{isLive ? 'LIVE CHAIN' : 'MODEL MODE'}</span>
         <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest ml-auto hidden sm:block">hedging flow · time decay · gamma · walls</span>
       </div>
 

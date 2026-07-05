@@ -217,7 +217,7 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
           <button className={toolBtn} onClick={() => apiRef.current?.png()} title="Export PNG" aria-label="Export PNG"><Download className="w-3.5 h-3.5" /></button>
           <button className={toolBtn} onClick={dumpCsv} title="Export CSV" aria-label="Export CSV"><span className="text-[9px] font-bold tracking-wider">CSV</span></button>
           <button className={toolBtn} onClick={fullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 className="w-3.5 h-3.5" /></button>
-          <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase ml-1" style={{ color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }} title="Front row real; DTE axis is a Heston forward-variance term model">MODEL</span>
+          <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase ml-1" style={{ color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }} title="Front row real; DTE axis is a Heston forward-variance term model">MODEL MODE</span>
         </div>
       </div>
 
