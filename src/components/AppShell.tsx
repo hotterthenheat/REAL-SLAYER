@@ -296,8 +296,10 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
            <div className={`flex mb-3 ${isSidebarExpanded ? 'justify-start px-1' : 'justify-center'}`}>
              <FeedPill status={feedStatus} compact={!isSidebarExpanded} />
            </div>
-           {/* Tier Info */}
-           <div 
+           {/* Tier Info — only for signed-in users. A guest must never see an owned plan
+               ("Lifetime access") next to a "Log in" CTA; that read as fake/contradictory. */}
+           {session?.authenticated && (
+           <div
              onClick={onUpgradeClick}
              className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--border-strong)] transition-all font-sans mx-auto ${isSidebarExpanded ? 'w-full justify-start' : 'w-max justify-center'}`}
              title={!isSidebarExpanded ? tierInfo?.label : undefined}
@@ -310,6 +312,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
                 <span className="text-[12px] text-[var(--text-tertiary)] font-medium tracking-normal truncate">{tierInfo?.desc}</span>
               </div>
            </div>
+           )}
 
            {session?.authenticated ? (
              <div className="flex items-center justify-between">
