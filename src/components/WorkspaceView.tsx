@@ -11,6 +11,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Plus, ChevronDown, X } from 'lucide-react';
 import { Pane, renderWidget } from './WorkspaceWidgets';
 import { ErrorBoundary } from './ErrorBoundary';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   PaneLayout, WidgetType, WIDGETS, widgetMeta, paneId, TEMPLATES, cloneTemplate, GRID_COLS,
 } from '../lib/workspace';
@@ -31,15 +32,21 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const interaction = useRef<null | { id: string; mode: 'move' | 'resize'; startX: number; startY: number; orig: PaneLayout }>(null);
 
-  // Lightweight self-contained toast for surfacing save failures.
-  const [toast, setToast] = useState<string | null>(null);
+  // Lightweight self-contained toast for surfacing save failures and successes.
+  const [toast, setToast] = useState<{ text: string; tone: 'error' | 'success' } | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const notifyError = useCallback((text: string) => {
-    setToast(text);
+  const notify = useCallback((text: string, tone: 'error' | 'success' = 'error') => {
+    setToast({ text, tone });
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 4000);
   }, []);
+  const notifyError = useCallback((text: string) => notify(text, 'error'), [notify]);
   useEffect(() => () => { if (toastTimer.current) clearTimeout(toastTimer.current); }, []);
+
+  // Single reusable confirmation dialog for destructive/irreversible actions.
+  const [confirm, setConfirm] = useState<null | {
+    title: string; message: string; confirmLabel?: string; danger?: boolean; onConfirm: () => void;
+  }>(null);
 
   useEffect(() => {
     const measure = () => {
@@ -153,7 +160,19 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
     window.removeEventListener('pointerup', endInteraction);
   }, [onPointerMove, endInteraction]);
 
-  const closePane = (id: string) => commit(layout.filter((p) => p.i !== id));
+  const closePane = (id: string) => {
+    const pane = layout.find((p) => p.i === id);
+    const label = pane ? widgetMeta(pane.widget).title : null;
+    setConfirm({
+      title: 'Remove pane',
+      message: label
+        ? `Remove the ${label} widget from your workspace? This cannot be undone.`
+        : 'Remove this pane from your workspace? This cannot be undone.',
+      confirmLabel: 'Remove',
+      danger: true,
+      onConfirm: () => commit(layout.filter((p) => p.i !== id)),
+    });
+  };
   const addWidget = (widget: WidgetType) => {
     const maxY = layout.reduce((m, p) => Math.max(m, p.y + p.h), 0);
     const meta = widgetMeta(widget);
@@ -191,20 +210,45 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   });
 
   const saveCustomLayout = () => {
-    if (!saveName.trim()) return;
-    const newCustom = { ...customLayouts, [saveName.trim()]: [...layout] };
-    setCustomLayouts(newCustom);
-    localStorage.setItem('slayer_ws_custom', JSON.stringify(newCustom));
-    setSaveName('');
-    setShowSaveOverlay(false);
+    const name = saveName.trim();
+    if (!name) return;
+    const doSave = () => {
+      const newCustom = { ...customLayouts, [name]: [...layout] };
+      setCustomLayouts(newCustom);
+      localStorage.setItem('slayer_ws_custom', JSON.stringify(newCustom));
+      setSaveName('');
+      setShowSaveOverlay(false);
+      notify(`Saved "${name}" to this browser`, 'success');
+    };
+    if (customLayouts[name]) {
+      // Close the save overlay first — it sits above the confirm dialog's portal.
+      setShowSaveOverlay(false);
+      setConfirm({
+        title: 'Overwrite layout',
+        message: `A saved layout named "${name}" already exists. Overwrite it?`,
+        confirmLabel: 'Overwrite',
+        danger: true,
+        onConfirm: doSave,
+      });
+      return;
+    }
+    doSave();
   };
 
   const deleteCustomLayout = (name: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    const newCustom = { ...customLayouts };
-    delete newCustom[name];
-    setCustomLayouts(newCustom);
-    localStorage.setItem('slayer_ws_custom', JSON.stringify(newCustom));
+    setConfirm({
+      title: 'Delete layout',
+      message: `Delete the saved layout "${name}"? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      danger: true,
+      onConfirm: () => {
+        const newCustom = { ...customLayouts };
+        delete newCustom[name];
+        setCustomLayouts(newCustom);
+        localStorage.setItem('slayer_ws_custom', JSON.stringify(newCustom));
+      },
+    });
   };
 
   const maxRow = layout.reduce((m, p) => Math.max(m, p.y + p.h), 0);
@@ -392,12 +436,22 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
       {toast && (
         <div
           role="alert"
-          className="fixed bottom-5 right-5 z-[300] flex items-center gap-2.5 bg-[var(--surface-2)] border border-[var(--danger)]/30 rounded-[3px] px-4 py-3 shadow-2xl text-[10px] font-medium text-[var(--text-primary)] max-w-xs"
+          className={`fixed bottom-5 right-5 z-[300] flex items-center gap-2.5 bg-[var(--surface-2)] border rounded-[3px] px-4 py-3 shadow-2xl text-[10px] font-medium text-[var(--text-primary)] max-w-xs ${toast.tone === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'}`}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[var(--danger)] shrink-0" />
-          <span>{toast}</span>
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${toast.tone === 'success' ? 'bg-[var(--success)]' : 'bg-[var(--danger)]'}`} />
+          <span>{toast.text}</span>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title ?? ''}
+        message={confirm?.message ?? ''}
+        confirmLabel={confirm?.confirmLabel}
+        danger={confirm?.danger}
+        onConfirm={() => { confirm?.onConfirm(); setConfirm(null); }}
+        onCancel={() => setConfirm(null)}
+      />
     </>
   );
 }

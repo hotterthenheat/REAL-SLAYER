@@ -922,9 +922,11 @@ export function SkyVisionView() {
       <div className="w-full mt-2">
         <button
           onClick={() => setIsDeepSkyseyeExpanded(!isDeepSkyseyeExpanded)}
-          className="w-full bg-[var(--surface)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:border-[var(--border-strong)] transition-colors p-3 rounded-lg flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+          disabled={!serverState?.deep_intelligence}
+          title={!serverState?.deep_intelligence ? 'Advanced intelligence populates once the deep read resolves for this contract' : undefined}
+          className="w-full bg-[var(--surface)] border border-[var(--border)] enabled:hover:bg-[var(--surface-2)] enabled:hover:border-[var(--border-strong)] transition-colors p-3 rounded-lg flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isDeepSkyseyeExpanded ? 'Hide Advanced Details' : 'Show Advanced Details'}
+          {!serverState?.deep_intelligence ? 'Advanced Details · Awaiting Deep Read' : isDeepSkyseyeExpanded ? 'Hide Advanced Details' : 'Show Advanced Details'}
         </button>
 
         {isDeepSkyseyeExpanded && serverState?.deep_intelligence && (

@@ -27,7 +27,7 @@ import { Progress } from './ui/Progress';
 import { useContractStore, ContractStore } from '../lib/store';
 import { zodError } from './ui/Field';
 import { CopyButton } from './ui/CopyButton';
-import { emailSchema, referralCodeSchema } from '../lib/formSchemas';
+import { emailSchema, passwordSchema, referralCodeSchema } from '../lib/formSchemas';
 import { THEMES, applyTheme, applyTextSize, applyCompact, applyUltrawide } from '../lib/displayPrefs';
 import { formatTime, formatDateTime } from '../lib/timeUtils';
 
@@ -192,6 +192,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
   // Security Vault & Compliance states
   const [sessions, setSessions] = useState<any[]>([]);
+  const [sessionsLoading, setSessionsLoading] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [pwError, setPwError] = useState('');
@@ -379,11 +380,16 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     }
   }, [blockSearchIndexing]);
 
-  const handleUpdatePrivacySettings = async (updates: {
-    notification_preferences?: typeof notifPreferences;
-    profile_visibility?: typeof profileVisibility;
-    block_search_indexing?: boolean;
-  }) => {
+  const handleUpdatePrivacySettings = async (
+    updates: {
+      notification_preferences?: typeof notifPreferences;
+      profile_visibility?: typeof profileVisibility;
+      block_search_indexing?: boolean;
+    },
+    // Revert the optimistic local state when the server rejects the change so the
+    // UI never shows a setting the backend refused.
+    revert?: () => void
+  ) => {
     setIsPatchingPrivacy(true);
     try {
       const res = await fetch('/api/users/preferences', {
@@ -396,9 +402,11 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         showToast('Privacy updates saved successfully.');
       } else {
         const d = await res.json();
+        revert?.();
         showToast(d.error || 'Server rejected privacy updates.', 'error');
       }
     } catch (e) {
+      revert?.();
       showToast('Error syncing privacy settings.', 'error');
     } finally {
       setIsPatchingPrivacy(false);
@@ -449,6 +457,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
   };
 
   const fetchSessions = async () => {
+    setSessionsLoading(true);
     try {
       const res = await fetch('/api/auth/sessions');
       if (res.ok) {
@@ -457,6 +466,8 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
       }
     } catch (e) {
       console.error('Error fetching sessions list:', e);
+    } finally {
+      setSessionsLoading(false);
     }
   };
 
@@ -496,21 +507,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
       return;
     }
     
-    // Front-end pre-validating password parameters
-    if (newPassword.length < 8) {
-      setPwError('Password must be at least 8 characters long.');
-      return;
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      setPwError('Password must contain at least one uppercase letter (A-Z).');
-      return;
-    }
-    if (!/[0-9]/.test(newPassword)) {
-      setPwError('Password must contain at least one digit (0-9).');
-      return;
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
-      setPwError('Password must contain at least one special character (!@#$%^&* etc.).');
+    // Front-end pre-validating password parameters against the shared schema.
+    const pwValidationErr = zodError(passwordSchema, newPassword);
+    if (pwValidationErr) {
+      setPwError(pwValidationErr);
       return;
     }
 
@@ -833,8 +833,8 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
                 <ul className="text-[10px] text-[var(--text-tertiary)] space-y-1 leading-normal list-disc pl-4">
                   <li>At least 8 characters.</li>
-                  <li>At least one uppercase letter.</li>
-                  <li>At least one digit (0-9) and one special character.</li>
+                  <li>At least one letter.</li>
+                  <li>At least one number (0-9).</li>
                 </ul>
 
                 <div className="flex justify-end">
@@ -870,7 +870,12 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               </p>
 
               <div className="divide-y divide-[var(--border)] bg-[var(--surface-2)] border border-[var(--border)] rounded-xl overflow-hidden">
-                {sessions.length === 0 ? (
+                {sessionsLoading ? (
+                  <div className="p-4 flex items-center justify-center gap-2 text-xs text-[var(--text-tertiary)] font-mono">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Loading sessions…</span>
+                  </div>
+                ) : sessions.length === 0 ? (
                   <div className="p-4 text-xs text-center text-[var(--text-tertiary)] font-mono">No active sessions located.</div>
                 ) : (
                   sessions.map((sess, idx) => (
@@ -972,9 +977,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       checked={notifPreferences.email_enabled}
                       disabled={isPatchingPrivacy}
                       onChange={(e) => {
+                        const prev = notifPreferences;
                         const next = { ...notifPreferences, email_enabled: e.target.checked };
                         setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next });
+                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
                       }}
                       className="peer sr-only"
                     />
@@ -993,9 +999,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       checked={notifPreferences.sms_enabled}
                       disabled={isPatchingPrivacy}
                       onChange={(e) => {
+                        const prev = notifPreferences;
                         const next = { ...notifPreferences, sms_enabled: e.target.checked };
                         setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next });
+                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
                       }}
                       className="peer sr-only"
                     />
@@ -1014,9 +1021,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       checked={notifPreferences.discord_enabled}
                       disabled={isPatchingPrivacy}
                       onChange={(e) => {
+                        const prev = notifPreferences;
                         const next = { ...notifPreferences, discord_enabled: e.target.checked };
                         setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next });
+                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
                       }}
                       className="peer sr-only"
                     />
@@ -1035,9 +1043,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       checked={notifPreferences.options_flow_alerts}
                       disabled={isPatchingPrivacy}
                       onChange={(e) => {
+                        const prev = notifPreferences;
                         const next = { ...notifPreferences, options_flow_alerts: e.target.checked };
                         setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next });
+                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
                       }}
                       className="peer sr-only"
                     />
@@ -1069,8 +1078,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                         key={opt.value}
                         type="button"
                         onClick={() => {
+                          const prev = profileVisibility;
                           setProfileVisibility(opt.value as any);
-                          handleUpdatePrivacySettings({ profile_visibility: opt.value as any });
+                          handleUpdatePrivacySettings({ profile_visibility: opt.value as any }, () => setProfileVisibility(prev));
                         }}
                         className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
                           profileVisibility === opt.value
@@ -1099,8 +1109,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       checked={blockSearchIndexing}
                       disabled={isPatchingPrivacy}
                       onChange={(e) => {
+                        const prev = blockSearchIndexing;
                         setBlockSearchIndexing(e.target.checked);
-                        handleUpdatePrivacySettings({ block_search_indexing: e.target.checked });
+                        handleUpdatePrivacySettings({ block_search_indexing: e.target.checked }, () => setBlockSearchIndexing(prev));
                       }}
                       className="peer sr-only"
                     />
