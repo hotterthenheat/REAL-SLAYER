@@ -88,7 +88,10 @@ export function DealerPositioningNetwork({ profile, decimals = 2 }: { profile: P
       id: 'spot',
       type: 'level',
       position: { x: 185, y: 108 },
-      data: { label: 'Spot', value: fmtLevel(spot, decimals), sub: 'live', color: 'var(--accent-color)', isSpot: true },
+      // Neutral role label — spot is the anchor every level's pull is measured from.
+      // Deliberately NOT a liveness claim: this graph has no feed-status input, so it
+      // must not assert "live" while the real feed could be offline/stale.
+      data: { label: 'Spot', value: fmtLevel(spot, decimals), sub: 'anchor', color: 'var(--accent-color)', isSpot: true },
       draggable: false,
     };
 
