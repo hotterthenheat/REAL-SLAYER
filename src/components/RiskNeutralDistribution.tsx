@@ -23,6 +23,7 @@ import { touchProbability } from '../lib/probability';
 import type { BreedenLitzenbergerResult } from '../lib/quantSuite';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
 import { useStrikeSync, StrikePublisher } from './quant/crosshairSync';
+import { DataStateBadge } from './ui/DataStateBadge';
 
 interface RiskNeutralDistributionProps {
   rnd: BreedenLitzenbergerResult;
@@ -135,14 +136,7 @@ export function RiskNeutralDistribution({
         <div className="flex items-center gap-2">
           <ChartTools name={`rnd-cdf-${ticker || 'spx'}`} svgRef={svgRef} fullscreenRef={wrapRef}
             csv={() => ({ headers: ['strike', 'pdf', 'cdf'], rows: m.sorted.map((d) => [d.strike.toFixed(2), d.probability.toExponential(6), d.cumulativeProb.toFixed(6)]) })} />
-          <span
-            className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase"
-            style={live
-              ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
-              : { color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }}
-          >
-            {live ? 'LIVE CHAIN' : 'MODEL MODE'}
-          </span>
+          <DataStateBadge state={live ? 'live' : 'model'} />
         </div>
       </div>
 

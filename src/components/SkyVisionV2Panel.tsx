@@ -16,6 +16,7 @@ import React from 'react';
 import { useContractStore } from '../lib/store';
 import { Crosshair, TrendingUp, TrendingDown, Target, Gauge, Layers } from 'lucide-react';
 import { LiveValue } from './ui/LiveValue';
+import { DataStateBadge } from './ui/DataStateBadge';
 
 const fmt = (v: number | undefined, d = 2) => (typeof v === 'number' && isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: d }) : '—');
 const strengthTone = (s: number) => (s >= 70 ? 'var(--success)' : s >= 45 ? 'var(--warning)' : 'var(--danger)');
@@ -85,17 +86,7 @@ export function SkyVisionV2Panel({ compact = false }: { compact?: boolean }) {
           <span className="text-[11px] font-black tracking-widest uppercase text-[var(--text-primary)]">Sky Vision</span>
           <span className="text-[var(--text-tertiary)]">·</span>
           <span className="text-[11px] font-black tracking-widest uppercase text-[var(--text-secondary)]">{sv.ticker}</span>
-          <span
-            className="text-[10px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border"
-            style={
-              isLiveChain
-                ? { color: 'var(--success)', borderColor: 'color-mix(in srgb, var(--success) 40%, transparent)', background: 'color-mix(in srgb, var(--success) 10%, transparent)' }
-                : { color: 'var(--warning)', borderColor: 'color-mix(in srgb, var(--warning) 40%, transparent)', background: 'color-mix(in srgb, var(--warning) 10%, transparent)' }
-            }
-            title={isLiveChain ? 'Computed from the live option chain streamed from the server.' : 'No live chain on this tick — computed from the deterministic model.'}
-          >
-            {isLiveChain ? 'LIVE CHAIN' : 'MODEL MODE'}
-          </span>
+          <DataStateBadge state={isLiveChain ? 'live' : 'model'} title={isLiveChain ? 'Computed from the live option chain streamed from the server.' : 'No live chain on this tick — computed from the deterministic model.'} />
         </div>
         <div className={compact ? 'flex flex-wrap items-center gap-x-1 gap-y-1' : 'flex items-center divide-x divide-[var(--border)]'}>
           <Stat
