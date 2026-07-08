@@ -37,12 +37,6 @@ const WorkspaceView = lazy(() => import('./components/WorkspaceView').then(m => 
 const QuantSuiteView = lazy(() => import('./components/QuantSuiteView'));
 import { AppShell } from './components/AppShell';
 
-/** Pass-through shell for tabs that bring their own TerminalShell chrome
- *  (the authenticated Home) — accepts AppShell's props and renders children only. */
-function ChromelessShell({ children }: { children?: React.ReactNode } & Record<string, unknown>) {
-  return <>{children}</>;
-}
-
 import {
   Sparkles,
   Database,
@@ -944,14 +938,8 @@ export default function App() {
   const ALERT_ROUTES = new Set(['skyvision', 'pinpoint', 'quant']);
   const showAlerts = purchasedTier > 1 && ALERT_ROUTES.has(activeTab);
 
-  // The authenticated Home renders the render-matched TerminalShell (its own
-  // sidebar + top bar), so the legacy AppShell chrome steps aside for that tab —
-  // all global overlays live inside the children and are preserved either way.
-  const isTerminalHome = activeTab === 'home' && !!session?.authenticated;
-  const Shell: React.ComponentType<any> = isTerminalHome ? ChromelessShell : AppShell;
-
   return (
-    <Shell
+    <AppShell
       session={session}
       onLogout={handleLogout}
       tierInfo={tierInfo}
@@ -1206,8 +1194,8 @@ export default function App() {
       {/* Legal center — global overlay (Terms / Privacy / Risk / Refunds / Cookies) */}
       <LegalCenter />
 
-      {/* Terminal Footer Status Bar (the terminal-shell Home carries its own chrome) */}
-      {activeTab !== 'workspace' && !isTerminalHome && (
+      {/* Terminal Footer Status Bar */}
+      {activeTab !== 'workspace' && (
         <footer className="mt-auto border-t border-[var(--border)] bg-[var(--surface)] px-4 sm:px-6 py-3.5 flex flex-col sm:flex-row items-center justify-between text-[9px] text-[var(--text-tertiary)] font-mono tracking-widest uppercase gap-2">
         <div className="flex items-center gap-2">
           <span className="text-[var(--text-tertiary)]">NY</span>
@@ -1406,6 +1394,6 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
-    </Shell>
+    </AppShell>
   );
 }
