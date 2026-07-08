@@ -10,14 +10,19 @@
  * (serverState.gex_profile) — the exact same feed DealerFlowView consumes. No
  * value is fabricated: when the profile is missing we render the same honest
  * pending state, and when a specific level is absent we show "—".
+ *
+ * Styling is the shared Slayer Terminal design system (src/styles/slayer-terminal.css
+ * + src/components/ui/terminal/*). Color is a data encoding, never decoration.
  */
 
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useContractStore } from '../lib/store';
 import EChart from './ui/EChart';
-import { DataStateBadge } from './ui/DataStateBadge';
-import { PanelSkeleton } from './PanelSkeleton';
-import { Info, Download, Waves } from 'lucide-react';
+import { TerminalPanel } from './ui/terminal/TerminalPanel';
+import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
+import { InsightPanel } from './ui/terminal/InsightPanel';
+import { StatusBadge } from './ui/terminal/StatusBadge';
+import { Download, Waves } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Formatting helpers (compact $ magnitudes, tabular-friendly)
@@ -67,66 +72,35 @@ function fmtPct(v: number | null | undefined, signed = true): string {
   return `${sign}${v.toFixed(2)}%`;
 }
 
-const V = {
-  danger: 'var(--danger)',
-  info: 'var(--info)',
-  success: 'var(--success)',
-  warning: 'var(--warning)',
-} as const;
-
 // Resolve a CSS custom property to its computed hex (for the canvas chart, which
-// can't read var()). Falls back to the Slayer-dark defaults.
+// can't read var()). Falls back to the Slayer brand defaults.
 function cssVar(name: string, fallback: string): string {
   if (typeof window === 'undefined') return fallback;
   const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   return v || fallback;
 }
 
+// Brand colours used for inline styles (matrix cells / row markers). Color = data.
+const SLAYER_RED = 'var(--slayer-red)'; // #980404 — deepest put/risk red (bars)
+const CALL_PURPLE = 'var(--call)';       // #792CA2 — calls
+const PIN_TEAL = 'var(--pin)';           // #2C687B — pin
+const NEG_RED = '#d94646';               // .slayer-neg — legible negative
+const POS_GREEN = '#2f9d45';             // .slayer-pos — legible positive
+
+const TONE_TEXT: Record<MetricTone, string> = {
+  neutral: 'text-[var(--text-primary)]',
+  positive: 'text-[#2f9d45]',
+  negative: 'text-[#d94646]',
+  warning: 'text-[var(--warning)]',
+  call: 'text-[var(--call)]',
+  pin: 'text-[var(--pin)]',
+};
+
 // ────────────────────────────────────────────────────────────────────────────
 // Small presentational atoms
 // ────────────────────────────────────────────────────────────────────────────
 
-function KpiCell({
-  label,
-  value,
-  valueColor,
-  valueClassName,
-  sub,
-  subColor,
-  first,
-}: {
-  label: string;
-  value: string;
-  valueColor?: string;
-  valueClassName?: string;
-  sub?: React.ReactNode;
-  subColor?: string;
-  first?: boolean;
-}) {
-  return (
-    <div className={`px-3 py-2.5 min-w-0 ${first ? '' : 'border-l'} border-[var(--border)]`}>
-      <div className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] truncate">
-        {label}
-      </div>
-      <div
-        className={`mt-1 font-mono font-bold tabular-nums leading-none ${valueClassName ?? 'text-[16px] sm:text-[18px] truncate'}`}
-        style={{ color: valueColor ?? 'var(--text-primary)' }}
-      >
-        {value}
-      </div>
-      {sub != null && (
-        <div
-          className="mt-1 text-[9px] font-mono font-semibold tabular-nums truncate"
-          style={{ color: subColor ?? 'var(--text-tertiary)' }}
-        >
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/** A styled native <select> matching the terminal's select chrome. */
+/** A styled native <select> using the shared `.slayer-control` chrome. */
 function TerminalSelect({
   label,
   value,
@@ -140,11 +114,11 @@ function TerminalSelect({
 }) {
   return (
     <label className="flex items-center gap-1.5">
-      <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
+      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-[var(--surface-3)] border border-[var(--border-strong)] rounded-md px-2 py-1 text-[10px] font-mono font-bold text-[var(--text-primary)] tracking-wide hover:border-[var(--accent-color)]/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] cursor-pointer"
+        className="slayer-control slayer-num cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
       >
         {options.map((o) => (
           <option key={o} value={o}>
@@ -169,26 +143,48 @@ function MatrixCell({
   const has = value != null && isFinite(value);
   const v = has ? (value as number) : 0;
   const pct = max > 0 ? Math.min(100, (Math.abs(v) / max) * 100) : 0;
-  // Colour: puts red, calls blue, net by sign.
-  const color =
-    side === 'put'
-      ? V.danger
-      : side === 'call'
-        ? V.info
-        : v < 0
-          ? V.danger
-          : V.info;
+  // Numbers: puts brighter red, calls purple, net by sign. Bars: puts deep brand
+  // red, calls purple, net by sign.
+  const numColor = side === 'put' ? NEG_RED : side === 'call' ? CALL_PURPLE : v < 0 ? NEG_RED : POS_GREEN;
+  const barColor = side === 'put' ? SLAYER_RED : side === 'call' ? CALL_PURPLE : v < 0 ? NEG_RED : POS_GREEN;
   return (
     <div className="relative h-5 flex items-center justify-end px-1 overflow-hidden">
-      <span className="relative z-10 text-[9.5px] font-mono tabular-nums font-semibold" style={{ color: has ? color : 'var(--text-tertiary)' }}>
+      <span className="relative z-10 text-[9.5px] slayer-num font-semibold" style={{ color: has ? numColor : 'var(--text-faint)' }}>
         {fmtMag(has ? v : null)}
       </span>
       {/* Thin proportional underline (sign encoded by colour, not a side bar). */}
       <span
         className="absolute bottom-[1px] right-0 h-[2px] rounded-full pointer-events-none"
-        style={{ width: `${pct}%`, background: color, opacity: 0.75 }}
+        style={{ width: `${pct}%`, background: barColor, opacity: 0.8 }}
         aria-hidden="true"
       />
+    </div>
+  );
+}
+
+/** A brand-toned mini stat cell for the bottom levels panel. */
+function LevelCell({
+  label,
+  value,
+  sub,
+  tone = 'neutral',
+  wrap,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: MetricTone;
+  wrap?: boolean;
+}) {
+  return (
+    <div className="min-w-0 px-3 py-2.5 border-b border-r border-[var(--border-subtle)]">
+      <div className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-muted)] truncate">{label}</div>
+      <div
+        className={`mt-1 slayer-num font-semibold leading-tight ${TONE_TEXT[tone]} ${wrap ? 'text-[13px] break-words' : 'text-[15px] truncate'}`}
+      >
+        {value}
+      </div>
+      {sub != null && <div className="mt-0.5 text-[10px] text-[var(--text-secondary)] slayer-num truncate">{sub}</div>}
     </div>
   );
 }
@@ -280,9 +276,9 @@ export default function PinpointExposureView() {
   const biasInfo = useMemo(() => {
     const bias: string | undefined = gauge?.bias;
     const pressure: number | undefined = gauge?.pressure;
-    let color = 'var(--text-primary)';
-    if (bias?.includes('SHORT')) color = V.danger;
-    else if (bias?.includes('LONG')) color = V.success;
+    let tone: MetricTone = 'neutral';
+    if (bias?.includes('SHORT')) tone = 'negative';
+    else if (bias?.includes('LONG')) tone = 'positive';
     let sub = '—';
     if (pressure != null && isFinite(pressure)) {
       const mag = Math.abs(pressure);
@@ -290,12 +286,11 @@ export default function PinpointExposureView() {
       const dir = pressure > 0 ? 'positive' : pressure < 0 ? 'negative' : 'neutral';
       sub = `${word} ${dir}`;
     }
-    return { label: bias ?? '—', color, sub };
+    return { label: bias ?? '—', tone, sub };
   }, [gauge]);
 
   // Feed provenance.
   const isLive = !!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC';
-  const feedState: 'live' | 'model' = isLive ? 'live' : 'model';
 
   // ── Strike windowing / interval ────────────────────────────────────────────
   const asc = useMemo(() => {
@@ -410,17 +405,19 @@ export default function PinpointExposureView() {
     return asc.slice(lo, hi + 1);
   }, [asc, centerIdx, callWall, putWall, magnet]);
 
-  // ── ECharts option (diverging horizontal net-dealer-pressure bars) ──────────
+  // ── ECharts option factory (diverging horizontal net-dealer-pressure bars) ──
   const chartOption = useMemo(() => {
     if (chartRows.length === 0) return null;
     // themeMode referenced so the memo recomputes (and re-reads tokens) on toggle.
     void themeMode;
-    const danger = cssVar('--danger', '#F87171');
-    const info = cssVar('--info', '#60A5FA');
-    const success = cssVar('--success', '#4ADE80');
-    const textPrimary = cssVar('--text-primary', '#E5E5E5');
-    const textTertiary = cssVar('--text-tertiary', '#A3A3A3');
-    const border = cssVar('--border-strong', 'rgba(255,255,255,0.18)');
+    // Brand palette (short-gamma = purple→teal, long-gamma = red gradient).
+    const cRed = cssVar('--slayer-red', '#980404');
+    const cRedLite = cssVar('--gex-4', '#e05454');
+    const cCall = cssVar('--call', '#792ca2');
+    const cPin = cssVar('--pin', '#2c687b');
+    const cGhost = cssVar('--slayer-ghost', '#f8f8ff');
+    const cMuted = cssVar('--text-muted', 'rgba(248,248,255,0.46)');
+    const cBorder = cssVar('--border-mid', 'rgba(248,248,255,0.14)');
 
     const cats = chartRows.map((r) => String(r.strike)); // ascending → highest at top
     const values = chartRows.map((r) => r.netGex ?? 0);
@@ -454,10 +451,10 @@ export default function PinpointExposureView() {
     // stagger labels top/bottom by row order so they never collide.
     type MLDef = { lvl: number | undefined; short: string; color: string; dash: number[] | 'solid' };
     const levelDefs: MLDef[] = [
-      { lvl: spot, short: 'SPOT', color: textPrimary, dash: 'solid' },
-      { lvl: putWall, short: 'PW', color: danger, dash: [5, 4] },
-      { lvl: callWall, short: 'CW', color: success, dash: [5, 4] },
-      { lvl: magnet, short: 'PIN', color: info, dash: [2, 3] },
+      { lvl: spot, short: 'SPOT', color: cGhost, dash: 'solid' },
+      { lvl: putWall, short: 'PW', color: cRed, dash: [5, 4] },
+      { lvl: callWall, short: 'CW', color: cCall, dash: [5, 4] },
+      { lvl: magnet, short: 'PIN', color: cPin, dash: [2, 3] },
     ];
     const merged = new Map<string, { parts: string[]; color: string; dash: number[] | 'solid' }>();
     for (const d of levelDefs) {
@@ -482,61 +479,74 @@ export default function PinpointExposureView() {
           fontWeight: 700,
           // Right-aligned; alternate top/bottom of the line so adjacent rows don't overlap.
           position: i % 2 === 0 ? 'insideEndTop' : 'insideEndBottom',
-          backgroundColor: 'rgba(0,0,0,0.6)',
+          backgroundColor: 'rgba(0,0,0,0.72)',
           padding: [2, 4],
           borderRadius: 2,
         },
       }));
 
-    return {
-      grid: { top: 16, right: 22, bottom: 34, left: 64 },
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          const p = Array.isArray(params) ? params[0] : params;
-          const v = p?.value ?? 0;
-          return `<span style="font-family:JetBrains Mono,monospace;font-size:11px">STRIKE ${p?.name}<br/>Net pressure <b style="color:${v < 0 ? danger : info}">${v < 0 ? '' : '+'}${fmtAxis(v)}</b></span>`;
-        },
-      },
-      xAxis: {
-        type: 'value',
-        min: -maxAbs * 1.08,
-        max: maxAbs * 1.08,
-        name: 'NET DEALER PRESSURE (Σγ, $ / 1% MOVE)',
-        nameLocation: 'middle',
-        nameGap: 22,
-        nameTextStyle: { color: textTertiary, fontSize: 9, fontWeight: 700 },
-        axisLabel: { formatter: (v: number) => fmtAxis(v), fontSize: 9 },
-        splitLine: { show: true, lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-      },
-      yAxis: {
-        type: 'category',
-        data: cats,
-        axisLabel: { fontSize: 9, color: textTertiary },
-        axisTick: { show: false },
-        axisLine: { lineStyle: { color: border } },
-      },
-      series: [
-        {
-          type: 'bar',
-          data: values,
-          barWidth: '62%',
-          itemStyle: {
-            borderRadius: 2,
-            color: (p: any) => (p.value < 0 ? danger : info),
-            opacity: 0.9,
-          },
-          markLine: {
-            silent: true,
-            symbol: 'none',
-            data: [
-              { xAxis: 0, lineStyle: { color: border, type: 'solid', width: 1 }, label: { show: false } },
-              ...markLineData,
-            ],
+    // Factory form so we can build LinearGradient fills via the echarts instance.
+    return (echarts: any) => {
+      // POSITIVE (dealer short gamma, extends right): purple → teal.
+      const posGrad = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: cCall },
+        { offset: 1, color: cPin },
+      ]);
+      // NEGATIVE (dealer long gamma, extends left): deep red → lighter red.
+      const negGrad = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
+        { offset: 0, color: cRed },
+        { offset: 1, color: cRedLite },
+      ]);
+      return {
+        grid: { top: 16, right: 22, bottom: 34, left: 64 },
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: (params: any) => {
+            const p = Array.isArray(params) ? params[0] : params;
+            const v = p?.value ?? 0;
+            return `<span style="font-family:JetBrains Mono,monospace;font-size:11px">STRIKE ${p?.name}<br/>Net pressure <b style="color:${v < 0 ? cRedLite : cPin}">${v < 0 ? '' : '+'}${fmtAxis(v)}</b></span>`;
           },
         },
-      ],
+        xAxis: {
+          type: 'value',
+          min: -maxAbs * 1.08,
+          max: maxAbs * 1.08,
+          name: 'NET DEALER PRESSURE (Σγ, $ / 1% MOVE)',
+          nameLocation: 'middle',
+          nameGap: 22,
+          nameTextStyle: { color: cMuted, fontSize: 9, fontWeight: 700 },
+          axisLabel: { formatter: (v: number) => fmtAxis(v), fontSize: 9, color: cMuted },
+          splitLine: { show: true, lineStyle: { color: 'rgba(248,248,255,0.05)' } },
+        },
+        yAxis: {
+          type: 'category',
+          data: cats,
+          axisLabel: { fontSize: 9, color: cMuted },
+          axisTick: { show: false },
+          axisLine: { lineStyle: { color: cBorder } },
+        },
+        series: [
+          {
+            type: 'bar',
+            data: values,
+            barWidth: '62%',
+            itemStyle: {
+              borderRadius: 2,
+              color: (p: any) => (p.value < 0 ? negGrad : posGrad),
+              opacity: 0.95,
+            },
+            markLine: {
+              silent: true,
+              symbol: 'none',
+              data: [
+                { xAxis: 0, lineStyle: { color: cBorder, type: 'solid', width: 1 }, label: { show: false } },
+                ...markLineData,
+              ],
+            },
+          },
+        ],
+      };
     };
   }, [chartRows, spot, callWall, putWall, magnet, themeMode]);
 
@@ -641,38 +651,52 @@ export default function PinpointExposureView() {
   }, [expiryOptions, expiry]);
   const [dateSel, setDateSel] = useState('All Dates');
 
+  // Shared selects rendered in each panel's actions slot.
+  const panelActions = (
+    <>
+      <TerminalSelect label="Expiry" value={expiry} onChange={setExpiry} options={expiryOptions} />
+      <TerminalSelect label="Date" value={dateSel} onChange={setDateSel} options={['All Dates']} />
+    </>
+  );
+
   // ── Honest pending state (mirrors DealerFlowView) ───────────────────────────
   if (!serverState || !profile || !profile.strikes || profile.strikes.length === 0) {
     return (
       <div
-        className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 space-y-5"
+        className="slayer-panel w-full p-6 space-y-5"
         id="pinpoint-data-pending"
         role="status"
         aria-busy="true"
         aria-label="Loading pinpoint exposure data"
       >
         <div className="flex flex-col items-center justify-center text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center">
-            <Waves className="w-6 h-6 text-[var(--success)]" />
+          <div className="w-12 h-12 rounded-full bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] flex items-center justify-center">
+            <Waves className="w-6 h-6 text-[var(--pin)]" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="text-[11px] font-black tracking-widest text-[var(--text-primary)] uppercase font-sans">
-              LOADING PINPOINT EXPOSURE
-            </h2>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest leading-relaxed max-w-sm mx-auto">
-              Loading dealer inventory & sensitivity by strike. Select any strike or option type to start the feed.
+            <h2 className="slayer-title">LOADING PINPOINT EXPOSURE</h2>
+            <p className="text-[11px] text-[var(--text-muted)] tracking-wide leading-relaxed max-w-sm mx-auto">
+              Loading dealer inventory &amp; sensitivity by strike. Select any strike or option type to start the feed.
             </p>
           </div>
           <div className="flex items-center gap-2 justify-center">
             <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] inline-block animate-pulse" />
-            <span className="text-[8px] font-mono tracking-widest text-[var(--text-tertiary)] font-bold uppercase">
+            <span className="text-[9px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">
               AWAITING FIRST DATA FRAME...
             </span>
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <PanelSkeleton label="Exposure Matrix" rows={6} />
-          <PanelSkeleton label="Dealer Positioning Map" rows={6} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {['Exposure Matrix', 'Dealer Positioning Map'].map((label) => (
+            <div key={label} className="slayer-panel p-4 space-y-2">
+              <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="h-9 rounded bg-[var(--bg-panel-soft)] animate-pulse" />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -690,105 +714,90 @@ export default function PinpointExposureView() {
   const frictionHi = spot != null && magnet != null ? Math.max(spot, magnet) : null;
   const hasFriction = frictionLo != null && frictionHi != null && Math.round(frictionLo) !== Math.round(frictionHi);
 
+  // Top KPI strip — real metrics mapped to fixed brand tones.
+  const topMetrics: Metric[] = [
+    {
+      label: 'Net GEX',
+      value: fmtBnSigned(netGex),
+      sub: netGexTrend,
+      tone: netGex == null ? 'neutral' : netGex < 0 ? 'negative' : 'positive',
+    },
+    {
+      label: 'Spot',
+      value: fmtLevel(spot),
+      sub: spotChange ? `${spotChange.abs >= 0 ? '+' : ''}${spotChange.abs.toFixed(2)} (${fmtPct(spotChange.pct)})` : '—',
+      tone: spotChange ? (spotChange.abs >= 0 ? 'positive' : 'negative') : 'neutral',
+    },
+    {
+      label: 'Call Wall',
+      value: fmtLevel(callWall),
+      sub: callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}% above` : '—',
+      tone: 'call',
+    },
+    {
+      label: 'Put Wall',
+      value: fmtLevel(putWall),
+      sub: putWallPct != null ? `${putWallPct.toFixed(2)}% below` : '—',
+      tone: 'negative',
+    },
+    { label: 'Pin Level', value: fmtLevel(magnet), sub: pinPct != null ? fmtPct(pinPct) : '—', tone: 'pin' },
+    {
+      label: 'Expected Move (1D)',
+      value: emAbs != null ? `±${emAbs.toFixed(2)}` : '—',
+      sub: emPct != null ? `±${(emPct * 100).toFixed(1)}%` : '—',
+      tone: 'warning',
+    },
+    { label: 'Market Control', value: control ? `${control.score}/100` : '—', sub: control?.word ?? '—', tone: 'neutral' },
+    { label: 'Dealer Bias', value: biasInfo.label, sub: biasInfo.sub, tone: biasInfo.tone },
+  ];
+
+  const rowTint = (isPin: boolean, isCall: boolean, isPut: boolean): string | undefined =>
+    isPin ? 'rgba(44,104,123,0.16)' : isCall ? 'rgba(121,44,162,0.14)' : isPut ? 'rgba(152,4,4,0.16)' : undefined;
+
   return (
-    <div className="w-full font-mono tabular-data space-y-3" id="pinpoint-exposure-view">
+    <div className="slayer-terminal w-full font-mono space-y-3 p-0.5" id="pinpoint-exposure-view">
       {/* ─────────────── 1. TOP KPI STRIP ─────────────── */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg overflow-hidden">
-        <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8">
-          <KpiCell
-            first
-            label="Net GEX"
-            value={fmtBnSigned(netGex)}
-            valueColor={netGex == null ? undefined : netGex < 0 ? V.danger : V.success}
-            sub={netGexTrend}
-          />
-          <KpiCell
-            label="Spot"
-            value={fmtLevel(spot)}
-            sub={
-              spotChange
-                ? `${spotChange.abs >= 0 ? '+' : ''}${spotChange.abs.toFixed(2)} (${fmtPct(spotChange.pct)})`
-                : '—'
-            }
-            subColor={spotChange ? (spotChange.abs >= 0 ? V.success : V.danger) : undefined}
-          />
-          <KpiCell
-            label="Call Wall"
-            value={fmtLevel(callWall)}
-            sub={callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}% above` : '—'}
-          />
-          <KpiCell
-            label="Put Wall"
-            value={fmtLevel(putWall)}
-            valueColor={putWall == null ? undefined : V.danger}
-            sub={putWallPct != null ? `${putWallPct.toFixed(2)}% below` : '—'}
-          />
-          <KpiCell label="Pin Level" value={fmtLevel(magnet)} sub={pinPct != null ? fmtPct(pinPct) : '—'} />
-          <KpiCell
-            label="Expected Move (1D)"
-            value={emAbs != null ? `±${emAbs.toFixed(2)}` : '—'}
-            valueColor={emAbs == null ? undefined : V.warning}
-            sub={emPct != null ? `±${(emPct * 100).toFixed(1)}%` : '—'}
-          />
-          <KpiCell
-            label="Market Control"
-            value={control ? `${control.score}/100` : '—'}
-            sub={control?.word ?? '—'}
-          />
-          <KpiCell
-            label="Dealer Bias"
-            value={biasInfo.label}
-            valueColor={biasInfo.color}
-            valueClassName="text-[12px] sm:text-[13px] whitespace-normal break-words leading-tight"
-            sub={biasInfo.sub}
-          />
-        </div>
-      </div>
+      <MetricStrip metrics={topMetrics} />
 
       {/* ─────────────── 2. MAIN TWO-COLUMN GRID ─────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] gap-3 items-start">
         {/* LEFT — EXPOSURE MATRIX */}
-        <section className="bg-[var(--surface)] border border-[var(--border)] rounded-lg flex flex-col min-w-0">
-          <div className="flex flex-wrap items-start justify-between gap-2 px-3 pt-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text-primary)]">
-                  Exposure Matrix
-                </h2>
-                <Info className="w-3 h-3 text-[var(--text-tertiary)]" aria-hidden="true" />
-                <DataStateBadge state={feedState} className="ml-1" />
-              </div>
-              <p className="text-[9px] text-[var(--text-tertiary)] tracking-wide mt-0.5">Inventory &amp; sensitivity by strike</p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <TerminalSelect label="Expiry" value={expiry} onChange={setExpiry} options={expiryOptions} />
-              <TerminalSelect label="Date" value={dateSel} onChange={setDateSel} options={['All Dates']} />
-            </div>
-          </div>
-
-          <div className="px-3 mt-2 text-[8.5px] text-[var(--text-tertiary)] tracking-wide flex flex-wrap gap-x-4 gap-y-0.5">
+        <TerminalPanel
+          title="Exposure Matrix"
+          subtitle="Inventory & sensitivity by strike"
+          actions={
+            <>
+              <StatusBadge tone={isLive ? 'live' : 'neutral'} dot>
+                {isLive ? 'Live Chain' : 'Model'}
+              </StatusBadge>
+              {panelActions}
+            </>
+          }
+          bodyClassName="flex flex-col gap-2"
+        >
+          <div className="text-[10px] text-[var(--text-muted)] tracking-wide flex flex-wrap gap-x-4 gap-y-0.5">
             <span>GEX: $ per 1% move</span>
             <span>DEX: $ per 1σ spot move</span>
             <span>VEX: $ per 1% vol shift</span>
           </div>
 
           {/* TABLE — fits without scroll at ≥1280px (xl); scrolls in-container below that. */}
-          <div className="mt-2 overflow-x-auto">
+          <div className="overflow-x-auto rounded-md border border-[var(--border-subtle)]">
             <div className="min-w-[500px] xl:min-w-0">
               {/* Group header */}
-              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] items-end border-b border-[var(--border)] text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
-                <div className="px-1 py-1">Strike</div>
-                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--success)]/80">GEX 1%</div>
-                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--info)]/80">DEX 1σ</div>
-                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--warning)]/80">VEX 1%v</div>
+              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] items-end border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+                <div className="px-1 py-1.5">Strike</div>
+                <div className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)] text-[var(--call)]">GEX 1%</div>
+                <div className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)] text-[var(--pin)]">DEX 1σ</div>
+                <div className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)] text-[var(--warning)]">VEX 1%v</div>
               </div>
               {/* Sub header */}
-              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border)] text-[8px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-faint)]">
                 <div className="px-1 py-1" />
                 {(['gex', 'dex', 'vex'] as const).map((g) => (
-                  <div key={g} className="col-span-3 grid grid-cols-3 border-l border-[var(--border)]">
-                    <div className="text-right px-1 py-1 text-[var(--danger)]/70">Put</div>
-                    <div className="text-right px-1 py-1 text-[var(--info)]/70">Call</div>
+                  <div key={g} className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
+                    <div className="text-right px-1 py-1 text-[#d94646]/80">Put</div>
+                    <div className="text-right px-1 py-1 text-[var(--call)]/90">Call</div>
                     <div className="text-right px-1 py-1">Net</div>
                   </div>
                 ))}
@@ -809,42 +818,44 @@ export default function PinpointExposureView() {
                 return (
                   <div key={r.strike}>
                     {showSpotDivider && (
-                      <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] bg-[var(--accent-color)]/10 border-y border-[var(--accent-color)]/30">
-                        <div className="px-1 py-1 text-[8.5px] font-black uppercase tracking-widest text-[var(--accent-color)]">
+                      <div
+                        className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-y border-[var(--border-mid)]"
+                        style={{ background: 'rgba(248,248,255,0.06)' }}
+                      >
+                        <div className="px-1 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">
                           Spot
                         </div>
-                        <div className="col-span-9 flex items-center px-1.5 py-1 text-[10px] font-mono font-bold tabular-nums text-[var(--accent-color)]">
+                        <div className="col-span-9 flex items-center px-1.5 py-1 text-[10px] slayer-num font-bold text-[var(--text-primary)]">
                           {fmtLevel(spot)}
                         </div>
                       </div>
                     )}
                     <div
-                      className={`grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border)] items-center ${
-                        isPin ? 'bg-[var(--info)]/[0.06]' : isCallWall ? 'bg-[var(--success)]/[0.05]' : isPutWall ? 'bg-[var(--danger)]/[0.05]' : ''
-                      }`}
+                      className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border-subtle)] items-center"
+                      style={{ background: rowTint(isPin, isCallWall, isPutWall) }}
                     >
                       <div className="px-1 py-0.5 flex items-center gap-0.5 min-w-0 overflow-hidden">
-                        <span className="text-[9.5px] font-mono font-bold tabular-nums text-[var(--text-secondary)]">
+                        <span className="text-[9.5px] slayer-num font-bold text-[var(--text-secondary)]">
                           {fmtLevel(r.strike)}
                         </span>
-                        {isPin && <span className="text-[6.5px] font-black text-[var(--info)] tracking-wide">PIN</span>}
-                        {isCallWall && <span className="text-[6.5px] font-black text-[var(--success)] tracking-wide">CW</span>}
-                        {isPutWall && <span className="text-[6.5px] font-black text-[var(--danger)] tracking-wide">PW</span>}
+                        {isPin && <span className="text-[6.5px] font-bold text-[var(--pin)] tracking-wide">PIN</span>}
+                        {isCallWall && <span className="text-[6.5px] font-bold text-[var(--call)] tracking-wide">CW</span>}
+                        {isPutWall && <span className="text-[6.5px] font-bold text-[#d94646] tracking-wide">PW</span>}
                       </div>
                       {/* GEX */}
-                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border)]">
+                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
                         <MatrixCell value={r.putGex} max={matrixMax.gex} side="put" />
                         <MatrixCell value={r.callGex} max={matrixMax.gex} side="call" />
                         <MatrixCell value={r.netGex} max={matrixMax.gex} side="net" />
                       </div>
                       {/* DEX */}
-                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border)]">
+                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
                         <MatrixCell value={r.putDex} max={matrixMax.dex} side="put" />
                         <MatrixCell value={r.callDex} max={matrixMax.dex} side="call" />
                         <MatrixCell value={r.netDex} max={matrixMax.dex} side="net" />
                       </div>
                       {/* VEX */}
-                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border)]">
+                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
                         <MatrixCell value={r.putVex} max={matrixMax.vex} side="put" />
                         <MatrixCell value={r.callVex} max={matrixMax.vex} side="call" />
                         <MatrixCell value={r.netVex} max={matrixMax.vex} side="net" />
@@ -857,149 +868,95 @@ export default function PinpointExposureView() {
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-[var(--border)] mt-auto">
-            <span className="text-[8.5px] text-[var(--text-tertiary)] tracking-wide truncate">
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <span className="text-[9px] text-[var(--text-muted)] tracking-wide truncate">
               Showing strikes {fmtLevel(loStrike)}–{fmtLevel(hiStrike)} · Interval: {interval || '—'} · Expiry: {expiry} · Dates: All Dates
             </span>
             <button
               type="button"
               onClick={exportCsv}
               aria-label="Export matrix as CSV"
-              className="shrink-0 p-1.5 rounded-md border border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)]/50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+              className="shrink-0 flex items-center justify-center p-1.5 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[#050505] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
             >
               <Download className="w-3.5 h-3.5" />
             </button>
           </div>
-        </section>
+        </TerminalPanel>
 
         {/* RIGHT — DEALER POSITIONING MAP */}
-        <section className="bg-[var(--surface)] border border-[var(--border)] rounded-lg flex flex-col min-w-0">
-          <div className="flex flex-wrap items-start justify-between gap-2 px-3 pt-3">
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h2 className="text-[12px] font-black uppercase tracking-widest text-[var(--text-primary)]">
-                  Dealer Positioning Map
-                </h2>
-                <Info className="w-3 h-3 text-[var(--text-tertiary)]" aria-hidden="true" />
-              </div>
-              <p className="text-[9px] text-[var(--text-tertiary)] tracking-wide mt-0.5">Net dealer pressure by strike</p>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <TerminalSelect label="Expiry" value={expiry} onChange={setExpiry} options={expiryOptions} />
-              <TerminalSelect label="Date" value={dateSel} onChange={setDateSel} options={['All Dates']} />
-            </div>
-          </div>
-
+        <TerminalPanel
+          title="Dealer Positioning Map"
+          subtitle="Net dealer pressure by strike"
+          actions={panelActions}
+          bodyClassName="flex flex-col gap-2"
+        >
           {/* Legend */}
-          <div className="px-3 mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[8.5px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
             <span className="flex items-center gap-1.5">
               <span
-                className="inline-block w-8 h-2 rounded-sm"
-                style={{ background: 'linear-gradient(90deg, var(--danger), var(--info))' }}
+                className="inline-block w-10 h-2 rounded-sm"
+                style={{
+                  background:
+                    'linear-gradient(90deg, var(--slayer-red), var(--gex-4) 42%, var(--call) 58%, var(--pin))',
+                }}
                 aria-hidden="true"
               />
               Net Dealer Pressure
             </span>
             <span className="flex items-center gap-1"><span className="text-[var(--text-primary)]">—</span> Spot</span>
-            <span className="flex items-center gap-1"><span className="text-[var(--danger)]">—</span> Put Wall</span>
-            <span className="flex items-center gap-1"><span className="text-[var(--info)]">—</span> Pin Level</span>
-            <span className="flex items-center gap-1"><span className="text-[var(--success)]">—</span> Call Wall</span>
+            <span className="flex items-center gap-1"><span className="text-[var(--slayer-red)]">—</span> Put Wall</span>
+            <span className="flex items-center gap-1"><span className="text-[var(--pin)]">—</span> Pin Level</span>
+            <span className="flex items-center gap-1"><span className="text-[var(--call)]">—</span> Call Wall</span>
           </div>
 
           {hasFriction && (
-            <div className="px-3 mt-1 text-[8.5px] font-bold uppercase tracking-widest text-[var(--warning)]/80">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
               Friction Zone {fmtLevel(frictionLo)}–{fmtLevel(frictionHi)}
             </div>
           )}
 
           {/* Chart */}
-          <div className="px-1 pt-2" style={{ height: 520 }}>
+          <div style={{ height: 520 }}>
             {chartOption ? (
               <EChart option={chartOption} notMerge style={{ width: '100%', height: '100%' }} />
             ) : (
-              <div className="h-full flex items-center justify-center text-[var(--text-tertiary)] text-[11px] uppercase tracking-widest">
+              <div className="h-full flex items-center justify-center text-[var(--text-muted)] text-[11px] uppercase tracking-widest">
                 Awaiting strike data…
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="px-3 py-2 border-t border-[var(--border)] mt-auto space-y-0.5">
-            <div className="text-[8.5px] text-[var(--text-tertiary)] tracking-wide">Positive = Dealer short gamma (upside supply)</div>
-            <div className="text-[8.5px] text-[var(--text-tertiary)] tracking-wide">Negative = Dealer long gamma (downside support)</div>
+          <div className="pt-1 space-y-0.5">
+            <div className="text-[9px] tracking-wide" style={{ color: 'var(--pin)' }}>Positive = Dealer short gamma (upside supply)</div>
+            <div className="text-[9px] tracking-wide" style={{ color: 'var(--slayer-red)' }}>Negative = Dealer long gamma (downside support)</div>
           </div>
-        </section>
+        </TerminalPanel>
       </div>
 
       {/* ─────────────── 3. BOTTOM STRIP ─────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
-        <BottomCard label="Net GEX" value={fmtBnSigned(netGex)} valueColor={netGex == null ? undefined : netGex < 0 ? V.danger : V.success} sub={netGexTrend} />
-        <BottomCard label="Net DEX" value={fmtCompact(netDexAgg, true)} valueColor={netDexAgg == null ? undefined : netDexAgg < 0 ? V.danger : V.info} sub={netDexAgg == null ? '—' : netDexAgg < 0 ? 'Downside tilt' : 'Upside tilt'} />
-        <BottomCard label="Net VEX" value={fmtCompact(netVexAgg, true)} valueColor={netVexAgg == null ? undefined : netVexAgg < 0 ? V.danger : V.info} sub={netVexAgg == null ? '—' : netVexAgg < 0 ? 'Short vega' : 'Long vega'} />
-        <BottomCard label="Spot" value={fmtLevel(spot)} sub={spotChange ? fmtPct(spotChange.pct) : '—'} subColor={spotChange ? (spotChange.abs >= 0 ? V.success : V.danger) : undefined} />
-        <BottomCard label="Put Wall" value={fmtLevel(putWall)} valueColor={putWall == null ? undefined : V.danger} sub={putWallPct != null ? `${putWallPct.toFixed(2)}%` : '—'} />
-        <BottomCard label="Pin Level" value={fmtLevel(magnet)} valueColor={magnet == null ? undefined : V.info} sub={pinPct != null ? fmtPct(pinPct) : '—'} />
-        <BottomCard label="Call Wall" value={fmtLevel(callWall)} valueColor={callWall == null ? undefined : V.success} sub={callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}%` : '—'} />
-        <BottomCard label="Dealer Bias" value={biasInfo.label} valueColor={biasInfo.color} sub={biasInfo.sub} valueClassName="text-[11px] whitespace-normal break-words leading-tight" />
-      </div>
+      <TerminalPanel title="Net Exposure & Levels">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 overflow-hidden rounded-md border-t border-l border-[var(--border-subtle)] bg-[var(--bg-panel)]">
+          <LevelCell label="Net GEX" value={fmtBnSigned(netGex)} sub={netGexTrend} tone={netGex == null ? 'neutral' : netGex < 0 ? 'negative' : 'positive'} />
+          <LevelCell label="Net DEX" value={fmtCompact(netDexAgg, true)} sub={netDexAgg == null ? '—' : netDexAgg < 0 ? 'Downside tilt' : 'Upside tilt'} tone={netDexAgg == null ? 'neutral' : netDexAgg < 0 ? 'negative' : 'positive'} />
+          <LevelCell label="Net VEX" value={fmtCompact(netVexAgg, true)} sub={netVexAgg == null ? '—' : netVexAgg < 0 ? 'Short vega' : 'Long vega'} tone={netVexAgg == null ? 'neutral' : netVexAgg < 0 ? 'negative' : 'positive'} />
+          <LevelCell label="Spot" value={fmtLevel(spot)} sub={spotChange ? fmtPct(spotChange.pct) : '—'} tone={spotChange ? (spotChange.abs >= 0 ? 'positive' : 'negative') : 'neutral'} />
+          <LevelCell label="Put Wall" value={fmtLevel(putWall)} sub={putWallPct != null ? `${putWallPct.toFixed(2)}%` : '—'} tone="negative" />
+          <LevelCell label="Pin Level" value={fmtLevel(magnet)} sub={pinPct != null ? fmtPct(pinPct) : '—'} tone="pin" />
+          <LevelCell label="Call Wall" value={fmtLevel(callWall)} sub={callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}%` : '—'} tone="call" />
+          <LevelCell label="Dealer Bias" value={biasInfo.label} sub={biasInfo.sub} tone={biasInfo.tone} wrap />
+        </div>
+      </TerminalPanel>
 
       {/* POSITIONING INSIGHT */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Positioning Insight</span>
-          <Info className="w-3 h-3 text-[var(--text-tertiary)]" aria-hidden="true" />
-        </div>
-        {insights.length > 0 ? (
-          <ul className="space-y-1.5">
-            {insights.map((t, i) => (
-              <li key={i} className="flex items-start gap-2 text-[11px] text-[var(--text-secondary)] leading-relaxed">
-                <span className="mt-1 w-1 h-1 rounded-full bg-[var(--accent-color)] shrink-0" aria-hidden="true" />
-                <span className="tabular-nums">{t}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest">Awaiting dealer levels…</div>
-        )}
-      </div>
+      <InsightPanel title="Positioning Insight" insights={insights} />
 
       {/* ─────────────── 4. FOOTER ─────────────── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-1 pt-1 text-[8.5px] text-[var(--text-tertiary)] tracking-wide">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-1 pt-1 text-[9px] text-[var(--text-muted)] tracking-wide">
         <span>Disclaimer: For informational purposes only. Not investment advice.</span>
         <span>Data as of {nowLabel}</span>
-        <span className="font-black tracking-widest text-[var(--text-secondary)]">REAL-SLAYER</span>
+        <span className="font-bold tracking-[0.16em] text-[var(--text-secondary)]">REAL-SLAYER</span>
       </div>
-    </div>
-  );
-}
-
-// Small bottom-strip stat card.
-function BottomCard({
-  label,
-  value,
-  valueColor,
-  valueClassName,
-  sub,
-  subColor,
-}: {
-  label: string;
-  value: string;
-  valueColor?: string;
-  valueClassName?: string;
-  sub?: React.ReactNode;
-  subColor?: string;
-}) {
-  return (
-    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-md px-2.5 py-2 min-w-0">
-      <div className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] truncate">{label}</div>
-      <div className={`mt-1 font-mono font-bold tabular-nums leading-none ${valueClassName ?? 'text-[13px] truncate'}`} style={{ color: valueColor ?? 'var(--text-primary)' }}>
-        {value}
-      </div>
-      {sub != null && (
-        <div className="mt-0.5 text-[8.5px] font-mono font-semibold tabular-nums truncate" style={{ color: subColor ?? 'var(--text-tertiary)' }}>
-          {sub}
-        </div>
-      )}
     </div>
   );
 }
