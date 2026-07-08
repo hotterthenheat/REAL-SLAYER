@@ -9,6 +9,7 @@ import { formatTime } from './lib/timeUtils';
 // Import Workspace Modular Views — eager imports are the shell + landing path.
 import { DiscoveryView } from './components/DiscoveryView';
 import SlayerIntro from './components/SlayerIntro';
+import SlayerHomeTerminal from './components/SlayerHomeTerminal';
 import { SkyseyeAlertHub } from './components/SkyseyeAlertHub';
 import TierGuard from './components/TierGuard';
 import { ClerkGate } from './components/ClerkGate';
@@ -28,6 +29,7 @@ import { SubscriptionPricing } from './components/SubscriptionPricing';
 const SkyVisionView = lazy(() => import('./components/SkyVisionView').then(m => ({ default: m.SkyVisionView })));
 const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m => ({ default: m.QuantAuditView })));
 const DealerFlowView = lazy(() => import('./components/DealerFlowView').then(m => ({ default: m.DealerFlowView })));
+const PinpointExposureView = lazy(() => import('./components/PinpointExposureView'));
 const ArborCapital = lazy(() => import('./components/ArborCapital'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const AdminOverseerPanel = lazy(() => import('./components/AdminOverseerPanel').then(m => ({ default: m.AdminOverseerPanel })));
@@ -993,9 +995,16 @@ export default function App() {
             >
             <Suspense fallback={<div className="w-full min-h-[300px] flex items-center justify-center text-[var(--text-tertiary)] font-mono text-[11px] uppercase tracking-[0.25em] animate-pulse">Loading module…</div>}>
             {/* TAB 1: HOME */}
-            {activeTab === 'home' && (
+            {/* Authenticated users get the live in-app terminal dashboard; guests keep the
+                marketing / paywall landing (SlayerIntro) so the sign-up entry is preserved. */}
+            {activeTab === 'home' && session?.authenticated && (
               <div className="animate-fadeIn">
-                <SlayerIntro 
+                <SlayerHomeTerminal />
+              </div>
+            )}
+            {activeTab === 'home' && !session?.authenticated && (
+              <div className="animate-fadeIn">
+                <SlayerIntro
                   onEnterApp={(targetTab) => {
                     const mappedTab = targetTab === 'quant' ? 'auditor' : (targetTab || 'skyvision');
                     handleSelectTab(mappedTab as any);
@@ -1049,7 +1058,7 @@ export default function App() {
             {activeTab === 'pinpoint' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
-                  <DealerFlowView />
+                  <PinpointExposureView />
                 </TierGuard>
               </div>
             )}

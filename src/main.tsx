@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import './themes.css';
+import './styles/slayer-terminal.css';
 
 // Patch fetch for two cross-cutting concerns: (1) always send the httpOnly
 // session cookie on same-origin requests (that cookie is the SOLE auth
