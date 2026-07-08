@@ -28,6 +28,7 @@ import { SubscriptionPricing } from './components/SubscriptionPricing';
 const SkyVisionView = lazy(() => import('./components/SkyVisionView').then(m => ({ default: m.SkyVisionView })));
 const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m => ({ default: m.QuantAuditView })));
 const DealerFlowView = lazy(() => import('./components/DealerFlowView').then(m => ({ default: m.DealerFlowView })));
+const PinpointExposureView = lazy(() => import('./components/PinpointExposureView'));
 const ArborCapital = lazy(() => import('./components/ArborCapital'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const AdminOverseerPanel = lazy(() => import('./components/AdminOverseerPanel').then(m => ({ default: m.AdminOverseerPanel })));
@@ -1049,7 +1050,7 @@ export default function App() {
             {activeTab === 'pinpoint' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
-                  <DealerFlowView />
+                  <PinpointExposureView />
                 </TierGuard>
               </div>
             )}
