@@ -18,8 +18,6 @@ import { RiskNeutralDistribution } from './RiskNeutralDistribution';
 import { ErrorBoundary } from './ErrorBoundary';
 import { TailRiskMap } from './TailRiskMap';
 import { IvSmile } from './IvSmile';
-import { sciChartEnabled } from '../lib/scichartFlag';
-const IvSmileSciChart = lazy(() => import('./quant/scichart/IvSmileSciChart').then(m => ({ default: m.IvSmileSciChart })));
 import { GreekExposurePanel } from './GreekExposurePanel';
 import { VolConePanel } from './VolConePanel';
 import { StrikeSyncProvider } from './quant/crosshairSync';
@@ -533,21 +531,6 @@ export default function QuantSuiteView() {
         </div>
       )}
 
-      {/* SciChart IV smile — feature-flagged rollout (localStorage slayer.scichart=1), the
-          existing IvSmile above stays as the live fallback until SciChart is licensed + proven. */}
-      {activeSubTab === 'volgeo' && optionChain.length >= 4 && spotPrice > 0 && sciChartEnabled() && (
-        <div className="border-t border-[var(--border)] pt-4">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-[11px] font-black uppercase tracking-widest text-[var(--text-secondary)]">IV Smile · SciChart</span>
-            <span className="rounded border border-[var(--info)]/40 bg-[var(--info)]/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-[var(--info)]">Beta</span>
-          </div>
-          <div style={{ height: 340 }}>
-            <Suspense fallback={<Surface3DLoading label="Loading SciChart…" />}>
-              <IvSmileSciChart points={optionChain.map(c => ({ strike: c.strike, iv: c.iv }))} spot={spotPrice} />
-            </Suspense>
-          </div>
-        </div>
-      )}
 
       {/* §2 Dealer Mechanics — per-strike Γ/Δ/vanna/charm/vega exposure from the real chain */}
       {activeSubTab === 'mechanics' && optionChain.length >= 4 && spotPrice > 0 && (

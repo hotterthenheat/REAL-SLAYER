@@ -25,5 +25,3 @@ users-fallback.json*
 *.db-shm
 _*.html
 
-# SciChart WASM copied from node_modules at build time (scripts/copy-scichart-wasm.mjs)
-public/scichart/

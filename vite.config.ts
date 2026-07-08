@@ -34,9 +34,6 @@ export default defineConfig(() => {
             // the Quant Lab, which dynamic-imports them — keep them in a dedicated
             // on-demand chunk instead of the eager vendor bundle.
             if (id.includes('echarts') || id.includes('zrender') || id.includes('claygl')) return 'echarts-vendor';
-            // SciChart (WASM charting) is only reached via dynamic import from the lazy
-            // scichart chart components — keep its ~1MB JS glue out of the eager vendor bundle.
-            if (id.includes('scichart')) return 'scichart-vendor';
             if (id.includes('recharts') || id.includes('victory-vendor')) return 'recharts-vendor';
             if (id.includes('lightweight-charts')) return 'charts-vendor';
             if (id.includes('react-dom') || id.includes('scheduler') || /node_modules[\\/]react[\\/]/.test(id)) return 'react-vendor';
