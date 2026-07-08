@@ -27,6 +27,22 @@ import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
 import { DataTable, type Column } from './ui/terminal/DataTable';
 import { StatusBadge, type BadgeTone } from './ui/terminal/StatusBadge';
 import { InteractiveChart } from './InteractiveChart';
+import { TerminalShell } from './layout/TerminalShell';
+import { TerminalSidebar } from './layout/TerminalSidebar';
+import { TerminalTopBar } from './layout/TerminalTopBar';
+
+/** Live wall-clock for the top bar (real time, ticking each second). */
+function useClock(): string {
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return now.toLocaleString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
+  });
+}
 
 /**
  * SlayerHomeTerminal — the authenticated-user Home dashboard.
@@ -124,6 +140,9 @@ export default function SlayerHomeTerminal() {
   const selectedAsset = useContractStore((s) => s.selectedAsset);
   const selectedTimeframe = useContractStore((s) => s.selectedTimeframe);
   const setSelectedTimeframe = useContractStore((s) => s.setSelectedTimeframe);
+  const activeTab = useContractStore((s) => s.activeTab);
+  const setActiveTab = useContractStore((s) => s.setActiveTab);
+  const clock = useClock();
 
   // Only trust the stream once it matches the ticker in view (same guard SlayerIntro /
   // DealerFlowView use) so switching assets never paints the prior ticker's dealer data.
@@ -459,8 +478,33 @@ export default function SlayerHomeTerminal() {
   const gammaStateTone = d.gammaState === 'ADDING_HEDGES' ? 'text-[#2f9d45]' : d.gammaState === 'REMOVING_HEDGES' ? 'text-[#d94646]' : undefined;
   const gammaStateLabel = d.gammaState === 'ADDING_HEDGES' ? 'Adding hedges' : d.gammaState === 'REMOVING_HEDGES' ? 'Removing hedges' : d.gammaState === 'STABLE' ? 'Stable' : '—';
 
+  // Top-bar reads — all real: spot/change from the derived frame, feed provenance
+  // from the stream flags, the timestamp from the live wall clock.
+  const changeStr = d.changeAbs == null
+    ? '—'
+    : `${d.changeAbs >= 0 ? '+' : ''}${d.changeAbs.toFixed(2)}  ${d.changePctV != null ? `${d.changePctV >= 0 ? '+' : ''}${d.changePctV.toFixed(2)}%` : ''}`;
+
   return (
-    <div className="slayer-terminal min-h-full w-full overflow-x-hidden p-3 sm:p-4 space-y-[var(--gap)]">
+    <TerminalShell
+      sidebar={
+        <TerminalSidebar
+          activeId={activeTab}
+          onChange={(id) => setActiveTab(id as any)}
+        />
+      }
+      topBar={
+        <TerminalTopBar
+          symbol={selectedAsset.ticker}
+          spot={fmtLevel(d.spot, 2)}
+          change={changeStr}
+          changeTone={d.changeAbs == null ? 'neutral' : d.changeAbs >= 0 ? 'positive' : 'negative'}
+          live={d.feed.value === 'Normal'}
+          feedLabel={d.feed.sub}
+          timestamp={clock}
+          onSettings={() => setActiveTab('settings')}
+        />
+      }
+    >
       {/* 1 · METRIC STRIP */}
       <MetricStrip metrics={metrics} />
 
@@ -738,6 +782,6 @@ export default function SlayerHomeTerminal() {
           )}
         </TerminalPanel>
       </div>
-    </div>
+    </TerminalShell>
   );
 }
