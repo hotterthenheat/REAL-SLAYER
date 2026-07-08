@@ -994,15 +994,8 @@ export default function App() {
               key={activeTab}
             >
             <Suspense fallback={<div className="w-full min-h-[300px] flex items-center justify-center text-[var(--text-tertiary)] font-mono text-[11px] uppercase tracking-[0.25em] animate-pulse">Loading module…</div>}>
-            {/* TAB 1: HOME */}
-            {/* Authenticated users get the live in-app terminal dashboard; guests keep the
-                marketing / paywall landing (SlayerIntro) so the sign-up entry is preserved. */}
-            {activeTab === 'home' && session?.authenticated && (
-              <div className="animate-fadeIn">
-                <SlayerHomeTerminal />
-              </div>
-            )}
-            {activeTab === 'home' && !session?.authenticated && (
+            {/* TAB 1: HOME — the landing page (SlayerIntro), for everyone. */}
+            {activeTab === 'home' && (
               <div className="animate-fadeIn">
                 <SlayerIntro
                   onEnterApp={(targetTab) => {
