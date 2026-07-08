@@ -90,6 +90,7 @@ function KpiCell({
   label,
   value,
   valueColor,
+  valueClassName,
   sub,
   subColor,
   first,
@@ -97,6 +98,7 @@ function KpiCell({
   label: string;
   value: string;
   valueColor?: string;
+  valueClassName?: string;
   sub?: React.ReactNode;
   subColor?: string;
   first?: boolean;
@@ -107,7 +109,7 @@ function KpiCell({
         {label}
       </div>
       <div
-        className="mt-1 text-[16px] sm:text-[18px] font-mono font-bold tabular-nums leading-none truncate"
+        className={`mt-1 font-mono font-bold tabular-nums leading-none ${valueClassName ?? 'text-[16px] sm:text-[18px] truncate'}`}
         style={{ color: valueColor ?? 'var(--text-primary)' }}
       >
         {value}
@@ -311,6 +313,37 @@ export default function PinpointExposureView() {
     return isFinite(min) ? min : 0;
   }, [asc]);
 
+  // Net DEX / VEX aggregates — summed from the real per-strike values exactly the
+  // way netGex aggregates (prefer the per-strike net field; fall back to call+put).
+  // Returns null only when NO strike carries a finite value, so an empty/absent
+  // metric honestly shows "—" rather than a fabricated 0.
+  const netAgg = useMemo(() => {
+    const sumBase = (base: 'Dex' | 'Vex') => {
+      if (asc.length === 0) return null;
+      let any = false;
+      let sum = 0;
+      for (const s of asc) {
+        const nd = s[`net${base}`];
+        let v: number | null = null;
+        if (nd != null && isFinite(nd)) v = nd;
+        else {
+          const c = s[`call${base}`];
+          const p = s[`put${base}`];
+          if ((c != null && isFinite(c)) || (p != null && isFinite(p))) v = (c || 0) + (p || 0);
+        }
+        if (v != null) {
+          any = true;
+          sum += v;
+        }
+      }
+      return any ? sum : null;
+    };
+    return { dex: sumBase('Dex'), vex: sumBase('Vex') };
+  }, [asc]);
+  // Prefer the server's top-level aggregate when present; else the per-strike sum.
+  const netDexAgg = netDex != null && isFinite(netDex) ? netDex : netAgg.dex;
+  const netVexAgg = netVex != null && isFinite(netVex) ? netVex : netAgg.vex;
+
   const centerIdx = useMemo(() => {
     if (asc.length === 0 || spot == null) return 0;
     let best = 0;
@@ -416,29 +449,44 @@ export default function PinpointExposureView() {
       return best;
     };
 
-    const markLineData: any[] = [];
-    const pushLine = (lvl: number | undefined, label: string, color: string, dash: number[] = [5, 4]) => {
-      const cat = nearestCat(lvl);
-      if (cat == null || lvl == null) return;
-      markLineData.push({
+    // Merge reference levels that snap to the SAME strike row into one combined
+    // label (e.g. pin == callWall → "CW·PIN 5,500"), shorten the codes, and
+    // stagger labels top/bottom by row order so they never collide.
+    type MLDef = { lvl: number | undefined; short: string; color: string; dash: number[] | 'solid' };
+    const levelDefs: MLDef[] = [
+      { lvl: spot, short: 'SPOT', color: textPrimary, dash: 'solid' },
+      { lvl: putWall, short: 'PW', color: danger, dash: [5, 4] },
+      { lvl: callWall, short: 'CW', color: success, dash: [5, 4] },
+      { lvl: magnet, short: 'PIN', color: info, dash: [2, 3] },
+    ];
+    const merged = new Map<string, { parts: string[]; color: string; dash: number[] | 'solid' }>();
+    for (const d of levelDefs) {
+      if (d.lvl == null) continue;
+      const cat = nearestCat(d.lvl);
+      if (cat == null) continue;
+      const ex = merged.get(cat);
+      if (ex) ex.parts.push(d.short);
+      else merged.set(cat, { parts: [d.short], color: d.color, dash: d.dash });
+    }
+    const catIndex = (cat: string) => cats.indexOf(cat);
+    const markLineData: any[] = Array.from(merged.entries())
+      .sort((a, b) => catIndex(a[0]) - catIndex(b[0]))
+      .map(([cat, info], i) => ({
         yAxis: cat,
-        lineStyle: { color, type: dash, width: 1.2, opacity: 0.85 },
+        lineStyle: { color: info.color, type: info.dash, width: 1.2, opacity: 0.9 },
         label: {
-          formatter: `${label} ${fmtLevel(lvl)}`,
-          color,
+          formatter: `${info.parts.join('·')} ${fmtLevel(Number(cat))}`,
+          color: info.color,
           fontSize: 9,
           fontFamily: 'JetBrains Mono, ui-monospace, monospace',
           fontWeight: 700,
-          position: 'insideEndTop',
-          backgroundColor: 'rgba(0,0,0,0.35)',
-          padding: [2, 3],
+          // Right-aligned; alternate top/bottom of the line so adjacent rows don't overlap.
+          position: i % 2 === 0 ? 'insideEndTop' : 'insideEndBottom',
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          padding: [2, 4],
+          borderRadius: 2,
         },
-      });
-    };
-    pushLine(putWall, 'PUT WALL', danger);
-    pushLine(magnet, 'PIN LEVEL', info, [2, 3]);
-    pushLine(callWall, 'CALL WALL', success);
-    pushLine(spot, 'SPOT', textPrimary, [1, 0]);
+      }));
 
     return {
       grid: { top: 16, right: 22, bottom: 34, left: 64 },
@@ -687,7 +735,13 @@ export default function PinpointExposureView() {
             value={control ? `${control.score}/100` : '—'}
             sub={control?.word ?? '—'}
           />
-          <KpiCell label="Dealer Bias" value={biasInfo.label} valueColor={biasInfo.color} sub={biasInfo.sub} />
+          <KpiCell
+            label="Dealer Bias"
+            value={biasInfo.label}
+            valueColor={biasInfo.color}
+            valueClassName="text-[12px] sm:text-[13px] whitespace-normal break-words leading-tight"
+            sub={biasInfo.sub}
+          />
         </div>
       </div>
 
@@ -718,24 +772,24 @@ export default function PinpointExposureView() {
             <span>VEX: $ per 1% vol shift</span>
           </div>
 
-          {/* TABLE (scrolls horizontally in its own container) */}
+          {/* TABLE — fits without scroll at ≥1280px (xl); scrolls in-container below that. */}
           <div className="mt-2 overflow-x-auto">
-            <div className="min-w-[640px]">
+            <div className="min-w-[500px] xl:min-w-0">
               {/* Group header */}
-              <div className="grid grid-cols-[64px_repeat(9,minmax(0,1fr))] items-end border-b border-[var(--border)] text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
-                <div className="px-1.5 py-1">Strike</div>
-                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--success)]/80">GEX (1% Move)</div>
-                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--info)]/80">DEX (1σ Move)</div>
-                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--warning)]/80">VEX (1% Vol)</div>
+              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] items-end border-b border-[var(--border)] text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">
+                <div className="px-1 py-1">Strike</div>
+                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--success)]/80">GEX 1%</div>
+                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--info)]/80">DEX 1σ</div>
+                <div className="col-span-3 text-center py-1 border-l border-[var(--border)] text-[var(--warning)]/80">VEX 1%v</div>
               </div>
               {/* Sub header */}
-              <div className="grid grid-cols-[64px_repeat(9,minmax(0,1fr))] border-b border-[var(--border)] text-[8px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
-                <div className="px-1.5 py-1" />
+              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border)] text-[8px] font-bold uppercase tracking-wider text-[var(--text-tertiary)]">
+                <div className="px-1 py-1" />
                 {(['gex', 'dex', 'vex'] as const).map((g) => (
                   <div key={g} className="col-span-3 grid grid-cols-3 border-l border-[var(--border)]">
-                    <div className="text-right px-1.5 py-1 text-[var(--danger)]/70">Put</div>
-                    <div className="text-right px-1.5 py-1 text-[var(--info)]/70">Call</div>
-                    <div className="text-right px-1.5 py-1">Net</div>
+                    <div className="text-right px-1 py-1 text-[var(--danger)]/70">Put</div>
+                    <div className="text-right px-1 py-1 text-[var(--info)]/70">Call</div>
+                    <div className="text-right px-1 py-1">Net</div>
                   </div>
                 ))}
               </div>
@@ -755,8 +809,8 @@ export default function PinpointExposureView() {
                 return (
                   <div key={r.strike}>
                     {showSpotDivider && (
-                      <div className="grid grid-cols-[64px_repeat(9,minmax(0,1fr))] bg-[var(--accent-color)]/10 border-y border-[var(--accent-color)]/30">
-                        <div className="px-1.5 py-1 text-[9px] font-black uppercase tracking-widest text-[var(--accent-color)]">
+                      <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] bg-[var(--accent-color)]/10 border-y border-[var(--accent-color)]/30">
+                        <div className="px-1 py-1 text-[8.5px] font-black uppercase tracking-widest text-[var(--accent-color)]">
                           Spot
                         </div>
                         <div className="col-span-9 flex items-center px-1.5 py-1 text-[10px] font-mono font-bold tabular-nums text-[var(--accent-color)]">
@@ -765,17 +819,17 @@ export default function PinpointExposureView() {
                       </div>
                     )}
                     <div
-                      className={`grid grid-cols-[64px_repeat(9,minmax(0,1fr))] border-b border-[var(--border)] items-center ${
+                      className={`grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border)] items-center ${
                         isPin ? 'bg-[var(--info)]/[0.06]' : isCallWall ? 'bg-[var(--success)]/[0.05]' : isPutWall ? 'bg-[var(--danger)]/[0.05]' : ''
                       }`}
                     >
-                      <div className="px-1.5 py-0.5 flex items-center gap-1">
-                        <span className="text-[10px] font-mono font-bold tabular-nums text-[var(--text-secondary)]">
+                      <div className="px-1 py-0.5 flex items-center gap-0.5 min-w-0 overflow-hidden">
+                        <span className="text-[9.5px] font-mono font-bold tabular-nums text-[var(--text-secondary)]">
                           {fmtLevel(r.strike)}
                         </span>
-                        {isPin && <span className="text-[7px] font-black text-[var(--info)] tracking-widest">PIN</span>}
-                        {isCallWall && <span className="text-[7px] font-black text-[var(--success)] tracking-widest">CW</span>}
-                        {isPutWall && <span className="text-[7px] font-black text-[var(--danger)] tracking-widest">PW</span>}
+                        {isPin && <span className="text-[6.5px] font-black text-[var(--info)] tracking-wide">PIN</span>}
+                        {isCallWall && <span className="text-[6.5px] font-black text-[var(--success)] tracking-wide">CW</span>}
+                        {isPutWall && <span className="text-[6.5px] font-black text-[var(--danger)] tracking-wide">PW</span>}
                       </div>
                       {/* GEX */}
                       <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border)]">
@@ -880,13 +934,13 @@ export default function PinpointExposureView() {
       {/* ─────────────── 3. BOTTOM STRIP ─────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
         <BottomCard label="Net GEX" value={fmtBnSigned(netGex)} valueColor={netGex == null ? undefined : netGex < 0 ? V.danger : V.success} sub={netGexTrend} />
-        <BottomCard label="Net DEX" value={fmtCompact(netDex, true)} valueColor={netDex == null ? undefined : netDex < 0 ? V.danger : V.info} sub={netDex == null ? '—' : netDex < 0 ? 'Downside tilt' : 'Upside tilt'} />
-        <BottomCard label="Net VEX" value={fmtCompact(netVex, true)} valueColor={netVex == null ? undefined : netVex < 0 ? V.danger : V.info} sub={netVex == null ? '—' : netVex < 0 ? 'Short vega' : 'Long vega'} />
+        <BottomCard label="Net DEX" value={fmtCompact(netDexAgg, true)} valueColor={netDexAgg == null ? undefined : netDexAgg < 0 ? V.danger : V.info} sub={netDexAgg == null ? '—' : netDexAgg < 0 ? 'Downside tilt' : 'Upside tilt'} />
+        <BottomCard label="Net VEX" value={fmtCompact(netVexAgg, true)} valueColor={netVexAgg == null ? undefined : netVexAgg < 0 ? V.danger : V.info} sub={netVexAgg == null ? '—' : netVexAgg < 0 ? 'Short vega' : 'Long vega'} />
         <BottomCard label="Spot" value={fmtLevel(spot)} sub={spotChange ? fmtPct(spotChange.pct) : '—'} subColor={spotChange ? (spotChange.abs >= 0 ? V.success : V.danger) : undefined} />
         <BottomCard label="Put Wall" value={fmtLevel(putWall)} valueColor={putWall == null ? undefined : V.danger} sub={putWallPct != null ? `${putWallPct.toFixed(2)}%` : '—'} />
         <BottomCard label="Pin Level" value={fmtLevel(magnet)} valueColor={magnet == null ? undefined : V.info} sub={pinPct != null ? fmtPct(pinPct) : '—'} />
         <BottomCard label="Call Wall" value={fmtLevel(callWall)} valueColor={callWall == null ? undefined : V.success} sub={callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}%` : '—'} />
-        <BottomCard label="Dealer Bias" value={biasInfo.label} valueColor={biasInfo.color} sub={biasInfo.sub} />
+        <BottomCard label="Dealer Bias" value={biasInfo.label} valueColor={biasInfo.color} sub={biasInfo.sub} valueClassName="text-[11px] whitespace-normal break-words leading-tight" />
       </div>
 
       {/* POSITIONING INSIGHT */}
@@ -924,19 +978,21 @@ function BottomCard({
   label,
   value,
   valueColor,
+  valueClassName,
   sub,
   subColor,
 }: {
   label: string;
   value: string;
   valueColor?: string;
+  valueClassName?: string;
   sub?: React.ReactNode;
   subColor?: string;
 }) {
   return (
     <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-md px-2.5 py-2 min-w-0">
       <div className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] truncate">{label}</div>
-      <div className="mt-1 text-[13px] font-mono font-bold tabular-nums leading-none truncate" style={{ color: valueColor ?? 'var(--text-primary)' }}>
+      <div className={`mt-1 font-mono font-bold tabular-nums leading-none ${valueClassName ?? 'text-[13px] truncate'}`} style={{ color: valueColor ?? 'var(--text-primary)' }}>
         {value}
       </div>
       {sub != null && (
