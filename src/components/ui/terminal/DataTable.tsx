@@ -1,56 +1,126 @@
 import React from 'react';
-import clsx from 'clsx';
+import { cx } from '../../../lib/cx';
 
 /**
- * DataTable — the shared terminal table (uses the .slayer-table styling). Generic
- * over row type; columns declare alignment + a cell renderer. Scrolls inside its
- * own container so the page body never scrolls horizontally.
+ * DataTable — the shared terminal data table: sticky uppercase header, hairline
+ * row rules, tabular numerics, optional keyboard-accessible row selection. It
+ * scrolls inside its own container so the page body never scrolls horizontally.
+ *
+ * Column API: the canonical shape is `{ id, title, render }`; the legacy shape
+ * `{ key, header, render }` from earlier pages is accepted as an alias so the
+ * page-by-page migration never breaks a caller.
  */
-export type Column<T> = {
-  key: string;
-  header: React.ReactNode;
-  align?: 'left' | 'right' | 'center';
-  render: (row: T, index: number) => React.ReactNode;
+export type DataColumn<T> = {
+  id?: string;
+  /** @deprecated compat alias for id */
+  key?: string;
+  title?: React.ReactNode;
+  /** @deprecated compat alias for title */
+  header?: React.ReactNode;
   className?: string;
+  align?: 'left' | 'center' | 'right';
+  width?: string;
+  render: (row: T, rowIndex: number) => React.ReactNode;
 };
 
-export function DataTable<T>({ columns, rows, rowKey, rowClassName, onRowClick, empty, className }: {
-  columns: Column<T>[];
+/** Legacy alias kept for existing imports. */
+export type Column<T> = DataColumn<T>;
+
+type DataTableProps<T> = {
+  columns: DataColumn<T>[];
   rows: T[];
-  rowKey: (row: T, index: number) => string;
-  rowClassName?: (row: T, index: number) => string | undefined;
-  /** Optional row-selection handler. When set, rows become clickable (cursor + a11y role). */
-  onRowClick?: (row: T, index: number) => void;
+  rowKey: (row: T, rowIndex: number) => string;
+  emptyState?: React.ReactNode;
+  /** @deprecated compat alias for emptyState */
   empty?: React.ReactNode;
   className?: string;
-}) {
-  const alignCls = (a?: 'left' | 'right' | 'center') =>
-    a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left';
+  rowClassName?: (row: T, rowIndex: number) => string | undefined;
+  /** Optional row-selection handler; rows become clickable + keyboard-operable. */
+  onRowClick?: (row: T, rowIndex: number) => void;
+  stickyHeader?: boolean;
+};
+
+const alignClass = (align?: 'left' | 'center' | 'right') => {
+  if (align === 'center') return 'text-center';
+  if (align === 'right') return 'text-right';
+  return 'text-left';
+};
+
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  emptyState,
+  empty,
+  className,
+  rowClassName,
+  onRowClick,
+  stickyHeader = true,
+}: DataTableProps<T>) {
+  const emptyNode = emptyState ?? empty ?? 'No data';
+  const colId = (column: DataColumn<T>, index: number) =>
+    column.id ?? column.key ?? String(index);
   return (
-    <div className={clsx('overflow-x-auto rounded-md border border-[var(--border-subtle)]', className)}>
-      <table className="slayer-table">
-        <thead>
+    <div
+      className={cx(
+        'slayer-scrollbar overflow-auto rounded-[10px] border border-[var(--border-subtle)]',
+        className,
+      )}
+    >
+      <table className="slayer-table w-full">
+        <thead className={cx(stickyHeader && 'sticky top-0 z-[1] bg-[var(--bg-panel)]')}>
           <tr>
-            {columns.map((c) => (
-              <th key={c.key} className={clsx(alignCls(c.align), c.className)}>{c.header}</th>
+            {columns.map((column, index) => (
+              <th
+                key={colId(column, index)}
+                className={cx(alignClass(column.align), column.className)}
+                style={column.width ? { width: column.width } : undefined}
+              >
+                {column.title ?? column.header}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 ? (
-            <tr><td colSpan={columns.length} className="text-center text-[var(--text-muted)] py-8">{empty ?? 'No data'}</td></tr>
+            <tr>
+              <td
+                className="px-4 py-8 text-center text-[var(--text-muted)]"
+                colSpan={columns.length}
+              >
+                {emptyNode}
+              </td>
+            </tr>
           ) : (
-            rows.map((row, i) => (
+            rows.map((row, rowIndex) => (
               <tr
-                key={rowKey(row, i)}
-                className={clsx(rowClassName?.(row, i), onRowClick && 'cursor-pointer')}
-                onClick={onRowClick ? () => onRowClick(row, i) : undefined}
+                key={rowKey(row, rowIndex)}
+                className={cx(
+                  'transition-colors',
+                  onRowClick && 'cursor-pointer',
+                  rowClassName?.(row, rowIndex),
+                )}
+                onClick={onRowClick ? () => onRowClick(row, rowIndex) : undefined}
                 role={onRowClick ? 'button' : undefined}
                 tabIndex={onRowClick ? 0 : undefined}
-                onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row, i); } } : undefined}
+                onKeyDown={
+                  onRowClick
+                    ? (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          onRowClick(row, rowIndex);
+                        }
+                      }
+                    : undefined
+                }
               >
-                {columns.map((c) => (
-                  <td key={c.key} className={clsx(alignCls(c.align), c.className)}>{c.render(row, i)}</td>
+                {columns.map((column, index) => (
+                  <td
+                    key={colId(column, index)}
+                    className={cx(alignClass(column.align), column.className)}
+                  >
+                    {column.render(row, rowIndex)}
+                  </td>
                 ))}
               </tr>
             ))

@@ -1,68 +1,77 @@
 /**
- * Slayer Terminal design system — global brand tokens + terminal primitives.
- * Imported once (src/main.tsx). Brand colors are the single source of truth:
- * red = true negative/put/risk, green = true positive/confirmed. Color is a data
- * encoding, never decoration. No neon glow, no gaming-HUD effects.
+ * REAL-SLAYER global terminal design system
+ * Single source of truth for shell, panels, grid, tables, chart tags, and status tones.
+ * The palette is intentionally restrained: color encodes data, not decoration.
+ *
+ * Ink rule: --positive/--negative are the deep brand anchors (#0D4715/#980404) used for
+ * fills, borders, bars and soft washes; --positive-ink/--negative-ink are the readable
+ * text variants used when a number itself carries the sign. Never decorate with either.
  */
 :root {
-  /* Global brand colors */
-  --slayer-black: #000000;
-  --slayer-coffee: #100C08;
+  /* Core brand */
   --slayer-white: #F5F5F5;
+  --slayer-coffee: #100C08;
   --slayer-ghost: #F8F8FF;
+  --slayer-black: #000000;
 
-  /* Site red / green */
+  /* Semantic site colors */
   --slayer-red: #980404;
   --slayer-green: #0D4715;
 
-  /* Terminal surfaces */
+  /* Backgrounds */
   --bg-app: #000000;
   --bg-shell: #050505;
   --bg-panel: #080706;
   --bg-panel-soft: #0d0a08;
   --bg-panel-raised: #100c08;
 
-  /* Borders */
+  /* Border system */
   --border-subtle: rgba(248, 248, 255, 0.08);
   --border-mid: rgba(248, 248, 255, 0.14);
   --border-strong: rgba(248, 248, 255, 0.22);
 
-  /* Text */
-  --text-primary: #f8f8ff;
-  --text-secondary: rgba(248, 248, 255, 0.72);
-  --text-muted: rgba(248, 248, 255, 0.46);
-  --text-faint: rgba(248, 248, 255, 0.28);
+  /* Typography */
+  --text-primary: #F8F8FF;
+  --text-secondary: rgba(248, 248, 255, 0.74);
+  --text-muted: rgba(248, 248, 255, 0.50);
+  --text-faint: rgba(248, 248, 255, 0.29);
 
-  /* Data colors */
+  /* Data tones — deep anchors (fills/borders) + readable ink (text) */
   --negative: #980404;
+  --negative-ink: #d94646;
   --negative-soft: rgba(152, 4, 4, 0.18);
-  --positive: #0d4715;
+  --positive: #0D4715;
+  --positive-ink: #2f9d45;
   --positive-soft: rgba(13, 71, 21, 0.22);
 
-  --call: #792ca2;
-  --pin: #2c687b;
-  --gamma-hot: #c13383;
-  --warning: #c49a3a;
+  /* Market-specific accents */
+  --call: #792CA2;
+  --pin: #2C687B;
+  --warning: #C49A3A;
+  --info: #4A6FB8;
   --neutral: rgba(248, 248, 255, 0.55);
 
-  /* GEX heatmap palette */
+  /* Recommended GEX palette */
   --gex-1: #443199;
-  --gex-2: #792ca2;
-  --gex-3: #c13383;
-  --gex-4: #e05454;
+  --gex-2: #792CA2;
+  --gex-3: #C13383;
+  --gex-4: #E05454;
 
-  /* Layout */
+  /* Geometry */
   --radius-panel: 10px;
   --radius-control: 7px;
   --gap: 10px;
   --panel-pad: 14px;
+
+  /* Shadows kept subtle */
+  --shadow-panel: 0 0 0 1px rgba(248, 248, 255, 0.03), 0 14px 40px rgba(0, 0, 0, 0.25);
 }
 
 .slayer-terminal {
   min-height: 100vh;
   background:
     radial-gradient(circle at 20% 0%, rgba(248, 248, 255, 0.035), transparent 28%),
-    linear-gradient(180deg, #050505 0%, #000000 100%);
+    linear-gradient(180deg, var(--bg-shell) 0%, var(--bg-app) 100%);
   color: var(--text-primary);
 }
 
@@ -72,6 +81,7 @@
     var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-panel);
 }
 
 .slayer-panel-header {
@@ -83,28 +93,36 @@
   color: var(--text-primary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
 }
 
 .slayer-subtitle {
   color: var(--text-muted);
   font-size: 11px;
+  line-height: 1.35;
   margin-top: 3px;
 }
 
 .slayer-control {
-  background: #050505;
+  appearance: none;
+  background: var(--bg-shell);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   color: var(--text-secondary);
   font-size: 11px;
   padding: 7px 10px;
+  transition:
+    border-color 120ms ease,
+    color 120ms ease,
+    background-color 120ms ease;
 }
 
-.slayer-control:hover {
+.slayer-control:hover,
+.slayer-control:focus-visible {
   border-color: var(--border-mid);
   color: var(--text-primary);
+  outline: none;
 }
 
 .slayer-table {
@@ -118,25 +136,68 @@
   color: var(--text-muted);
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 9px 10px;
   border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
 }
 
 .slayer-table td {
   color: var(--text-secondary);
   padding: 9px 10px;
   border-bottom: 1px solid rgba(248, 248, 255, 0.045);
+  vertical-align: middle;
 }
 
 .slayer-table tr:hover td {
   background: rgba(248, 248, 255, 0.025);
 }
 
-.slayer-num { font-variant-numeric: tabular-nums; }
+.slayer-num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.slayer-kpi-up { color: var(--positive-ink); }
+.slayer-kpi-down { color: var(--negative-ink); }
+.slayer-call { color: var(--call); }
+.slayer-pin { color: var(--pin); }
+.slayer-warning { color: var(--warning); }
+
+.slayer-grid-lines {
+  background-image:
+    linear-gradient(rgba(248, 248, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(248, 248, 255, 0.05) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.slayer-level-tag {
+  border: 1px solid var(--border-subtle);
+  background: rgba(0, 0, 0, 0.88);
+  border-radius: 7px;
+  padding: 5px 8px;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.slayer-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(248, 248, 255, 0.15) transparent;
+}
+.slayer-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+.slayer-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(248, 248, 255, 0.12);
+  border-radius: 999px;
+}
+.slayer-scrollbar::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Legacy aliases (existing pages) ─────────────────────────────────────────
+   Kept for backward compatibility during the page-by-page migration. New code
+   should prefer the .slayer-kpi-* / token classes above. */
 .slayer-red { color: var(--slayer-red); }
 .slayer-green { color: var(--slayer-green); }
-.slayer-pos { color: #2f9d45; }
-.slayer-neg { color: #d94646; }
+.slayer-pos { color: var(--positive-ink); }
+.slayer-neg { color: var(--negative-ink); }
 .slayer-muted { color: var(--text-muted); }

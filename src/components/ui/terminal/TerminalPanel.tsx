@@ -1,33 +1,61 @@
 import React from 'react';
-import clsx from 'clsx';
+import { cx } from '../../../lib/cx';
 
 /**
- * TerminalPanel — the canonical Slayer Terminal panel: hairline border, brand
- * surface gradient, optional titled header with an actions slot. Wrap existing
- * cards with this so every panel reads as one system.
+ * TerminalPanel — the standard panel frame: hairline border, brand surface
+ * gradient, optional titled header with an actions slot, optional footer.
+ * `bodyClassName` is kept as a compat alias of `contentClassName`.
  */
-type Props = {
-  title?: string;
-  subtitle?: string;
+type TerminalPanelProps = {
+  title?: React.ReactNode;
+  subtitle?: React.ReactNode;
   actions?: React.ReactNode;
+  footer?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  contentClassName?: string;
+  /** @deprecated compat alias for contentClassName */
   bodyClassName?: string;
+  padded?: boolean;
 };
 
-export function TerminalPanel({ title, subtitle, actions, children, className, bodyClassName }: Props) {
+export function TerminalPanel({
+  title,
+  subtitle,
+  actions,
+  footer,
+  children,
+  className,
+  contentClassName,
+  bodyClassName,
+  padded = true,
+}: TerminalPanelProps) {
+  const hasHeader = title || subtitle || actions;
   return (
-    <section className={clsx('slayer-panel overflow-hidden', className)}>
-      {(title || subtitle || actions) && (
+    <section className={cx('slayer-panel flex min-h-0 flex-col', className)}>
+      {hasHeader ? (
         <header className="slayer-panel-header flex items-start justify-between gap-3">
           <div className="min-w-0">
-            {title && <h2 className="slayer-title truncate">{title}</h2>}
-            {subtitle && <p className="slayer-subtitle">{subtitle}</p>}
+            {title ? <div className="slayer-title">{title}</div> : null}
+            {subtitle ? <div className="slayer-subtitle">{subtitle}</div> : null}
           </div>
-          {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
+          {actions ? <div className="shrink-0">{actions}</div> : null}
         </header>
-      )}
-      <div className={clsx('p-[var(--panel-pad)]', bodyClassName)}>{children}</div>
+      ) : null}
+      <div
+        className={cx(
+          'min-h-0 flex-1',
+          padded ? 'p-[var(--panel-pad)]' : '',
+          contentClassName ?? bodyClassName,
+        )}
+      >
+        {children}
+      </div>
+      {footer ? (
+        <footer className="border-t border-[var(--border-subtle)] px-[var(--panel-pad)] py-3">
+          {footer}
+        </footer>
+      ) : null}
     </section>
   );
 }
