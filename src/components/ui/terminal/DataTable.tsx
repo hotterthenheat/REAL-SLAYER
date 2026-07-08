@@ -14,11 +14,13 @@ export type Column<T> = {
   className?: string;
 };
 
-export function DataTable<T>({ columns, rows, rowKey, rowClassName, empty, className }: {
+export function DataTable<T>({ columns, rows, rowKey, rowClassName, onRowClick, empty, className }: {
   columns: Column<T>[];
   rows: T[];
   rowKey: (row: T, index: number) => string;
   rowClassName?: (row: T, index: number) => string | undefined;
+  /** Optional row-selection handler. When set, rows become clickable (cursor + a11y role). */
+  onRowClick?: (row: T, index: number) => void;
   empty?: React.ReactNode;
   className?: string;
 }) {
@@ -39,7 +41,14 @@ export function DataTable<T>({ columns, rows, rowKey, rowClassName, empty, class
             <tr><td colSpan={columns.length} className="text-center text-[var(--text-muted)] py-8">{empty ?? 'No data'}</td></tr>
           ) : (
             rows.map((row, i) => (
-              <tr key={rowKey(row, i)} className={rowClassName?.(row, i)}>
+              <tr
+                key={rowKey(row, i)}
+                className={clsx(rowClassName?.(row, i), onRowClick && 'cursor-pointer')}
+                onClick={onRowClick ? () => onRowClick(row, i) : undefined}
+                role={onRowClick ? 'button' : undefined}
+                tabIndex={onRowClick ? 0 : undefined}
+                onKeyDown={onRowClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRowClick(row, i); } } : undefined}
+              >
                 {columns.map((c) => (
                   <td key={c.key} className={clsx(alignCls(c.align), c.className)}>{c.render(row, i)}</td>
                 ))}

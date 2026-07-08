@@ -1,27 +1,46 @@
-import React, { useMemo, useState, useEffect, useRef } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  ArrowRight,
-  Search,
-  ShieldAlert,
-  Flame,
-  Database,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
   Target,
+  Search,
+  RefreshCw,
   Info,
-  X
+  X,
+  Save,
+  Plus,
+  Star,
+  TrendingUp,
+  TrendingDown,
+  ShieldCheck,
+  AlertTriangle,
+  Droplet,
+  Crosshair,
+  CheckCircle2,
+  ArrowUpRight,
+  Activity,
+  Layers,
+  Clock,
+  Signal,
 } from 'lucide-react';
 import { AssetInfo } from '../types';
 import { ASSET_LIST } from '../data';
 import { useContractStore } from '../lib/store';
 import { formatTime } from '../lib/timeUtils';
 import { fmtNum } from '../lib/format';
-import { AssetSparkline } from './AssetSparkline';
 import { DataStateBadge } from './ui/DataStateBadge';
-import { SearchInput } from './ui/SearchInput';
-import { deriveSetup, SetupRow, SetupInspector, type ScannerContract } from './scanner/SetupQueue';
+import { deriveSetup, type DerivedSetup, type ScannerContract } from './scanner/SetupQueue';
+import { TerminalPanel } from './ui/terminal/TerminalPanel';
+import { DataTable, type Column } from './ui/terminal/DataTable';
+import { StatusBadge, type BadgeTone } from './ui/terminal/StatusBadge';
+import { toast } from './ui/toast';
+import {
+  useTrackingStore,
+  setupKey,
+  isTerminal,
+  STATUS_LABEL,
+  type TrackedSetup,
+} from '../lib/trackedSetups';
+import { loadWatchlist, saveWatchlist, toggleWatch } from '../lib/watchlist';
 
 interface DiscoveryViewProps {
   systemScore: any;
@@ -726,44 +745,177 @@ const INITIAL_FEED_LOGS = [
   { id: nextFeedLogId(), timestamp: '01:28:40 PM', ticker: 'QQQ', strike: 455, type: 'C', side: 'Sweep', size: '2,400 cons', premium: '$348,000', tag: 'BULLISH', action: 'ABOVE ASK' }
 ];
 
+// ── Redesign helpers ─────────────────────────────────────────────────────────
+// Short human strategy label per scanner shelf (the SETUP column / inspector idea).
+const SETUP_LABEL: Record<string, string> = {
+  conviction: 'Conviction',
+  improved: 'Momentum',
+  mispriced: 'Value Gap',
+  invalidation: 'Rebound',
+  whale: 'Block Sweep',
+};
+// Expiry horizon bucket derived from each shelf's stated trade horizon (SHELF_EXPLANATIONS).
+// Not fabricated — it maps the existing horizon metadata onto a 0DTE/1D/3D bucket so the
+// Expiry filter is a real, functional filter over the ranked setups.
+const SHELF_EXPIRY: Record<string, '0DTE' | '1D' | '3D'> = {
+  improved: '0DTE',
+  invalidation: '0DTE',
+  mispriced: '1D',
+  whale: '1D',
+  conviction: '3D',
+};
+const STRATEGY_OPTS: { value: string; label: string }[] = [
+  { value: 'all', label: 'All strategies' },
+  { value: 'conviction', label: 'Conviction' },
+  { value: 'improved', label: 'Momentum' },
+  { value: 'mispriced', label: 'Value gap' },
+  { value: 'invalidation', label: 'Rebound / risk' },
+  { value: 'whale', label: 'Block sweep' },
+];
+const UNIVERSE_OPTS = ['All', 'SPX', 'NDX', 'QQQ', 'SPY', 'RUT'];
+const EXPIRY_OPTS = ['All', '0DTE', '1D', '3D'];
+const CONF_OPTS = [
+  { value: '0', label: 'Any' },
+  { value: '80', label: '80%+' },
+  { value: '85', label: '85%+' },
+  { value: '90', label: '90%+' },
+];
+const MOVE_OPTS = [
+  { value: '0', label: 'Any' },
+  { value: '20', label: '±20%+' },
+  { value: '30', label: '±30%+' },
+  { value: '40', label: '±40%+' },
+  { value: '50', label: '±50%+' },
+];
+
+/** Working-stop assumption (disciplined −50% premium stop) used to express R/R honestly. */
+const WORKING_STOP_PCT = 50;
+/** Reward-to-risk from the setup's own projected target vs the working stop. Null when non-positive. */
+function computeRR(s: DerivedSetup): number | null {
+  const price = s.premium;
+  const t1 = s.c.t1;
+  const rewardPct = typeof t1 === 'number' && t1 > 0 && price > 0
+    ? ((t1 - price) / price) * 100
+    : s.expectedMovePct;
+  if (!isFinite(rewardPct) || rewardPct <= 0) return null;
+  return rewardPct / WORKING_STOP_PCT;
+}
+
+/** Status chip from the setup score (ACTIVE ≥90 / WATCH ≥80 / MONITOR below). */
+function statusMeta(health: number): { label: string; tone: BadgeTone } {
+  if (health >= 90) return { label: 'Active', tone: 'positive' };
+  if (health >= 80) return { label: 'Watch', tone: 'warning' };
+  return { label: 'Monitor', tone: 'neutral' };
+}
+
+const liqTone = (l: DerivedSetup['liquidity']) =>
+  l === 'Tight' ? 'text-[#2f9d45]' : l === 'Wide' ? 'text-[#d94646]' : 'text-[var(--warning)]';
+
+/** A compact confidence/probability bar with a trailing % value. */
+function MeterBar({ pct, tone = 'var(--pin)', showValue = true }: { pct: number; tone?: string; showValue?: boolean }) {
+  const w = Math.max(0, Math.min(100, pct));
+  return (
+    <span className="inline-flex items-center gap-2 w-full">
+      <span className="relative h-1.5 flex-1 min-w-[36px] rounded-full bg-[var(--border-subtle)] overflow-hidden">
+        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${w}%`, background: tone }} />
+      </span>
+      {showValue && <span className="slayer-num text-[11px] font-semibold tabular-nums" style={{ color: tone }}>{w.toFixed(0)}%</span>}
+    </span>
+  );
+}
+
+/** A labeled meter row for the inspector (Probability / Confidence). */
+function LabeledMeter({ label, pct, tone }: { label: string; pct: number; tone: string }) {
+  return (
+    <div>
+      <div className="flex items-center justify-between text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+        <span>{label}</span>
+        <span className="slayer-num font-semibold" style={{ color: tone }}>{Math.round(pct)}%</span>
+      </div>
+      <div className="mt-1"><MeterBar pct={pct} tone={tone} showValue={false} /></div>
+    </div>
+  );
+}
+
+/** A native SVG donut built from real counts — no chart lib, brand-toned. */
+function Donut({ segments, size = 116, thickness = 15 }: {
+  segments: { label: string; value: number; color: string }[];
+  size?: number;
+  thickness?: number;
+}) {
+  const total = segments.reduce((a, s) => a + s.value, 0);
+  const r = (size - thickness) / 2;
+  const C = 2 * Math.PI * r;
+  let acc = 0;
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0" role="img" aria-label="Setup bias distribution">
+      <g transform={`rotate(-90 ${size / 2} ${size / 2})`}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--border-subtle)" strokeWidth={thickness} />
+        {total > 0 && segments.map((s) => {
+          const len = (s.value / total) * C;
+          const el = (
+            <circle key={s.label} cx={size / 2} cy={size / 2} r={r} fill="none"
+              stroke={s.color} strokeWidth={thickness}
+              strokeDasharray={`${len} ${C - len}`} strokeDashoffset={-acc} />
+          );
+          acc += len;
+          return el;
+        })}
+      </g>
+      <text x="50%" y="46%" textAnchor="middle" dominantBaseline="central"
+        className="slayer-num" style={{ fill: 'var(--text-primary)', fontSize: 22, fontWeight: 700 }}>{total}</text>
+      <text x="50%" y="62%" textAnchor="middle" dominantBaseline="central"
+        style={{ fill: 'var(--text-muted)', fontSize: 8, letterSpacing: '0.14em' }}>SETUPS</text>
+    </svg>
+  );
+}
+
+/** Styled native <select> on the shared .slayer-control chrome. */
+function FilterSelect({ label, value, onChange, options }: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+}) {
+  return (
+    <label className="flex flex-col gap-1 min-w-0">
+      <span className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</span>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="slayer-control slayer-num cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
+      >
+        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function DiscoveryView({
   systemScore,
   discovery,
   onSelectContract
 }: DiscoveryViewProps) {
-  const themeMode = useContractStore(s => s.themeMode);
-  const isLight = themeMode === 'light';
-
   const [contracts, setContracts] = useState(INITIAL_CONTRACTS);
-  const [expandedContracts, setExpandedContracts] = useState<Record<string, boolean>>({});
-  const [activeShelf, setActiveShelf] = useState<'conviction' | 'improved' | 'mispriced' | 'invalidation' | 'whale' | 'all'>('conviction');
+  const [activeShelf, setActiveShelf] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsSearchFocused(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredSearchAssets = ASSET_LIST.filter(a => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return a.ticker.toLowerCase().includes(q) || a.name.toLowerCase().includes(q);
-  });
-
-  const filteredSearchContracts = contracts.filter(c => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return c.ticker.toLowerCase().includes(q) || String(c.strike).includes(q) || (c.ticker + ' ' + c.strike).toLowerCase().includes(q);
-  });
-
+  // Redesign filter state — each maps to a real field on the ranked setups.
+  const [universe, setUniverse] = useState<string>('All');
+  const [expiryFilter, setExpiryFilter] = useState<string>('All');
+  const [minConfidence, setMinConfidence] = useState<string>('0');
+  const [minExpMove, setMinExpMove] = useState<string>('0');
   const [optionTypeFilter, setOptionTypeFilter] = useState<'all' | 'calls' | 'puts'>('all');
+
+  // Watchlist / Queue rail
+  const [watchQueueTab, setWatchQueueTab] = useState<'watchlist' | 'queue'>('queue');
+  const [watchlist, setWatchlist] = useState<string[]>(() => loadWatchlist());
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  // Real tracked-setups store (the queue + track/queue handlers).
+  const trackingSetups = useTrackingStore(s => s.setups);
+  const track = useTrackingStore(s => s.track);
+  const cancelTrack = useTrackingStore(s => s.cancel);
   const [feedLogs, setFeedLogs] = useState(INITIAL_FEED_LOGS);
   // True when the sample discovery SSE stream drops; surfaced as a subtle
   // "reconnecting" chip on the tape (the browser EventSource auto-reconnects).
@@ -908,6 +1060,7 @@ export function DiscoveryView({
   // layout isn't perfectly static. This is NOT a live market feed — it runs purely
   // on the SAMPLE seed rows and is presented under the view's "SAMPLE DATA" label.
   useEffect(() => {
+    if (!autoRefresh) return;
     const flashTimers: ReturnType<typeof setTimeout>[] = [];
     const tickInterval = setInterval(() => {
       // Compute purely inside the updater; collect the flash side-effect to run AFTER.
@@ -947,7 +1100,7 @@ export function DiscoveryView({
     }, 2800);
 
     return () => { clearInterval(tickInterval); flashTimers.forEach(clearTimeout); };
-  }, []);
+  }, [autoRefresh]);
 
   // Manual scan refresh: re-ticks local contract premiums and appends a fresh
   // tape entry. Server-streamed metrics (GEX / accuracy / scan-rate) are left
@@ -1001,20 +1154,30 @@ export function DiscoveryView({
     }, 1000);
   };
 
-  // Combined filtering of our expanded database
+  // Combined filtering — every predicate maps to a real field on the sample setup rows.
+  const minConf = Number(minConfidence) || 0;
+  const minMove = Number(minExpMove) || 0;
   const filteredContracts = useMemo(() => {
     return contracts.filter(c => {
-      // 1. Shelf check
-      if (activeShelf !== 'all' && c.shelf !== activeShelf) {
-        return false;
-      }
-      // 2. Call/Put check
+      // Strategy (shelf)
+      if (activeShelf !== 'all' && c.shelf !== activeShelf) return false;
+      // Universe (ticker)
+      if (universe !== 'All' && c.ticker !== universe) return false;
+      // Bias (call / put)
       if (optionTypeFilter === 'calls' && !c.isCall) return false;
       if (optionTypeFilter === 'puts' && c.isCall) return false;
-      
-      // 3. Search query check (search strike or ticker)
+      // Expiry bucket (derived from the shelf's stated horizon)
+      if (expiryFilter !== 'All' && SHELF_EXPIRY[c.shelf] !== expiryFilter) return false;
+      // Min confidence (health score)
+      if (minConf > 0 && c.health < minConf) return false;
+      // Min expected move (magnitude of the expectedMove field)
+      if (minMove > 0) {
+        const mv = Math.abs(parseFloat(String(c.expectedMove).replace(/[^0-9.\-]/g, ''))) || 0;
+        if (mv < minMove) return false;
+      }
+      // Symbol / strike search
       if (searchQuery.trim().length > 0) {
-        const query = searchQuery.toUpperCase();
+        const query = searchQuery.toUpperCase().trim();
         const matchesTicker = c.ticker.includes(query);
         const matchesStrike = String(c.strike).includes(query);
         const matchesType = (query === 'C' || query === 'CALL') ? c.isCall : (query === 'P' || query === 'PUT') ? !c.isCall : false;
@@ -1022,91 +1185,12 @@ export function DiscoveryView({
       }
       return true;
     });
-  }, [contracts, activeShelf, optionTypeFilter, searchQuery]);
+  }, [contracts, activeShelf, universe, optionTypeFilter, expiryFilter, minConf, minMove, searchQuery]);
 
-  // GROUP TICKER SEPARATION SYSTEM (Separate per ticker SPX, NDX, QQQ, SPY)
-  // Inside each ticker group, sort contracts from STRONGEST (highest rating) to WEAKEST (lowest rating)
-  const groupedByTickerAndSorted = useMemo(() => {
-    const groups: Record<string, typeof filteredContracts> = {};
-    filteredContracts.forEach(c => {
-      if (!groups[c.ticker]) {
-        groups[c.ticker] = [];
-      }
-      groups[c.ticker].push(c);
-    });
+  const currentManualText = SHELF_EXPLANATIONS[activeShelf as keyof typeof SHELF_EXPLANATIONS] ?? SHELF_EXPLANATIONS.all;
+  const activeTicker = useContractStore(s => s.selectedAsset.ticker);
 
-    // Sort contracts in each ticker group descending by health score (rating)
-    Object.keys(groups).forEach(tk => {
-      groups[tk].sort((a, b) => b.health - a.health);
-    });
-
-    return groups;
-  }, [filteredContracts]);
-
-  // Sort tickers: prioritize major indices SPX, NDX, QQQ, SPY, RUT
-  const sortedTickers = useMemo(() => {
-    return Object.keys(groupedByTickerAndSorted).sort((a, b) => {
-      const priority: Record<string, number> = { 'SPX': 1, 'NDX': 2, 'QQQ': 3, 'SPY': 4, 'RUT': 5 };
-      return (priority[a] || 99) - (priority[b] || 99);
-    });
-  }, [groupedByTickerAndSorted]);
-
-  // Quick statistics for display
-  const metricsOverview = useMemo(() => {
-    const totalCount = contracts.length;
-    const enterCount = contracts.filter(c => c.health >= 88).length;
-    const extremeEV = contracts.filter(c => c.shelf === 'whale' || c.shelf === 'conviction').length;
-    return {
-      totalCount,
-      enterCount,
-      extremeEV
-    };
-  }, [contracts]);
-
-  // Largest trades derived from the live tape (feedLogs) rather than hardcoded.
-  // Premiums arrive as formatted strings ("$504,000") so we parse to compare.
-  const topFlows = useMemo(() => {
-    const parsePremium = (p: string) => Number(String(p).replace(/[^0-9.]/g, '')) || 0;
-    let bullish: typeof feedLogs[number] | null = null;
-    let hedge: typeof feedLogs[number] | null = null;
-    for (const log of feedLogs) {
-      if (log.tag === 'BULLISH') {
-        if (!bullish || parsePremium(log.premium) > parsePremium(bullish.premium)) bullish = log;
-      } else {
-        if (!hedge || parsePremium(log.premium) > parsePremium(hedge.premium)) hedge = log;
-      }
-    }
-    const largestOverall = feedLogs.reduce<typeof feedLogs[number] | null>((max, log) =>
-      !max || parsePremium(log.premium) > parsePremium(max.premium) ? log : max, null);
-    return { bullish, hedge, largestOverall };
-  }, [feedLogs]);
-
-  // Match corresponding AssetInfo object to trigger selection
-  const handleSelectWithMatch = (ticker: string, strike: number, isCall: boolean) => {
-    const asset = ASSET_LIST.find(a => a.ticker === ticker);
-    if (asset) {
-      onSelectContract(asset, strike, isCall);
-    }
-  };
-
-  const currentManualText = SHELF_EXPLANATIONS[activeShelf];
-
-  // Theme classes mapping — driven by design tokens so cards/wells render on the
-  // real surface/border in BOTH light and dark (was hardcoded bg-black/border-black
-  // in both modes, plus an invalid zinc-550).
-  const c_bgMain = "bg-[var(--surface)]";
-  const c_textColor = "text-[var(--text-primary)]";
-  const c_cardBg = "bg-[var(--surface)] border-[var(--border)] shadow-sm text-[var(--text-primary)]";
-  const c_cardBorder = "border-[var(--border)]";
-  const c_textWhite = "text-[var(--text-primary)] font-black";
-  const c_textMuted = "text-[var(--text-tertiary)] font-medium";
-  const c_pillBg = "bg-[var(--surface-2)] border-[var(--border)]";
-  const c_innerCardBg = "bg-[var(--surface-2)] border-[var(--border)]";
-  const c_innerWellBg = "bg-[var(--surface)] border-[var(--border)]";
-  const c_glassBg = "bg-[var(--surface)] border border-[var(--border)] shadow-md text-[var(--text-primary)]";
-
-  // Ranked queue: the filtered setups flattened and sorted strongest-first, each enriched with
-  // the row/inspector display fields. This is the core of the redesigned scanner.
+  // Ranked queue: filtered setups sorted strongest-first, enriched with display fields.
   const rankedSetups = useMemo(
     () => [...filteredContracts]
       .sort((a, b) => b.health - a.health)
@@ -1117,246 +1201,538 @@ export function DiscoveryView({
     () => rankedSetups.find(s => s.c.id === selectedSetupId) ?? rankedSetups[0] ?? null,
     [rankedSetups, selectedSetupId],
   );
-  // "Review Setup" routes the contract into the SkyVision detail page (the confirm/prove/track flow).
+  // "Trade This Setup" / "Review" routes the contract into the SkyVision detail page.
   const reviewSetup = (s: { c: ScannerContract; side: 'C' | 'P' }) => {
     const asset = ASSET_LIST.find(a => a.ticker === s.c.ticker);
     if (asset) onSelectContract(asset, s.c.strike, s.side === 'C');
   };
 
-  // Symbol group for the command header — the index/ETF universe the scanner covers.
-  const SYMBOL_GROUP = ['SPX', 'NDX', 'QQQ', 'SPY', 'RUT'];
-  const activeTicker = useContractStore.getState().selectedAsset.ticker;
+  // ── MARKET REGIME (derived from the real ranked setups + tape) ───────────────
+  const regime = useMemo(() => {
+    const n = rankedSetups.length;
+    const bullish = rankedSetups.filter(s => s.direction === 'BULLISH').length;
+    const bearish = rankedSetups.filter(s => s.direction === 'BEARISH').length;
+    const callCount = rankedSetups.filter(s => s.side === 'C').length;
+    const putCount = rankedSetups.filter(s => s.side === 'P').length;
+    const avgMove = n ? rankedSetups.reduce((a, s) => a + s.expectedMovePct, 0) / n : 0;
+    const liq = { Tight: 0, Fair: 0, Wide: 0 };
+    rankedSetups.forEach(s => { liq[s.liquidity] += 1; });
+    const liqOrder: DerivedSetup['liquidity'][] = ['Tight', 'Fair', 'Wide'];
+    const majorityLiq = liqOrder.reduce((a, b) => (liq[b] > liq[a] ? b : a), 'Tight');
+    // Tape bias from the sample flow tape (parse formatted premiums).
+    const parseP = (p: string) => Number(String(p).replace(/[^0-9.]/g, '')) || 0;
+    let bull$ = 0, hedge$ = 0;
+    for (const l of feedLogs) { if (l.tag === 'BULLISH') bull$ += parseP(l.premium); else hedge$ += parseP(l.premium); }
+    const tape = bull$ > hedge$ * 1.15 ? { label: 'Net Buying', tone: 'positive' as BadgeTone }
+      : hedge$ > bull$ * 1.15 ? { label: 'Hedging', tone: 'negative' as BadgeTone }
+        : { label: 'Balanced', tone: 'neutral' as BadgeTone };
+    const trend = bullish > bearish ? { label: 'Bullish', tone: 'positive' as BadgeTone }
+      : bearish > bullish ? { label: 'Bearish', tone: 'negative' as BadgeTone }
+        : { label: 'Mixed', tone: 'neutral' as BadgeTone };
+    const vol = avgMove >= 40 ? { label: 'Elevated', tone: 'warning' as BadgeTone }
+      : avgMove >= 25 ? { label: 'Active', tone: 'neutral' as BadgeTone }
+        : { label: 'Compressed', tone: 'positive' as BadgeTone };
+    const liqState: { label: string; tone: BadgeTone } =
+      majorityLiq === 'Tight' ? { label: 'Tight', tone: 'positive' }
+        : majorityLiq === 'Wide' ? { label: 'Wide', tone: 'negative' }
+          : { label: 'Fair', tone: 'warning' };
+    const pcRatio = callCount > 0 ? putCount / callCount : 0;
+    const insight = n === 0
+      ? 'No setups match the current filters — widen the universe, strategy, or thresholds.'
+      : `${bullish} of ${n} ranked setups lean bullish · tape reads ${tape.label.toLowerCase()} · average expected move ±${avgMove.toFixed(0)}% · ${majorityLiq.toLowerCase()} liquidity dominates.`;
+    return { n, bullish, bearish, callCount, putCount, avgMove, trend, tape, vol, liqState, pcRatio, insight };
+  }, [rankedSetups, feedLogs]);
+
+  // ── SETUP DISTRIBUTION (bias donut + by-strategy bars) ───────────────────────
+  const distribution = useMemo(() => {
+    const bull = rankedSetups.filter(s => s.direction === 'BULLISH' && s.c.shelf !== 'mispriced').length;
+    const bear = rankedSetups.filter(s => s.direction === 'BEARISH' && s.c.shelf !== 'mispriced').length;
+    const neutral = rankedSetups.filter(s => s.c.shelf === 'mispriced').length;
+    const segments = [
+      { label: 'Bullish', value: bull, color: '#2f9d45' },
+      { label: 'Bearish', value: bear, color: '#d94646' },
+      { label: 'Neutral', value: neutral, color: 'var(--pin)' },
+    ];
+    const byStrategy: { label: string; value: number }[] = [];
+    for (const shelf of ['conviction', 'improved', 'mispriced', 'invalidation', 'whale']) {
+      const count = rankedSetups.filter(s => s.c.shelf === shelf).length;
+      if (count > 0) byStrategy.push({ label: SETUP_LABEL[shelf] ?? shelf, value: count });
+    }
+    byStrategy.sort((a, b) => b.value - a.value);
+    const maxStrategy = byStrategy.reduce((m, s) => Math.max(m, s.value), 0);
+    return { segments, byStrategy, maxStrategy };
+  }, [rankedSetups]);
+
+  // ── WATCHLIST / QUEUE (real watchlist tickers + real tracked setups) ─────────
+  const queueRows = useMemo(
+    () => trackingSetups.filter(s => !isTerminal(s.status)),
+    [trackingSetups],
+  );
+  const watchlistRows = useMemo(
+    () => rankedSetups.filter(s => watchlist.includes(s.c.ticker)),
+    [rankedSetups, watchlist],
+  );
+
+  // Is the selected setup already in the queue (a live tracked record)?
+  const selectedTracked = useMemo(() => {
+    if (!selectedSetup) return false;
+    const key = setupKey({ ticker: selectedSetup.c.ticker, strike: selectedSetup.c.strike, optionType: selectedSetup.side, kind: 'contract' });
+    return trackingSetups.some(t => !isTerminal(t.status) && setupKey(t) === key);
+  }, [selectedSetup, trackingSetups]);
+
+  // ── Actions ──────────────────────────────────────────────────────────────────
+  const addToQueue = (s: DerivedSetup) => {
+    const asset = ASSET_LIST.find(a => a.ticker === s.c.ticker);
+    const spot = asset?.defaultPrice ?? s.c.strike;
+    const res = track({
+      source: 'skyvision', kind: 'contract', dataMode: 'sample',
+      ticker: s.c.ticker, contract: s.label, direction: s.direction, strike: s.c.strike,
+      expiry: SHELF_EXPIRY[s.c.shelf] ?? '0DTE', optionType: s.side, setupScore: s.c.health, confidence: s.c.health,
+      premiumAtTrack: s.premium, spotAtTrack: spot, fairValue: s.fairValue,
+      expectedMovePct: s.expectedMovePct, invalidationLevel: s.invalidation,
+      dealerReason: s.dealerSupport, volatilityReason: `Expected move ±${s.expectedMovePct.toFixed(0)}%`,
+      liquidityGrade: s.liquidity, entryDelta: s.c.delta, entryThetaPerDay: s.c.theta, dteDays: 0,
+    }, Date.now());
+    toast[res.duplicate ? 'info' : 'success'](res.duplicate ? 'Already in queue' : 'Added to queue', {
+      description: res.duplicate ? 'It’s in Trade History (Sample track).' : `${s.label} · Sample track · in Trade History`,
+    });
+    setWatchQueueTab('queue');
+  };
+
+  const toggleStar = (ticker: string) => {
+    setWatchlist(prev => { const next = toggleWatch(prev, ticker); saveWatchlist(next); return next; });
+  };
+
+  const saveView = () => {
+    try {
+      localStorage.setItem('slayer.skyvision.view.v1', JSON.stringify({
+        universe, activeShelf, expiryFilter, minConfidence, minExpMove, optionTypeFilter, searchQuery,
+      }));
+      toast.success('View saved', { description: 'Your scanner filters are stored on this device.' });
+    } catch {
+      toast.error('Could not save view', { description: 'Local storage is unavailable in this context.' });
+    }
+  };
+
+  const clearFilters = () => {
+    setActiveShelf('all'); setUniverse('All'); setExpiryFilter('All');
+    setMinConfidence('0'); setMinExpMove('0'); setOptionTypeFilter('all'); setSearchQuery('');
+  };
 
   return (
-    <div className={`w-full flex flex-col font-mono select-none antialiased space-y-6 max-w-6xl mx-auto pt-2 pb-12 ${c_textColor}`}>
-      
-      {/* 1. COMMAND HEADER — title · symbol group · data state · last updated · refresh */}
-      <div className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-3 sm:px-4 rounded-xl border ${c_cardBg}`}>
+    <div className="w-full flex flex-col gap-4 font-mono text-[var(--text-secondary)] antialiased pb-10">
+
+      {/* HEADER — title · context · data-state · method · refresh */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Target className="w-4 h-4 text-[var(--success)] shrink-0" />
+          <Target className="w-4 h-4 text-[#2f9d45] shrink-0" />
           <div className="min-w-0">
-            <h1 className={`text-xs font-black tracking-widest uppercase ${c_textWhite} truncate`}>
-              SkyVision <span className="text-[var(--text-tertiary)]">· Options Scanner</span>
-            </h1>
-            <p className="text-[9px] text-[var(--text-tertiary)] mt-0.5 uppercase tracking-widest truncate">
+            <h1 className="slayer-title truncate">SkyVision <span className="text-[var(--text-muted)]">· Options Scanner</span></h1>
+            <p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
               {activeTicker} · 0DTE / 1D / 3D · Updated {formatTime(new Date(metricsAsOf))}
             </p>
           </div>
         </div>
-
         <div className="flex flex-wrap items-center gap-2">
-          {/* symbol group */}
-          <div className="flex items-center p-0.5 rounded-md border bg-[var(--surface-2)] border-[var(--border)]">
-            {SYMBOL_GROUP.map(sym => {
-              const asset = ASSET_LIST.find(a => a.ticker === sym);
-              const on = activeTicker === sym;
-              return (
-                <button
-                  key={sym}
-                  onClick={() => asset && useContractStore.getState().setSelectedAsset(asset)}
-                  aria-label={`Focus ${sym}`}
-                  aria-pressed={on}
-                  className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
-                    on ? 'bg-[var(--surface-3)] text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
-                  }`}
-                >
-                  {sym}
-                </button>
-              );
-            })}
-          </div>
           <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
-          {/* Scanner status — folded into the header so it no longer takes a full panel row. */}
-          <span className="hidden sm:inline-flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)]" title={lastScanMessage}>
-            <span className={`w-1.5 h-1.5 rounded-full ${isMockScanning ? 'bg-[var(--warning)] animate-pulse' : 'bg-[var(--success)]'}`} aria-hidden="true" />
-            {isMockScanning ? 'Scanning' : 'Ready'}
-          </span>
-          {/* Method — education on demand, out of the queue's vertical space. */}
+          <StatusBadge tone={isMockScanning ? 'warning' : 'live'} dot>{isMockScanning ? 'Scanning' : 'Live'}</StatusBadge>
           <button
             onClick={() => setIsStrategyExpanded(true)}
             aria-label="How this scan works"
-            className="inline-flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2 py-1.5 text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+            className="slayer-control inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.12em] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]"
           >
-            <Info className="w-3 h-3" />Method
+            <Info className="w-3.5 h-3.5" />Method
           </button>
           <button
             onClick={triggerManualScannerRefresh}
             disabled={isMockScanning}
             aria-label="Refresh scan"
-            className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
-              isMockScanning ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)]' : 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)] hover:bg-[var(--surface-3)]'
-            }`}
+            className="slayer-control inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.12em] text-[var(--text-primary)] hover:border-[var(--border-strong)] disabled:opacity-60"
           >
-            <RefreshCw className={`w-3 h-3 ${isMockScanning ? 'animate-spin text-[var(--success)]' : ''}`} />
-            {isMockScanning ? 'Scanning…' : 'Refresh scan'}
+            <RefreshCw className={`w-3.5 h-3.5 ${isMockScanning ? 'animate-spin text-[#2f9d45]' : ''}`} />
+            {isMockScanning ? 'Scanning…' : 'Refresh'}
           </button>
         </div>
       </div>
 
-      {/* 2. CONTROLS BAR (Segmented Selection, Filters, Search) */}
-      <div className={`grid grid-cols-1 md:grid-cols-12 gap-3 items-center rounded-lg border ${c_glassBg}`}>
-        
-        {/* Navigation Categories Tabs */}
-        <div className="md:col-span-8 flex items-center p-0.5 border rounded-md overflow-x-auto scrollbar-none gap-0.5 bg-[var(--surface-2)] border-[var(--border)]">
-          {[
-            { id: 'conviction', label: 'Top Setups', count: contracts.filter(c => c.shelf === 'conviction').length },
-            { id: 'improved', label: 'Quick Scalp', count: contracts.filter(c => c.shelf === 'improved').length },
-            { id: 'mispriced', label: 'DISCOUNTED', count: contracts.filter(c => c.shelf === 'mispriced').length },
-            { id: 'invalidation', label: 'REBOUNDS', count: contracts.filter(c => c.shelf === 'invalidation').length },
-            { id: 'whale', label: 'WHALE SWEEPS', count: contracts.filter(c => c.shelf === 'whale').length },
-            { id: 'all', label: 'ALL', count: contracts.length }
-          ].map(shelf => (
-            <button
-              key={shelf.id}
-              onClick={() => setActiveShelf(shelf.id as any)}
-              className={`px-3 py-1.5 text-[9.5px] uppercase font-black tracking-wider rounded transition-colors cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-                activeShelf === shelf.id
-                  ? 'bg-[var(--surface-3)] text-[var(--text-primary)]'
-                  : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
-              }`}
-            >
-              <span>{shelf.label}</span>
-              <span className={`text-[8px] font-bold px-1 py-0.5 rounded ${activeShelf === shelf.id ? 'bg-[var(--surface)] text-[var(--text-secondary)]' : 'bg-[var(--surface)] text-[var(--text-tertiary)]'}`}>
-                {shelf.count}
-              </span>
-            </button>
-          ))}
+      {/* TOP FILTER BAR */}
+      <section className="slayer-panel p-3">
+        <div className="flex flex-wrap items-end gap-2.5">
+          <FilterSelect label="Universe" value={universe} onChange={setUniverse} options={UNIVERSE_OPTS.map(u => ({ value: u, label: u === 'All' ? 'All indices' : u }))} />
+          <FilterSelect label="Strategy" value={activeShelf} onChange={setActiveShelf} options={STRATEGY_OPTS} />
+          <FilterSelect label="Expiry" value={expiryFilter} onChange={setExpiryFilter} options={EXPIRY_OPTS.map(e => ({ value: e, label: e === 'All' ? 'All expiries' : e }))} />
+          <FilterSelect label="Bias" value={optionTypeFilter} onChange={(v) => setOptionTypeFilter(v as 'all' | 'calls' | 'puts')} options={[{ value: 'all', label: 'All' }, { value: 'calls', label: 'Calls' }, { value: 'puts', label: 'Puts' }]} />
+          <FilterSelect label="Min Confidence" value={minConfidence} onChange={setMinConfidence} options={CONF_OPTS} />
+          <FilterSelect label="Min Exp Move" value={minExpMove} onChange={setMinExpMove} options={MOVE_OPTS} />
+          <label className="flex flex-1 min-w-[150px] flex-col gap-1">
+            <span className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Symbol</span>
+            <span className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-faint)]" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Ticker or strike…"
+                aria-label="Filter by ticker or strike"
+                className="slayer-control slayer-num w-full !pl-8 uppercase placeholder:text-[var(--text-faint)]"
+              />
+            </span>
+          </label>
+          <button
+            onClick={saveView}
+            className="slayer-control inline-flex items-center gap-1.5 self-end font-semibold uppercase tracking-[0.12em] text-[var(--text-primary)] hover:border-[var(--border-strong)]"
+          >
+            <Save className="h-3.5 w-3.5" />Save View
+          </button>
         </div>
+      </section>
 
-        {/* Option Call/Put Type Filter */}
-         <div className="md:col-span-2 flex justify-center p-0.5 border rounded-md bg-[var(--surface-2)] border-[var(--border)]">
-          {[
-            { id: 'all', label: 'ALL' },
-            { id: 'calls', label: 'C' },
-            { id: 'puts', label: 'P' }
-          ].map(opt => (
-            <button
-              key={opt.id}
-              onClick={() => setOptionTypeFilter(opt.id as any)}
-              className={`px-3.5 py-1.5 text-[8.5px] uppercase font-extrabold rounded flex-1 transition-colors cursor-pointer ${
-                optionTypeFilter === opt.id
-                  ? 'bg-[var(--info)]/15 text-[var(--info)] border border-[var(--info)]/30'
-                  : 'text-[var(--text-tertiary)] border border-transparent hover:text-[var(--text-primary)]'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      {/* MAIN — opportunities table + selected-setup inspector */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_360px]">
 
-        {/* Ticker / strike search box */}
-        <div className="md:col-span-2 relative" ref={searchContainerRef}>
-          <SearchInput
-            ariaLabel="Filter by ticker or strike"
-            value={searchQuery}
-            onChange={setSearchQuery}
-            onFocus={() => setIsSearchFocused(true)}
-            onClear={() => { setSearchQuery(''); setIsSearchFocused(false); }}
-            placeholder="Filter by ticker or strike…"
-            uppercase
-            size="sm"
-            inputClassName="text-[9.5px] font-black"
-            rightSlot={searchQuery.length === 0 ? (
-              <kbd className="hidden sm:inline-block bg-[var(--surface-2)] text-[var(--text-tertiary)] border border-[var(--border)] px-1 py-[1.5px] rounded-xs font-mono text-[7px] select-none">TXT</kbd>
-            ) : undefined}
-          />
-
-          {/* Dynamic Search Combobox results list overlay */}
-          <AnimatePresence>
-            {isSearchFocused && (
-              <motion.div
-                initial={{ opacity: 0, y: 3 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 3 }}
-                className={`absolute right-0 top-full mt-2 w-[300px] max-w-[calc(100vw-24px)] border shadow-2xl rounded-lg overflow-hidden z-50 text-left font-mono ${
-                  isLight ? 'bg-white border-[var(--border)] text-zinc-800' : 'bg-[var(--bg-base)] border-[var(--border)] text-[var(--text-secondary)]'
-                }`}
-              >
-                {/* 1. SECTION: MAIN INDEXES */}
-                <div className={`px-2.5 py-1 text-[7.5px] font-extrabold uppercase tracking-widest border-b ${
-                  isLight ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)]' : 'bg-[var(--surface-2)]/40 text-[var(--text-tertiary)] border-[var(--border)]'
-                }`}>
-                  Switch Active Index Ticker
-                </div>
-                {filteredSearchAssets.length === 0 ? (
-                  <div className="px-3.5 py-2 text-[8px] text-[var(--text-tertiary)] uppercase">No active assets found</div>
-                ) : (
-                  filteredSearchAssets.map(a => (
-                    <button
-                      key={a.ticker}
-                      onClick={() => {
-                        useContractStore.getState().setSelectedAsset(a);
-                        setIsSearchFocused(false);
-                        setSearchQuery('');
-                      }}
-                      className={`w-full text-left px-3.5 py-1.5 transition-all flex justify-between items-center border-b ${
-                        isLight ? 'hover:bg-[var(--surface-2)] border-[var(--border)]' : 'hover:bg-[var(--surface-3)] border-[var(--border)]'
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <span className={`text-[9.5px] font-black ${isLight ? 'text-zinc-900' : 'text-zinc-150'}`}>{a.ticker}</span>
-                        <span className="text-[7.5px] text-[var(--text-tertiary)] font-sans uppercase font-bold">{a.name}</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[9px] font-bold block">${a.defaultPrice.toFixed(2)}</span>
-                        <span className="text-[7.5px] font-bold text-[var(--success)]">+{a.volatility.toFixed(1)}% VOL</span>
-                      </div>
-                    </button>
-                  ))
-                )}
-
-                {/* 2. SECTION: OPTIONS & TRANSITIONS */}
-                <div className={`px-2.5 py-1 text-[7.5px] font-extrabold uppercase tracking-widest border-b ${
-                  isLight ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)]' : 'bg-[var(--surface-2)]/40 text-[var(--text-tertiary)] border-[var(--border)]'
-                }`}>
-                  Launch Option chain / Assessments
-                </div>
-                <div className="max-h-[160px] overflow-y-auto">
-                  {filteredSearchContracts.length === 0 ? (
-                    <div className="px-3.5 py-2 text-[8px] text-[var(--text-tertiary)] uppercase">No options matched</div>
-                  ) : (
-                    filteredSearchContracts.map(c => (
-                      <button
-                        key={c.id}
-                        type="button"
-                        onClick={() => {
-                          const asset = ASSET_LIST.find(a => a.ticker === c.ticker);
-                          if (asset) {
-                            useContractStore.getState().selectContractAtomically(asset, c.strike, c.isCall);
-                          }
-                          setIsSearchFocused(false);
-                          setSearchQuery('');
-                        }}
-                        className={`w-full text-left px-3.5 py-2 transition-all border-b last:border-none flex flex-col ${
-                          isLight ? 'hover:bg-[var(--surface-2)] border-[var(--border)]' : 'hover:bg-[var(--surface-3)] border-[var(--border)]'
-                        }`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span className={`text-[9.5px] font-black ${c.isCall ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
-                            {c.ticker} {fmtNum(c.strike)}{c.isCall ? 'C' : 'P'}
-                          </span>
-                          <span className={`text-[7.5px] font-bold px-1 py-0.5 rounded border ${
-                            c.isCall
-                              ? 'bg-[var(--success)]/10 text-[var(--success)] border-[var(--success)]/20'
-                              : 'bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--danger)]/20'
-                          }`}>
-                            {c.shelf.toUpperCase()}
-                          </span>
-                        </div>
-                        <span className="text-[8px] text-[var(--text-tertiary)] font-sans font-semibold uppercase truncate">{c.narrative}</span>
-                      </button>
-                    ))
-                  )}
-                </div>
-              </motion.div>
+        {/* LEFT: OPPORTUNITIES */}
+        <TerminalPanel
+          title={`Opportunities (${rankedSetups.length})`}
+          subtitle="Real ranked setups · strongest first"
+          actions={<StatusBadge tone="neutral">Sample model</StatusBadge>}
+          bodyClassName="!p-0"
+        >
+          <DataTable<DerivedSetup>
+            rows={rankedSetups}
+            rowKey={(s) => s.c.id}
+            onRowClick={(s) => setSelectedSetupId(s.c.id)}
+            rowClassName={(s) => [
+              selectedSetup?.c.id === s.c.id ? 'bg-[var(--bg-panel-raised)]' : '',
+              lastFlashingId === s.c.id ? 'bg-[rgba(248,248,255,0.05)]' : '',
+            ].filter(Boolean).join(' ')}
+            empty={(
+              <div className="flex flex-col items-center gap-2 py-6">
+                <Crosshair className="h-5 w-5 text-[var(--text-faint)]" aria-hidden="true" />
+                <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">No setups match your filters</span>
+                <button onClick={clearFilters} className="slayer-control text-[10px] font-semibold uppercase tracking-[0.12em] hover:border-[var(--border-strong)]">Clear filters</button>
+              </div>
             )}
-          </AnimatePresence>
-        </div>
+            columns={[
+              { key: 'rank', header: '#', align: 'left', className: 'w-[40px] text-[var(--text-faint)]', render: (_s, i) => <span className="slayer-num">{i + 1}</span> },
+              {
+                key: 'symbol', header: 'Symbol', render: (s) => (
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); toggleStar(s.c.ticker); }}
+                      aria-label={watchlist.includes(s.c.ticker) ? `Unwatch ${s.c.ticker}` : `Watch ${s.c.ticker}`}
+                      className="shrink-0 text-[var(--text-faint)] transition-colors hover:text-[var(--warning)]"
+                    >
+                      <Star className="h-3 w-3" fill={watchlist.includes(s.c.ticker) ? 'var(--warning)' : 'none'} stroke={watchlist.includes(s.c.ticker) ? 'var(--warning)' : 'currentColor'} />
+                    </button>
+                    <span className="leading-tight">
+                      <span className="block font-semibold text-[var(--text-primary)]">{s.c.ticker}</span>
+                      <span className="block slayer-num text-[10px] text-[var(--text-muted)]">{fmtNum(s.c.strike)}{s.side}</span>
+                    </span>
+                  </div>
+                )
+              },
+              { key: 'setup', header: 'Setup', render: (s) => <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">{SETUP_LABEL[s.c.shelf] ?? s.c.shelf}</span> },
+              {
+                key: 'bias', header: 'Bias', render: (s) => (
+                  <span className={`inline-flex items-center gap-1 font-semibold ${s.direction === 'BULLISH' ? 'text-[#2f9d45]' : 'text-[#d94646]'}`}>
+                    {s.direction === 'BULLISH' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                    {s.direction === 'BULLISH' ? 'Bull' : 'Bear'}
+                  </span>
+                )
+              },
+              { key: 'conf', header: 'Confidence', className: 'min-w-[124px]', render: (s) => <MeterBar pct={s.c.health} tone={s.c.health >= 90 ? '#2f9d45' : s.c.health >= 80 ? 'var(--warning)' : 'var(--pin)'} /> },
+              { key: 'move', header: 'Exp Move', align: 'right', render: (s) => <span className="slayer-num text-[var(--pin)]">±{s.expectedMovePct.toFixed(0)}%</span> },
+              { key: 'rr', header: 'R/R', align: 'right', render: (s) => { const rr = computeRR(s); return <span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)}:1`}</span>; } },
+              { key: 'status', header: 'Status', align: 'right', render: (s) => { const m = statusMeta(s.c.health); return <StatusBadge tone={m.tone}>{m.label}</StatusBadge>; } },
+            ]}
+          />
+        </TerminalPanel>
 
+        {/* RIGHT: SELECTED SETUP */}
+        <div className="lg:sticky lg:top-2">
+          {((s: DerivedSetup | null) => {
+            if (!s) {
+              return (
+                <TerminalPanel title="Selected Setup">
+                  <div className="flex flex-col items-center gap-2 py-8 text-center">
+                    <Crosshair className="h-5 w-5 text-[var(--text-faint)]" aria-hidden="true" />
+                    <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Select a setup</span>
+                    <p className="text-[10px] text-[var(--text-faint)]">Pick a row to see its idea, rationale, risk, and trade plan.</p>
+                  </div>
+                </TerminalPanel>
+              );
+            }
+            const rank = rankedSetups.findIndex((x) => x.c.id === s.c.id) + 1;
+            const rr = computeRR(s);
+            const prob = Math.min(99, Math.max(1, Math.abs(s.c.delta ?? 0) * 100));
+            const target1 = typeof s.c.t1 === 'number' && s.c.t1 > 0 ? s.c.t1 : null;
+            const stopPremium = s.premium * (1 - WORKING_STOP_PCT / 100);
+            const dirColor = s.direction === 'BULLISH' ? 'text-[#2f9d45]' : 'text-[#d94646]';
+            const asset = ASSET_LIST.find((a) => a.ticker === s.c.ticker);
+            const expiry = SHELF_EXPIRY[s.c.shelf] ?? '0DTE';
+            const horizon = (SHELF_EXPLANATIONS[s.c.shelf as keyof typeof SHELF_EXPLANATIONS] ?? SHELF_EXPLANATIONS.all).horizon;
+            const st = statusMeta(s.c.health);
+            const DirIcon = s.direction === 'BULLISH' ? TrendingUp : TrendingDown;
+            return (
+              <TerminalPanel
+                title="Selected Setup"
+                actions={<DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />}
+                bodyClassName="!p-3.5 space-y-3"
+              >
+                {/* identity */}
+                <div className="flex items-start justify-between gap-2 border-b border-[var(--border-subtle)] pb-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <DirIcon className={`h-5 w-5 shrink-0 ${dirColor}`} />
+                    <div className="min-w-0">
+                      <span className="block text-[18px] font-bold leading-none text-[var(--text-primary)] slayer-num truncate">#{rank} · {s.label}</span>
+                      <span className="mt-1 block text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)] truncate">{asset?.name ?? s.c.ticker}</span>
+                    </div>
+                  </div>
+                  <StatusBadge tone={st.tone} className="shrink-0">{s.direction === 'BULLISH' ? 'Bull' : 'Bear'}</StatusBadge>
+                </div>
+
+                {/* contract idea / strike / expiry */}
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { l: 'Contract Idea', v: `Long ${s.side === 'C' ? 'Call' : 'Put'}` },
+                    { l: 'Strike', v: fmtNum(s.c.strike) },
+                    { l: 'Expiry', v: expiry },
+                  ].map((x) => (
+                    <div key={x.l} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
+                      <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{x.l}</span>
+                      <span className="block slayer-num text-[12px] font-semibold text-[var(--text-primary)]">{x.v}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* rationale */}
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><ShieldCheck className="h-3 w-3 text-[#2f9d45]" />Setup Rationale</span>
+                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">{s.c.narrative}</p>
+                  <p className="mt-1.5 text-[9px] uppercase tracking-[0.1em] text-[var(--text-faint)]">{s.dealerSupport}</p>
+                </div>
+
+                {/* probability & confidence */}
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5 space-y-2.5">
+                  <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Probability &amp; Confidence</span>
+                  <LabeledMeter label="Probability (Δ-implied ITM)" pct={prob} tone="var(--pin)" />
+                  <LabeledMeter label="Model confidence" pct={s.c.health} tone={s.c.health >= 90 ? '#2f9d45' : s.c.health >= 80 ? 'var(--warning)' : 'var(--pin)'} />
+                </div>
+
+                {/* expected move + target range */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
+                    <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Expected Move</span>
+                    <span className="block slayer-num text-[13px] font-semibold text-[var(--pin)]">±{s.expectedMovePct.toFixed(0)}%</span>
+                  </div>
+                  <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
+                    <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Target Range</span>
+                    <span className="block slayer-num text-[13px] font-semibold text-[var(--text-primary)]">${s.premium.toFixed(2)} → ${(target1 ?? s.fairValue).toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* risk parameters */}
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><AlertTriangle className="h-3 w-3 text-[#d94646]" />Risk Parameters</span>
+                  <div className="mt-1.5 space-y-1 text-[11px]">
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Max Risk</span><span className="slayer-num text-[var(--text-primary)]">${(s.premium * 100).toFixed(0)} / contract</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop / Invalidation</span><span className="slayer-num text-[#d94646]">{s.side === 'C' ? 'Below' : 'Above'} {s.invalidation.toLocaleString()}</span></div>
+                    <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">Invalidation Reason</span><span className="text-right text-[var(--text-secondary)]">{s.dealerSupport} fails</span></div>
+                  </div>
+                </div>
+
+                {/* trade plan */}
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><Droplet className="h-3 w-3 text-[var(--pin)]" />Trade Plan</span>
+                  <div className="mt-1.5 space-y-1 text-[11px]">
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Entry</span><span className="slayer-num text-[var(--text-primary)]">${s.premium.toFixed(2)} <span className="text-[9px] text-[var(--text-faint)]">(${(s.c.bid ?? s.premium).toFixed(2)}–${(s.c.ask ?? s.premium).toFixed(2)})</span></span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className="slayer-num text-[#2f9d45]">{target1 == null ? '—' : `$${target1.toFixed(2)} (+${(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className="slayer-num text-[#2f9d45]">${s.fairValue.toFixed(2)} (+{(s.fairGapPct * 100).toFixed(0)}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop</span><span className="slayer-num text-[#d94646]">${stopPremium.toFixed(2)} (−{WORKING_STOP_PCT}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Time Stop</span><span className="text-[var(--text-secondary)]">{horizon}</span></div>
+                    <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">R / R</span><span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)} : 1`}</span></div>
+                  </div>
+                  <p className="mt-2 border-t border-[var(--border-subtle)] pt-2 text-[10px] leading-relaxed text-[var(--text-secondary)]">
+                    Take partial at Target 1; trail the stop to entry after +{WORKING_STOP_PCT}% and hold the balance toward Target 2 (model fair value). Working stop is −{WORKING_STOP_PCT}% of premium.
+                  </p>
+                </div>
+
+                {/* actions */}
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  {selectedTracked ? (
+                    <button
+                      onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[#2f9d45]/50 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#2f9d45] transition-colors hover:border-[#2f9d45]"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />In Queue
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => addToQueue(s)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--border-mid)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)]"
+                    >
+                      <Plus className="h-3.5 w-3.5" />Add to Queue
+                    </button>
+                  )}
+                  <button
+                    onClick={() => reviewSetup(s)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[#2f9d45]/40 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#2f9d45] transition-colors hover:border-[#2f9d45]"
+                  >
+                    Trade This Setup<ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </TerminalPanel>
+            );
+          })(selectedSetup)}
+        </div>
       </div>
 
-      {/* Method modal — the "How this category works" education, on demand via the header
-          Method button, so it never occupies vertical space above the setup queue. */}
+      {/* BOTTOM — market regime · setup distribution · watchlist/queue */}
+      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+
+        {/* MARKET REGIME */}
+        <TerminalPanel title="Market Regime" subtitle="Derived from ranked setups + tape">
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { name: 'Trend / Bias', st: regime.trend },
+              { name: 'Tape', st: regime.tape },
+              { name: 'Volatility', st: regime.vol },
+              { name: 'Liquidity', st: regime.liqState },
+            ].map((r) => (
+              <div key={r.name} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-2">
+                <div className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{r.name}</div>
+                <div className="mt-1.5"><StatusBadge tone={r.st.tone}>{r.st.label}</StatusBadge></div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 border-t border-[var(--border-subtle)] pt-2.5 text-[11px] leading-relaxed text-[var(--text-secondary)]">{regime.insight}</p>
+          <div className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-4">
+            {[
+              { l: 'Put / Call', v: regime.pcRatio.toFixed(2), tone: 'text-[var(--text-primary)]' },
+              { l: 'Avg Exp Move', v: `±${regime.avgMove.toFixed(0)}%`, tone: 'text-[var(--pin)]' },
+              { l: 'Net GEX', v: `${globalGex.toFixed(0)}B`, tone: globalGex >= 0 ? 'text-[#2f9d45]' : 'text-[#d94646]' },
+              { l: 'Scan Rate', v: `${scanRate.toFixed(1)}/s`, tone: 'text-[var(--text-primary)]' },
+            ].map((x) => (
+              <div key={x.l} className="bg-[var(--bg-panel)] px-2.5 py-2">
+                <div className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)] truncate">{x.l}</div>
+                <div className={`mt-0.5 slayer-num text-[14px] font-semibold ${x.tone}`}>{x.v}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-faint)]">Net GEX &amp; scan rate are streamed sample metrics.</p>
+        </TerminalPanel>
+
+        {/* SETUP DISTRIBUTION */}
+        <TerminalPanel title="Setup Distribution" subtitle="By bias · by strategy">
+          <div className="flex items-center gap-4">
+            <Donut segments={distribution.segments} />
+            <div className="flex-1 space-y-1.5">
+              {distribution.segments.map((seg) => (
+                <div key={seg.label} className="flex items-center justify-between text-[11px]">
+                  <span className="flex items-center gap-1.5 text-[var(--text-secondary)]"><span className="h-2 w-2 rounded-sm" style={{ background: seg.color }} />{seg.label}</span>
+                  <span className="slayer-num text-[var(--text-primary)]">{seg.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="mt-3 space-y-2 border-t border-[var(--border-subtle)] pt-3">
+            {distribution.byStrategy.length === 0 ? (
+              <p className="text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)]">No setups in view.</p>
+            ) : distribution.byStrategy.map((row) => (
+              <div key={row.label}>
+                <div className="flex items-center justify-between text-[10px]">
+                  <span className="uppercase tracking-[0.08em] text-[var(--text-secondary)]">{row.label}</span>
+                  <span className="slayer-num text-[var(--text-muted)]">{row.value}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-[var(--border-subtle)]">
+                  <span className="block h-full rounded-full bg-[var(--pin)]" style={{ width: `${distribution.maxStrategy ? (row.value / distribution.maxStrategy) * 100 : 0}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </TerminalPanel>
+
+        {/* WATCHLIST / QUEUE */}
+        <TerminalPanel
+          title="Watchlist / Queue"
+          bodyClassName="!p-0"
+          actions={(
+            <div className="flex items-center gap-0.5 rounded-md border border-[var(--border-subtle)] p-0.5">
+              {(['watchlist', 'queue'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setWatchQueueTab(t)}
+                  className={`rounded px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors ${watchQueueTab === t ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
+                >
+                  {t === 'watchlist' ? `Watchlist ${watchlistRows.length}` : `Queue ${queueRows.length}`}
+                </button>
+              ))}
+            </div>
+          )}
+        >
+          <div className="max-h-[300px] overflow-y-auto">
+            {watchQueueTab === 'queue' ? (
+              queueRows.length === 0 ? (
+                <p className="px-3 py-6 text-center text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)]">No setups queued. Add one from a selected setup.</p>
+              ) : queueRows.map((t) => (
+                <div key={t.id} className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-[11px]">
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-[var(--text-primary)] slayer-num">{t.contract}</div>
+                    <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">{STATUS_LABEL[t.status]} · conf {t.confidence}%</div>
+                  </div>
+                  <span className="slayer-num text-[10px] text-[var(--pin)]">±{t.expectedMovePct != null ? t.expectedMovePct.toFixed(0) : '—'}%</span>
+                  <button onClick={() => cancelTrack(t.id)} aria-label="Remove from queue" className="text-[var(--text-faint)] transition-colors hover:text-[#d94646]"><X className="h-3 w-3" /></button>
+                </div>
+              ))
+            ) : (
+              watchlistRows.length === 0 ? (
+                <p className="px-3 py-6 text-center text-[10px] uppercase tracking-[0.12em] text-[var(--text-faint)]">Star a symbol in the table to build your watchlist.</p>
+              ) : watchlistRows.map((s) => (
+                <button
+                  key={s.c.id}
+                  onClick={() => setSelectedSetupId(s.c.id)}
+                  className="flex w-full items-center gap-2 border-b border-[var(--border-subtle)] px-3 py-2 text-left text-[11px] transition-colors hover:bg-[var(--bg-panel-soft)]"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="font-semibold text-[var(--text-primary)] slayer-num">{s.label}</div>
+                    <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">{SETUP_LABEL[s.c.shelf] ?? s.c.shelf} · conf {s.c.health}%</div>
+                  </div>
+                  <span className="slayer-num text-[10px] text-[var(--pin)]">±{s.expectedMovePct.toFixed(0)}%</span>
+                  <Star className="h-3 w-3 shrink-0" fill="var(--warning)" stroke="var(--warning)" aria-hidden="true" />
+                </button>
+              ))
+            )}
+          </div>
+          {watchQueueTab === 'queue' && queueRows.length > 0 && (
+            <button
+              onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
+              className="w-full border-t border-[var(--border-subtle)] px-3 py-2 text-center text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+            >
+              Open Trade History →
+            </button>
+          )}
+        </TerminalPanel>
+      </div>
+
+      {/* STATUS BAR */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2.5 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+        <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />Last scan <span className="slayer-num normal-case text-[var(--text-secondary)]">{formatTime(new Date(metricsAsOf))}</span></span>
+        <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" />Source <span className="text-[var(--text-secondary)]">Sample stream</span></span>
+        <span className="flex items-center gap-1.5"><Signal className="h-3 w-3" />Feed <span className={feedError ? 'text-[var(--warning)]' : 'text-[#2f9d45]'}>{feedError ? 'Reconnecting' : 'Streaming'}</span></span>
+        <span className="flex items-center gap-1.5"><Activity className="h-3 w-3" />Scanned <span className="slayer-num text-[var(--text-secondary)]">{contracts.length}</span> · Universe <span className="slayer-num text-[var(--text-secondary)]">{UNIVERSE_OPTS.length - 1}</span> · Scans <span className="slayer-num text-[var(--text-secondary)]">{scanHistoryCount}</span></span>
+        <span className="flex items-center gap-2">Auto-refresh
+          <button
+            onClick={() => setAutoRefresh((v) => !v)}
+            role="switch"
+            aria-checked={autoRefresh}
+            aria-label="Toggle auto-refresh"
+            className={`relative h-4 w-7 rounded-full transition-colors ${autoRefresh ? 'bg-[var(--positive)]' : 'bg-[var(--border-mid)]'}`}
+          >
+            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-[var(--text-primary)] transition-all ${autoRefresh ? 'left-3.5' : 'left-0.5'}`} />
+          </button>
+        </span>
+      </div>
+
+      {/* METHOD MODAL — education on demand */}
       <AnimatePresence>
         {isStrategyExpanded && (
           <motion.div
@@ -1368,238 +1744,43 @@ export function DiscoveryView({
             aria-modal="true"
             aria-label="How this scan category works"
           >
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsStrategyExpanded(false)} />
+            <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setIsStrategyExpanded(false)} />
             <motion.div
               initial={{ scale: 0.97, y: 8 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.97, opacity: 0 }}
               transition={{ duration: 0.18 }}
-              className="relative w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-2xl text-left"
+              className="slayer-panel relative w-full max-w-lg p-5 text-left"
             >
-              <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] pb-2.5">
+              <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] pb-2.5">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Info className="w-4 h-4 text-[var(--info)] shrink-0" />
-                  <span className="text-[11px] font-extrabold uppercase tracking-widest text-[var(--text-primary)] truncate">Method · {currentManualText.title}</span>
+                  <Info className="h-4 w-4 text-[var(--pin)] shrink-0" />
+                  <span className="truncate text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-primary)]">Method · {currentManualText.title}</span>
                 </div>
-                <button onClick={() => setIsStrategyExpanded(false)} aria-label="Close" className="shrink-0 rounded p-1 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]">
-                  <X className="w-4 h-4" />
+                <button onClick={() => setIsStrategyExpanded(false)} aria-label="Close" className="shrink-0 rounded p-1 text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]">
+                  <X className="h-4 w-4" />
                 </button>
               </div>
-              <p className="mt-3 leading-relaxed font-sans text-[12px] text-[var(--text-secondary)] font-medium">
-                {currentManualText.whyItsBest}
-              </p>
+              <p className="mt-3 text-[12px] font-medium leading-relaxed text-[var(--text-secondary)]">{currentManualText.whyItsBest}</p>
               <div className="mt-3 grid grid-cols-3 gap-2">
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
-                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Horizon</span>
-                  <span className={`block text-[10px] font-mono font-bold ${c_textWhite}`}>{currentManualText.horizon}</span>
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
+                  <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Horizon</span>
+                  <span className="block slayer-num text-[10px] font-bold text-[var(--text-primary)]">{currentManualText.horizon}</span>
                 </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
-                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Signal</span>
-                  <span className="block text-[9px] font-mono font-bold text-[var(--info)] uppercase leading-tight">{currentManualText.mathTracking}</span>
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
+                  <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Signal</span>
+                  <span className="block text-[9px] font-bold uppercase leading-tight text-[var(--pin)]">{currentManualText.mathTracking}</span>
                 </div>
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
-                  <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]">Confidence</span>
-                  <span className="block text-[9px] font-mono font-bold text-[var(--success)] leading-tight">{currentManualText.confidenceTier}</span>
+                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
+                  <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Confidence</span>
+                  <span className="block text-[9px] font-bold leading-tight text-[#2f9d45]">{currentManualText.confidenceTier}</span>
                 </div>
               </div>
-              <p className="mt-3 border-t border-[var(--border)] pt-2 text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest">Sample data — illustrative, not a live scan.</p>
+              <p className="mt-3 border-t border-[var(--border-subtle)] pt-2 text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Sample data — illustrative, not a live scan.</p>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* 3. MAIN SETUP QUEUE + SELECTED-SETUP INSPECTOR */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
-
-        {/* LEFT: ranked setup queue — larger horizontal rows, strongest elevated */}
-        <div className="lg:col-span-8 flex flex-col gap-3 w-full">
-          <div className="flex items-center justify-between px-1">
-            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[var(--text-secondary)]">
-              {rankedSetups.length} {rankedSetups.length === 1 ? 'setup' : 'setups'} · strongest first
-            </span>
-            <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Sample model ranking</span>
-          </div>
-
-          {rankedSetups.length === 0 ? (
-            <div className="border p-8 rounded-xl text-center uppercase text-xs space-y-2 bg-[var(--surface)] border-[var(--border)]">
-              <ShieldAlert className="w-8 h-8 text-[var(--text-tertiary)] mx-auto" />
-              <p className={`font-extrabold tracking-widest text-[10px] ${c_textWhite}`}>No setups match your filters.</p>
-              <p className="text-[9px] text-[var(--text-tertiary)] leading-snug font-sans">Try clearing the filters or modifying your search terms above.</p>
-              <button
-                type="button"
-                onClick={() => { setActiveShelf('all'); setOptionTypeFilter('all'); setSearchQuery(''); }}
-                className="mt-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border font-mono text-[9px] font-black uppercase tracking-wider transition-colors cursor-pointer bg-transparent border-[var(--border-strong)] text-[var(--text-secondary)] hover:border-[var(--success)] hover:text-[var(--success)]"
-              >
-                <RefreshCw className="w-3 h-3" />
-                Clear filters
-              </button>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2.5">
-              {rankedSetups.map((s, i) => (
-                <SetupRow
-                  key={s.c.id}
-                  s={s}
-                  selected={selectedSetup?.c.id === s.c.id}
-                  elevated={i === 0}
-                  onSelect={() => setSelectedSetupId(s.c.id)}
-                  onReview={() => reviewSetup(s)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT: selected-setup inspector */}
-        <div className="lg:col-span-4 w-full">
-          <SetupInspector s={selectedSetup} onReview={reviewSetup} />
-        </div>
-
-      </div>
-
-      {/* 4. SUPPORTING MARKET CONTEXT — secondary evidence, collapsed by default so it never
-          competes with the setup queue. */}
-      <div className={`w-full rounded-xl border ${c_cardBg}`}>
-        <button
-          type="button"
-          onClick={() => setIsSupportingOpen(v => !v)}
-          aria-expanded={isSupportingOpen}
-          className="w-full flex items-center justify-between px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] rounded-xl"
-        >
-          <div className="flex items-center gap-2">
-            <Flame className="w-4 h-4 text-[var(--danger)]" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-primary)]">Supporting evidence</span>
-            <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">Largest trades · Sample flow</span>
-          </div>
-          {isSupportingOpen ? <ChevronUp className="w-3.5 h-3.5 text-[var(--text-tertiary)]" /> : <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />}
-        </button>
-
-        <AnimatePresence initial={false}>
-          {isSupportingOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              className="overflow-hidden"
-            >
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4 pt-0">
-
-                {/* Largest trades (derived from the sample tape) */}
-                <div className="border rounded-xl p-3 sm:p-4 text-left flex flex-col gap-3 bg-[var(--surface-2)] border-[var(--border)]">
-                  <div className="flex items-center gap-2 border-b pb-2 border-[var(--border)]">
-                    <Flame className="w-3.5 h-3.5 text-[var(--danger)]" />
-                    <h2 className={`text-[10px] font-black uppercase tracking-widest ${c_textWhite}`}>Largest Trades</h2>
-                  </div>
-                  <div className="space-y-2.5">
-                    <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface)] border-[var(--border)]">
-                      {topFlows.bullish ? (
-                        <>
-                          <div className="space-y-0.5">
-                            <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Bullish</span>
-                            <span className="text-[var(--success)] font-bold block">{topFlows.bullish.ticker} {fmtNum(topFlows.bullish.strike)}{topFlows.bullish.type}</span>
-                            <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.bullish.size}</span>
-                          </div>
-                          <div className="text-right space-y-0.5">
-                            <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
-                            <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.bullish.premium}</span>
-                          </div>
-                        </>
-                      ) : (<span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting bullish flow…</span>)}
-                    </div>
-                    <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface)] border-[var(--border)]">
-                      {topFlows.hedge ? (
-                        <>
-                          <div className="space-y-0.5">
-                            <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Hedge</span>
-                            <span className="text-[var(--danger)] font-bold block">{topFlows.hedge.ticker} {fmtNum(topFlows.hedge.strike)}{topFlows.hedge.type}</span>
-                            <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.hedge.size}</span>
-                          </div>
-                          <div className="text-right space-y-0.5">
-                            <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
-                            <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.hedge.premium}</span>
-                          </div>
-                        </>
-                      ) : (<span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting hedge flow…</span>)}
-                    </div>
-                    <div className="border p-2.5 rounded-lg flex justify-between items-center text-[10px] bg-[var(--surface)] border-[var(--border)]">
-                      {topFlows.largestOverall ? (
-                        <>
-                          <div className="space-y-0.5">
-                            <span className="text-[7.5px] uppercase block font-black text-[var(--text-tertiary)]">Largest Overall</span>
-                            <span className="text-[var(--info)] font-bold block">{topFlows.largestOverall.ticker} {fmtNum(topFlows.largestOverall.strike)}{topFlows.largestOverall.type}</span>
-                            <span className="text-[8px] font-sans uppercase text-[var(--text-secondary)]">{topFlows.largestOverall.side}</span>
-                          </div>
-                          <div className="text-right space-y-0.5">
-                            <span className="text-[7.5px] block uppercase font-bold text-[var(--text-tertiary)]">Premium</span>
-                            <span className={`block font-black font-mono ${c_textWhite}`}>{topFlows.largestOverall.premium}</span>
-                          </div>
-                        </>
-                      ) : (<span className="text-[9px] text-[var(--text-tertiary)] italic">Awaiting flow…</span>)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sample option flow tape */}
-                <div className="border rounded-xl p-3 sm:p-4 text-left flex flex-col gap-3 bg-[var(--surface-2)] border-[var(--border)]">
-                  <div className="flex items-center justify-between border-b pb-2 border-[var(--border)]">
-                    <div className="flex items-center gap-2">
-                      <Database className="w-3.5 h-3.5 text-[var(--info)]" />
-                      <h2 className={`text-[10px] font-black uppercase tracking-widest ${c_textWhite}`}>Sample Option Flow</h2>
-                    </div>
-                    {feedError && (
-                      <span className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border bg-[var(--warning)]/10 text-[var(--warning)] border-[var(--warning)]/30" role="status" aria-live="polite">
-                        <RefreshCw className="w-2.5 h-2.5 animate-spin" aria-hidden="true" />
-                        Reconnecting…
-                      </span>
-                    )}
-                  </div>
-                  <div className="h-[260px] overflow-y-auto scrollbar-thin pr-1 select-none flex flex-col gap-1.5">
-                    <AnimatePresence initial={false}>
-                      {feedLogs.map((log, index) => {
-                        const isSweep = log.side === 'Sweep';
-                        const isBullish = log.tag === 'BULLISH';
-                        return (
-                          <motion.div
-                            key={(log as any).id ?? `${log.timestamp}-${log.ticker}-${log.strike}-${index}`}
-                            initial={{ opacity: 0, x: 20, height: 0 }}
-                            animate={{ opacity: 1, x: 0, height: 'auto' }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.3 }}
-                            className="py-2.5 border rounded-lg px-2.5 transition-colors flex flex-col gap-1 text-[9.5px] bg-[var(--surface)] border-[var(--border)] hover:bg-[var(--surface-3)]"
-                          >
-                            <div className="flex justify-between items-center text-[9px]">
-                              <div className="flex items-center gap-1.5">
-                                <span className="font-mono font-bold text-[var(--text-tertiary)]">{log.timestamp}</span>
-                                <span className={`px-1 py-0.5 rounded font-black text-[7.5px] ${isSweep ? 'bg-[var(--warning)]/10 border border-[var(--warning)]/25 text-[var(--warning)]' : 'bg-[var(--info)]/10 border border-[var(--info)]/25 text-[var(--info)]'}`}>
-                                  {log.side.toUpperCase()}
-                                </span>
-                              </div>
-                              <span className={`font-mono font-extrabold flex items-center gap-1 ${isBullish ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>
-                                <span aria-hidden="true">{isBullish ? '▲' : '▼'}</span>
-                                {log.action}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-baseline font-mono font-bold">
-                              <span className={`text-[10.5px] ${c_textWhite}`}>{log.ticker} {fmtNum(log.strike)}{log.type}</span>
-                              <span className={isBullish ? 'text-[var(--success)]' : 'text-[var(--warning)]'}><span aria-hidden="true">{isBullish ? '+' : '−'}</span>{log.premium}</span>
-                            </div>
-                            <div className="flex justify-between items-center text-[8.5px] text-[var(--text-tertiary)] pt-1 border-t border-[var(--border)]">
-                              <span>Size {log.size}</span>
-                              <span>Bias <span className={isBullish ? 'text-[var(--success)] font-bold' : 'text-[var(--text-secondary)] font-bold'}>{log.tag}</span></span>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                  </div>
-                </div>
-
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
 
     </div>
   );
