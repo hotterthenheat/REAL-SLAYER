@@ -1,0 +1,142 @@
+/**
+ * Slayer Terminal design system — global brand tokens + terminal primitives.
+ * Imported once (src/main.tsx). Brand colors are the single source of truth:
+ * red = true negative/put/risk, green = true positive/confirmed. Color is a data
+ * encoding, never decoration. No neon glow, no gaming-HUD effects.
+ */
+:root {
+  /* Global brand colors */
+  --slayer-black: #000000;
+  --slayer-coffee: #100C08;
+  --slayer-white: #F5F5F5;
+  --slayer-ghost: #F8F8FF;
+
+  /* Site red / green */
+  --slayer-red: #980404;
+  --slayer-green: #0D4715;
+
+  /* Terminal surfaces */
+  --bg-app: #000000;
+  --bg-shell: #050505;
+  --bg-panel: #080706;
+  --bg-panel-soft: #0d0a08;
+  --bg-panel-raised: #100c08;
+
+  /* Borders */
+  --border-subtle: rgba(248, 248, 255, 0.08);
+  --border-mid: rgba(248, 248, 255, 0.14);
+  --border-strong: rgba(248, 248, 255, 0.22);
+
+  /* Text */
+  --text-primary: #f8f8ff;
+  --text-secondary: rgba(248, 248, 255, 0.72);
+  --text-muted: rgba(248, 248, 255, 0.46);
+  --text-faint: rgba(248, 248, 255, 0.28);
+
+  /* Data colors */
+  --negative: #980404;
+  --negative-soft: rgba(152, 4, 4, 0.18);
+  --positive: #0d4715;
+  --positive-soft: rgba(13, 71, 21, 0.22);
+
+  --call: #792ca2;
+  --pin: #2c687b;
+  --gamma-hot: #c13383;
+  --warning: #c49a3a;
+  --neutral: rgba(248, 248, 255, 0.55);
+
+  /* GEX heatmap palette */
+  --gex-1: #443199;
+  --gex-2: #792ca2;
+  --gex-3: #c13383;
+  --gex-4: #e05454;
+
+  /* Layout */
+  --radius-panel: 10px;
+  --radius-control: 7px;
+  --gap: 10px;
+  --panel-pad: 14px;
+}
+
+.slayer-terminal {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(248, 248, 255, 0.035), transparent 28%),
+    linear-gradient(180deg, #050505 0%, #000000 100%);
+  color: var(--text-primary);
+}
+
+.slayer-panel {
+  background:
+    linear-gradient(180deg, rgba(248, 248, 255, 0.025), transparent 42%),
+    var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-panel);
+}
+
+.slayer-panel-header {
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 14px;
+}
+
+.slayer-title {
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.slayer-subtitle {
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.slayer-control {
+  background: #050505;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 7px 10px;
+}
+
+.slayer-control:hover {
+  border-color: var(--border-mid);
+  color: var(--text-primary);
+}
+
+.slayer-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.slayer-table th {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.slayer-table td {
+  color: var(--text-secondary);
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(248, 248, 255, 0.045);
+}
+
+.slayer-table tr:hover td {
+  background: rgba(248, 248, 255, 0.025);
+}
+
+.slayer-num { font-variant-numeric: tabular-nums; }
+.slayer-red { color: var(--slayer-red); }
+.slayer-green { color: var(--slayer-green); }
+.slayer-pos { color: #2f9d45; }
+.slayer-neg { color: #d94646; }
+.slayer-muted { color: var(--text-muted); }
