@@ -62,19 +62,19 @@ export function MetricStrip({ metrics, columns = 8, className }: MetricStripProp
             index !== 0 && 'border-l border-[var(--border-subtle)]',
           )}
         >
-          <div className="truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
             {metric.label}
           </div>
           <div
             className={cx(
-              'mt-1.5 truncate text-[22px] font-semibold leading-none slayer-num',
+              'mt-1.5 break-words text-[22px] font-semibold leading-[1.05] slayer-num',
               toneClass[metric.tone || 'neutral'],
             )}
           >
             {metric.value}
           </div>
           {metric.sub ? (
-            <div className="mt-1 truncate text-[11px] text-[var(--text-secondary)]">
+            <div className="mt-1 text-[11px] leading-tight text-[var(--text-secondary)]">
               {metric.sub}
             </div>
           ) : null}

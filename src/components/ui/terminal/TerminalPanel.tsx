@@ -34,7 +34,7 @@ export function TerminalPanel({
   return (
     <section className={cx('slayer-panel flex min-h-0 flex-col', className)}>
       {hasHeader ? (
-        <header className="slayer-panel-header flex items-start justify-between gap-3">
+        <header className="slayer-panel-header flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             {title ? <div className="slayer-title">{title}</div> : null}
             {subtitle ? <div className="slayer-subtitle">{subtitle}</div> : null}
