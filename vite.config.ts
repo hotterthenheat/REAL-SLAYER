@@ -21,7 +21,11 @@ export default defineConfig(() => {
     build: {
       // Split heavy, independent vendors out of the main bundle for a faster
       // first paint. The bundler still resolves load order via the module graph.
-      chunkSizeWarningLimit: 900,
+      // ECharts (~1.1MB) and three.js are already isolated into their own chunks
+      // and only dynamic-imported by the Quant Lab / 3D dashboard — they never
+      // touch first paint. The limit sits just above that intentional lazy chunk
+      // so the warning flags genuine regressions, not the known on-demand vendors.
+      chunkSizeWarningLimit: 1200,
       rollupOptions: {
         output: {
           manualChunks(id: string) {
