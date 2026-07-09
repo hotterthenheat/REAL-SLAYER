@@ -9,7 +9,7 @@ import { formatTime } from './lib/timeUtils';
 // Import Workspace Modular Views — eager imports are the shell + landing path.
 import { DiscoveryView } from './components/DiscoveryView';
 import SlayerLanding from './components/SlayerLanding';
-import { SkyseyeAlertHub } from './components/SkyseyeAlertHub';
+import SlayerLoader from './components/SlayerLoader';
 import TierGuard from './components/TierGuard';
 import { ClerkGate } from './components/ClerkGate';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
@@ -17,7 +17,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette } from './components/CommandPalette';
 import { Toaster } from './components/ui/toast';
 import { useTrackingResolver } from './lib/useTrackingResolver';
-import { Spinner } from './components/ui/Spinner';
 import { LegalCenter, useLegal } from './components/LegalCenter';
 // Eagerly imported — used directly by the Subscription tab; a lazy() wrapper here
 // can't code-split it cleanly and only warns at build.
@@ -28,6 +27,7 @@ import { SubscriptionPricing } from './components/SubscriptionPricing';
 const SkyVisionView = lazy(() => import('./components/SkyVisionView').then(m => ({ default: m.SkyVisionView })));
 const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m => ({ default: m.QuantAuditView })));
 const DealerFlowView = lazy(() => import('./components/DealerFlowView').then(m => ({ default: m.DealerFlowView })));
+const PinpointTerminal = lazy(() => import('./components/PinpointTerminal'));
 const PinpointExposureView = lazy(() => import('./components/PinpointExposureView'));
 const ArborCapital = lazy(() => import('./components/ArborCapital'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
@@ -898,13 +898,7 @@ export default function App() {
   }
 
   if (session === null) {
-    return (
-      <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-tertiary)] flex flex-col justify-center items-center font-mono select-none antialiased">
-        <Spinner size="lg" tone="primary" label="Connecting to your workspace" className="mb-4" />
-        <div className="tracking-widest uppercase text-xs text-[var(--text-primary)]">Connecting to your workspace…</div>
-        <div className="text-[10px] text-[var(--text-tertiary)] mt-2 uppercase font-mono font-bold">Verifying your secure session</div>
-      </div>
-    );
+    return <SlayerLoader label="Connecting to your workspace" sub="Verifying your secure session" />;
   }
 
   // Gating check has been deferred so that unauthenticated users can view the full homepage landing workspace.
@@ -912,13 +906,7 @@ export default function App() {
 
   // Safe fallback loading state and skeletal setup
   if (!serverState) {
-    return (
-      <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-tertiary)] flex flex-col justify-center items-center font-mono select-none antialiased">
-        <Spinner size="lg" tone="primary" label="Loading live market data" className="mb-4" />
-        <div className="tracking-widest uppercase text-xs text-[var(--text-primary)]">Loading live market data…</div>
-        <div className="text-[10px] text-[var(--text-tertiary)] mt-2 uppercase font-mono">Syncing the analytics engine</div>
-      </div>
-    );
+    return <SlayerLoader label="Loading live market data" sub="Syncing the analytics engine" />;
   }
 
   // ── HOME = full-screen marketing landing for EVERYONE (guest + authenticated).
@@ -995,12 +983,9 @@ export default function App() {
 
   // Determine if alert notifications are allowed to display.
   // Alert notifications are only allowed if purchasedTier > 1 (paid tiers).
-  // Additionally, alerts are never allowed on the landing page ('home'), for any tier.
-  // Flow-alert popups belong only on trading-analysis routes. Suppress them on Home and on
-  // content/config routes (Settings, Admin, Community, Trade History, Workspace) where a
-  // floating trade alert overlaps the page and reads as intrusive / demo-unsafe.
-  const ALERT_ROUTES = new Set(['skyvision', 'pinpoint', 'quant']);
-  const showAlerts = purchasedTier > 1 && ALERT_ROUTES.has(activeTab);
+  // The floating trade-alert popup (SkyseyeAlertHub) is retired: it docked bottom-right
+  // over the Selected-Setup rail / Watchlist panels, isn't part of any page render, and
+  // surfaced sample-scored alerts. Real alerts live inline on the pages instead.
 
   return (
     <AppShell
@@ -1022,7 +1007,6 @@ export default function App() {
             IMPERSONATING USER - CLICK HERE TO TERMINATE SESSION
           </div>
         )}
-        {showAlerts && <SkyseyeAlertHub />}
 
         <div className="flex-1 flex flex-col w-full mx-auto relative z-10 h-full overflow-hidden">
           {/* Feed-honesty banner: surface SSE disconnects AND a quiet-but-open stream inside the
@@ -1047,6 +1031,7 @@ export default function App() {
                 activeTab === 'skyvision' ? 'SkyVision Cockpit' :
                 activeTab === 'pinpoint' ? 'Pinpoint GEX' :
                 activeTab === 'dealerflow' ? 'Dealer Flow' :
+                activeTab === 'liveterminal' ? 'Live Terminal' :
                 activeTab === 'quant' ? 'Quant Lab' :
                 activeTab === 'auditor' ? 'Trust Registry' :
                 activeTab === 'community' ? 'Arbor Capital' :
@@ -1090,6 +1075,15 @@ export default function App() {
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
                   <DealerFlowView />
+                </TierGuard>
+              </div>
+            )}
+
+            {/* TAB: LIVE TERMINAL — the GEX-node tick chart + strike×expiry heatmap + flow board. */}
+            {activeTab === 'liveterminal' && (
+              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+                <TierGuard requiredTier={2} tabKey="live terminal" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
+                  <PinpointTerminal ticker={selectedAsset.ticker} />
                 </TierGuard>
               </div>
             )}

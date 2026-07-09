@@ -148,17 +148,14 @@ function MatrixCell({
   // red, calls purple, net by sign.
   const numColor = side === 'put' ? NEG_RED : side === 'call' ? CALL_PURPLE : v < 0 ? NEG_RED : POS_GREEN;
   const barColor = side === 'put' ? SLAYER_RED : side === 'call' ? CALL_PURPLE : v < 0 ? NEG_RED : POS_GREEN;
+  // Heat-map cell: a subtle magnitude-scaled wash of the sign colour (max ~18%),
+  // so the matrix reads as an exposure heatmap rather than a wall of numbers.
+  const tint = has && pct > 0 ? `color-mix(in srgb, ${barColor} ${Math.round(pct * 0.18)}%, transparent)` : undefined;
   return (
-    <div className="relative h-5 flex items-center justify-end px-1 overflow-hidden">
+    <div className="relative flex h-5 items-center justify-end px-1 overflow-hidden" style={{ background: tint }}>
       <span className="relative z-10 text-[9.5px] slayer-num font-semibold" style={{ color: has ? numColor : 'var(--text-faint)' }}>
         {fmtMag(has ? v : null)}
       </span>
-      {/* Thin proportional underline (sign encoded by colour, not a side bar). */}
-      <span
-        className="absolute bottom-[1px] right-0 h-[2px] rounded-full pointer-events-none"
-        style={{ width: `${pct}%`, background: barColor, opacity: 0.8 }}
-        aria-hidden="true"
-      />
     </div>
   );
 }

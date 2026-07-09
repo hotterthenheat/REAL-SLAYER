@@ -277,6 +277,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
           <NavItem id="skyvision" label="SkyVision" icon={Sparkles} activeColor="text-[var(--accent-color)]" />
           <NavItem id="pinpoint" label="Pinpoint GEX" icon={Dna} activeColor="text-[var(--accent-color)]" />
           <NavItem id="dealerflow" label="Dealer Flow" icon={Waves} activeColor="text-[var(--accent-color)]" />
+          <NavItem id="liveterminal" label="Live Terminal" icon={RadioTower} activeColor="text-[var(--accent-color)]" />
           <NavItem id="quant" label="Quant Lab" icon={LineChart} activeColor="text-[var(--accent-color)]" />
           <NavItem id="auditor" label="Trade History" icon={Database} />
           
@@ -366,6 +367,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
             <NavItem id="skyvision" label="SkyVision" icon={Sparkles} activeColor="text-[var(--accent-color)]" isMobile />
             <NavItem id="pinpoint" label="Pinpoint GEX" icon={Dna} activeColor="text-[var(--accent-color)]" isMobile />
             <NavItem id="dealerflow" label="Dealer Flow" icon={Waves} activeColor="text-[var(--accent-color)]" isMobile />
+            <NavItem id="liveterminal" label="Live Terminal" icon={RadioTower} activeColor="text-[var(--accent-color)]" isMobile />
             <NavItem id="quant" label="Quant Lab" icon={LineChart} activeColor="text-[var(--accent-color)]" isMobile />
             <NavItem id="auditor" label="Trade History" icon={Database} isMobile />
 
