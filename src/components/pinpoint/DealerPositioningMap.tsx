@@ -39,12 +39,18 @@ export function DealerPositioningMap({
   actions,
   footer,
 }: DealerPositioningMapProps) {
-  const width = 780;
+  const width = 800;
   const rowHeight = 28;
   const top = 30;
   const height = rows.length * rowHeight + 60;
-  const centerX = 390;
-  const barMax = 260;
+  const centerX = 384;
+  const barMax = 232;
+  // Reserved right-hand gutter so level tags render as a clean vertical rail and
+  // are never clipped by the plot edge. Dashed rules stop just before the rail.
+  const labelW = 158;
+  const labelX = width - labelW - 6;
+  const lineStart = 118;
+  const lineEnd = labelX - 8;
   const maxAbs = Math.max(1e-9, ...rows.map((row) => Math.abs(row.value)));
 
   const nearestRowIndex = (level?: number): number | null => {
@@ -94,7 +100,7 @@ export function DealerPositioningMap({
                 <text x={20} y={y + 4} fontSize="11" fill="var(--text-secondary)" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {fmt(row.strike)}
                 </text>
-                <line x1={120} x2={width - 80} y1={y} y2={y} stroke="rgba(248,248,255,0.05)" strokeWidth="1" />
+                <line x1={lineStart} x2={lineEnd} y1={y} y2={y} stroke="rgba(248,248,255,0.05)" strokeWidth="1" />
                 <rect
                   x={isPositive ? centerX : centerX - magnitude}
                   y={y - 6}
@@ -115,11 +121,14 @@ export function DealerPositioningMap({
             const color = refs[0].color;
             return (
               <g key={`ref-${idx}`}>
-                <line x1={120} x2={width - 80} y1={y} y2={y} stroke={color} strokeOpacity="0.7" strokeWidth="1" strokeDasharray="4 4" />
-                <foreignObject x={width - 78} y={y - 15} width={76} height={30}>
-                  <div className="slayer-level-tag text-center leading-tight" style={{ color }}>
-                    <div className="truncate">{label}</div>
-                    <div className="slayer-num text-[var(--text-primary)]">{value}</div>
+                <line x1={lineStart} x2={lineEnd} y1={y} y2={y} stroke={color} strokeOpacity="0.7" strokeWidth="1" strokeDasharray="4 4" />
+                <foreignObject x={labelX} y={y - 15} width={labelW} height={30}>
+                  <div
+                    className="slayer-level-tag flex flex-col justify-center whitespace-nowrap leading-tight"
+                    style={{ color, borderColor: color, paddingTop: 3, paddingBottom: 3 }}
+                  >
+                    <span className="font-semibold">{label}</span>
+                    <span className="slayer-num text-[var(--text-primary)]">{value}</span>
                   </div>
                 </foreignObject>
               </g>

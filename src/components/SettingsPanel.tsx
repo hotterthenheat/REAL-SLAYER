@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import {
   Settings,
-  HelpCircle,
   Type,
-  Eye,
   Palette,
   RefreshCw,
   Coins,
@@ -27,6 +25,7 @@ import {
   Trash2,
   Download,
   Keyboard,
+  ChevronDown,
 } from 'lucide-react';
 import { UserProfile } from './UserProfile';
 import { TwoFactorFlow } from './TwoFactorFlow';
@@ -1258,21 +1257,24 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 <p className="text-xs text-[var(--text-tertiary)] leading-relaxed mt-0.5 mb-2">
                   Adjust how large the text appears throughout the app.
                 </p>
-                <select
-                  aria-label="Text size"
-                  value={selectedFont}
-                  onChange={(e) => {
-                    const newVal = e.target.value as 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL';
-                    setSelectedFont(newVal);
-                    applyTextSize(newVal);
-                    handleSaveSettings(newVal, compactMode, activeTheme);
-                  }}
-                  className={`${CONTROL} cursor-pointer appearance-none`}
-                >
-                  <option value="STANDARD">Standard</option>
-                  <option value="ENHANCED">Large</option>
-                  <option value="ENHANCED_XL">Extra Large</option>
-                </select>
+                <div className="relative">
+                  <select
+                    aria-label="Text size"
+                    value={selectedFont}
+                    onChange={(e) => {
+                      const newVal = e.target.value as 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL';
+                      setSelectedFont(newVal);
+                      applyTextSize(newVal);
+                      handleSaveSettings(newVal, compactMode, activeTheme);
+                    }}
+                    className={`${CONTROL} cursor-pointer appearance-none pr-9`}
+                  >
+                    <option value="STANDARD">Standard</option>
+                    <option value="ENHANCED">Large</option>
+                    <option value="ENHANCED_XL">Extra Large</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               {/* Clock Format */}
@@ -1303,16 +1305,19 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 <p className="text-xs text-[var(--text-tertiary)] leading-relaxed mt-0.5 mb-2">
                   All times display in this timezone. US market hours are in Eastern Time.
                 </p>
-                <select
-                  aria-label="Display time zone"
-                  value={timeZone}
-                  onChange={(e) => setTimeZone(e.target.value as 'EST' | 'UTC' | 'LOCAL')}
-                  className={`${CONTROL} cursor-pointer appearance-none`}
-                >
-                  <option value="EST">New York Time (EST / EDT)</option>
-                  <option value="UTC">Coordinated Universal Time (UTC)</option>
-                  <option value="LOCAL">Local System Time (User Device Zone)</option>
-                </select>
+                <div className="relative">
+                  <select
+                    aria-label="Display time zone"
+                    value={timeZone}
+                    onChange={(e) => setTimeZone(e.target.value as 'EST' | 'UTC' | 'LOCAL')}
+                    className={`${CONTROL} cursor-pointer appearance-none pr-9`}
+                  >
+                    <option value="EST">New York Time (EST / EDT)</option>
+                    <option value="UTC">Coordinated Universal Time (UTC)</option>
+                    <option value="LOCAL">Local System Time (User Device Zone)</option>
+                  </select>
+                  <ChevronDown className="w-4 h-4 text-[var(--text-tertiary)] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                </div>
               </div>
 
               {/* Compact View */}
@@ -1506,28 +1511,19 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
             <SettingsCard icon={Coins} title="Referral Rewards">
               <ReferralCodeBox />
 
-              <div className="pt-5 border-t border-[var(--border)] space-y-4">
-                <div>
-                  <span className={FIELD_LABEL}>Your referral code</span>
-                  <div className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg px-3 py-2.5 text-sm font-bold font-mono tracking-widest text-center">
-                    {session?.custom_referral_code || 'SLAYERX'}
+              <div className="pt-5 border-t border-[var(--border)]">
+                <span className={FIELD_LABEL}>Your custom referral link</span>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-lg px-3 py-2.5 text-xs font-mono flex items-center">
+                    <span className="break-all">{referralLink}</span>
                   </div>
-                </div>
-
-                <div>
-                  <span className={FIELD_LABEL}>Your custom referral link</span>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-lg px-3 py-2.5 text-xs font-mono flex items-center">
-                      <span className="break-all">{referralLink}</span>
-                    </div>
-                    <CopyButton
-                      content={referralLink}
-                      variant="primary"
-                      label="Copy Link"
-                      title="Copy full referral link to clipboard"
-                      className="px-6 py-2.5 text-xs sm:shrink-0"
-                    />
-                  </div>
+                  <CopyButton
+                    content={referralLink}
+                    variant="primary"
+                    label="Copy Link"
+                    title="Copy full referral link to clipboard"
+                    className="px-6 py-2.5 text-xs sm:shrink-0"
+                  />
                 </div>
               </div>
             </SettingsCard>

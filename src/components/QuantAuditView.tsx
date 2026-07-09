@@ -673,7 +673,7 @@ export function QuantAuditView({
           {selected ? (
             <SelectedTradePanel row={selected} onCancel={cancelTracked} onLoad={loadContract} />
           ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-16 text-center">
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
               <Activity className="w-6 h-6 text-[var(--text-faint)]" />
               <p className="text-[11px] text-[var(--text-muted)] tracking-wide max-w-[220px]">Select a trade from the blotter to inspect its thesis, target ladder and result.</p>
             </div>
@@ -700,23 +700,27 @@ export function QuantAuditView({
           </div>
         }
       >
-        <div style={{ height: 300 }}>
-          {chartOption ? (
-            <EChart option={chartOption} notMerge style={{ width: '100%', height: '100%' }} />
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] animate-pulse" />
-              <span className="text-[10px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">Awaiting closed trades</span>
-              <p className="text-[10px] text-[var(--text-faint)] max-w-[280px] tracking-wide">
-                The equity curve builds from real realized outcomes. Close a tracked setup or log a resolved archive trade to populate it — no series is drawn from open positions.
+        {chartOption ? (
+          <>
+            <div style={{ height: 300 }}>
+              <EChart option={chartOption} notMerge style={{ width: '100%', height: '100%' }} />
+            </div>
+            <div className="flex items-center justify-between gap-2 pt-2 text-[9px] text-[var(--text-muted)] tracking-wide">
+              <span>{closedOrdered.length} closed trade{closedOrdered.length === 1 ? '' : 's'} · unit: {unitLabel}</span>
+              <span>{perfMode === 'r' ? 'R = return ÷ planned risk (1R)' : 'Per-contract $ = premium move × 100'}</span>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-start gap-3 py-3">
+            <span className="mt-1 w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--warning)] animate-pulse" />
+            <div className="min-w-0">
+              <div className="text-[10px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">Awaiting closed trades</div>
+              <p className="text-[10px] text-[var(--text-faint)] tracking-wide mt-1 max-w-[520px] leading-relaxed">
+                The equity curve builds from real realized outcomes — close a tracked setup or log a resolved archive trade to populate it. No series is drawn from open positions.
               </p>
             </div>
-          )}
-        </div>
-        <div className="flex items-center justify-between gap-2 pt-2 text-[9px] text-[var(--text-muted)] tracking-wide">
-          <span>{closedOrdered.length} closed trade{closedOrdered.length === 1 ? '' : 's'} · unit: {unitLabel}</span>
-          <span>{perfMode === 'r' ? 'R = return ÷ planned risk (1R)' : 'Per-contract $ = premium move × 100'}</span>
-        </div>
+          </div>
+        )}
       </TerminalPanel>
 
       {/* ─────────────── FOOTER ─────────────── */}

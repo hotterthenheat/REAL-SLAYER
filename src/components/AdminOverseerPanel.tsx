@@ -12,8 +12,8 @@ import { DataTable, type Column } from './ui/terminal/DataTable';
 import { StatusBadge } from './ui/terminal/StatusBadge';
 import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
-  ShieldAlert, Users, Activity, Key, MonitorPlay, Radio,
-  Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, Search, RefreshCw, ScrollText, Wifi
+  ShieldAlert, Users, Activity, Key, Radio,
+  Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, RefreshCw, ScrollText
 } from 'lucide-react';
 
 /**
@@ -163,7 +163,7 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
 
   const metrics: Metric[] = [
     { label: 'Total Users', value: overview?.total_users ?? '—' },
-    { label: 'Live Now', value: overview?.live_connections ?? '—', tone: 'positive' },
+    { label: 'Live Now', value: overview?.live_connections ?? '—', tone: overview?.live_connections ? 'positive' : 'neutral' },
     { label: 'Suspended', value: overview?.suspended ?? '—', tone: overview?.suspended ? 'warning' : 'neutral' },
     { label: 'Banned', value: overview?.banned ?? '—', tone: overview?.banned ? 'negative' : 'neutral' },
     { label: 'Audit Entries', value: overview?.audit_entries ?? '—' },
@@ -176,7 +176,7 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
 
       {/* Feed health — the market-data provider currently backing every terminal read. */}
       <TerminalPanel title="Feed Health" subtitle="Market-data provider backing every terminal read">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-3">
           <div>
             <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Provider</div>
             <div className="flex items-center gap-2">
@@ -187,10 +187,6 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
           <div>
             <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Mode</div>
             <DataStateBadge state={feed.state} />
-          </div>
-          <div>
-            <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Live Connections</div>
-            <div className="slayer-num text-[13px] font-semibold text-[var(--positive-ink)]">{overview?.live_connections ?? '—'}</div>
           </div>
           <div>
             <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Server Time</div>

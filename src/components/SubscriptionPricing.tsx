@@ -239,11 +239,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           >
             <div className="flex flex-col flex-grow">
               <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     Discord
                   </span>
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--text-faint)] font-semibold">Community</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$39' : '$32'}</span>
@@ -286,11 +285,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           >
             <div className="flex flex-col flex-grow">
               <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     Pinpoint GEX
                   </span>
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--text-faint)] font-semibold">Dealer GEX</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$99' : '$82'}</span>
@@ -341,11 +339,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
 
             <div className="flex flex-col flex-grow">
               <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     SkyVision
                   </span>
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--text-faint)] font-semibold">Flagship</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$499' : '$415'}</span>
@@ -396,11 +393,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           >
             <div className="flex flex-col flex-grow">
               <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="flex items-center justify-between mb-4">
+                <div className="mb-4">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     Lifetime
                   </span>
-                  <span className="text-[9px] uppercase tracking-[0.18em] text-[var(--text-faint)] font-semibold">Lifetime</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[26px] font-semibold text-[var(--text-primary)] tracking-tight leading-none">Custom</span>
@@ -496,7 +492,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               {/* Modal Top Ribbon Header */}
               <div className="border-b border-[var(--border-subtle)] px-4 sm:px-6 py-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-[var(--positive-ink)]" />
+                  {selectedPlanForCheckout === 'lifetime' && <Mail className="w-4 h-4 text-[var(--positive-ink)]" />}
                   <span className="text-[11px] uppercase font-semibold tracking-[0.18em] text-[var(--text-secondary)]">
                     {selectedPlanForCheckout === 'lifetime' ? 'Contact sales' : 'Checkout'}
                   </span>
@@ -569,10 +565,6 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   <div className="border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] rounded-[8px] p-4">
                         <div className="space-y-4 flex flex-col justify-between h-full">
                           <div className="space-y-3.5">
-                            <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[0.18em] text-[var(--text-secondary)] font-semibold border-b border-[var(--border-subtle)] pb-2">
-                              <Mail className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0" />
-                              Contact form
-                            </div>
                             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
                               The Lifetime Pass is priced individually. Send us your details and our team
                               will reach out with a custom quote &mdash; no payment is taken here.

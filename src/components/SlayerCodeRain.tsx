@@ -7,12 +7,16 @@ import { useReducedMotion } from 'motion/react';
  * (steel = SkyVision setup scanning, amber = Pinpoint AI dealer flow), under a
  * radial scrim + vignette so it reads as texture, not a chart. Colour still
  * encodes meaning; motion is slow. Collapses to nothing under reduced-motion.
+ *
+ * Positioned `absolute inset-0`, it fills — and is clipped to — its nearest
+ * positioned ancestor (the hero section), so the rain lives only behind the
+ * first viewport and fades to solid #08090A at the hero's lower edge. Every
+ * section below the hero therefore sits on clean, legible black.
  */
 
 const STEEL = '#6A93B5'; // SkyVision — setup scanning / scoring / ranking
 const AMBER = '#C79350'; // Pinpoint AI — dealer flow / GEX / gamma / walls
 const DIM2 = '#454E58';
-const DIM = '#6B7177';
 
 const POOL = [
   // SkyVision — setup scanner
@@ -100,14 +104,12 @@ export default function SlayerCodeRain() {
     });
   }, []);
 
-  if (reduce) {
-    return (
-      <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0" style={{ background: '#08090A' }} />
-    );
-  }
+  // Reduced motion: no rain. The hero simply resolves to the page's solid
+  // #08090A, matching every section below it.
+  if (reduce) return null;
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 overflow-hidden" style={{ background: '#08090A' }}>
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       {columns.map((col, i) => (
         <div
           key={i}
@@ -133,6 +135,9 @@ export default function SlayerCodeRain() {
       <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 72% 62% at 50% 44%, rgba(8,9,10,0.9) 0%, rgba(8,9,10,0.55) 44%, transparent 78%)' }} />
       {/* vignette */}
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 260px 70px rgba(0,0,0,0.92)', background: 'radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.62) 100%)' }} />
+      {/* bottom fade — ramps the rain into solid #08090A so it dissolves cleanly
+          into the sections below the hero */}
+      <div className="absolute inset-x-0 bottom-0 h-1/2" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(8,9,10,0.85) 62%, #08090A 100%)' }} />
     </div>
   );
 }

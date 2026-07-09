@@ -833,7 +833,6 @@ export default function QuantSuiteView() {
           <TerminalPanel
             title="Risk-Neutral Distribution"
             subtitle={`Breeden–Litzenberger ∂²C/∂K² on the option chain · ${dteD}D horizon · r = 5.1%`}
-            actions={<DataStateBadge state={liveState(isLiveData)} />}
             contentClassName="flex flex-col gap-2 p-2"
           >
             {rndOption ? (
@@ -867,7 +866,6 @@ export default function QuantSuiteView() {
           <TerminalPanel
             title="Regime Detection"
             subtitle="Streamed quant-edge signal grid + measurable-feature classifier over the candle series"
-            actions={<DataStateBadge state={liveState(isLiveData)} title="Signals are computed server-side on the same streamed data as the rest of the suite." />}
             contentClassName="flex flex-col gap-[var(--gap)] p-2"
           >
             <RegimeMatrixPanel />
@@ -904,7 +902,6 @@ export default function QuantSuiteView() {
           <TerminalPanel
             title="Greeks & Factor Exposures"
             subtitle="OI-weighted chain aggregates · smile factors · per-expiry profile"
-            actions={<DataStateBadge state={liveState(isLiveData)} />}
             contentClassName="flex flex-col gap-[var(--gap)] p-2"
           >
             <div>
@@ -979,7 +976,6 @@ export default function QuantSuiteView() {
         <TerminalPanel
           title="Model Notes & Assumptions"
           subtitle="Provenance and structure of every model on this page — nothing here is a fitted-quality claim"
-          actions={<DataStateBadge state={liveState(isLiveData)} />}
           contentClassName="grid grid-cols-1 gap-[6px] sm:grid-cols-2 xl:grid-cols-3 p-2"
         >
           <ModelNote label="Data Source">{serverState?.data_source ?? '— (no server state yet)'}</ModelNote>

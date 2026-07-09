@@ -899,17 +899,14 @@ export default function PinpointExposureView() {
         />
       </div>
 
-      {/* ─────────────── 3. BOTTOM STRIP ─────────────── */}
-      <TerminalPanel title="Net Exposure & Levels">
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 overflow-hidden rounded-md border-t border-l border-[var(--border-subtle)] bg-[var(--bg-panel)]">
+      {/* ─────────────── 3. AGGREGATE NET EXPOSURE ─────────────── */}
+      {/* The three net-greek totals side by side. Level/wall/bias figures live in
+          the top KPI strip — not duplicated here. */}
+      <TerminalPanel title="Aggregate Net Exposure" subtitle="Net dealer greeks across the visible chain">
+        <div className="grid grid-cols-1 sm:grid-cols-3 overflow-hidden rounded-md border-t border-l border-[var(--border-subtle)] bg-[var(--bg-panel)]">
           <LevelCell label="Net GEX" value={fmtBnSigned(netGex)} sub={netGexTrend} tone={netGex == null ? 'neutral' : netGex < 0 ? 'negative' : 'positive'} />
           <LevelCell label="Net DEX" value={fmtCompact(netDexAgg, true)} sub={netDexAgg == null ? '—' : netDexAgg < 0 ? 'Downside tilt' : 'Upside tilt'} tone={netDexAgg == null ? 'neutral' : netDexAgg < 0 ? 'negative' : 'positive'} />
           <LevelCell label="Net VEX" value={fmtCompact(netVexAgg, true)} sub={netVexAgg == null ? '—' : netVexAgg < 0 ? 'Short vega' : 'Long vega'} tone={netVexAgg == null ? 'neutral' : netVexAgg < 0 ? 'negative' : 'positive'} />
-          <LevelCell label="Spot" value={fmtLevel(spot)} sub={spotChange ? fmtPct(spotChange.pct) : '—'} tone={spotChange ? (spotChange.abs >= 0 ? 'positive' : 'negative') : 'neutral'} />
-          <LevelCell label="Put Wall" value={fmtLevel(putWall)} sub={putWallPct != null ? `${putWallPct.toFixed(2)}%` : '—'} tone="negative" />
-          <LevelCell label="Pin Level" value={fmtLevel(magnet)} sub={pinPct != null ? fmtPct(pinPct) : '—'} tone="pin" />
-          <LevelCell label="Call Wall" value={fmtLevel(callWall)} sub={callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}%` : '—'} tone="call" />
-          <LevelCell label="Dealer Bias" value={biasInfo.label} sub={biasInfo.sub} tone={biasInfo.tone} wrap />
         </div>
       </TerminalPanel>
 

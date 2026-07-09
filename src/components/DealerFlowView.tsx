@@ -1199,22 +1199,28 @@ export function DealerFlowView() {
     },
     {
       label: 'GEX',
-      value: view.netGex != null ? fmtGreek(view.netGex) : '—',
-      sub: view.netGex != null ? (view.netGex >= 0 ? 'Net Positive' : 'Net Negative') : undefined,
-      tone: (view.netGex ?? 0) >= 0 ? 'positive' : 'negative',
+      value: view.netGex != null && isFinite(view.netGex) ? fmtGreek(view.netGex) : '—',
+      sub:
+        view.netGex != null && isFinite(view.netGex)
+          ? view.netGex >= 0 ? 'Net Positive' : 'Net Negative'
+          : 'no chain data',
+      tone: view.netGex != null && isFinite(view.netGex) ? (view.netGex >= 0 ? 'positive' : 'negative') : 'neutral',
     },
     {
       label: 'Net DEX',
-      value: view.netDex != null ? fmtGreek(view.netDex) : '—',
-      sub: view.netDex != null ? (view.netDex >= 0 ? 'dealers long delta' : 'dealers short delta') : undefined,
-      tone: (view.netDex ?? 0) >= 0 ? 'positive' : 'negative',
+      value: view.netDex != null && isFinite(view.netDex) ? fmtGreek(view.netDex) : '—',
+      sub:
+        view.netDex != null && isFinite(view.netDex)
+          ? view.netDex >= 0 ? 'dealers long delta' : 'dealers short delta'
+          : 'no chain data',
+      tone: view.netDex != null && isFinite(view.netDex) ? (view.netDex >= 0 ? 'positive' : 'negative') : 'neutral',
     },
   ];
 
   // Cell atoms for the pressure matrix / chain: red negative, info-blue positive.
   const pressCell = (v?: number | null) => (
     <span
-      className={`slayer-num text-[11px] font-medium ${
+      className={`slayer-num text-[11px] font-medium whitespace-nowrap ${
         v == null || !isFinite(v) ? 'text-[var(--text-faint)]' : v < 0 ? 'text-[var(--negative-ink)]' : 'text-[var(--info)]'
       }`}
     >
@@ -1222,7 +1228,7 @@ export function DealerFlowView() {
     </span>
   );
   const countCell = (v?: number | null) => (
-    <span className="slayer-num text-[11px] text-[var(--text-secondary)]">
+    <span className="slayer-num text-[11px] whitespace-nowrap text-[var(--text-secondary)]">
       {v == null || !isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US')}
     </span>
   );
@@ -1416,23 +1422,21 @@ export function DealerFlowView() {
           actions={expirySelector}
           padded={false}
         >
-          <div className="max-h-[420px] overflow-y-auto">
-            <DataTable
-              columns={matrixColumns}
-              rows={matrixData.rows}
-              rowKey={(r) => r.strike}
-              className="border-0"
-              rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
-              emptyState="Chain profile pending."
-            />
-          </div>
+          <DataTable
+            columns={matrixColumns}
+            rows={matrixData.rows}
+            rowKey={(r) => r.strike}
+            className="max-h-[420px] border-0"
+            rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+            emptyState="Chain profile pending."
+          />
         </TerminalPanel>
       </div>
 
       {/* ============== ROW 2 — order flow + key levels rail + options chain ============== */}
       <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel className="xl:col-span-4" title="Order Flow" subtitle="cumulative tape delta · live regime">
-          <div className="space-y-4">
+          <div className="space-y-3">
             <div>
               <div className="slayer-subtitle">Cumulative Δ · session tape</div>
               <div
@@ -1475,18 +1479,6 @@ export function DealerFlowView() {
                   {gauge.pressure != null ? `${gauge.pressure > 0 ? '+' : ''}${Math.round(gauge.pressure)}` : '—'}
                 </div>
               </div>
-              <div className="slayer-panel px-3 py-2">
-                <div className="slayer-subtitle">Net GEX</div>
-                <div className={`mt-0.5 slayer-num text-[13px] font-semibold ${(view.netGex ?? 0) >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
-                  {view.netGex != null ? fmtGreek(view.netGex) : '—'}
-                </div>
-              </div>
-              <div className="slayer-panel px-3 py-2">
-                <div className="slayer-subtitle">Net DEX</div>
-                <div className={`mt-0.5 slayer-num text-[13px] font-semibold ${(view.netDex ?? 0) >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
-                  {view.netDex != null ? fmtGreek(view.netDex) : '—'}
-                </div>
-              </div>
             </div>
           </div>
         </TerminalPanel>
@@ -1507,16 +1499,14 @@ export function DealerFlowView() {
           subtitle={chainView.atmStrike != null ? `near-the-money · ATM ${fmtNum(chainView.atmStrike)}` : 'near-the-money'}
           padded={false}
         >
-          <div className="overflow-x-auto">
-            <DataTable
-              columns={chainColumns}
-              rows={chainView.rows}
-              rowKey={(r) => r.strike}
-              className="border-0"
-              rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
-              emptyState={`This feed does not stream a per-contract chain for ${selectedAsset.ticker}.`}
-            />
-          </div>
+          <DataTable
+            columns={chainColumns}
+            rows={chainView.rows}
+            rowKey={(r) => r.strike}
+            className="border-0"
+            rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+            emptyState={`This feed does not stream a per-contract chain for ${selectedAsset.ticker}.`}
+          />
         </TerminalPanel>
       </div>
 

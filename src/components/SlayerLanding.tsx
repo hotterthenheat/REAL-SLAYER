@@ -371,7 +371,10 @@ function Reveal({ children, y = 26, delay = 0 }: { children: React.ReactNode; y?
 function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
   return (
     <section className="relative overflow-hidden">
-      <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
+      {/* live code-rain — confined to the hero; fades to solid black at its
+          lower edge so every section below sits on clean, legible #08090A */}
+      <SlayerCodeRain />
+      <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
         <div>
           <Eyebrow>From Traders. For Traders.</Eyebrow>
           <h1 className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
@@ -683,8 +686,6 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
       className="fixed inset-0 z-[40] overflow-y-auto overflow-x-hidden font-mono antialiased slayer-scrollbar"
       style={{ background: '#08090A', color: PALETTE.text }}
     >
-      {/* live code-rain background — ported from slayerterminal.com */}
-      <SlayerCodeRain />
       {/* scroll-progress rail — GEX gradient, fixed to the top of the canvas */}
       <motion.div
         aria-hidden="true"
