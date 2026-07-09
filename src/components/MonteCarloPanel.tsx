@@ -111,7 +111,7 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
 
   if (!result) {
     return (
-      <div className="h-[260px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
+      <div className="h-full min-h-[220px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
         <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest">Monte Carlo needs spot, vol & horizon</span>
       </div>
     );
@@ -138,7 +138,7 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
   );
 
   return (
-    <div ref={wrapRef} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+    <div ref={wrapRef} className="flex h-full min-h-0 flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
       <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)] gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <span className="w-[3px] h-3.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
@@ -169,7 +169,10 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
         </div>
       </div>
 
-      <canvas ref={canvasRef} className="w-full h-[240px] block" />
+      {/* Sample-path cloud grows to fill the panel height (min 220px) so the summary
+          panel is filled by a bigger visualization rather than stretched into a void.
+          The draw effect reads canvas.clientHeight, so it adapts to the flexed size. */}
+      <canvas ref={canvasRef} className="w-full flex-1 min-h-[220px] block" />
 
       {/* Terminal distribution */}
       <div className="relative">

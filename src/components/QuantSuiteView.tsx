@@ -828,41 +828,69 @@ export default function QuantSuiteView() {
           </TerminalPanel>
         </div>
 
-        {/* ───────────── 3. RND + REGIME DETECTION ───────────── */}
-        <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2">
-          <TerminalPanel
-            title="Risk-Neutral Distribution"
-            subtitle={`Breeden–Litzenberger ∂²C/∂K² on the option chain · ${dteD}D horizon · r = 5.1%`}
-            contentClassName="flex flex-col gap-2 p-2"
-          >
-            {rndOption ? (
-              <div className="h-[260px]" id="quant-suite-rnd-chart">
-                <EChart option={rndOption} notMerge />
+        {/* ───────────── 3. RND + MONTE CARLO (left) | REGIME DETECTION (right) ───────────── */}
+        {/* The Regime signal column is intrinsically tall (11 live signals + candle-series
+            classifier). Pairing a lone short chart beside it stretched that chart into a
+            ~800px black void. Instead the left column stacks the RND density over the
+            Monte-Carlo panel, whose sample-path cloud GROWS to fill the column height the
+            Regime panel sets — the void becomes a bigger, honest visualization. */}
+        <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2 xl:items-stretch">
+          {/* LEFT — RND (natural height) over Monte Carlo (fills the remaining column) */}
+          <div className="flex min-h-0 flex-col gap-[var(--gap)]">
+            <TerminalPanel
+              title="Risk-Neutral Distribution"
+              subtitle={`Breeden–Litzenberger ∂²C/∂K² on the option chain · ${dteD}D horizon · r = 5.1%`}
+              contentClassName="flex flex-col gap-2 p-2"
+            >
+              {rndOption ? (
+                <div className="h-[300px]" id="quant-suite-rnd-chart">
+                  <EChart option={rndOption} notMerge />
+                </div>
+              ) : (
+                <div className="flex h-[300px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  Chain too sparse for a density solve
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
+                <Cell label="Exp Move" value={`±${expectedMovePct.toFixed(2)}%`} sub={`1σ · ${dteD}D`} />
+                <Cell
+                  label="Skew"
+                  value={rndResult.skewness.toFixed(3)}
+                  tone={rndResult.skewness < 0 ? 'neg' : 'pos'}
+                  sub={rndResult.skewness < 0 ? 'Put-tailed' : 'Call-tailed'}
+                />
+                <Cell
+                  label="Kurtosis"
+                  value={rndResult.kurtosis.toFixed(2)}
+                  tone={rndResult.isFatTailed ? 'warn' : undefined}
+                  sub={rndResult.isFatTailed ? 'Fat-tailed' : 'Excess'}
+                />
+                <Cell label="P(>+2σ)" value={rndTails.pAbove2 != null ? fmtPct(rndTails.pAbove2) : '—'} sub="Upper tail" />
+                <Cell label="P(<-2σ)" value={rndTails.pBelow2 != null ? fmtPct(rndTails.pBelow2) : '—'} sub="Lower tail" />
               </div>
-            ) : (
-              <div className="flex h-[260px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Chain too sparse for a density solve
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
-              <Cell label="Exp Move" value={`±${expectedMovePct.toFixed(2)}%`} sub={`1σ · ${dteD}D`} />
-              <Cell
-                label="Skew"
-                value={rndResult.skewness.toFixed(3)}
-                tone={rndResult.skewness < 0 ? 'neg' : 'pos'}
-                sub={rndResult.skewness < 0 ? 'Put-tailed' : 'Call-tailed'}
-              />
-              <Cell
-                label="Kurtosis"
-                value={rndResult.kurtosis.toFixed(2)}
-                tone={rndResult.isFatTailed ? 'warn' : undefined}
-                sub={rndResult.isFatTailed ? 'Fat-tailed' : 'Excess'}
-              />
-              <Cell label="P(>+2σ)" value={rndTails.pAbove2 != null ? fmtPct(rndTails.pAbove2) : '—'} sub="Upper tail" />
-              <Cell label="P(<-2σ)" value={rndTails.pBelow2 != null ? fmtPct(rndTails.pBelow2) : '—'} sub="Lower tail" />
-            </div>
-          </TerminalPanel>
+            </TerminalPanel>
 
+            <TerminalPanel
+              title="Monte Carlo Scenario Summary"
+              subtitle={`Seeded GBM / jump-diffusion / Heston paths · σ = ${fmtPct(defaultIv)} · ${dteD}D horizon · r = 5.0%`}
+              actions={<DataStateBadge state="model" label="Model · Seeded" title="Deterministically seeded simulation on real spot/vol inputs — a model, not market data." />}
+              contentClassName="p-2"
+              className="min-h-0 flex-1"
+            >
+              <div id="quant-suite-monte-carlo" className="h-full min-h-0">
+                <MonteCarloPanel
+                  spot={spotPrice}
+                  r={0.05}
+                  sigma={defaultIv}
+                  tYears={Math.max(1, dteD) / 365}
+                  ticker={activeTicker}
+                  decimals={activeAsset.decimals}
+                />
+              </div>
+            </TerminalPanel>
+          </div>
+
+          {/* RIGHT — Regime Detection (the tall signal column that anchors the row) */}
           <TerminalPanel
             title="Regime Detection"
             subtitle="Streamed quant-edge signal grid + measurable-feature classifier over the candle series"
@@ -879,31 +907,15 @@ export default function QuantSuiteView() {
           </TerminalPanel>
         </div>
 
-        {/* ───────────── 4. MONTE CARLO + GREEKS/FACTORS ───────────── */}
-        <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2">
-          <TerminalPanel
-            title="Monte Carlo Scenario Summary"
-            subtitle={`Seeded GBM / jump-diffusion / Heston paths · σ = ${fmtPct(defaultIv)} · ${dteD}D horizon · r = 5.0%`}
-            actions={<DataStateBadge state="model" label="Model · Seeded" title="Deterministically seeded simulation on real spot/vol inputs — a model, not market data." />}
-            contentClassName="p-2"
-          >
-            <div id="quant-suite-monte-carlo">
-              <MonteCarloPanel
-                spot={spotPrice}
-                r={0.05}
-                sigma={defaultIv}
-                tYears={Math.max(1, dteD) / 365}
-                ticker={activeTicker}
-                decimals={activeAsset.decimals}
-              />
-            </div>
-          </TerminalPanel>
-
-          <TerminalPanel
-            title="Greeks & Factor Exposures"
-            subtitle="OI-weighted chain aggregates · smile factors · per-expiry profile"
-            contentClassName="flex flex-col gap-[var(--gap)] p-2"
-          >
+        {/* ───────────── 4. GREEKS & FACTOR EXPOSURES (full width) ───────────── */}
+        {/* Full-width now that Monte Carlo joined the RND column above — the OI-weighted
+            aggregates, smile factors, per-expiry profile and per-strike exposure chart
+            all fill the wider row, so no panel is stretched past its content. */}
+        <TerminalPanel
+          title="Greeks & Factor Exposures"
+          subtitle="OI-weighted chain aggregates · smile factors · per-expiry profile"
+          contentClassName="flex flex-col gap-[var(--gap)] p-2"
+        >
             <div>
               <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Σ greek × OI × 100</span>}>
                 Aggregate Greeks
@@ -970,7 +982,6 @@ export default function QuantSuiteView() {
               </div>
             )}
           </TerminalPanel>
-        </div>
 
         {/* ───────────── 5. MODEL NOTES & ASSUMPTIONS (real metadata only) ───────────── */}
         <TerminalPanel

@@ -540,7 +540,7 @@ export default function PinpointExposureView() {
       <MetricStrip metrics={topMetrics} />
 
       {/* ─────────────── 2. MAIN TWO-COLUMN GRID ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] gap-3 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] gap-3 items-stretch">
         {/* LEFT — EXPOSURE MATRIX */}
         <TerminalPanel
           title="Exposure Matrix"

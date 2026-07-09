@@ -1406,7 +1406,9 @@ export function DealerFlowView() {
       {activeEngineView === 'profile' && (
       <div className="space-y-[var(--gap)]">
       {/* ============== ROW 1 — dealer net gamma map + dealer pressure matrix ============== */}
-      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+      {/* items-start: each panel sizes to its own content so a short matrix never
+          stretches into an empty black interior next to the fixed-height gamma map. */}
+      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel
           className="xl:col-span-7"
           title={`Dealer Net Gamma Map · ${selectedAsset.ticker}`}
@@ -1434,7 +1436,10 @@ export function DealerFlowView() {
       </div>
 
       {/* ============== ROW 2 — order flow + key levels rail + options chain ============== */}
-      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+      {/* items-start: the short Order Flow and Key Levels Rail panels size to their
+          own content instead of stretching to match the tall Options Chain table,
+          eliminating the ~430px / ~290px empty interiors below their content. */}
+      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel className="xl:col-span-4" title="Order Flow" subtitle="cumulative tape delta · live regime">
           <div className="space-y-3">
             <div>
@@ -1511,13 +1516,16 @@ export function DealerFlowView() {
       </div>
 
       {/* ============== ROW 3 — real-time multi-ticker flow + market notes ============== */}
-      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+      {/* items-start: Market Notes sizes to its small form + list instead of
+          stretching to match a long multi-ticker Real-Time Flow list (was ~990px
+          of empty interior). The Real-Time Flow table is capped + scrolls below. */}
+      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel className="xl:col-span-7" title="Real-Time Flow" subtitle="multi-ticker · live spots" padded={false}>
           <DataTable
             columns={multiTickerColumns}
             rows={multiTickerRows}
             rowKey={(r) => r.ticker}
-            className="border-0"
+            className="max-h-[420px] border-0"
             emptyState="Only one ticker is streaming right now."
           />
         </TerminalPanel>

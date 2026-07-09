@@ -1,9 +1,23 @@
 import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
+import { Sparkles, Dna, Waves, RadioTower, LineChart, Database, CreditCard, LogIn, Menu, X } from 'lucide-react';
 
 // three.js is heavy — the 3D hero backdrop loads lazily so it never blocks paint.
 const SlayerHero3D = lazy(() => import('./SlayerHero3D'));
+
+// Product nav — the SAME tabs the app shell exposes, so the landing and the
+// terminal share one left-sidebar navigation (no top-vs-side mismatch). Each
+// carries a one-line description so visitors see what every tab is.
+const PRODUCTS: { tab: string; label: string; desc: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[] = [
+  { tab: 'skyvision', label: 'SkyVision', desc: 'Ranked trade setups', icon: Sparkles },
+  { tab: 'pinpoint', label: 'Pinpoint GEX', desc: 'Dealer positioning & walls', icon: Dna },
+  { tab: 'dealerflow', label: 'Dealer Flow', desc: 'Live pressure by strike', icon: Waves },
+  { tab: 'liveterminal', label: 'Live Terminal', desc: 'Chart + GEX nodes', icon: RadioTower },
+  { tab: 'quant', label: 'Quant Lab', desc: 'Vol surface & models', icon: LineChart },
+  { tab: 'auditor', label: 'Trade History', desc: 'Tracked outcomes', icon: Database },
+  { tab: 'subscription', label: 'Pricing', desc: 'Plans & access', icon: CreditCard },
+];
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -294,65 +308,102 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
   );
 }
 
-/* ─────────────────────────── sections ─────────────────────────── */
-const NAV: { label: string; href?: string; tab?: string }[] = [
-  { label: 'Product', href: '#product' },
-  { label: 'Pinpoint', tab: 'pinpoint' },
-  { label: 'SkyVision', tab: 'skyvision' },
-  { label: 'Pricing', tab: 'subscription' },
-  { label: 'FAQ', href: '#faq' },
-];
-
-function TopNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const navStyle = { color: muted } as const;
+/* ─────────────────────────── sidebar (matches the app shell) ─────────────── */
+function BrandMark() {
   return (
-    <header className="sticky top-0 z-50 w-full backdrop-blur" style={{ background: 'rgba(0,0,0,0.72)', borderBottom: `1px solid ${line}` }}>
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
-            <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
-            <span aria-hidden="true" className="slayer-caret ml-[3px] inline-block h-[13px] w-[7px] rounded-[1px]" style={{ background: PALETTE.ghost, boxShadow: '0 0 10px rgba(244,245,246,0.45)' }} />
-          </span>
+    <span className="inline-flex items-center text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
+      <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
+      <span aria-hidden="true" className="slayer-caret ml-[3px] inline-block h-[13px] w-[7px] rounded-[1px]" style={{ background: PALETTE.ghost, boxShadow: '0 0 10px rgba(244,245,246,0.45)' }} />
+    </span>
+  );
+}
+
+function NavRow({ p, onEnter, onClick }: { p: (typeof PRODUCTS)[number]; onEnter: (t?: string) => void; onClick?: () => void }) {
+  const Icon = p.icon;
+  return (
+    <button
+      type="button"
+      onClick={() => { onEnter(p.tab); onClick?.(); }}
+      className="group flex w-full items-center gap-3 rounded-[8px] px-2.5 py-2 text-left transition-colors"
+      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(248,248,255,0.05)')}
+      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+    >
+      <Icon className="h-[18px] w-[18px] shrink-0" style={{ color: muted }} />
+      <span className="min-w-0">
+        <span className="block text-[13px] font-medium leading-tight" style={{ color: PALETTE.text }}>{p.label}</span>
+        <span className="block truncate text-[10.5px] leading-tight" style={{ color: faint }}>{p.desc}</span>
+      </span>
+    </button>
+  );
+}
+
+function SidebarFooter({ onLaunch }: { onLaunch: () => void }) {
+  return (
+    <div className="space-y-2 border-t px-3 py-4" style={{ borderColor: line }}>
+      <div className="flex items-center gap-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: muted }}>
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#2f9d45', boxShadow: '0 0 8px rgba(47,157,69,0.7)' }} /> Live now
+      </div>
+      <button
+        type="button"
+        onClick={onLaunch}
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[7px] px-3 py-2.5 text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors"
+        style={{ background: PALETTE.ghost, color: '#0A0806' }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = '#ffffff')}
+        onMouseLeave={(e) => (e.currentTarget.style.background = PALETTE.ghost)}
+      >
+        <LogIn className="h-3.5 w-3.5" /> Launch Terminal
+      </button>
+      <button type="button" onClick={onLaunch} className="w-full cursor-pointer text-center text-[11px]" style={{ color: muted }}>
+        Log in / Create account
+      </button>
+    </div>
+  );
+}
+
+/** Desktop left sidebar — the same shape and nav as the app shell. */
+function LandingSidebar({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
+  return (
+    <aside className="hidden w-[248px] shrink-0 flex-col md:flex" style={{ borderRight: `1px solid ${line}`, background: '#050505' }}>
+      <div className="px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}><BrandMark /></div>
+      <nav className="slayer-scrollbar flex-1 overflow-y-auto px-3 py-4">
+        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Products</div>
+        <div className="space-y-0.5">
+          {PRODUCTS.map((p) => <NavRow key={p.tab} p={p} onEnter={onEnter} />)}
         </div>
-        <nav className="hidden items-center gap-7 md:flex">
-          {NAV.map((n) => (
-            n.tab ? (
-              <button key={n.label} type="button" onClick={() => onEnter(n.tab)}
-                className="cursor-pointer text-[12px] font-medium tracking-[0.02em] transition-colors" style={navStyle}
-                onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.text)} onMouseLeave={(e) => (e.currentTarget.style.color = muted)}>
-                {n.label}
-              </button>
-            ) : (
-              <a key={n.label} href={n.href} className="text-[12px] font-medium tracking-[0.02em] transition-colors" style={navStyle}
-                 onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.text)} onMouseLeave={(e) => (e.currentTarget.style.color = muted)}>
-                {n.label}
-              </a>
-            )
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          <div className="hidden sm:block"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
-          <button type="button" aria-label="Menu" className="cursor-pointer p-2 md:hidden" style={{ color: PALETTE.text }} onClick={() => setOpen((o) => !o)}>
-            <div className="space-y-[3px]"><span className="block h-px w-5" style={{ background: PALETTE.text }} /><span className="block h-px w-5" style={{ background: PALETTE.text }} /><span className="block h-px w-5" style={{ background: PALETTE.text }} /></div>
-          </button>
-        </div>
+      </nav>
+      <SidebarFooter onLaunch={onLaunch} />
+    </aside>
+  );
+}
+
+/** Mobile top bar + slide-in drawer (mirrors the app's mobile nav). */
+function LandingMobileNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="md:hidden">
+      <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 backdrop-blur" style={{ background: 'rgba(5,5,5,0.85)', borderBottom: `1px solid ${line}` }}>
+        <BrandMark />
+        <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="cursor-pointer p-1.5" style={{ color: PALETTE.text }}><Menu className="h-5 w-5" /></button>
       </div>
       {open ? (
-        <div className="md:hidden" style={{ borderTop: `1px solid ${line}` }}>
-          <div className="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-3">
-            {NAV.map((n) => (
-              n.tab ? (
-                <button key={n.label} type="button" onClick={() => { setOpen(false); onEnter(n.tab); }} className="cursor-pointer py-2 text-left text-[13px]" style={navStyle}>{n.label}</button>
-              ) : (
-                <a key={n.label} href={n.href} onClick={() => setOpen(false)} className="py-2 text-[13px]" style={navStyle}>{n.label}</a>
-              )
-            ))}
-            <div className="pt-2"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
-          </div>
+        <div className="fixed inset-0 z-[70]">
+          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setOpen(false)} />
+          <aside className="absolute left-0 top-0 flex h-full w-[280px] max-w-[82vw] flex-col" style={{ background: '#050505', borderRight: `1px solid ${line}` }}>
+            <div className="flex items-center justify-between px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}>
+              <BrandMark />
+              <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="cursor-pointer p-1" style={{ color: muted }}><X className="h-5 w-5" /></button>
+            </div>
+            <nav className="slayer-scrollbar flex-1 overflow-y-auto px-3 py-4">
+              <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Products</div>
+              <div className="space-y-0.5">
+                {PRODUCTS.map((p) => <NavRow key={p.tab} p={p} onEnter={onEnter} onClick={() => setOpen(false)} />)}
+              </div>
+            </nav>
+            <SidebarFooter onLaunch={() => { setOpen(false); onLaunch(); }} />
+          </aside>
         </div>
       ) : null}
-    </header>
+    </div>
   );
 }
 
@@ -734,31 +785,36 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
 
   return (
     <div
-      ref={rootRef}
-      className="fixed inset-0 z-[40] overflow-y-auto overflow-x-hidden font-mono antialiased slayer-scrollbar"
+      className="fixed inset-0 z-[40] flex font-mono antialiased"
       style={{ background: '#08090A', color: PALETTE.text }}
     >
-      {/* scroll-progress rail — GEX gradient, fixed to the top of the canvas */}
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none fixed left-0 right-0 top-0 z-[60] h-[2px] origin-left"
-        style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.gex[0]}, ${PALETTE.gex[1]}, ${PALETTE.gex[2]}, ${PALETTE.gex[3]})` }}
-      />
-      <div ref={contentRef} className="relative z-10">
-        <TopNav onLaunch={onLaunch} onEnter={onEnter} />
-        <motion.div style={{ y: heroY, opacity: heroOpacity }}>
-          <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />
-        </motion.div>
-        <Reveal><ProblemSection /></Reveal>
-        <Reveal><SolutionSection /></Reveal>
-        <Reveal><ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
-        <Reveal><FeatureSection metrics={metrics} onEnter={onEnter} /></Reveal>
-        <Reveal><HowItWorks /></Reveal>
-        <Reveal><ComparisonSection /></Reveal>
-        <Reveal><GetStartedSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
-        <Reveal><FaqSection /></Reveal>
-        <Reveal><FinalCta onLaunch={onLaunch} /></Reveal>
-        <Footer />
+      {/* SAME left sidebar as the app shell — one navigation everywhere */}
+      <LandingSidebar onLaunch={onLaunch} onEnter={onEnter} />
+
+      {/* main scroll area (its own scroller, so Lenis + progress rail + reveals work) */}
+      <div ref={rootRef} className="slayer-scrollbar relative flex-1 overflow-y-auto overflow-x-hidden">
+        {/* scroll-progress rail — GEX gradient, pinned to the top of the main area */}
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none sticky left-0 top-0 z-[60] h-[2px] w-full origin-left"
+          style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.gex[0]}, ${PALETTE.gex[1]}, ${PALETTE.gex[2]}, ${PALETTE.gex[3]})` }}
+        />
+        <LandingMobileNav onLaunch={onLaunch} onEnter={onEnter} />
+        <div ref={contentRef} className="relative z-10">
+          <motion.div style={{ y: heroY, opacity: heroOpacity }}>
+            <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />
+          </motion.div>
+          <Reveal><ProblemSection /></Reveal>
+          <Reveal><SolutionSection /></Reveal>
+          <Reveal><ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
+          <Reveal><FeatureSection metrics={metrics} onEnter={onEnter} /></Reveal>
+          <Reveal><HowItWorks /></Reveal>
+          <Reveal><ComparisonSection /></Reveal>
+          <Reveal><GetStartedSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
+          <Reveal><FaqSection /></Reveal>
+          <Reveal><FinalCta onLaunch={onLaunch} /></Reveal>
+          <Footer />
+        </div>
       </div>
     </div>
   );

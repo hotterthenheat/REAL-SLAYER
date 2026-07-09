@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef, useState } from 'react';
 import TerminalPanel from '../ui/terminal/TerminalPanel';
 
 /**
@@ -44,8 +45,14 @@ export function DealerPositioningMap({
   footer,
 }: DealerPositioningMapProps) {
   // ── geometry ────────────────────────────────────────────────────────────
+  // Horizontal design units are fixed (viewBox width = 820); the VERTICAL extent
+  // is derived from the panel's real height so the chart GROWS to fill its panel
+  // instead of leaving a black band beneath a short SVG. We measure the plot
+  // wrapper (which the flex column stretches to the panel height, matching the
+  // taller Exposure Matrix sibling) and pick a viewBox height whose aspect ratio
+  // equals the wrapper's — so the SVG fills it edge-to-edge with uniform scaling
+  // (no distortion), the rows simply breathe into the extra space.
   const width = 820;
-  const rowHeight = 20;
   const headH = 46; // axis title + scale + gridline top
   const plotL = 74; // right edge of strike labels
   const zoneW = 150; // right-hand zone-annotation rail
@@ -53,8 +60,38 @@ export function DealerPositioningMap({
   const centerX = (plotL + plotR) / 2;
   const barMax = (plotR - plotL) / 2;
   const top = headH + 10;
+  const botPad = 14;
+
+  const plotRef = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState<{ w: number; h: number } | null>(null);
+  useLayoutEffect(() => {
+    const el = plotRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      if (r.width <= 0 || r.height <= 0) return;
+      setBox((prev) =>
+        prev && Math.abs(prev.w - r.width) < 0.5 && Math.abs(prev.h - r.height) < 0.5
+          ? prev
+          : { w: r.width, h: r.height },
+      );
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  // Natural (pre-measure) height keeps ~20u rows so the first paint is sensible;
+  // once measured, the viewBox height tracks the wrapper's aspect ratio so the
+  // SVG fills the panel exactly. Rows never shrink below a legible floor.
+  const naturalH = top + rows.length * 20 + botPad;
+  const aspectH = box && box.w > 0 ? (width * box.h) / box.w : naturalH;
+  const height = Math.max(top + botPad + rows.length * 12, aspectH);
+  const rowHeight = rows.length > 0 ? (height - top - botPad) / rows.length : 20;
   const bottom = top + rows.length * rowHeight;
-  const height = bottom + 14;
+  const barH = Math.min(rowHeight * 0.45, 12); // bar thickness scales with the row
+  const markerH = Math.min(rowHeight * 0.7, 16); // spot marker height
 
   const maxAbs = Math.max(1e-9, ...rows.map((r) => Math.abs(r.value)));
   const niceMax = niceCeil(maxAbs);
@@ -120,7 +157,7 @@ export function DealerPositioningMap({
 
   return (
     <TerminalPanel title={title} subtitle={subtitle} actions={actions} footer={footer} padded={false}>
-      <div className="p-[var(--panel-pad)]">
+      <div className="flex h-full min-h-0 flex-col p-[var(--panel-pad)]">
         {/* legend */}
         <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
           {legend.map((l) => (
@@ -137,7 +174,16 @@ export function DealerPositioningMap({
           ))}
         </div>
 
-        <svg viewBox={`0 0 ${width} ${height}`} className="h-auto w-full" style={{ fontVariantNumeric: 'tabular-nums' }}>
+        {/* Plot wrapper — flex-1 so it stretches to the panel height; the SVG is
+            absolutely positioned to fill it (and so never forces the row height,
+            keeping the Exposure Matrix as the height-defining sibling). */}
+        <div ref={plotRef} className="relative min-h-0 w-full flex-1">
+        <svg
+          viewBox={`0 0 ${width} ${height}`}
+          preserveAspectRatio="xMidYMid meet"
+          className="absolute inset-0 h-full w-full"
+          style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
           {/* axis title */}
           <text x={centerX} y={14} fontSize="9.5" fill="var(--text-muted)" textAnchor="middle" style={{ letterSpacing: '0.12em' }}>
             NET DEALER PRESSURE (NOTIONAL)
@@ -192,9 +238,9 @@ export function DealerPositioningMap({
                 </text>
                 <rect
                   x={isPos ? centerX : centerX - mag}
-                  y={y - 4.5}
+                  y={y - barH / 2}
                   width={Math.max(0.6, mag)}
-                  height={9}
+                  height={barH}
                   rx={1.5}
                   fill={isPos ? STEEL : RED}
                 >
@@ -208,7 +254,7 @@ export function DealerPositioningMap({
           {spotIdx != null ? (
             <g>
               <line x1={plotL} x2={plotR} y1={yOfIndex(spotIdx)} y2={yOfIndex(spotIdx)} stroke="var(--text-primary)" strokeOpacity="0.55" strokeWidth="1" />
-              <rect x={centerX - 1.5} y={yOfIndex(spotIdx) - 7} width={3} height={14} fill="var(--text-primary)" />
+              <rect x={centerX - 1.5} y={yOfIndex(spotIdx) - markerH / 2} width={3} height={markerH} fill="var(--text-primary)" />
             </g>
           ) : null}
 
@@ -240,6 +286,7 @@ export function DealerPositioningMap({
             );
           })}
         </svg>
+        </div>
       </div>
     </TerminalPanel>
   );
