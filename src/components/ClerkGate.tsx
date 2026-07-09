@@ -113,7 +113,8 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-8 w-8 rounded-[7px] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] hover:border-[var(--border-mid)] flex items-center justify-center z-20"
+            aria-label="Dismiss sign-in"
+            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-8 w-8 rounded-[7px] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] hover:border-[var(--border-mid)] flex items-center justify-center z-20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
             title="Dismiss"
           >
             <X className="w-4 h-4" />
@@ -142,13 +143,15 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         <div className="grid grid-cols-2 gap-1 bg-[var(--bg-panel-soft)] rounded-[8px] p-1 border border-[var(--border-subtle)] text-[12px] font-semibold mb-5">
           <button
             onClick={() => { setActiveMode('signin'); setErrorMessage(null); }}
-            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            aria-pressed={activeMode === 'signin'}
+            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Sign In
           </button>
           <button
             onClick={() => { setActiveMode('signup'); setErrorMessage(null); }}
-            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            aria-pressed={activeMode === 'signup'}
+            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Create Account
           </button>
@@ -195,7 +198,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
             <button
               type="submit"
               disabled={isLoading || totpCode.length < 6}
-              className="w-full py-3.5 mt-1 bg-[var(--text-primary)] hover:opacity-90 text-[#0A0806] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 mt-1 bg-[var(--text-primary)] hover:opacity-90 text-[#0A0806] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
             >
               {isLoading ? (
                 <>

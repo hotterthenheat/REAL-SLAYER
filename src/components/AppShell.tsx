@@ -247,7 +247,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
         <div className="p-3 border-b border-[var(--border)] h-[73px] flex items-center gap-2 overflow-hidden">
           <button
             type="button"
-            className="origin-left cursor-pointer rounded-md focus-visible:ring-2 focus-visible:ring-[var(--info)] focus:outline-none"
+            className="origin-left cursor-pointer rounded-md focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
             style={{ transform: isSidebarExpanded ? 'scale(0.9)' : 'scale(0.9) translateX(-4px)' }}
             onClick={() => setActiveTab('home')}
             aria-label="Go to home"
@@ -257,7 +257,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
           <button
             type="button"
             onClick={() => setIsSidebarExpanded(v => !v)}
-            className="ml-auto p-2 rounded-md border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--info)] focus:outline-none"
+            className="ml-auto p-2 rounded-md border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
             aria-label={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
             aria-expanded={isSidebarExpanded}
             title={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
@@ -290,7 +290,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
           <NavItem id="community" label="Community" icon={GraduationCap} activeColor="text-[var(--accent-color)]" />
           <NavItem id="subscription" label="Pricing" icon={CreditCard} />
 
-          <div className="mt-auto pt-4 flex flex-col gap-1.5 border-t border-[var(--border)] mt-2">
+          <div className="mt-auto pt-4 flex flex-col gap-1.5 border-t border-[var(--border)]">
             <NavItem id="settings" label="Settings" icon={SlidersHorizontal} />
             <NavItem id="admin" label="Admin Panel" icon={Lock} adminOnly />
           </div>
@@ -304,8 +304,12 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
                ("Lifetime access") next to a "Log in" CTA; that read as fake/contradictory. */}
            {session?.authenticated && (
            <div
+             role="button"
+             tabIndex={0}
              onClick={onUpgradeClick}
-             className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--border-strong)] transition-all font-sans mx-auto ${isSidebarExpanded ? 'w-full justify-start' : 'w-max justify-center'}`}
+             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onUpgradeClick(); } }}
+             aria-label={`${tierInfo?.label ?? 'Plan'} — manage plan`}
+             className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--border-strong)] transition-all font-sans mx-auto focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? 'w-full justify-start' : 'w-max justify-center'}`}
              title={!isSidebarExpanded ? tierInfo?.label : undefined}
            >
               <span className="relative flex h-2 w-2 shrink-0">

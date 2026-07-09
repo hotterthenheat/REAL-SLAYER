@@ -178,12 +178,15 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
         </div>
         <div className="flex items-center gap-2">
           {/* Lookback window control — drives the correlation/PCA sample window. */}
-          <div className="hidden sm:flex items-center rounded border border-[var(--border)] overflow-hidden">
+          <div className="hidden sm:flex items-center rounded border border-[var(--border)] overflow-hidden" role="group" aria-label="Correlation lookback window">
             {LOOKBACKS.map((lb) => (
               <button
                 key={lb}
+                type="button"
                 onClick={() => setLookback(lb)}
-                className={`px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest uppercase transition-colors ${lookback === lb ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
+                aria-pressed={lookback === lb}
+                aria-label={`${lb} day lookback`}
+                className={`px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest uppercase transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${lookback === lb ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
               >
                 {lb}D
               </button>

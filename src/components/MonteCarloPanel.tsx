@@ -147,18 +147,18 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
           </span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-md overflow-hidden border border-[var(--border)]">
+          <div className="flex rounded-md overflow-hidden border border-[var(--border)]" role="group" aria-label="Process model">
             {MODELS.map((m) => (
-              <button key={m.key} onClick={() => setModel(m.key)}
-                className={`text-[9.5px] font-bold uppercase tracking-wider px-2 py-1 transition-colors cursor-pointer ${model === m.key ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
+              <button key={m.key} type="button" onClick={() => setModel(m.key)} aria-pressed={model === m.key} aria-label={`${m.label} process`}
+                className={`text-[9.5px] font-bold uppercase tracking-wider px-2 py-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${model === m.key ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
                 {m.label}
               </button>
             ))}
           </div>
-          <div className="flex rounded-md overflow-hidden border border-[var(--border)]">
+          <div className="flex rounded-md overflow-hidden border border-[var(--border)]" role="group" aria-label="Path count">
             {PATH_COUNTS.map((n) => (
-              <button key={n} onClick={() => setNPaths(n)}
-                className={`text-[9.5px] font-bold tabular-nums px-2 py-1 transition-colors cursor-pointer ${nPaths === n ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
+              <button key={n} type="button" onClick={() => setNPaths(n)} aria-pressed={nPaths === n} aria-label={`${pathLabel(n)} paths`}
+                className={`text-[9.5px] font-bold tabular-nums px-2 py-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${nPaths === n ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
                 {pathLabel(n)}
               </button>
             ))}

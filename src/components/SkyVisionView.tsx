@@ -131,7 +131,6 @@ export function SkyVisionView() {
   const setSelectedAsset = useContractStore(s => s.setSelectedAsset);
   const setSelectedStrike = useContractStore(s => s.setSelectedStrike);
   const setSelectedOptionType = useContractStore(s => s.setSelectedOptionType);
-  const isPositionOpen = useContractStore(s => s.isPositionOpen);
 
   const isExpanded = selectedStrike !== null;
 

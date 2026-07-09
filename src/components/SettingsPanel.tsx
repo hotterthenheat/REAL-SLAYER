@@ -62,6 +62,7 @@ const FIELD_LABEL = 'block text-[11px] font-semibold uppercase tracking-wider te
 
 const BTN_BASE =
   'inline-flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-colors ' +
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ' +
   'disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
 const BTN_PRIMARY = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--text-primary)] text-[var(--bg-base)] hover:opacity-90`;
 const BTN_SECONDARY = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--border-strong)]`;
@@ -70,7 +71,7 @@ const BTN_DANGER = `${BTN_BASE} px-4 py-2 min-h-[40px] text-[var(--danger)] bord
 const BTN_DANGER_SOLID = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--danger)] text-[var(--bg-base)] hover:brightness-110`;
 
 const segBtn = (active: boolean) =>
-  `flex-1 min-h-[40px] px-3 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+  `flex-1 min-h-[40px] px-3 rounded-lg border text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
     active
       ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)] text-[var(--text-primary)]'
       : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
@@ -295,8 +296,8 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
         {/* 36px minimum tap target wrapping the 16px checkbox visual */}
         <button
           onClick={() => setDisabledKeybinds({ [bindId]: !isDisabled })}
-          className="flex items-center justify-center w-9 h-9 -ml-1.5 rounded-lg cursor-pointer shrink-0"
-          aria-label={isDisabled ? 'Enable keybind' : 'Disable keybind'}
+          className="flex items-center justify-center w-9 h-9 -ml-1.5 rounded-lg cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
+          aria-label={isDisabled ? `Enable ${label} keybind` : `Disable ${label} keybind`}
         >
           <span className={`w-4 h-4 rounded flex items-center justify-center border ${isDisabled ? 'bg-transparent border-[var(--border-strong)]' : 'bg-[var(--accent-color)] border-[var(--accent-color)] text-[var(--bg-base)]'}`}>
             {!isDisabled && <svg viewBox="0 0 24 24" fill="none" className="w-3 h-3 stroke-current stroke-[3]"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
@@ -309,7 +310,8 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
           if (!isDisabled) setIsRecording(true);
         }}
         disabled={isDisabled}
-        className={`px-3 min-h-[36px] min-w-[92px] text-xs font-mono font-semibold rounded-lg flex items-center justify-center transition-all border
+        aria-label={`Rebind ${label}, current shortcut ${displayKey.toUpperCase()}`}
+        className={`px-3 min-h-[36px] min-w-[92px] text-xs font-mono font-semibold rounded-lg flex items-center justify-center transition-all border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]
           ${isDisabled ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)] cursor-not-allowed' : isRecording ? 'bg-[var(--accent-color)]/20 text-[var(--accent-color)] border-[var(--accent-color)]/50' : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'}`}
       >
         {isRecording ? 'Listening…' : displayKey.toUpperCase()}
@@ -443,7 +445,15 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     : PUBLIC_BASE;
   const referralLink = `${referralBase}/join/${session?.custom_referral_code || 'SLAYERX'}`;
 
-  const handleSaveSettings = async (font: 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL', compact: boolean, theme: string) => {
+  // Applying appearance prefs is optimistic (state + DOM change instantly). If the
+  // server rejects the write, revert both so the UI never diverges from what was
+  // actually persisted — mirroring the privacy handlers' revert contract.
+  const handleSaveSettings = async (
+    font: 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL',
+    compact: boolean,
+    theme: string,
+    revert?: () => void
+  ) => {
     setIsUpdating(true);
     try {
       const res = await fetch('/api/users/preferences', {
@@ -460,17 +470,19 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         onUpdateSession();
         showToast('Display preferences saved and synchronized.');
       } else {
+        revert?.();
         showToast('Failed to save display preferences.', 'error');
       }
     } catch (e) {
       console.error('Failed to update Settings parameters', e);
+      revert?.();
       showToast('Backend connection error.', 'error');
     } finally {
       setIsUpdating(false);
     }
   };
 
-  const saveUltrawide = async (on: boolean) => {
+  const saveUltrawide = async (on: boolean, revert?: () => void) => {
     try {
       const res = await fetch('/api/users/preferences', {
         method: 'PATCH',
@@ -480,9 +492,14 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
       if (res.ok) {
         onUpdateSession();
         showToast('Display preferences saved and synchronized.');
+      } else {
+        revert?.();
+        showToast('Failed to save display preferences.', 'error');
       }
     } catch (e) {
       console.error('Failed to update ultrawide preference', e);
+      revert?.();
+      showToast('Backend connection error.', 'error');
     }
   };
 
@@ -784,9 +801,12 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         setInvoiceLog(data);
         // Refresh token stats on header
         onUpdateSession();
+      } else {
+        showToast('Invoice simulation failed to run.', 'error');
       }
     } catch (e) {
       console.error('Invoice simulation failed', e);
+      showToast('Invoice simulation failed to run.', 'error');
     } finally {
       setIsSimulatingInvoice(false);
     }
@@ -822,7 +842,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 flex items-center gap-2 px-4 rounded-lg text-[11px] font-semibold tracking-wide transition-all cursor-pointer min-h-[40px] whitespace-nowrap border ${
+                className={`shrink-0 flex items-center gap-2 px-4 rounded-lg text-[11px] font-semibold tracking-wide transition-all cursor-pointer min-h-[40px] whitespace-nowrap border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)] ${
                   isActive
                     ? 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)] border-transparent'
@@ -878,6 +898,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     <div className="font-mono text-sm font-bold text-[var(--success)] bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 rounded-lg w-fit select-all">
                       {simulatedOtp}
                     </div>
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5 leading-snug">
+                      Shown here because email delivery is simulated in this environment.
+                    </p>
                   </div>
 
                   <div>
@@ -1263,9 +1286,13 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     value={selectedFont}
                     onChange={(e) => {
                       const newVal = e.target.value as 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL';
+                      const prev = selectedFont;
                       setSelectedFont(newVal);
                       applyTextSize(newVal);
-                      handleSaveSettings(newVal, compactMode, activeTheme);
+                      handleSaveSettings(newVal, compactMode, activeTheme, () => {
+                        setSelectedFont(prev);
+                        applyTextSize(prev);
+                      });
                     }}
                     className={`${CONTROL} cursor-pointer appearance-none pr-9`}
                   >
@@ -1328,9 +1355,13 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   checked={compactMode}
                   onChange={(e) => {
                     const newVal = e.target.checked;
+                    const prev = compactMode;
                     setCompactMode(newVal);
                     applyCompact(newVal);
-                    handleSaveSettings(selectedFont, newVal, activeTheme);
+                    handleSaveSettings(selectedFont, newVal, activeTheme, () => {
+                      setCompactMode(prev);
+                      applyCompact(prev);
+                    });
                   }}
                 />
               </div>
@@ -1343,9 +1374,13 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   checked={ultrawideMode}
                   onChange={(e) => {
                     const newVal = e.target.checked;
+                    const prev = ultrawideMode;
                     setUltrawideMode(newVal);
                     applyUltrawide(newVal);
-                    saveUltrawide(newVal);
+                    saveUltrawide(newVal, () => {
+                      setUltrawideMode(prev);
+                      applyUltrawide(prev);
+                    });
                   }}
                 />
               </div>
@@ -1371,11 +1406,15 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       title="Default (Slayer)"
                       type="button"
                       onClick={() => {
+                        const prev = activeTheme;
                         setActiveTheme('');
                         applyTheme('');
-                        handleSaveSettings(selectedFont, compactMode, '');
+                        handleSaveSettings(selectedFont, compactMode, '', () => {
+                          setActiveTheme(prev);
+                          applyTheme(prev);
+                        });
                       }}
-                      className={`group relative aspect-square rounded-lg border-2 transition-all ${
+                      className={`group relative aspect-square rounded-lg border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
                         isDefaultThemeActive
                           ? 'border-[var(--accent-color)] scale-110 z-10'
                           : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
@@ -1400,13 +1439,18 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                         <button
                           key={t.id}
                           title={t.name}
+                          aria-label={`Apply ${t.name} theme`}
                           type="button"
                           onClick={() => {
+                            const prev = activeTheme;
                             setActiveTheme(t.id);
                             applyTheme(t.id);
-                            handleSaveSettings(selectedFont, compactMode, t.id);
+                            handleSaveSettings(selectedFont, compactMode, t.id, () => {
+                              setActiveTheme(prev);
+                              applyTheme(prev);
+                            });
                           }}
-                          className={`group relative aspect-square rounded-lg border-2 overflow-hidden transition-all ${
+                          className={`group relative aspect-square rounded-lg border-2 overflow-hidden transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
                             activeTheme === t.id
                               ? 'border-[var(--accent-color)] scale-110 z-10'
                               : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'

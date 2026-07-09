@@ -1247,10 +1247,10 @@ export function DealerFlowView() {
             <span className="rounded-[4px] border border-[var(--border-strong)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">SPOT</span>
           )}
           {r.strike === matrixData.pinStrike && (
-            <span className="rounded-[4px] border border-[color:rgba(44,104,123,0.55)] bg-[rgba(44,104,123,0.16)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">PIN</span>
+            <span className="rounded-[4px] border border-[color-mix(in_srgb,var(--pin)_55%,transparent)] bg-[color-mix(in_srgb,var(--pin)_16%,transparent)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">PIN</span>
           )}
           {r.strike === matrixData.flipStrike && (
-            <span className="rounded-[4px] border border-[color:rgba(196,154,58,0.5)] bg-[rgba(196,154,58,0.14)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--warning)]">FLIP</span>
+            <span className="rounded-[4px] border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--warning)]">FLIP</span>
           )}
         </span>
       ),
@@ -1338,7 +1338,7 @@ export function DealerFlowView() {
         <span className="flex items-center gap-2">
           <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>
           {r.ticker === selectedAsset.ticker && (
-            <span className="rounded-[4px] border border-[color:rgba(44,104,123,0.55)] bg-[rgba(44,104,123,0.16)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">IN VIEW</span>
+            <span className="rounded-[4px] border border-[color-mix(in_srgb,var(--pin)_55%,transparent)] bg-[color-mix(in_srgb,var(--pin)_16%,transparent)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">IN VIEW</span>
           )}
         </span>
       ),
@@ -1378,7 +1378,7 @@ export function DealerFlowView() {
   const expiryStatus = isMultiExpiry
     ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'expiry' : 'expiries'} · model split`
     : expiryTab === 'aggregated'
-      ? 'all dates · live aggregate'
+      ? 'all dates · aggregate profile'
       : (() => {
           const t = tickerExpirations.find((x) => x.id === expiryTab);
           return t ? `${t.date} · ${t.dteDays}DTE · model split` : 'select expiry';
@@ -1429,7 +1429,7 @@ export function DealerFlowView() {
             rows={matrixData.rows}
             rowKey={(r) => r.strike}
             className="max-h-[420px] border-0"
-            rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+            rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]' : undefined)}
             emptyState="Chain profile pending."
           />
         </TerminalPanel>
@@ -1509,7 +1509,7 @@ export function DealerFlowView() {
             rows={chainView.rows}
             rowKey={(r) => r.strike}
             className="border-0"
-            rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+            rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]' : undefined)}
             emptyState={`This feed does not stream a per-contract chain for ${selectedAsset.ticker}.`}
           />
         </TerminalPanel>

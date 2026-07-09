@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { withCacheBust } from '../lib/format';
 import { Camera, Upload, User, CheckCircle2, X, Image as ImageIcon, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { TerminalLogo } from './BrandLogo';
 
 interface UserProfileProps {
   session: any;
@@ -397,7 +396,7 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="p-3 bg-rose-950/20 border border-rose-900/50 rounded text-[var(--danger)] text-xs font-mono flex items-center gap-2"
+            className="p-3 bg-[var(--danger)]/10 border border-[var(--danger)]/30 rounded text-[var(--danger)] text-xs font-mono flex items-center gap-2"
           >
             <AlertCircle className="w-4 h-4 shrink-0 animate-pulse" />
             <span>{errorMsg}</span>
@@ -510,9 +509,7 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
                 </div>
               </>
             ) : (
-              <div className="text-center space-y-1 scale-125">
-                <TerminalLogo />
-              </div>
+              <User className="w-10 h-10 text-[var(--text-tertiary)]" aria-hidden="true" />
             )}
           </div>
 
@@ -569,12 +566,12 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
                     </span>
                   )}
                   {availability === 'taken' && (
-                    <span className="text-rose-500 flex items-center gap-1">
+                    <span className="text-[var(--danger)] flex items-center gap-1">
                       <AlertCircle className="w-2.5 h-2.5" /> Handle Taken
                     </span>
                   )}
                   {availability === 'invalid' && (
-                    <span className="text-rose-500 flex items-center gap-1">
+                    <span className="text-[var(--danger)] flex items-center gap-1">
                       <X className="w-2.5 h-2.5" /> Blocked Format
                     </span>
                   )}
@@ -588,7 +585,7 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
                 value={handle}
                 onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/\s+/g, ''))}
                 className={`w-full bg-[var(--surface-2)] border border-[var(--border)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] text-[var(--text-primary)] rounded-lg p-2.5 pl-8 text-sm transition-colors focus:outline-none placeholder-[var(--text-tertiary)] font-mono ${
-                  availability === 'available' ? 'border-[var(--border)]' : availability === 'taken' || availability === 'invalid' ? 'border-rose-500/30' : 'border-[var(--border)]'
+                  availability === 'available' ? 'border-[var(--border)]' : availability === 'taken' || availability === 'invalid' ? 'border-[var(--danger)]/30' : 'border-[var(--border)]'
                 }`}
                 placeholder="your_handle"
               />
@@ -642,7 +639,8 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
                   setCropActive(false);
                   setCropParams(null);
                 }}
-                className="text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+                aria-label="Close crop editor"
+                className="rounded text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
               >
                 <X className="w-5 h-5" />
               </button>

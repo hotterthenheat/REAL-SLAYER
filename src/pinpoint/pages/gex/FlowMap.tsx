@@ -78,8 +78,9 @@ const FlowMap = () => {
           {matrix.strikes.length} strikes · {matrix.expiries.length} expirations
         </span>
         {/* Honest data-provenance badge: this surface runs on the built-in
-            simulator until a live feed is wired — never label it "live". */}
-        <span className="ml-auto rounded border border-[#4A6FB8]/40 bg-[#4A6FB8]/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-[#7A9BD8]">
+            simulator until a live feed is wired — never label it "live". Warn
+            tone (theme token) reads as a caution chip, never a green live badge. */}
+        <span className="ml-auto rounded border border-warn/30 bg-warn/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-warn">
           Simulated Feed
         </span>
       </div>

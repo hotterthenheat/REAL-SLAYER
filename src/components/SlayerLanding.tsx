@@ -29,9 +29,10 @@ const PRODUCTS: NavProduct[] = [...MAIN_VIEWS, ...TOOLS];
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
  *
- * Institutional / data-first, not a SaaS template: pure-black canvas, deep
- * #100C08 panels, thin hairline borders, tabular numerics, restrained colour
- * (colour encodes data, never decorates). The hero + preview mockups read
+ * Institutional / data-first, not a SaaS template: tokenised surfaces
+ * (var(--surface)) on the app canvas, thin hairline borders, tabular numerics,
+ * restrained colour (colour encodes data, never decorates), fully theme-aware.
+ * The hero + preview mockups read
  * REAL fields off the live store when present and fall back to an honest "—"
  * — nothing here is fabricated.
  *
@@ -41,16 +42,19 @@ const PRODUCTS: NavProduct[] = [...MAIN_VIEWS, ...TOOLS];
  * product is live — there is no waitlist.
  */
 
-// Landing palette = the SAME neutral brand language as the terminal + the
-// slayerterminal.com backdrop. NO purple: colour here means the same thing it
-// means inside the app — steel = call-side / SkyVision, amber = dealer flow /
-// walls, green = bullish, red = put-side / bearish.
+// Landing palette = the SAME neutral brand language as the terminal. Surfaces,
+// text and borders now resolve to the app's design tokens (var(--surface)/-2,
+// var(--text-*), var(--border)/-strong, var(--accent-color)) so the landing is
+// ONE system with the terminal and follows the active user theme (dark / light /
+// the 73 presets). Only the code-rain hero stays intrinsically dark (see below).
+// The data accents stay literal: steel = call-side / SkyVision, amber = dealer
+// flow / walls, green = bullish, red = put-side / bearish.
 const PALETTE = {
-  bg: '#08090A',
-  panel: '#100C08',
-  panelSoft: '#0A0806',
-  text: '#F5F5F5',
-  ghost: '#F8F8FF',
+  bg: 'var(--background)',      // page + footer canvas (theme-aware)
+  panel: 'var(--surface)',     // primary panel surface
+  panelSoft: 'var(--surface-2)', // nested / softer surface
+  text: 'var(--text-primary)', // strong body text
+  ghost: 'var(--text-primary)', // brightest heading text
   steel: '#6A93B5', // calls / SkyVision (matches the Dealer Positioning Map)
   amber: '#C79350', // dealer flow / GEX / walls / pins (Pinpoint)
   red: '#B23B3B',   // puts / bearish
@@ -59,10 +63,26 @@ const PALETTE = {
   accent: ['#6A93B5', '#C79350', '#3F9C79', '#B23B3B'] as const,
 };
 
-const line = 'rgba(248,248,255,0.10)';
-const lineStrong = 'rgba(248,248,255,0.18)';
-const muted = 'rgba(245,245,245,0.52)';
-const faint = 'rgba(245,245,245,0.32)';
+// Accent fill (buttons) + its readable text — themeable, mirrors the terminal.
+const accentFill = 'var(--accent-color)';
+const accentText = 'var(--primary-contrast)';
+// Subtle hover wash / brighten built from the accent so it works in every theme.
+const hoverWash = 'color-mix(in srgb, var(--accent-color) 8%, transparent)';
+const accentBright = 'color-mix(in srgb, var(--accent-color), #ffffff 15%)';
+
+const line = 'var(--border)';
+const lineStrong = 'var(--border-strong)';
+const muted = 'var(--text-secondary)';
+const faint = 'var(--text-tertiary)';
+
+// The hero renders over the code-rain, whose scrims are intrinsically dark in
+// EVERY theme, so hero copy/controls stay fixed light-on-dark (they must not
+// flip to the dark token values under .light-theme). Everything below the hero
+// uses the theme tokens above.
+const HERO_GHOST = '#F8F8FF';
+const HERO_TEXT = '#F5F5F5';
+const HERO_MUTED = 'rgba(245,245,245,0.62)';
+const HERO_FAINT = 'rgba(245,245,245,0.42)';
 
 type HeroMetrics = {
   spot?: number | null;
@@ -102,11 +122,11 @@ const fmtGex = (v?: number | null) => {
 const fmtPct = (v?: number | null) => (isNum(v) ? `±${(v * 100).toFixed(2)}%` : '—');
 
 /* ─────────────────────────── atoms ─────────────────────────── */
-function Eyebrow({ children }: { children: React.ReactNode }) {
+function Eyebrow({ children, onDark = false }: { children: React.ReactNode; onDark?: boolean }) {
   return (
     <div
       className="text-[10px] font-semibold uppercase"
-      style={{ letterSpacing: '0.28em', color: faint }}
+      style={{ letterSpacing: '0.28em', color: onDark ? HERO_FAINT : faint }}
     >
       {children}
     </div>
@@ -143,30 +163,40 @@ function Panel({ children, className = '', soft = false, style }: { children: Re
   );
 }
 
-function PrimaryButton({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
+function PrimaryButton({ children, onClick, onDark = false }: { children: React.ReactNode; onClick?: () => void; onDark?: boolean }) {
+  // Below the hero: themeable accent fill. On the (always-dark) hero: fixed
+  // light-on-dark so the CTA reads on the code-rain in every theme.
+  const bg = onDark ? '#F8F8FF' : accentFill;
+  const fg = onDark ? '#0A0806' : accentText;
+  const bgHover = onDark ? '#ffffff' : accentBright;
+  const glow = onDark ? '0 6px 20px rgba(248,248,255,0.14)' : '0 6px 20px color-mix(in srgb, var(--accent-color) 22%, transparent)';
   return (
     <button
       type="button"
       onClick={onClick}
       className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,box-shadow] duration-200 will-change-transform"
-      style={{ background: PALETTE.ghost, color: '#0A0806' }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(248,248,255,0.14)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = PALETTE.ghost; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+      style={{ background: bg, color: fg }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = glow; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = bg; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
     >
       {children}
     </button>
   );
 }
 
-function GhostButton({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) {
+function GhostButton({ children, onClick, onDark = false }: { children: React.ReactNode; onClick?: () => void; onDark?: boolean }) {
+  const fg = onDark ? HERO_TEXT : PALETTE.text;
+  const bd = onDark ? 'rgba(248,248,255,0.18)' : lineStrong;
+  const bdHover = onDark ? 'rgba(248,248,255,0.4)' : 'var(--border-strong)';
+  const bgHover = onDark ? 'rgba(248,248,255,0.05)' : hoverWash;
   return (
     <button
       type="button"
       onClick={onClick}
       className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,border-color] duration-200 will-change-transform"
-      style={{ background: 'transparent', color: PALETTE.text, border: `1px solid ${lineStrong}` }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248,248,255,0.05)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(248,248,255,0.4)'; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = lineStrong; }}
+      style={{ background: 'transparent', color: fg, border: `1px solid ${bd}` }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = bdHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = bd; }}
     >
       {children}
     </button>
@@ -202,7 +232,7 @@ function PressureMap({ rows }: { rows: PressureRow[] }) {
             <div className="w-12 shrink-0 text-right text-[9px] tabular-nums" style={{ color: r.kind === 'spot' ? PALETTE.ghost : muted }}>
               {fmtLvl(r.strike)}
             </div>
-            <div className="relative h-[9px] flex-1 overflow-hidden rounded-[2px]" style={{ background: 'rgba(248,248,255,0.04)' }}>
+            <div className="relative h-[9px] flex-1 overflow-hidden rounded-[2px]" style={{ background: 'var(--surface-2)' }}>
               <div className="absolute inset-y-0" style={{ left: pos ? '50%' : `${50 - w / 2}%`, width: `${w / 2}%`, background: color, opacity: 0.85 }} />
               <div className="absolute inset-y-0 left-1/2 w-px" style={{ background: lineStrong }} />
             </div>
@@ -327,7 +357,7 @@ function BrandMark() {
   return (
     <span className="inline-flex items-center text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
       <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
-      <span aria-hidden="true" className="slayer-caret ml-[3px] inline-block h-[13px] w-[7px] rounded-[1px]" style={{ background: PALETTE.ghost, boxShadow: '0 0 10px rgba(244,245,246,0.45)' }} />
+      <span aria-hidden="true" className="slayer-caret ml-[3px] inline-block h-[13px] w-[7px] rounded-[1px]" style={{ background: 'var(--accent-color)', boxShadow: '0 0 10px color-mix(in srgb, var(--accent-color) 45%, transparent)' }} />
     </span>
   );
 }
@@ -339,7 +369,7 @@ function NavRow({ p, onEnter, onClick }: { p: (typeof PRODUCTS)[number]; onEnter
       type="button"
       onClick={() => { onEnter(p.tab); onClick?.(); }}
       className="group flex w-full items-center gap-3 rounded-[8px] px-2.5 py-2 text-left transition-colors"
-      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(248,248,255,0.05)')}
+      onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
       onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
     >
       <Icon className="h-[18px] w-[18px] shrink-0" style={{ color: muted }} />
@@ -361,9 +391,9 @@ function SidebarFooter({ onLaunch }: { onLaunch: () => void }) {
         type="button"
         onClick={onLaunch}
         className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[7px] px-3 py-2.5 text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors"
-        style={{ background: PALETTE.ghost, color: '#0A0806' }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = '#ffffff')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = PALETTE.ghost)}
+        style={{ background: accentFill, color: accentText }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = accentBright)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = accentFill)}
       >
         <LogIn className="h-3.5 w-3.5" /> Launch Terminal
       </button>
@@ -389,7 +419,7 @@ function NavGroup({ heading, items, onEnter, onClick }: { heading: string; items
 /** Desktop left sidebar — the same shape, grouping and nav as the app shell. */
 function LandingSidebar({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
   return (
-    <aside className="hidden w-[248px] shrink-0 flex-col md:flex" style={{ borderRight: `1px solid ${line}`, background: '#050505' }}>
+    <aside className="hidden w-[248px] shrink-0 flex-col md:flex" style={{ borderRight: `1px solid ${line}`, background: 'var(--surface)' }}>
       <div className="px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}><BrandMark /></div>
       <nav className="slayer-scrollbar flex-1 space-y-4 overflow-y-auto px-3 py-4">
         <NavGroup heading="Main Views" items={MAIN_VIEWS} onEnter={onEnter} />
@@ -405,14 +435,14 @@ function LandingMobileNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter
   const [open, setOpen] = useState(false);
   return (
     <div className="md:hidden">
-      <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 backdrop-blur" style={{ background: 'rgba(5,5,5,0.85)', borderBottom: `1px solid ${line}` }}>
+      <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 backdrop-blur" style={{ background: 'color-mix(in srgb, var(--surface) 85%, transparent)', borderBottom: `1px solid ${line}` }}>
         <BrandMark />
         <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="cursor-pointer p-1.5" style={{ color: PALETTE.text }}><Menu className="h-5 w-5" /></button>
       </div>
       {open ? (
         <div className="fixed inset-0 z-[70]">
           <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-[280px] max-w-[82vw] flex-col" style={{ background: '#050505', borderRight: `1px solid ${line}` }}>
+          <aside className="absolute left-0 top-0 flex h-full w-[280px] max-w-[82vw] flex-col" style={{ background: 'var(--surface)', borderRight: `1px solid ${line}` }}>
             <div className="flex items-center justify-between px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}>
               <BrandMark />
               <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="cursor-pointer p-1" style={{ color: muted }}><X className="h-5 w-5" /></button>
@@ -453,7 +483,7 @@ const HERO_RISE = {
 function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
   const reduce = useReducedMotion();
   return (
-    <section className="relative overflow-hidden" style={{ minHeight: '92vh' }}>
+    <section className="relative overflow-hidden" style={{ minHeight: '92vh', background: '#08090A' }}>
       {/* the real slayerterminal.com hero backdrop — a live code/finance rain
           (steel = SkyVision scanning, amber = Pinpoint dealer flow) under a
           scrim + vignette, confined to the hero and faded to solid #08090A at
@@ -465,19 +495,19 @@ function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: R
           animate="show"
           variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.04 } } }}
         >
-          <motion.div variants={HERO_RISE}><Eyebrow>From Traders. For Traders.</Eyebrow></motion.div>
-          <motion.h1 variants={HERO_RISE} className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
+          <motion.div variants={HERO_RISE}><Eyebrow onDark>From Traders. For Traders.</Eyebrow></motion.div>
+          <motion.h1 variants={HERO_RISE} className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: HERO_GHOST, letterSpacing: '-0.02em' }}>
             Read the flow.<br />Rank the contract.
           </motion.h1>
-          <motion.p variants={HERO_RISE} className="mt-5 max-w-xl text-[15px] leading-relaxed" style={{ color: muted }}>
+          <motion.p variants={HERO_RISE} className="mt-5 max-w-xl text-[15px] leading-relaxed" style={{ color: HERO_MUTED }}>
             SkyVision finds the setup, Pinpoint AI reads the flow. GEX, DEX, VEX, dealer positioning,
             and volatility structure — one clean trading command center.
           </motion.p>
           <motion.div variants={HERO_RISE} className="mt-7 flex flex-wrap items-center gap-3">
-            <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
-            <GhostButton onClick={() => onEnter('pinpoint')}>View Terminal Preview</GhostButton>
+            <PrimaryButton onClick={onLaunch} onDark>Launch Terminal</PrimaryButton>
+            <GhostButton onClick={() => onEnter('pinpoint')} onDark>View Terminal Preview</GhostButton>
           </motion.div>
-          <motion.p variants={HERO_RISE} className="mt-5 text-[11.5px]" style={{ color: faint }}>
+          <motion.p variants={HERO_RISE} className="mt-5 text-[11.5px]" style={{ color: HERO_FAINT }}>
             Built for traders who need levels, context, and execution clarity.
           </motion.p>
         </motion.div>
@@ -588,7 +618,7 @@ function FeatureSection({ metrics, onEnter }: { metrics: HeroMetrics; onEnter: (
             onClick={() => onEnter(f.tab)}
             className="group cursor-pointer text-left transition-transform duration-200 will-change-transform hover:-translate-y-[2px]"
           >
-            <Panel className="h-full p-5 transition-shadow duration-200 group-hover:shadow-[0_0_0_1px_rgba(248,248,255,0.22),0_10px_30px_rgba(0,0,0,0.4)]">
+            <Panel className="h-full p-5 transition-shadow duration-200 group-hover:shadow-[0_0_0_1px_var(--border-strong),0_10px_30px_rgba(0,0,0,0.4)]">
               <div className="flex items-center justify-between">
                 <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
                 <span className="text-[10px]" style={{ color: faint }}>→</span>
@@ -733,9 +763,9 @@ function PlanCard({ p, onEnter }: { p: (typeof PLANS)[number]; onEnter: (t?: str
         type="button"
         onClick={() => onEnter('subscription')}
         className="mt-5 w-full cursor-pointer rounded-[7px] px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.1em] transition-colors"
-        style={p.featured ? { background: PALETTE.ghost, color: '#0A0806' } : { background: 'transparent', color: PALETTE.text, border: `1px solid ${lineStrong}` }}
-        onMouseEnter={(e) => { if (p.featured) e.currentTarget.style.background = '#ffffff'; else e.currentTarget.style.background = 'rgba(248,248,255,0.05)'; }}
-        onMouseLeave={(e) => { if (p.featured) e.currentTarget.style.background = PALETTE.ghost; else e.currentTarget.style.background = 'transparent'; }}
+        style={p.featured ? { background: accentFill, color: accentText } : { background: 'transparent', color: PALETTE.text, border: `1px solid ${lineStrong}` }}
+        onMouseEnter={(e) => { if (p.featured) e.currentTarget.style.background = accentBright; else e.currentTarget.style.background = hoverWash; }}
+        onMouseLeave={(e) => { if (p.featured) e.currentTarget.style.background = accentFill; else e.currentTarget.style.background = 'transparent'; }}
       >
         {p.name === 'Lifetime' ? 'Contact sales' : 'Select plan'}
       </button>
@@ -783,7 +813,7 @@ function FaqSection() {
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
                 className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2 py-4 text-left transition-colors"
-                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(248,248,255,0.03)')}
+                onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <span className="text-[14px] font-medium" style={{ color: PALETTE.ghost }}>{q}</span>
@@ -949,7 +979,7 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
   return (
     <div
       className="fixed inset-0 z-[40] flex font-mono antialiased"
-      style={{ background: '#08090A', color: PALETTE.text }}
+      style={{ background: 'var(--background)', color: PALETTE.text }}
     >
       {/* SAME left sidebar as the app shell — one navigation everywhere */}
       <LandingSidebar onLaunch={onLaunch} onEnter={onEnter} />
