@@ -912,8 +912,9 @@ export default function App() {
   // ── HOME = full-screen marketing landing for EVERYONE (guest + authenticated).
   // The previous authenticated Home dashboard (SlayerHomeTerminal) is retired. The
   // landing's hero/preview mockups read real GEX/chain/candle fields off serverState;
-  // absent fields render an honest "—". Product nav enters the app shell; the waitlist
-  // CTA opens the real sign-up gate (mounted here since the landing bypasses AppShell).
+  // absent fields render an honest "—". Product nav enters the app shell; the launch
+  // CTA opens the terminal when signed in, otherwise the real sign-up gate (mounted
+  // here since the landing bypasses AppShell). The product is live — no waitlist.
   if (activeTab === 'home') {
     const isFiniteNum = (v: any): v is number => typeof v === 'number' && isFinite(v);
     const gp: any = serverState?.gex_profile ?? null;
@@ -953,7 +954,7 @@ export default function App() {
           pressure={landingPressure}
           spark={landingSpark}
           onEnter={(tab) => handleSelectTab((tab as any) || 'pinpoint')}
-          onJoinWaitlist={() => setShowAuthModal(true)}
+          onLaunch={() => (session?.authenticated ? handleSelectTab('pinpoint') : setShowAuthModal(true))}
         />
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
