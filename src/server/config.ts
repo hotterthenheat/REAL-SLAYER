@@ -24,13 +24,15 @@ export const TIER_PRICING: Record<string, {
   oneTime?: number;
   accessTier: 'discord' | 'pinpoint' | 'skyvision' | 'lifetime';
 }> = {
-  // Value ladder: Discord (entry) → Pinpoint GEX (commodity dealer-GEX tool) →
-  // SkyVision (flagship — picks the trades and includes the GEX tool + Quant Lab).
-  // Lifetime is contact-only (no self-serve price). Quant Lab is folded into SkyVision.
-  discord:   { tier: 1, name: 'Discord',      monthly: 3900,  annual: 38400,  accessTier: 'discord' },
-  pinpoint:  { tier: 2, name: 'Pinpoint GEX', monthly: 9900,  annual: 98400,  accessTier: 'pinpoint' },
-  skyvision: { tier: 3, name: 'SkyVision',    monthly: 49900, annual: 498000, accessTier: 'skyvision' },
-  lifetime:  { tier: 5, name: 'Lifetime',     monthly: 0,     annual: 0,      accessTier: 'lifetime' },
+  // Three-tier ladder: Pinpoint ($125 — everything except SkyVision picks &
+  // Quant Lab, Discord folded in) → SkyVision ($275 — everything included) →
+  // Lifetime (contact-only, no self-serve price). Annual ≈ 17-18% off
+  // (103×12 / 226×12). The legacy `discord` plan is no longer sold but stays
+  // mapped so existing discord-tier accounts keep resolving.
+  discord:   { tier: 1, name: 'Discord',   monthly: 3900,  annual: 38400,  accessTier: 'discord' },
+  pinpoint:  { tier: 2, name: 'Pinpoint',  monthly: 12500, annual: 123600, accessTier: 'pinpoint' },
+  skyvision: { tier: 3, name: 'SkyVision', monthly: 27500, annual: 271200, accessTier: 'skyvision' },
+  lifetime:  { tier: 5, name: 'Lifetime',  monthly: 0,     annual: 0,      accessTier: 'lifetime' },
 };
 
 // Admins MUST be configured via ADMIN_EMAILS in production (fail closed); the

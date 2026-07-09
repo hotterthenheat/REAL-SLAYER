@@ -80,8 +80,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
   // Opens the lifetime contact modal. Paid plans never reach this — they
   // go straight to Stripe Checkout via handleStripeCheckout.
   const handleCheckoutPlan = (plan: string) => {
-    // Prompt login if not authenticated
-    if (!session?.authenticated && onRequestAuth) {
+    // Lifetime is a CONTACT form (name/email/phone), not a purchase — no login
+    // required, the visitor just fills their info out. Paid plans still prompt
+    // login so checkout intent survives authentication.
+    if (plan !== 'lifetime' && !session?.authenticated && onRequestAuth) {
       // Retain checkout intent inside state-store so we resume immediately on successful authentication login
       setCheckoutPlan(plan);
       onRequestAuth();
@@ -94,13 +96,14 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
   };
 
   useEffect(() => {
-    if (checkoutPlan && session?.authenticated) {
-      // Resume the retained intent: paid plans go to Stripe, lifetime opens the contact modal.
-      if (checkoutPlan === 'lifetime') {
-        handleCheckoutPlan(checkoutPlan);
-      } else {
-        handleStripeCheckout(checkoutPlan);
-      }
+    if (!checkoutPlan) return;
+    // Resume the retained intent: lifetime opens the contact form immediately
+    // (no auth needed); paid plans go to Stripe once the user is signed in.
+    if (checkoutPlan === 'lifetime') {
+      handleCheckoutPlan(checkoutPlan);
+      setCheckoutPlan(null);
+    } else if (session?.authenticated) {
+      handleStripeCheckout(checkoutPlan);
       setCheckoutPlan(null);
     }
   }, [checkoutPlan, session?.authenticated, setCheckoutPlan]);
@@ -227,55 +230,9 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-stretch max-w-[340px] sm:max-w-none lg:max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-stretch max-w-[340px] sm:max-w-none lg:max-w-5xl mx-auto">
 
-          {/* SQUIRE CARD */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[10px] p-6 flex flex-col bg-[var(--bg-panel)] border border-[var(--border-subtle)] transition-colors duration-200 hover:border-[var(--border-mid)]"
-          >
-            <div className="flex flex-col flex-grow">
-              <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="mb-4">
-                  <span className="text-[var(--text-primary)] text-[13px] font-semibold">
-                    Discord
-                  </span>
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$39' : '$32'}</span>
-                  <span className="text-[12px] text-[var(--text-muted)]">/ mo</span>
-                </div>
-              </div>
-
-              <ul className="space-y-2.5 mb-6 flex-grow">
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span>Real-time Discord chat &amp; alerts</span>
-                </li>
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span>Daily option discovery reports</span>
-                </li>
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span>Verified historic trade archive</span>
-                </li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => handleStripeCheckout('discord')}
-              disabled={checkoutPending === 'discord'}
-              className={ghostCtaCls}
-            >
-              {checkoutPending === 'discord' ? 'Redirecting…' : 'Select plan'}
-            </button>
-          </motion.div>
-
-          {/* PINPOINT GEX CARD */}
+          {/* PINPOINT CARD — everything except SkyVision picks & Quant Lab */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -287,20 +244,17 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
                 <div className="mb-4">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
-                    Pinpoint GEX
+                    Pinpoint
                   </span>
+                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">The dealer-GEX terminal</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$99' : '$82'}</span>
+                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$125' : '$103'}</span>
                   <span className="text-[12px] text-[var(--text-muted)]">/ mo</span>
                 </div>
               </div>
 
               <ul className="space-y-2.5 mb-6 flex-grow">
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span className="text-[var(--text-primary)] font-medium">Everything in Discord</span>
-                </li>
                 <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
                   <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
                   <span>Live dealer positioning (GEX, DEX, VEX)</span>
@@ -312,6 +266,18 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                 <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
                   <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
                   <span>Zero-DTE levels &amp; dealer dynamics</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span>Dealer Flow &amp; Live Terminal</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span>Trade History tracking</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span>Real-time Discord chat &amp; alerts</span>
                 </li>
               </ul>
             </div>
@@ -343,9 +309,10 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     SkyVision
                   </span>
+                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Everything included</span>
                 </div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$499' : '$415'}</span>
+                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$275' : '$226'}</span>
                   <span className="text-[12px] text-[var(--text-muted)]">/ mo</span>
                 </div>
               </div>
@@ -353,7 +320,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               <ul className="space-y-2.5 mb-6 flex-grow">
                 <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
                   <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span className="text-[var(--text-primary)] font-medium">Everything in Pinpoint GEX</span>
+                  <span className="text-[var(--text-primary)] font-medium">Everything in Pinpoint</span>
                 </li>
                 <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
                   <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
@@ -516,15 +483,13 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                     <div>
                       <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-[0.18em] block font-semibold">Your plan</span>
                       <h3 className="text-[19px] font-semibold text-[var(--text-primary)] mt-1.5 tracking-tight font-sans">
-                        {selectedPlanForCheckout === 'discord' && "Discord"}
                         {selectedPlanForCheckout === 'skyvision' && "SkyVision"}
-                        {selectedPlanForCheckout === 'pinpoint' && "Pinpoint GEX"}
+                        {selectedPlanForCheckout === 'pinpoint' && "Pinpoint"}
                         {selectedPlanForCheckout === 'lifetime' && "Lifetime"}
                       </h3>
                       <p className="text-[11px] text-[var(--text-muted)] mt-1.5 leading-relaxed">
-                        {selectedPlanForCheckout === 'discord' && "Live alerts & Discord community"}
                         {selectedPlanForCheckout === 'skyvision' && "Trade picks, GEX & Quant Lab — everything"}
-                        {selectedPlanForCheckout === 'pinpoint' && "Live dealer positioning (GEX)"}
+                        {selectedPlanForCheckout === 'pinpoint' && "Everything except SkyVision picks & Quant Lab"}
                         {selectedPlanForCheckout === 'lifetime' && "All features, permanent access"}
                       </p>
                     </div>
@@ -534,8 +499,8 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                         {selectedPlanForCheckout === 'lifetime'
                           ? 'Custom quote'
                           : billingCycle === 'monthly'
-                            ? (selectedPlanForCheckout === 'discord' ? '$39' : selectedPlanForCheckout === 'pinpoint' ? '$99' : '$499')
-                            : (selectedPlanForCheckout === 'discord' ? '$32' : selectedPlanForCheckout === 'pinpoint' ? '$82' : '$415')
+                            ? (selectedPlanForCheckout === 'pinpoint' ? '$125' : '$275')
+                            : (selectedPlanForCheckout === 'pinpoint' ? '$103' : '$226')
                         }
                       </span>
                       {selectedPlanForCheckout !== 'lifetime' && (
