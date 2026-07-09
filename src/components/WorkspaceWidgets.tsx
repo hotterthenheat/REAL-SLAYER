@@ -13,7 +13,6 @@ import { useContractStore } from '../lib/store';
 import type { WidgetType } from '../lib/workspace';
 import { formatTime } from '../lib/timeUtils';
 import { Table, THead, TBody, TR, TH, TD } from './ui/Table';
-import { Badge } from './ui/Badge';
 
 /* ------------------------------------------------------------------ */
 /* Pane chrome                                                         */
@@ -59,7 +58,7 @@ export function Pane({ title, isMaximized, onClose, onMaximize, onHeaderPointerD
 /* Shared presentational primitives (consistent across every widget)  */
 /* ------------------------------------------------------------------ */
 
-const Empty = ({ label = 'Awaiting live feed' }: { label?: string }) => (
+const Empty = ({ label = 'Awaiting feed' }: { label?: string }) => (
   <div className="h-full w-full flex flex-col items-center justify-center gap-1.5 text-center px-3">
     <span className="text-[10px] font-medium uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
       {label}
@@ -241,22 +240,16 @@ const LiveOptionsFlow = React.memo(() => {
   const feed = serverState?.deep_intelligence?.flow_feed ?? [];
   // Stamp the feed with the server tick time (real), formatted via user prefs.
   const stamp = updatedAt ? formatTime(new Date(updatedAt)) : formatTime();
-  // Honest source label: only read LIVE when a real provider is connected. The sandbox
-  // tape is synthetic and must read MODEL — never presented under a "Live" header.
-  const isLiveData = !!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC';
 
   return (
     <div className="flex flex-col h-full w-full">
       <SubHead>
         <span className="flex items-center gap-1.5">
           Options Flow
-          <Badge tone={isLiveData ? 'success' : 'warning'} size="sm" dot pulse={isLiveData}>
-            {isLiveData ? 'LIVE CHAIN' : 'MODEL MODE'}
-          </Badge>
         </span>
       </SubHead>
       {feed.length === 0 ? (
-        <Empty label={isLiveData ? 'Live options flow' : 'Model options flow'} />
+        <Empty label="Options flow" />
       ) : (
         <div className="flex-1 overflow-auto">
           <Table bare className="text-[10px]">

@@ -169,7 +169,7 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
     ? 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10'
     : state === 'model' ? 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10'
       : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]';
-  const stateLabel = state === 'live' ? 'Live Chain' : state === 'model' ? 'Model Mode' : 'Collecting';
+  const stateLabel = state === 'warming' ? 'Collecting' : '';
   const method = `Pearson · log returns · ${lookback}D`;
 
   return (
@@ -195,7 +195,7 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
               </button>
             ))}
           </div>
-          <span className={`text-[9px] font-semibold tracking-[0.14em] px-1.5 py-0.5 rounded-[var(--radius-control)] border uppercase ${stateCss}`}>{stateLabel}</span>
+          {stateLabel && <span className={`text-[9px] font-semibold tracking-[0.14em] px-1.5 py-0.5 rounded-[var(--radius-control)] border uppercase ${stateCss}`}>{stateLabel}</span>}
         </div>
       </div>
 

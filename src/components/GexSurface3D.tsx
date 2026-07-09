@@ -314,7 +314,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
           <button className={toolBtn} onClick={() => apiRef.current?.png()} title="Export PNG" aria-label="Export PNG"><Download className="w-3.5 h-3.5" /></button>
           <button className={toolBtn} onClick={dumpCsv} title="Export CSV" aria-label="Export CSV"><span className="text-[9px] font-bold tracking-wider">CSV</span></button>
           <button className={toolBtn} onClick={fullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 className="w-3.5 h-3.5" /></button>
-          <DataStateBadge state={live ? 'live' : 'model'} className="ml-1" title={live ? 'Real per-expiry chains' : 'Per-expiry split modeled from the aggregate term structure'} />
+          <DataStateBadge state={live ? 'live' : 'model'} className="ml-1" />
         </div>
       </div>
 

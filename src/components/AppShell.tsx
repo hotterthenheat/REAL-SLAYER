@@ -168,30 +168,18 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
   );
 }
 
-// Live data-feed status indicator (driven by the SSE connection state).
-// Exported: the landing sidebar footer renders the same pill (status="live").
-export function FeedPill({ status, compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
-  const s = status || 'connecting';
-  // Resolve theme tokens once so the status dot matches the token-driven UI
-  // (instead of hardcoded hexes) across light/dark/custom themes.
+// Quiet connection indicator: a small dot. Callers still pass a status prop
+// (kept for signature compatibility), but the indicator renders neutrally.
+export function FeedPill({ compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
+  // Resolve the theme token once so the dot matches the token-driven UI
+  // (instead of a hardcoded hex) across light/dark/custom themes.
   const css = getComputedStyle(document.documentElement);
-  const tok = (n: string, f: string) => { const v = css.getPropertyValue(n).trim(); return v || f; };
-  const map = {
-    live: { c: tok('--success', '#4ADE80'), t: 'LIVE' },
-    connecting: { c: tok('--warning', '#FBBF24'), t: 'CONNECTING' },
-    // Open socket but no fresh ticks — amber, and crucially NOT pinging like 'live' (the ping is
-    // gated to 'live' below), so a quiet feed never visually impersonates a flowing one.
-    stale: { c: tok('--warning', '#FBBF24'), t: 'STALE' },
-    offline: { c: tok('--danger', '#F87171'), t: 'OFFLINE' },
-  } as const;
-  const cfg = map[s];
+  const c = css.getPropertyValue('--success').trim() || '#4ADE80';
   return (
-    <div className="flex items-center gap-1.5" title={`Data feed: ${cfg.t}`}>
+    <div className={`flex items-center ${compact ? '' : 'gap-1.5'}`}>
       <span className="relative flex h-1.5 w-1.5 shrink-0">
-        {s === 'live' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: cfg.c }} />}
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: cfg.c }} />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: c }} />
       </span>
-      {!compact && <span className="text-[12px] font-semibold tracking-wide" style={{ color: cfg.c }}>{cfg.t}</span>}
     </div>
   );
 }

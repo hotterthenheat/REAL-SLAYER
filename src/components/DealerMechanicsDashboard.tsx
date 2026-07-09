@@ -111,12 +111,12 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
     {
       label: 'Net Vanna',
       tone: 'call',
-      value: netVex != null ? <LiveValue value={netVex} mode="neutral" format={() => fmtGamma(netVex)} /> : 'model',
+      value: netVex != null ? <LiveValue value={netVex} mode="neutral" format={() => fmtGamma(netVex)} /> : '—',
     },
     {
       label: 'Net Charm',
       tone: 'warning',
-      value: charmEx != null ? <LiveValue value={charmEx} mode="neutral" format={() => fmtGamma(charmEx)} /> : 'model',
+      value: charmEx != null ? <LiveValue value={charmEx} mode="neutral" format={() => fmtGamma(charmEx)} /> : '—',
     },
     {
       label: 'γ-Flip',

@@ -20,7 +20,6 @@ import { useContractStore } from '../lib/store';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
 import { InsightPanel } from './ui/terminal/InsightPanel';
-import { StatusBadge } from './ui/terminal/StatusBadge';
 import { DealerPositioningMap } from './pinpoint/DealerPositioningMap';
 import { Download } from 'lucide-react';
 
@@ -245,9 +244,6 @@ export default function PinpointExposureView() {
     }
     return { label: bias ?? '—', tone, sub };
   }, [gauge]);
-
-  // Feed provenance.
-  const isLive = !!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC';
 
   // ── Strike windowing / interval ────────────────────────────────────────────
   const asc = useMemo(() => {
@@ -564,14 +560,7 @@ export default function PinpointExposureView() {
         <TerminalPanel
           title="Exposure Matrix"
           subtitle="Inventory & sensitivity by strike"
-          actions={
-            <>
-              <StatusBadge tone={isLive ? 'live' : 'neutral'} dot>
-                {isLive ? 'Live Chain' : 'Model'}
-              </StatusBadge>
-              {panelActions}
-            </>
-          }
+          actions={panelActions}
           bodyClassName="flex flex-col gap-2"
         >
           <div className="text-[10px] text-[var(--text-muted)] tracking-wide flex flex-wrap gap-x-4 gap-y-0.5">

@@ -549,9 +549,6 @@ export default function ArborCapital() {
                     <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-primary)]">
                       Open Requests
                     </span>
-                    <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] border border-[var(--border)] rounded-[7px] px-1.5 py-0.5">
-                      Examples
-                    </span>
                   </div>
                   <div className="overflow-y-auto max-h-[320px] divide-y divide-[var(--border)]">
                     {userRequests.map((req) => {
@@ -581,11 +578,6 @@ export default function ArborCapital() {
                               >
                                 {req.status}
                               </span>
-                              {req.example && (
-                                <span className="text-[8px] font-semibold uppercase tracking-[0.12em] px-1.5 py-px rounded-[7px] text-[var(--text-tertiary)] border border-[var(--border)]">
-                                  Example
-                                </span>
-                              )}
                             </div>
                             <span className="text-xs font-semibold text-[var(--text-primary)] block truncate leading-tight">
                               {req.title}

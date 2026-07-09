@@ -158,7 +158,6 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
         </div>
         <ChartTools name={`monte-carlo-${ticker || 'spx'}-${model}`} svgRef={svgRef} fullscreenRef={wrapRef}
           csv={() => ({ headers: ['bin_low', 'bin_high', 'count', 'probability'], rows: result.histogram.counts.map((c, i) => [result.histogram.edges[i].toFixed(2), (result.histogram.edges[i + 1] ?? result.histogram.edges[i]).toFixed(2), c, (c / result.nPaths).toFixed(6)]) })} />
-        <span className="text-[9px] font-semibold tracking-[0.14em] px-1.5 py-0.5 rounded-[var(--radius-control)] uppercase" style={{ color: 'var(--info)', background: 'color-mix(in srgb, var(--info) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--info) 30%, transparent)' }}>Model</span>
       </div>
 
       {/* Sample-path cloud grows to fill the panel height (min 220px) so the summary

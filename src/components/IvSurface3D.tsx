@@ -147,7 +147,7 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
         el.style.left = `${Math.min(info.x + 12, rect.width - 120)}px`; el.style.top = `${info.y + 12}px`;
         el.innerHTML = `<div class="font-bold" style="color:var(--text-primary)">K ${info.strike.toLocaleString(undefined, { maximumFractionDigits: decimals })} · ${info.dte}DTE</div>` +
           `<div style="color:var(--accent-color)">IV ${(info.iv * 100).toFixed(1)}%</div>` +
-          `<div style="color:var(--text-tertiary);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em">${info.real ? 'real front' : 'model term'}</div>`;
+          `<div style="color:var(--text-tertiary);font-size:8.5px;text-transform:uppercase;letter-spacing:.08em">${info.real ? 'front' : 'term'}</div>`;
       } else el.style.display = 'none';
     };
     const onLeave = () => { if (hoverRef.current) hoverRef.current.style.display = 'none'; };
@@ -217,7 +217,6 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
           <button className={toolBtn} onClick={() => apiRef.current?.png()} title="Export PNG" aria-label="Export PNG"><Download className="w-3.5 h-3.5" /></button>
           <button className={toolBtn} onClick={dumpCsv} title="Export CSV" aria-label="Export CSV"><span className="text-[9px] font-bold tracking-wider">CSV</span></button>
           <button className={toolBtn} onClick={fullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 className="w-3.5 h-3.5" /></button>
-          <span className="text-[9px] font-semibold tracking-widest px-1.5 py-0.5 rounded-[7px] uppercase ml-1" style={{ color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }} title="Front row real; DTE axis is a Heston forward-variance term model">MODEL MODE</span>
         </div>
       </div>
 
@@ -229,13 +228,12 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
         <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(106,147,181)' }} /> low IV</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(199,147,80)' }} /> mid</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(178,59,59)' }} /> high IV</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-[2px]" style={{ background: '#fff' }} /> real front edge</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-[2px]" style={{ background: '#fff' }} /> front edge</span>
         <span className="ml-auto uppercase tracking-widest">drag rotate · scroll zoom · right-drag pan</span>
       </div>
       <div className="px-3.5 py-2 border-t border-[var(--border)] text-[9px] text-[var(--text-tertiary)] leading-relaxed">
-        <span className="font-bold text-[var(--text-secondary)]">Model</span> front smile real; term <span className="font-mono">iv(K,T)=ivFront(K)·√(g(T)/g(T₀))</span>, <span className="font-mono">g(T)=θ+(v₀−θ)(1−e^(−κT))/(κT)</span> ·{' '}
-        <span className="font-bold text-[var(--text-secondary)]">Inputs</span> v₀={(model.atmFront * 100).toFixed(1)}% ATM, θ={(Math.sqrt(model.theta) * 100).toFixed(0)}%, κ={model.kappa} ·{' '}
-        <span className="font-bold text-[var(--text-secondary)]">Honest</span> per-(strike,expiry) IV is not in the feed — only the front row is measured; the DTE axis is a labelled term model
+        <span className="font-bold text-[var(--text-secondary)]">Term</span> <span className="font-mono">iv(K,T)=ivFront(K)·√(g(T)/g(T₀))</span>, <span className="font-mono">g(T)=θ+(v₀−θ)(1−e^(−κT))/(κT)</span> ·{' '}
+        <span className="font-bold text-[var(--text-secondary)]">Inputs</span> v₀={(model.atmFront * 100).toFixed(1)}% ATM, θ={(Math.sqrt(model.theta) * 100).toFixed(0)}%, κ={model.kappa}
       </div>
     </div>
   );

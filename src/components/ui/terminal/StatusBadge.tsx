@@ -37,7 +37,7 @@ const toneClasses: Record<Exclude<BadgeTone, 'live'>, string> = {
   info:
     'border-[color:rgba(74,111,184,0.45)] bg-[rgba(74,111,184,0.16)] text-[var(--text-primary)]',
   call:
-    'border-[color:rgba(121,44,162,0.5)] bg-[rgba(121,44,162,0.14)] text-[var(--call)]',
+    'border-[color:rgba(106,147,181,0.5)] bg-[rgba(106,147,181,0.14)] text-[var(--call)]',
   pin:
     'border-[color:rgba(44,104,123,0.5)] bg-[rgba(44,104,123,0.16)] text-[var(--pin)]',
 };

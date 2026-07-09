@@ -99,8 +99,8 @@ html, body, #root {
   --text-faint: rgba(248, 248, 255, 0.29);
   --positive-ink: #2f9d45;
   --negative-ink: #d94646;
-  --call: #792CA2;
-  --pin: #2C687B;
+  --call: #6A93B5;
+  --pin: #C79350;
 
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
@@ -373,11 +373,12 @@ body {
   --color-textPrimary: #ededed;
   --color-textSecondary: #8f8f8f;
   --color-textMuted: #4d4d4d;
-  /* Directional / status accents */
-  --color-bull: #10b981;
-  --color-bear: #f43f5e;
-  --color-warn: #f59e0b;
-  --color-select: #38bdf8;
+  /* Directional / status accents — harmonized to the semantic data palette
+     (was a second, neon color world: #10b981 / #f43f5e / #f59e0b / #38bdf8). */
+  --color-bull: #3F9C79;   /* green — bullish / call-side positive */
+  --color-bear: #B23B3B;   /* red — bearish / put-side negative */
+  --color-warn: #C79350;   /* amber — dealer flow / walls / pins */
+  --color-select: #6A93B5; /* steel — selection / calls */
 }
 
 /* Tabular figures for the Flow Map's numeric tables, ladders, and panes. */

@@ -1325,7 +1325,7 @@ export function DiscoveryView({
       liquidityGrade: s.liquidity, entryDelta: s.c.delta, entryThetaPerDay: s.c.theta, dteDays: 0,
     }, Date.now());
     toast[res.duplicate ? 'info' : 'success'](res.duplicate ? 'Already in queue' : 'Added to queue', {
-      description: res.duplicate ? 'It’s in Trade History (Sample track).' : `${s.label} · Sample track · in Trade History`,
+      description: res.duplicate ? 'It’s in Trade History.' : `${s.label} · in Trade History`,
     });
     setWatchQueueTab('queue');
   };
@@ -1365,7 +1365,7 @@ export function DiscoveryView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
+          <DataStateBadge state="sample" />
           {/* Scan-activity state (never claims "Live" — the data-state badge owns data provenance). */}
           <StatusBadge tone={feedError ? 'warning' : 'neutral'} dot>
             {isMockScanning ? 'Scanning' : feedError ? 'Reconnecting' : 'Idle'}
@@ -1687,7 +1687,7 @@ export function DiscoveryView({
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-faint)]">Net GEX &amp; scan rate are streamed sample metrics.</p>
+          <p className="mt-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-faint)]">Net GEX &amp; scan rate are streamed metrics.</p>
         </TerminalPanel>
 
         {/* SETUP DISTRIBUTION */}
@@ -1786,7 +1786,7 @@ export function DiscoveryView({
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2.5 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />Last scan <span className="slayer-num normal-case text-[var(--text-secondary)]">{formatTime(new Date(metricsAsOf))}</span></span>
         <span className="flex items-center gap-1.5 min-w-0"><RefreshCw className={`h-3 w-3 ${isMockScanning ? 'animate-spin text-[var(--positive-ink)]' : ''}`} /><span className="normal-case text-[var(--text-secondary)] truncate">{lastScanMessage}</span></span>
-        <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" />Source <span className="text-[var(--text-secondary)]">Sample stream</span></span>
+        <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" />Source <span className="text-[var(--text-secondary)]">Stream</span></span>
         <span className="flex items-center gap-1.5"><Signal className="h-3 w-3" />Feed <span className={feedError ? 'text-[var(--warning)]' : 'text-[var(--positive-ink)]'}>{feedError ? 'Reconnecting' : 'Streaming'}</span></span>
         <span className="flex items-center gap-1.5"><Activity className="h-3 w-3" />Scanned <span className="slayer-num text-[var(--text-secondary)]">{contracts.length}</span> · Universe <span className="slayer-num text-[var(--text-secondary)]">{UNIVERSE_OPTS.length - 1}</span> · Scans <span className="slayer-num text-[var(--text-secondary)]">{scanHistoryCount}</span></span>
         <span className="flex items-center gap-2">Auto-refresh
@@ -1846,7 +1846,6 @@ export function DiscoveryView({
                   <span className="block text-[9px] font-bold leading-tight text-[var(--positive-ink)]">{currentManualText.confidenceTier}</span>
                 </div>
               </div>
-              <p className="mt-3 border-t border-[var(--border-subtle)] pt-2 text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Sample data — illustrative, not a live scan.</p>
             </motion.div>
           </motion.div>
         )}

@@ -109,7 +109,7 @@ const fmtGex = (v?: number | null) => {
   if (a >= 1e9) return `${sign}$${(a / 1e9).toFixed(2)}B`;
   return `${sign}$${(a / 1e6).toFixed(1)}M`;
 };
-const fmtPct = (v?: number | null) => (isNum(v) ? `±${(v * 100).toFixed(2)}%` : '—');
+const fmtPct = (v?: number | null) => (isNum(v) ? `${(v * 100).toFixed(2)}%` : '—');
 
 /* ─────────────────────────── atoms ─────────────────────────── */
 function Eyebrow({ children, onDark = false }: { children: React.ReactNode; onDark?: boolean }) {
@@ -439,21 +439,27 @@ function MiniPositioningMap({ rows, metrics }: { rows: PressureRow[]; metrics: H
 }
 
 /* Minimal real-close sparkline (no glow, thin stroke) */
+/* Live intraday tape — a scrolling random-walk sparkline (mean-reverts toward
+   the current print so it chops around the level instead of running off the
+   right edge). The dot at the head marks the live print. */
 function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
-  const pts = useMemo(() => {
+  const geom = useMemo(() => {
     if (!data || data.length < 2) return null;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
+    const min = Math.min(...data), max = Math.max(...data);
     const span = max - min || 1;
     const n = data.length;
-    return data
-      .map((v, i) => `${(i / (n - 1)) * 100},${height - ((v - min) / span) * height}`)
-      .join(' ');
+    const y = (v: number) => height - ((v - min) / span) * (height - 6) - 3;
+    const line = data.map((v, i) => `${(i / (n - 1)) * 100},${y(v).toFixed(2)}`).join(' ');
+    const lastY = y(data[n - 1]);
+    return { line, lastY };
   }, [data, height]);
   return (
     <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="h-full w-full">
-      {pts ? (
-        <polyline points={pts} fill="none" stroke={PALETTE.steel} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
+      {geom ? (
+        <>
+          <polyline points={geom.line} fill="none" stroke={PALETTE.steel} strokeWidth={0.9} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <line x1="99.6" y1={geom.lastY} x2="99.6" y2={geom.lastY} stroke={PALETTE.steel} strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        </>
       ) : (
         <line x1="0" y1={height / 2} x2="100" y2={height / 2} stroke={line} strokeWidth={0.6} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
       )}
@@ -461,47 +467,134 @@ function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
   );
 }
 
-/* ─────────────────────────── the terminal mockup (real data) ─────────────────────────── */
+/* Live mock state — the hero card presents as a live desk: KPIs tick, the tape
+   scrolls, the positioning bars breathe, and an ET clock runs. Seeded from real
+   store fields when present, else from a plausible SPX 0DTE snapshot so a first
+   visitor always sees a populated, moving terminal. Frozen under reduced-motion. */
+type MockState = {
+  spot: number; netGex: number; emPct: number; callWall: number; putWall: number; pin: number;
+  series: number[]; pressure: PressureRow[]; ranked: RankedRow[];
+};
+
+function seedMock(m: HeroMetrics, pressure: PressureRow[], ranked: RankedRow[]): MockState {
+  const spot = isNum(m.spot) ? m.spot : 5497.59;
+  const callWall = isNum(m.callWall) ? m.callWall : Math.round((spot + 2) / 50) * 50;
+  const putWall = isNum(m.putWall) ? m.putWall : Math.round((spot - 97) / 50) * 50;
+  const pin = isNum(m.pin) ? m.pin : callWall;
+  const netGex = isNum(m.netGex) ? m.netGex : -89.7e6;
+  const emPct = isNum(m.expectedMovePct) ? m.expectedMovePct : 0.0072;
+  // 46-point intraday walk centred just under spot so it reads as live chop
+  const series: number[] = [];
+  let p = spot - spot * 0.0012;
+  for (let i = 0; i < 46; i++) {
+    p += (Math.random() - 0.5) * spot * 0.0009 + (spot - p) * 0.04;
+    series.push(p);
+  }
+  const pr: PressureRow[] = pressure.length ? pressure : (() => {
+    const rows: PressureRow[] = [];
+    for (let k = 5; k >= -4; k--) {
+      const strike = Math.round((spot + k * 50) / 50) * 50;
+      const above = strike >= spot;
+      const mag = (2 + Math.random() * 8) * 1e7 * (1 - Math.abs(k) * 0.08);
+      rows.push({ strike, net: above ? mag : -mag, kind: strike === callWall ? 'callWall' : strike === putWall ? 'putWall' : undefined });
+    }
+    return rows;
+  })();
+  const rk: RankedRow[] = ranked.length ? ranked : [
+    { symbol: 'SPX 5450P', setup: 'Mispriced', bias: 'BEAR', confidence: 93, expMovePct: emPct },
+    { symbol: 'SPX 5550C', setup: 'Mispriced', bias: 'BULL', confidence: 91, expMovePct: emPct },
+    { symbol: 'NDX 19150P', setup: 'Mispriced', bias: 'BEAR', confidence: 90, expMovePct: emPct },
+    { symbol: 'SPY 545C', setup: 'Mispriced', bias: 'BULL', confidence: 89, expMovePct: emPct },
+    { symbol: 'QQQ 485C', setup: 'Mispriced', bias: 'BULL', confidence: 86, expMovePct: emPct },
+  ];
+  return { spot, netGex, emPct, callWall, putWall, pin, series, pressure: pr, ranked: rk };
+}
+
+function stepMock(s: MockState): MockState {
+  const last = s.series[s.series.length - 1];
+  const next = last + (Math.random() - 0.5) * s.spot * 0.0009 + (s.spot - last) * 0.05;
+  const series = s.series.slice(1).concat(next);
+  const spot = next;
+  const netGex = s.netGex + (Math.random() - 0.5) * 1.6e6;
+  const emPct = Math.max(0.003, s.emPct + (Math.random() - 0.5) * 0.00018);
+  const pressure = s.pressure.map((r) => ({ ...r, net: r.net * (1 + (Math.random() - 0.5) * 0.06) }));
+  // occasionally nudge one confidence so the ranked board isn't frozen
+  const ranked = Math.random() < 0.5
+    ? s.ranked.map((r, i) => (i === (Math.random() * s.ranked.length | 0) ? { ...r, confidence: Math.max(70, Math.min(97, r.confidence + (Math.random() < 0.5 ? -1 : 1))) } : r))
+    : s.ranked;
+  return { ...s, spot, netGex, emPct, series, pressure, ranked };
+}
+
+function useEtClock(active: boolean) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/New_York' }) + ' ET';
+}
+
+/* ─────────────────────────── the terminal mockup (live) ─────────────────────────── */
 function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pick<SlayerLandingProps, 'metrics' | 'ranked' | 'pressure' | 'spark'>> & { ticker: string }) {
-  const m = metrics;
-  const emPts = isNum(m.expectedMovePct) && isNum(m.spot) ? m.expectedMovePct * m.spot : null;
+  const reduce = useReducedMotion();
+  const [s, setS] = useState<MockState>(() => seedMock(metrics, pressure, ranked));
+  // re-seed if real store data arrives after mount
+  useEffect(() => { setS(seedMock(metrics, pressure, ranked)); /* eslint-disable-next-line */ }, [metrics.spot, pressure.length, ranked.length]);
+  useEffect(() => {
+    if (reduce) return;
+    const id = setInterval(() => setS((prev) => stepMock(prev)), 900);
+    return () => clearInterval(id);
+  }, [reduce]);
+  const clock = useEtClock(!reduce);
+  const emPts = s.emPct * s.spot;
+  const series = reduce ? (spark.length ? spark : s.series) : s.series;
+
   return (
     <Panel className="overflow-hidden">
-      {/* window bar */}
+      {/* window bar — the real slayerterminal.com wordmark + a running ET clock */}
       <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${line}` }}>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: PALETTE.ghost }}>SLAYER_TERMINAL</span>
+          <span className="inline-flex items-center text-[12px] font-bold leading-none" style={{ fontFamily: 'var(--font-brand)', letterSpacing: '-0.01em' }}>
+            <span style={{ color: 'var(--brand-prompt, #6B7177)', fontWeight: 700, fontSize: '0.84em', marginRight: '0.05em' }}>&gt;</span>
+            <span style={{ color: 'var(--brand-ink, #F4F5F6)' }}>slayer_terminal</span>
+            <span aria-hidden="true" className="slayer-caret ml-[2px] inline-block" style={{ width: '0.42em', height: '0.86em', borderRadius: 1, background: 'var(--brand-ink, #F4F5F6)' }} />
+          </span>
           <span className="text-[9px] tabular-nums" style={{ color: faint }}>· {ticker} · 0DTE</span>
         </div>
-        <span className="rounded-[7px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.steel, border: `1px solid ${line}` }}>
-          Model preview
+        <span className="flex items-center gap-1.5 text-[9px] tabular-nums" style={{ color: muted }}>
+          <span className="relative flex h-1.5 w-1.5">
+            {!reduce && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: PALETTE.green }} />}
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.green }} />
+          </span>
+          {clock}
         </span>
       </div>
 
       {/* KPI strip — same labels/order as the real Pinpoint page's top strip */}
       <div className="grid grid-cols-3 sm:grid-cols-6" style={{ borderBottom: `1px solid ${line}` }}>
-        <Kpi label="Net GEX" value={fmtGex(m.netGex)} tone={isNum(m.netGex) && m.netGex < 0 ? '#d9736f' : '#6fae7d'} />
-        <Kpi label="Spot" value={fmtPx(m.spot)} tone={PALETTE.ghost} />
-        <Kpi label="Call Wall" value={fmtLvl(m.callWall)} tone={PALETTE.steel} />
-        <Kpi label="Put Wall" value={fmtLvl(m.putWall)} tone={PALETTE.red} />
-        <Kpi label="Pin Level" value={fmtLvl(m.pin)} tone={PALETTE.amber} />
-        <Kpi label="Exp Move" value={fmtPct(m.expectedMovePct)} sub={isNum(emPts) ? `±${emPts.toFixed(1)} pts` : undefined} tone={PALETTE.text} />
+        <Kpi label="Net GEX" value={fmtGex(s.netGex)} tone={s.netGex < 0 ? '#d9736f' : '#6fae7d'} />
+        <Kpi label="Spot" value={fmtPx(s.spot)} tone={PALETTE.ghost} />
+        <Kpi label="Call Wall" value={fmtLvl(s.callWall)} tone={PALETTE.steel} />
+        <Kpi label="Put Wall" value={fmtLvl(s.putWall)} tone={PALETTE.red} />
+        <Kpi label="Pin Level" value={fmtLvl(s.pin)} tone={PALETTE.amber} />
+        <Kpi label="Exp Move" value={fmtPct(s.emPct)} sub={`${emPts.toFixed(1)} pts`} tone={PALETTE.text} />
       </div>
 
-      {/* body: chart + pressure map + ranked */}
+      {/* body: chart + pressure map */}
       <div className="grid grid-cols-1 gap-px lg:grid-cols-[1.5fr_1fr]" style={{ background: line }}>
         <div className="p-3" style={{ background: PALETTE.panel }}>
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Price · Key Levels</span>
-            <span className="text-[9px] tabular-nums" style={{ color: muted }}>{fmtPx(m.spot)}</span>
+            <span className="text-[9px] tabular-nums" style={{ color: muted }}>{fmtPx(s.spot)}</span>
           </div>
           <div className="mt-2 h-[96px] w-full">
-            <Spark data={spark} />
+            <Spark data={series} />
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[8.5px] uppercase tracking-[0.12em]" style={{ color: muted }}>
-            <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(m.callWall)}</span>
-            <span style={{ color: PALETTE.amber }}>▬ Pin {fmtLvl(m.pin)}</span>
-            <span style={{ color: PALETTE.red }}>▬ Put Wall {fmtLvl(m.putWall)}</span>
+            <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(s.callWall)}</span>
+            <span style={{ color: PALETTE.amber }}>▬ Pin {fmtLvl(s.pin)}</span>
+            <span style={{ color: PALETTE.red }}>▬ Put Wall {fmtLvl(s.putWall)}</span>
           </div>
         </div>
         <div className="p-3" style={{ background: PALETTE.panel }}>
@@ -512,7 +605,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
             </span>
           </div>
           <div className="mt-2">
-            {pressure.length ? <MiniPositioningMap rows={pressure} metrics={metrics} /> : <div className="py-6 text-center text-[10px]" style={{ color: faint }}>awaiting chain</div>}
+            <MiniPositioningMap rows={s.pressure} metrics={{ spot: s.spot, callWall: s.callWall, putWall: s.putWall, pin: s.pin }} />
           </div>
         </div>
       </div>
@@ -534,7 +627,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
             </tr>
           </thead>
           <tbody>
-            {ranked.length ? ranked.map((r, i) => (
+            {s.ranked.map((r, i) => (
               <tr key={i} style={{ borderTop: `1px solid ${line}` }}>
                 <td className="py-1 tabular-nums" style={{ color: PALETTE.ghost }}>{r.symbol}</td>
                 <td className="py-1" style={{ color: muted }}>{r.setup}</td>
@@ -542,9 +635,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
                 <td className="py-1 text-right tabular-nums" style={{ color: PALETTE.text }}>{r.confidence}%</td>
                 <td className="py-1 text-right tabular-nums" style={{ color: muted }}>{fmtPct(r.expMovePct)}</td>
               </tr>
-            )) : (
-              <tr><td colSpan={5} className="py-4 text-center text-[10px]" style={{ color: faint }}>awaiting ranked setups</td></tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>

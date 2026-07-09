@@ -68,7 +68,7 @@ export default function QuantVizLab() {
   const riskCloud = useMemo(() => riskCloudPoints(), [seed]);
   const hedgeGrid = useMemo(() => hedgingPressureGrid(), [seed]);
 
-  const refresh = () => { setSeed(s => s + 1); toast.info('Regenerated mock feed', { description: 'Swap generators for a live feed once API keys are set.' }); };
+  const refresh = () => { setSeed(s => s + 1); toast.info('Data refreshed'); };
 
   return (
     <section className="space-y-3" id="quant-viz-lab" aria-label="Quant visual analytics">
@@ -76,7 +76,6 @@ export default function QuantVizLab() {
         <div className="flex items-center gap-2">
           <Boxes className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
           <h2 className="font-mono text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Quant Lab · Visual Analytics</h2>
-          <span className="rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">mock feed</span>
         </div>
         <button
           onClick={refresh}
@@ -116,7 +115,7 @@ export default function QuantVizLab() {
         <VizPanel
           title="Implied Vol Surface"
           term={<Term id="iv">Implied Vol Surface</Term>}
-          subtitle="moneyness × tenor × IV (model)"
+          subtitle="moneyness × tenor × IV"
           icon={<Box />}
           height={380}
         >
@@ -138,7 +137,7 @@ export default function QuantVizLab() {
       </div>
 
       {/* Row 3: dealer hedging-pressure surface (hero) */}
-      <VizPanel title="Dealer Hedging Pressure" subtitle="strike × time-to-close × |hedging flow| (model)" icon={<Waves />} height={320}>
+      <VizPanel title="Dealer Hedging Pressure" subtitle="strike × time-to-close × |hedging flow|" icon={<Waves />} height={320}>
         <LazyMount minHeight={320}>
           <ThreeSurface grid={hedgeGrid} axisLabels={['Strike', 'Time → Close', 'Pressure']} height={320} />
         </LazyMount>

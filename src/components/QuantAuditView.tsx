@@ -566,9 +566,9 @@ export function QuantAuditView({
       {/* ─────────────── Tracked-setup performance (Live vs Model — never mixed) ─────────────── */}
       {anyTracked && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <StatBlock title="Live tracks" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
+          <StatBlock title="Tracked setups" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
           <StatBlock
-            title="Model / Sample" icon={<FlaskConical className="w-3 h-3" />} stats={modelStats} live={false}
+            title="Additional tracks" icon={<FlaskConical className="w-3 h-3" />} stats={modelStats} live={false}
             action={liveStats.resolved + modelStats.resolved > 0 ? (
               <button onClick={clearResolved} className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:underline rounded transition-colors">Clear resolved</button>
             ) : undefined}
@@ -730,7 +730,7 @@ export function QuantAuditView({
       {/* ─────────────── FOOTER ─────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-1 pt-1 text-[9px] text-[var(--text-muted)] tracking-wide">
         <span>Disclaimer: For informational purposes only. Not investment advice.</span>
-        <span>{kpis.total} logged · Live tracks & model/sample kept separate</span>
+        <span>{kpis.total} logged</span>
         <span className="font-bold tracking-[0.16em] text-[var(--text-secondary)]">REAL-SLAYER</span>
       </div>
     </div>
@@ -793,7 +793,7 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
   // Thesis (real fields only).
   const thesis = useMemo(() => {
     if (t) {
-      return `${t.recommendation} · ${t.structureState}. ${t.vwapState}, ${t.rsiState}. ${t.dealerPositioning}. Model: +${t.expectedReturn}% expected return vs -${t.expectedDrawdown}% expected drawdown · P(win) ${t.probabilityPositive}% · stability ${t.thesisStability}%.`;
+      return `${t.recommendation} · ${t.structureState}. ${t.vwapState}, ${t.rsiState}. ${t.dealerPositioning}. +${t.expectedReturn}% expected return vs -${t.expectedDrawdown}% expected drawdown · P(win) ${t.probabilityPositive}% · stability ${t.thesisStability}%.`;
     }
     if (s) {
       const bits = [s.dealerReason, s.volatilityReason].filter(x => x && x !== '—');

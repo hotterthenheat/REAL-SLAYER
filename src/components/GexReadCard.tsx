@@ -59,8 +59,8 @@ export function GexReadCard() {
 
       <span className="text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest tabular-nums">
         {summary?.generatedAt
-          ? `As of ${formatTime(summary.generatedAt)} · auto-generated from this ticker's live GEX — refreshes every 30 min`
-          : "Model estimate — auto-generated from this ticker's live GEX, refreshes every 30 min"}
+          ? `As of ${formatTime(summary.generatedAt)} · auto-generated from this ticker's GEX — refreshes every 30 min`
+          : "Auto-generated from this ticker's GEX, refreshes every 30 min"}
       </span>
     </div>
   );

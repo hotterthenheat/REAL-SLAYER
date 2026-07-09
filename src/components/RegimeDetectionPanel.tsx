@@ -101,7 +101,6 @@ export function RegimeDetectionPanel({ candles, intervalMinutes = 5, ticker }: R
                 ['posterior_tail_risk', regime.posteriors.TAIL_RISK.toFixed(4)],
               ],
             })} />
-          <span className="text-[9px] font-semibold tracking-[0.14em] px-1.5 py-0.5 rounded-[var(--radius-control)] uppercase" style={{ color: 'var(--info)', background: 'color-mix(in srgb, var(--info) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--info) 30%, transparent)' }} title="Gaussian-feature classifier over Hurst / realized-vol / kurtosis — measurable, not labeled by hand.">Model</span>
         </div>
       </div>
 

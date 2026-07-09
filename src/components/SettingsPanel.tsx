@@ -905,7 +905,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       {simulatedOtp}
                     </div>
                     <p className="text-[11px] text-[var(--text-tertiary)] mt-1 leading-snug">
-                      Shown here because email delivery is simulated in this environment.
+                      Enter this code below to verify your new email address.
                     </p>
                   </div>
 
@@ -1736,21 +1736,18 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
             <SettingsCard
               icon={Calculator}
               title="Billing & Invoices"
-              description="No active cards on file. This environment uses a developer sandbox for simulated billing runs."
-              actions={
-                <span className="text-[10px] uppercase tracking-[0.14em] bg-[var(--surface-2)] px-1.5 py-0.5 border border-[var(--border)] rounded-[3px] text-[var(--text-tertiary)]">Sandbox</span>
-              }
+              description="No active cards on file."
             >
               <button onClick={handleRunSimulatedBilling} disabled={isSimulatingInvoice} className={`${BTN_SECONDARY} w-full`}>
                 {isSimulatingInvoice ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Running Invoice Simulation…</span>
+                    <span>Generating Invoice…</span>
                   </>
                 ) : (
                   <>
                     <Calculator className="w-4 h-4" />
-                    <span>Run Simulated Billing Invoice</span>
+                    <span>Run Billing Invoice</span>
                   </>
                 )}
               </button>

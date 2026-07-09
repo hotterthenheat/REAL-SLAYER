@@ -494,13 +494,16 @@ const Frame: React.FC<{ height: number; children: React.ReactNode }> = ({ height
 );
 
 const STATE_META: Record<DataState, { label: string; css: string }> = {
-  live: { label: 'Live Chain', css: 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10' },
-  delayed: { label: 'Delayed Data', css: 'text-[var(--warning)] border-[var(--warning)]/40 bg-[var(--warning)]/10' },
-  model: { label: 'Model Mode', css: 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10' },
+  live: { label: '', css: 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10' },
+  delayed: { label: '', css: 'text-[var(--warning)] border-[var(--warning)]/40 bg-[var(--warning)]/10' },
+  model: { label: '', css: 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10' },
   required: { label: 'Data Required', css: 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]' },
 };
 
 function StatePill({ state }: { state: DataState }) {
+  // Provenance stamps (live / delayed / model) are not surfaced — only the genuine
+  // "not enough data yet" empty-state is shown.
+  if (state !== 'required') return null;
   const m = STATE_META[state];
   return (
     <div className={`pointer-events-none absolute left-3 top-2 z-10 rounded-[7px] border px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-widest ${m.css}`}>

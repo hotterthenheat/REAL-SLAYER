@@ -587,7 +587,7 @@ export function SkyVisionView() {
               </div>
               <div className="flex items-stretch">
                 <div className="pl-6 border-l border-[var(--border)] text-right">
-                  <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-[0.16em] font-bold">{isPriceLive ? 'Live Mid' : 'Model Mid'}</span>
+                  <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-[0.16em] font-bold">Mid</span>
                   <span className="text-[var(--text-primary)] font-semibold block text-[17px] font-mono tabular-nums leading-tight mt-0.5">${(activePrice ?? 0).toFixed(2)}</span>
                 </div>
               </div>
@@ -626,13 +626,6 @@ export function SkyVisionView() {
                   <div className="flex justify-between items-center">
                     <span className="text-[var(--text-tertiary)] uppercase text-[10px] font-bold flex items-center gap-1.5">
                       Confidence
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                        isConfidenceLive
-                          ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
-                          : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-3)]'
-                      }`}>
-                        {isConfidenceLive ? 'Live' : 'Model Est.'}
-                      </span>
                     </span>
                     <span className="font-bold text-[var(--text-primary)] text-[10px] font-mono tabular-nums">{tradeHealthValue}%</span>
                   </div>
@@ -646,22 +639,14 @@ export function SkyVisionView() {
                   </div>
                   {!isConfidenceLive && (
                     <span className="block text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider leading-snug">
-                      Model estimate · not investment advice
+                      Not investment advice
                     </span>
                   )}
                 </div>
 
-                {/* Greeks 2x2 grid — labelled by provenance so a model/estimate
-                    fallback is never presented as live data. */}
+                {/* Greeks 2x2 grid */}
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">Greeks</span>
-                  <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                    derivedGreeks.source === 'live'
-                      ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
-                      : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-3)]'
-                  }`}>
-                    {derivedGreeks.source === 'live' ? 'Live' : derivedGreeks.source === 'chain' ? 'Model Chain' : 'Model Est.'}
-                  </span>
                 </div>
                 <div className="grid grid-cols-4 border-t border-b border-[var(--border)] py-2.5 font-mono text-[10px]">
                   <div className="flex flex-col gap-0.5 pr-2">
@@ -689,19 +674,12 @@ export function SkyVisionView() {
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] text-[var(--text-tertiary)] tracking-widest font-bold uppercase flex items-center gap-1.5">
                       Expected Move
-                      <span className={`text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                        isExpectedMoveLive
-                          ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
-                          : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-3)]'
-                      }`}>
-                        {isExpectedMoveLive ? 'Live' : 'Model Est.'}
-                      </span>
                     </span>
                     <span className="font-bold text-[var(--info)] text-sm font-mono tabular-nums">+{expectedMoveField}%</span>
                   </div>
                   {!isExpectedMoveLive && (
                     <span className="block text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider leading-snug">
-                      Model estimate · not investment advice
+                      Not investment advice
                     </span>
                   )}
                 </div>
@@ -1128,7 +1106,7 @@ export function SkyVisionView() {
                   <div className="border-b border-[var(--border)] pb-2.5 mb-3 shrink-0 flex justify-between items-center">
                     <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest flex items-center gap-2">
                        <Activity className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
-                       {(!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC') ? 'Live Order Flow' : 'Model Order Flow'}
+                       Order Flow
                     </span>
                   </div>
                   <div className="flex flex-col gap-2 overflow-y-auto text-[10px] font-mono pr-1 flex-1">
@@ -1157,7 +1135,7 @@ export function SkyVisionView() {
         <div className="w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-[var(--radius-panel)] space-y-3">
           <div className="flex justify-between items-center pb-2.5 border-b border-[var(--border)]">
             <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
-              <Activity className={`w-3.5 h-3.5 ${isChartLive ? 'text-[var(--success)]' : 'text-[var(--info)]'}`} /> {isChartLive ? 'Live Chart' : 'Model Chart'}
+              <Activity className={`w-3.5 h-3.5 ${isChartLive ? 'text-[var(--success)]' : 'text-[var(--info)]'}`} /> Chart
             </span>
             <button
               onClick={() => setIsChartExpanded(!isChartExpanded)}
@@ -1184,7 +1162,6 @@ export function SkyVisionView() {
               showFVGs={true}
               showLiquiditySweeps={true}
               showDisplacementEvents={true}
-              watermarkText={isChartLive ? 'LIVE CHART' : 'MODEL CHART'}
               gexLevels={serverState?.deep_intelligence?.dealer_metrics ? {
                 callWall: serverState.deep_intelligence.dealer_metrics.callWall,
                 putWall: serverState.deep_intelligence.dealer_metrics.putWall,

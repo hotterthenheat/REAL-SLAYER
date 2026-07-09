@@ -75,12 +75,6 @@ const FlowMap = () => {
         <span className="font-mono text-[10px] text-textMuted uppercase tracking-wider">
           {matrix.strikes.length} strikes · {matrix.expiries.length} expirations
         </span>
-        {/* Honest data-provenance badge: this surface runs on the built-in
-            simulator until a live feed is wired — never label it "live". Warn
-            tone (theme token) reads as a caution chip, never a green live badge. */}
-        <span className="ml-auto rounded-[7px] border border-warn/30 bg-warn/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-warn">
-          Simulated Feed
-        </span>
       </div>
 
       {/* Key levels — one dominant figure (Net GEX) carries the read; the walls,
@@ -99,7 +93,7 @@ const FlowMap = () => {
           </div>
         </div>
         {([
-          { label: 'Spot', value: `$${levels.spot.toFixed(2)}`, cls: 'text-textPrimary', sub: 'simulated tick' },
+          { label: 'Spot', value: `$${levels.spot.toFixed(2)}`, cls: 'text-textPrimary', sub: 'underlying' },
           { label: <Term id="gammaFlip">Gamma Flip</Term>, value: `$${levels.flip.toFixed(2)}`, cls: 'text-textPrimary', sub: levels.spot > levels.flip ? 'spot above' : 'spot below' },
           { label: <Term id="callWall">Call Wall</Term>, value: `$${levels.callWall.toFixed(2)}`, cls: 'text-bull', sub: 'dealer supply' },
           { label: <Term id="putWall">Put Wall</Term>, value: `$${levels.putWall.toFixed(2)}`, cls: 'text-bear', sub: 'dealer support' },
@@ -122,7 +116,7 @@ const FlowMap = () => {
         left={
           <Panel
             title={`${activeTicker} — GEX nodes + levels`}
-            subtitle="simulated feed · metric toggle drives the matrix"
+            subtitle="metric toggle drives the matrix"
             className="h-full w-full"
             bodyClassName="flex flex-col"
           >
