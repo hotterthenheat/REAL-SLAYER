@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useReducedMotion, useInView } from 'motion/react';
 import type { MotionValue } from 'motion/react';
 import Lenis from 'lenis';
-import { LogIn, Menu, X, Check, ArrowUpRight } from 'lucide-react';
+import { LogIn, Menu, X, Check, ArrowUpRight, CreditCard } from 'lucide-react';
 // The hero backdrop is the real slayerterminal.com motif: a live code/finance
 // "rain" (neutral steel/amber tints), NOT a coloured 3D field. Light, no WebGL.
 import SlayerCodeRain from './SlayerCodeRain';
@@ -560,12 +560,27 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
 /** Footer for visitors — same container styling as AppShell's footer
  *  (p-4, border-t var(--border), var(--surface) bg), with the logged-out
  *  affordances: FeedPill LIVE, the primary Launch CTA, and log in / sign up. */
-function LandingSidebarFooter({ onLaunch, expanded }: { onLaunch: () => void; expanded: boolean }) {
+function LandingSidebarFooter({ onLaunch, onEnter, expanded }: { onLaunch: () => void; onEnter: (t?: string) => void; expanded: boolean }) {
   return (
     <div className={`p-4 border-t border-[var(--border)] bg-[var(--surface)] overflow-hidden whitespace-nowrap transition-[padding] duration-300 ${expanded ? 'px-4' : 'px-2'}`}>
       <div className={`flex mb-3 ${expanded ? 'justify-start px-1' : 'justify-center'}`}>
         <FeedPill status="live" compact={!expanded} />
       </div>
+      {/* Plans/pricing card — the visitor's equivalent of the terminal's tier
+          card, same slot + container styling; opens the live Pricing page. */}
+      <button
+        type="button"
+        onClick={() => onEnter('subscription')}
+        aria-label="View plans and pricing"
+        title={!expanded ? 'Plans & pricing' : undefined}
+        className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--border-strong)] transition-all mx-auto focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${expanded ? 'w-full justify-start' : 'w-max justify-center'}`}
+      >
+        <CreditCard className="w-4 h-4 shrink-0 text-[var(--text-tertiary)]" />
+        <div className={`flex flex-col text-left transition-all duration-300 ${expanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0 overflow-hidden'}`}>
+          <span className="text-[12px] font-semibold tracking-wide text-[var(--text-primary)] truncate">Plans &amp; pricing</span>
+          <span className="text-[12px] text-[var(--text-tertiary)] font-medium truncate">From $39/mo · view all</span>
+        </div>
+      </button>
       <button
         type="button"
         onClick={onLaunch}
@@ -658,7 +673,7 @@ function LandingSidebar({ onLaunch, onEnter, scrollTop }: { onLaunch: () => void
           </div>
         </div>
 
-        <LandingSidebarFooter onLaunch={onLaunch} expanded={expanded} />
+        <LandingSidebarFooter onLaunch={onLaunch} onEnter={onEnter} expanded={expanded} />
       </aside>
     </NavCtx.Provider>
   );
@@ -713,10 +728,24 @@ function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: () => vo
               {NAV_TOOLS.map((it) => renderNavItem(it, true))}
               {renderNavItem(NAV_SETTINGS, true)}
 
+              {/* Plans/pricing card — mirrors the terminal footer's tier slot. */}
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onEnter('subscription'); }}
+                aria-label="View plans and pricing"
+                className="w-full flex items-center gap-2.5 px-3 py-3 mt-6 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg hover:border-[var(--border-strong)] transition-all text-left focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+              >
+                <CreditCard className="w-4 h-4 shrink-0 text-[var(--text-tertiary)]" />
+                <div className="flex flex-col">
+                  <span className="text-[13px] font-semibold tracking-wide text-[var(--text-primary)]">Plans &amp; pricing</span>
+                  <span className="text-[12px] text-[var(--text-tertiary)] font-medium">From $39/mo · view all</span>
+                </div>
+              </button>
+
               <button
                 type="button"
                 onClick={() => { setOpen(false); onLaunch(); }}
-                className="w-full px-3 py-3 mt-6 font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg tracking-wide cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                className="w-full px-3 py-3 mt-2 font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg tracking-wide cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
                 style={{ background: accentFill, color: accentText }}
               >
                 <LogIn className="w-4 h-4" /> Launch Terminal
