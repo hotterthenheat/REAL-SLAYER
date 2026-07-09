@@ -75,7 +75,7 @@ export default function SlayerLoader({
       {/* restrained top wash — structure, not glow */}
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(1100px 480px at 50% -12%, rgba(68,49,153,0.14), transparent 70%)' }}
+        style={{ background: 'radial-gradient(1100px 480px at 50% -12%, rgba(106,147,181,0.12), transparent 70%)' }}
       />
       {/* faint scanning sweep across the whole frame */}
       <motion.div
@@ -150,7 +150,7 @@ export default function SlayerLoader({
             className="absolute inset-y-0 left-0 transition-[width] duration-150 ease-out"
             style={{
               width: `${idx}%`,
-              background: 'linear-gradient(90deg, #443199, #792CA2, #C13383, #E05454)',
+              background: 'linear-gradient(90deg, #6A93B5, #C79350, #3F9C79, #B23B3B)',
             }}
           />
         </div>
@@ -164,7 +164,7 @@ export default function SlayerLoader({
         >
           <span className="tabular-nums">{label}</span>
           {/* CSS caret blink — hard steps(1), matching the brand caret timing */}
-          <span aria-hidden="true" className="slayer-caret inline-block h-[9px] w-[6px]" style={{ background: '#C13383' }} />
+          <span aria-hidden="true" className="slayer-caret inline-block h-[9px] w-[6px]" style={{ background: '#6A93B5' }} />
         </motion.div>
 
         {sub ? (

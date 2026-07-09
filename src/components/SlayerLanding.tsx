@@ -1,23 +1,30 @@
-import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
 import Lenis from 'lenis';
-import { Sparkles, Dna, Waves, RadioTower, LineChart, Database, CreditCard, LogIn, Menu, X } from 'lucide-react';
+import { Sparkles, Dna, Waves, RadioTower, LineChart, Database, CreditCard, LogIn, Menu, X, Check, ArrowUpRight, LayoutGrid, GraduationCap } from 'lucide-react';
+// The hero backdrop is the real slayerterminal.com motif: a live code/finance
+// "rain" (neutral steel/amber tints), NOT a coloured 3D field. Light, no WebGL.
+import SlayerCodeRain from './SlayerCodeRain';
 
-// three.js is heavy — the 3D hero backdrop loads lazily so it never blocks paint.
-const SlayerHero3D = lazy(() => import('./SlayerHero3D'));
-
-// Product nav — the SAME tabs the app shell exposes, so the landing and the
-// terminal share one left-sidebar navigation (no top-vs-side mismatch). Each
-// carries a one-line description so visitors see what every tab is.
-const PRODUCTS: { tab: string; label: string; desc: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> }[] = [
+// Product nav — mirrors the app shell's sidebar EXACTLY (same tabs, order, and
+// Main Views / Tools grouping — see AppShell.tsx) so the landing and terminal
+// share one left-sidebar navigation (no top-vs-side, no two-different-navs).
+// Each row carries a one-line description so visitors see what every tab is.
+type NavProduct = { tab: string; label: string; desc: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> };
+const MAIN_VIEWS: NavProduct[] = [
   { tab: 'skyvision', label: 'SkyVision', desc: 'Ranked trade setups', icon: Sparkles },
   { tab: 'pinpoint', label: 'Pinpoint GEX', desc: 'Dealer positioning & walls', icon: Dna },
   { tab: 'dealerflow', label: 'Dealer Flow', desc: 'Live pressure by strike', icon: Waves },
   { tab: 'liveterminal', label: 'Live Terminal', desc: 'Chart + GEX nodes', icon: RadioTower },
   { tab: 'quant', label: 'Quant Lab', desc: 'Vol surface & models', icon: LineChart },
   { tab: 'auditor', label: 'Trade History', desc: 'Tracked outcomes', icon: Database },
+];
+const TOOLS: NavProduct[] = [
+  { tab: 'workspace', label: 'Workspace', desc: 'Saved layouts', icon: LayoutGrid },
+  { tab: 'community', label: 'Community', desc: 'Learn & discuss', icon: GraduationCap },
   { tab: 'subscription', label: 'Pricing', desc: 'Plans & access', icon: CreditCard },
 ];
+const PRODUCTS: NavProduct[] = [...MAIN_VIEWS, ...TOOLS];
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -34,15 +41,22 @@ const PRODUCTS: { tab: string; label: string; desc: string; icon: React.Componen
  * product is live — there is no waitlist.
  */
 
+// Landing palette = the SAME neutral brand language as the terminal + the
+// slayerterminal.com backdrop. NO purple: colour here means the same thing it
+// means inside the app — steel = call-side / SkyVision, amber = dealer flow /
+// walls, green = bullish, red = put-side / bearish.
 const PALETTE = {
-  bg: '#000000',
+  bg: '#08090A',
   panel: '#100C08',
   panelSoft: '#0A0806',
   text: '#F5F5F5',
   ghost: '#F8F8FF',
-  red: '#980404',
-  green: '#0D4715',
-  gex: ['#443199', '#792CA2', '#C13383', '#E05454'] as const,
+  steel: '#6A93B5', // calls / SkyVision (matches the Dealer Positioning Map)
+  amber: '#C79350', // dealer flow / GEX / walls / pins (Pinpoint)
+  red: '#B23B3B',   // puts / bearish
+  green: '#3F9C79', // calls / bullish
+  // ordinal accent quartet for numbered/step decoration — neutral, no purple.
+  accent: ['#6A93B5', '#C79350', '#3F9C79', '#B23B3B'] as const,
 };
 
 const line = 'rgba(248,248,255,0.10)';
@@ -174,7 +188,7 @@ function Kpi({ label, value, tone = PALETTE.text, sub }: { label: string; value:
   );
 }
 
-/* Diverging dealer-pressure bars (real strikes; purple/teal positive, red negative) */
+/* Diverging dealer-pressure bars (real strikes; steel = call-side / positive, red = put-side / negative) */
 function PressureMap({ rows }: { rows: PressureRow[] }) {
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.net)));
   return (
@@ -182,7 +196,7 @@ function PressureMap({ rows }: { rows: PressureRow[] }) {
       {rows.map((r) => {
         const w = (Math.abs(r.net) / max) * 100;
         const pos = r.net >= 0;
-        const color = pos ? PALETTE.gex[1] : PALETTE.red;
+        const color = pos ? PALETTE.steel : PALETTE.red;
         return (
           <div key={r.strike} className="flex items-center gap-2">
             <div className="w-12 shrink-0 text-right text-[9px] tabular-nums" style={{ color: r.kind === 'spot' ? PALETTE.ghost : muted }}>
@@ -214,7 +228,7 @@ function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
   return (
     <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="h-full w-full">
       {pts ? (
-        <polyline points={pts} fill="none" stroke={PALETTE.gex[1]} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
+        <polyline points={pts} fill="none" stroke={PALETTE.steel} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
       ) : (
         <line x1="0" y1={height / 2} x2="100" y2={height / 2} stroke={line} strokeWidth={0.6} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
       )}
@@ -234,7 +248,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
           <span className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: PALETTE.ghost }}>SLAYER_TERMINAL</span>
           <span className="text-[9px] tabular-nums" style={{ color: faint }}>· {ticker} · 0DTE</span>
         </div>
-        <span className="rounded-[4px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.gex[0], border: `1px solid ${line}` }}>
+        <span className="rounded-[4px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.steel, border: `1px solid ${line}` }}>
           Model preview
         </span>
       </div>
@@ -243,9 +257,9 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
       <div className="grid grid-cols-3 sm:grid-cols-6" style={{ borderBottom: `1px solid ${line}` }}>
         <Kpi label="Spot" value={fmtPx(m.spot)} tone={PALETTE.ghost} />
         <Kpi label="Net GEX" value={fmtGex(m.netGex)} tone={isNum(m.netGex) && m.netGex < 0 ? '#d9736f' : '#6fae7d'} />
-        <Kpi label="Call Wall" value={fmtLvl(m.callWall)} tone={PALETTE.gex[1]} />
-        <Kpi label="Put Wall" value={fmtLvl(m.putWall)} tone="#d9736f" />
-        <Kpi label="Pin" value={fmtLvl(m.pin)} tone={PALETTE.gex[2]} />
+        <Kpi label="Call Wall" value={fmtLvl(m.callWall)} tone={PALETTE.steel} />
+        <Kpi label="Put Wall" value={fmtLvl(m.putWall)} tone={PALETTE.red} />
+        <Kpi label="Pin" value={fmtLvl(m.pin)} tone={PALETTE.amber} />
         <Kpi label="Exp Move" value={fmtPct(m.expectedMovePct)} sub={isNum(emPts) ? `±${emPts.toFixed(1)} pts` : undefined} tone={PALETTE.text} />
       </div>
 
@@ -260,9 +274,9 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
             <Spark data={spark} />
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[8.5px] uppercase tracking-[0.12em]" style={{ color: muted }}>
-            <span style={{ color: PALETTE.gex[1] }}>▬ Call Wall {fmtLvl(m.callWall)}</span>
-            <span style={{ color: PALETTE.gex[2] }}>▬ Pin {fmtLvl(m.pin)}</span>
-            <span style={{ color: '#d9736f' }}>▬ Put Wall {fmtLvl(m.putWall)}</span>
+            <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(m.callWall)}</span>
+            <span style={{ color: PALETTE.amber }}>▬ Pin {fmtLvl(m.pin)}</span>
+            <span style={{ color: PALETTE.red }}>▬ Put Wall {fmtLvl(m.putWall)}</span>
           </div>
         </div>
         <div className="p-3" style={{ background: PALETTE.panel }}>
@@ -360,16 +374,26 @@ function SidebarFooter({ onLaunch }: { onLaunch: () => void }) {
   );
 }
 
-/** Desktop left sidebar — the same shape and nav as the app shell. */
+/** One labelled nav group (mirrors the app shell's "Main Views" / "Tools"). */
+function NavGroup({ heading, items, onEnter, onClick }: { heading: string; items: NavProduct[]; onEnter: (t?: string) => void; onClick?: () => void }) {
+  return (
+    <div>
+      <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>{heading}</div>
+      <div className="space-y-0.5">
+        {items.map((p) => <NavRow key={p.tab} p={p} onEnter={onEnter} onClick={onClick} />)}
+      </div>
+    </div>
+  );
+}
+
+/** Desktop left sidebar — the same shape, grouping and nav as the app shell. */
 function LandingSidebar({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
   return (
     <aside className="hidden w-[248px] shrink-0 flex-col md:flex" style={{ borderRight: `1px solid ${line}`, background: '#050505' }}>
       <div className="px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}><BrandMark /></div>
-      <nav className="slayer-scrollbar flex-1 overflow-y-auto px-3 py-4">
-        <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Products</div>
-        <div className="space-y-0.5">
-          {PRODUCTS.map((p) => <NavRow key={p.tab} p={p} onEnter={onEnter} />)}
-        </div>
+      <nav className="slayer-scrollbar flex-1 space-y-4 overflow-y-auto px-3 py-4">
+        <NavGroup heading="Main Views" items={MAIN_VIEWS} onEnter={onEnter} />
+        <NavGroup heading="Tools" items={TOOLS} onEnter={onEnter} />
       </nav>
       <SidebarFooter onLaunch={onLaunch} />
     </aside>
@@ -393,11 +417,9 @@ function LandingMobileNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter
               <BrandMark />
               <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="cursor-pointer p-1" style={{ color: muted }}><X className="h-5 w-5" /></button>
             </div>
-            <nav className="slayer-scrollbar flex-1 overflow-y-auto px-3 py-4">
-              <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Products</div>
-              <div className="space-y-0.5">
-                {PRODUCTS.map((p) => <NavRow key={p.tab} p={p} onEnter={onEnter} onClick={() => setOpen(false)} />)}
-              </div>
+            <nav className="slayer-scrollbar flex-1 space-y-4 overflow-y-auto px-3 py-4">
+              <NavGroup heading="Main Views" items={MAIN_VIEWS} onEnter={onEnter} onClick={() => setOpen(false)} />
+              <NavGroup heading="Tools" items={TOOLS} onEnter={onEnter} onClick={() => setOpen(false)} />
             </nav>
             <SidebarFooter onLaunch={() => { setOpen(false); onLaunch(); }} />
           </aside>
@@ -432,12 +454,11 @@ function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: R
   const reduce = useReducedMotion();
   return (
     <section className="relative overflow-hidden" style={{ minHeight: '92vh' }}>
-      {/* living 3D dealer-pressure field — the hero backdrop, confined to the
-          hero and faded to solid black at its lower edge so every section below
-          sits on clean, legible #08090A. Lazy (three.js); null fallback. */}
-      <Suspense fallback={null}>
-        <SlayerHero3D />
-      </Suspense>
+      {/* the real slayerterminal.com hero backdrop — a live code/finance rain
+          (steel = SkyVision scanning, amber = Pinpoint dealer flow) under a
+          scrim + vignette, confined to the hero and faded to solid #08090A at
+          its lower edge so every section below sits on clean, legible black. */}
+      <SlayerCodeRain />
       <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
         <motion.div
           initial={reduce ? false : 'hidden'}
@@ -478,7 +499,7 @@ function ProblemSection() {
       <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         {cards.map((c, i) => (
           <Panel key={i} className="p-5">
-            <div className="text-[10px] font-semibold tabular-nums" style={{ color: PALETTE.gex[i] ?? PALETTE.gex[0] }}>0{i + 1}</div>
+            <div className="text-[10px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] ?? PALETTE.accent[0] }}>0{i + 1}</div>
             <div className="mt-3 text-[14px] font-semibold leading-snug" style={{ color: PALETTE.ghost }}>{c.t}</div>
             <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{c.d}</p>
           </Panel>
@@ -511,7 +532,7 @@ function SolutionSection() {
         <div className="space-y-2.5">
           {bullets.map((b, i) => (
             <div key={i} className="flex items-start gap-3 rounded-[8px] p-3" style={{ background: PALETTE.panel, border: `1px solid ${line}` }}>
-              <span className="mt-[3px] h-3 w-3 shrink-0 rounded-[3px]" style={{ background: PALETTE.gex[i % 4] }} />
+              <span className="mt-[3px] h-3 w-3 shrink-0 rounded-[3px]" style={{ background: PALETTE.accent[i % 4] }} />
               <span className="text-[13.5px]" style={{ color: PALETTE.text }}>{b}</span>
             </div>
           ))}
@@ -600,7 +621,7 @@ function MiniBars({ values }: { values: number[] }) {
   return (
     <div className="flex items-end gap-1.5 rounded-[6px] p-2.5" style={{ background: PALETTE.panelSoft, border: `1px solid ${line}`, height: 62 }}>
       {values.map((v, i) => (
-        <div key={i} className="flex-1 rounded-[2px]" style={{ height: `${(v / max) * 100}%`, background: PALETTE.gex[i % 4], opacity: 0.85 }} />
+        <div key={i} className="flex-1 rounded-[2px]" style={{ height: `${(v / max) * 100}%`, background: PALETTE.accent[i % 4], opacity: 0.85 }} />
       ))}
     </div>
   );
@@ -615,7 +636,7 @@ function HowItWorks() {
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
             <Panel key={i} className="p-5">
-              <div className="text-[11px] font-semibold tabular-nums" style={{ color: PALETTE.gex[i] }}>STEP {i + 1}</div>
+              <div className="text-[11px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>STEP {i + 1}</div>
               <div className="mt-3 text-[14px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
             </Panel>
           ))}
@@ -658,7 +679,7 @@ function ComparisonSection() {
                 <td className="py-2.5 pr-4" style={{ color: PALETTE.text }}>{r[0]}</td>
                 <td className="py-2.5 text-center tabular-nums">{cell(r[1])}</td>
                 <td className="py-2.5 text-center tabular-nums">{cell(r[2])}</td>
-                <td className="py-2.5 text-center tabular-nums" style={{ background: 'rgba(68,49,153,0.06)' }}>{cell(r[3], true)}</td>
+                <td className="py-2.5 text-center tabular-nums" style={{ background: 'rgba(106,147,181,0.07)' }}>{cell(r[3], true)}</td>
               </tr>
             ))}
           </tbody>
@@ -668,23 +689,73 @@ function ComparisonSection() {
   );
 }
 
-function GetStartedSection({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
+/* Real plans — mirror SubscriptionPricing (monthly $; annual saves up to 18%).
+   The landing shows the actual prices so "you can't even see pricing" is gone;
+   the CTA opens the live Pricing page (Stripe checkout / lifetime contact). */
+const PLANS: { name: string; price: string; note: string; feats: string[]; featured?: boolean }[] = [
+  { name: 'Discord', price: '$39', note: '/ mo', feats: ['Real-time Discord chat & alerts', 'Daily option discovery reports', 'Verified historic trade archive'] },
+  { name: 'Pinpoint GEX', price: '$99', note: '/ mo', feats: ['Everything in Discord', 'Live dealer positioning (GEX, DEX, VEX)', 'Gamma exposure by strike', 'Zero-DTE levels & dealer dynamics'] },
+  { name: 'SkyVision', price: '$499', note: '/ mo', featured: true, feats: ['Everything in Pinpoint GEX', 'Tells you which options to trade', 'Live volatility surface & expected P&L', 'Trade health score tracker', 'Quant Lab — backtester, order flow & momentum'] },
+  { name: 'Lifetime', price: 'Custom', note: 'talk to us', feats: ['All features unlocked', 'Permanent platform access', 'Private 1-on-1 onboarding', 'Early beta access to tools'] },
+];
+
+function PlanCard({ p, onEnter }: { p: (typeof PLANS)[number]; onEnter: (t?: string) => void }) {
   return (
-    <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="mx-auto max-w-2xl text-center">
-        <Eyebrow>Live Now</Eyebrow>
-        <h2 className="mt-3 text-[28px] font-semibold leading-tight sm:text-[34px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
-          Start Reading Market Structure Today
-        </h2>
-        <p className="mx-auto mt-4 max-w-lg text-[14px] leading-relaxed" style={{ color: muted }}>
-          Slayer Terminal is live. Create an account and open the full terminal — Pinpoint GEX,
-          SkyVision ranking, Dealer Flow, and the live command center. No waitlist.
-        </p>
-        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
-          <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
-          <GhostButton onClick={() => onEnter('pinpoint')}>View Terminal Preview</GhostButton>
+    <div
+      className="relative flex flex-col rounded-[10px] p-5 transition-colors duration-200"
+      style={{
+        background: p.featured ? PALETTE.panel : PALETTE.panelSoft,
+        border: `1px solid ${p.featured ? lineStrong : line}`,
+        boxShadow: p.featured ? '0 30px 80px -50px rgba(0,0,0,0.9)' : 'none',
+      }}
+    >
+      {p.featured ? (
+        <span className="absolute -top-2.5 left-5 rounded-[5px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
+          Most Popular
+        </span>
+      ) : null}
+      <div className="border-b pb-4" style={{ borderColor: line }}>
+        <div className="text-[13px] font-semibold" style={{ color: PALETTE.ghost }}>{p.name}</div>
+        <div className="mt-3 flex items-baseline gap-1.5">
+          <span className="text-[30px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text }}>{p.price}</span>
+          <span className="text-[11px]" style={{ color: faint }}>{p.note}</span>
         </div>
-        <p className="mt-4 text-[11px]" style={{ color: faint }}>Sign in to unlock full access. Pricing shown at checkout.</p>
+      </div>
+      <ul className="mt-4 flex-1 space-y-2">
+        {p.feats.map((f, i) => (
+          <li key={i} className="flex items-start gap-2 text-[12px] leading-snug" style={{ color: muted }}>
+            <Check className="mt-[2px] h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.green }} />
+            <span>{f}</span>
+          </li>
+        ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => onEnter('subscription')}
+        className="mt-5 w-full cursor-pointer rounded-[7px] px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.1em] transition-colors"
+        style={p.featured ? { background: PALETTE.ghost, color: '#0A0806' } : { background: 'transparent', color: PALETTE.text, border: `1px solid ${lineStrong}` }}
+        onMouseEnter={(e) => { if (p.featured) e.currentTarget.style.background = '#ffffff'; else e.currentTarget.style.background = 'rgba(248,248,255,0.05)'; }}
+        onMouseLeave={(e) => { if (p.featured) e.currentTarget.style.background = PALETTE.ghost; else e.currentTarget.style.background = 'transparent'; }}
+      >
+        {p.name === 'Lifetime' ? 'Contact sales' : 'Select plan'}
+      </button>
+    </div>
+  );
+}
+
+function PricingSection({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
+  return (
+    <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
+      <div className="mx-auto max-w-6xl">
+        <SectionHead eyebrow="Pricing" title="Plans & Access" sub="Slayer Terminal is live — no waitlist. Pick a plan and open the full terminal. Annual billing saves up to 18%." />
+        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
+          {PLANS.map((p) => <PlanCard key={p.name} p={p} onEnter={onEnter} />)}
+        </div>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
+          <GhostButton onClick={() => onEnter('subscription')}>See full pricing</GhostButton>
+        </div>
+        <p className="mt-4 text-center text-[11px]" style={{ color: faint }}>Prices in USD. Sign in to check out — access is granted at payment. Cancel anytime.</p>
       </div>
     </section>
   );
@@ -708,9 +779,15 @@ function FaqSection() {
           const isOpen = open === i;
           return (
             <div key={i} style={{ borderTop: i === 0 ? 'none' : `1px solid ${line}` }}>
-              <button type="button" onClick={() => setOpen(isOpen ? null : i)} className="flex w-full cursor-pointer items-center justify-between gap-4 py-4 text-left">
+              <button
+                type="button"
+                onClick={() => setOpen(isOpen ? null : i)}
+                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2 py-4 text-left transition-colors"
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(248,248,255,0.03)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
                 <span className="text-[14px] font-medium" style={{ color: PALETTE.ghost }}>{q}</span>
-                <span className="text-[16px] leading-none" style={{ color: muted }}>{isOpen ? '−' : '+'}</span>
+                <span className="text-[16px] leading-none transition-transform" style={{ color: isOpen ? PALETTE.steel : muted, transform: isOpen ? 'rotate(0deg)' : 'none' }}>{isOpen ? '−' : '+'}</span>
               </button>
               {isOpen ? <p className="pb-4 text-[13px] leading-relaxed" style={{ color: muted }}>{a}</p> : null}
             </div>
@@ -724,7 +801,7 @@ function FaqSection() {
 function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
     <section className="relative overflow-hidden px-5 py-24" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(800px 360px at 50% 120%, rgba(121,44,162,0.14), transparent 70%)' }} />
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(800px 360px at 50% 120%, rgba(106,147,181,0.12), transparent 70%)' }} />
       <div className="relative mx-auto max-w-2xl text-center">
         <h2 className="text-[30px] font-semibold leading-tight sm:text-[38px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
           From Traders. For Traders.
@@ -735,12 +812,82 @@ function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   );
 }
 
-function Footer() {
+function FootLink({ label, onClick, external }: { label: string; onClick: () => void; external?: boolean }) {
   return (
-    <footer className="px-5 py-10" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
-        <span className="text-[12px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}><span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span></span>
-        <span className="text-[10px]" style={{ color: faint }}>For informational purposes only. Not investment advice. Analytics platform — not guaranteed profit.</span>
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1 text-left text-[12px] transition-colors"
+      style={{ color: muted }}
+      onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.ghost)}
+      onMouseLeave={(e) => (e.currentTarget.style.color = muted)}
+    >
+      {label}{external ? <ArrowUpRight className="h-3 w-3" /> : null}
+    </button>
+  );
+}
+
+function Footer({ onLaunch, onEnter, scrollTo }: { onLaunch: () => void; onEnter: (t?: string) => void; scrollTo: (id: string) => void }) {
+  return (
+    <footer className="px-5 pb-10 pt-14" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
+      <div className="mx-auto max-w-6xl">
+        <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
+          {/* brand + tagline + social */}
+          <div className="col-span-2 sm:col-span-4 lg:col-span-1">
+            <span className="text-[15px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
+              <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
+            </span>
+            <p className="mt-3 max-w-xs text-[12px] leading-relaxed" style={{ color: faint }}>
+              The options terminal. SkyVision finds the setup, Pinpoint AI reads the flow.
+            </p>
+            <a
+              href="https://x.com/JoinSlayer"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-flex items-center gap-2 text-[12px] transition-colors"
+              style={{ color: muted }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.ghost)}
+              onMouseLeave={(e) => (e.currentTarget.style.color = muted)}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+              @JoinSlayer
+            </a>
+          </div>
+          {/* products */}
+          <div>
+            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Products</div>
+            <div className="flex flex-col gap-2">
+              {MAIN_VIEWS.map((p) => (
+                <FootLink key={p.tab} label={p.label} onClick={() => onEnter(p.tab)} />
+              ))}
+            </div>
+          </div>
+          {/* company */}
+          <div>
+            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Company</div>
+            <div className="flex flex-col gap-2">
+              <FootLink label="Pricing" onClick={() => scrollTo('pricing')} />
+              <FootLink label="Product" onClick={() => scrollTo('product')} />
+              <FootLink label="FAQ" onClick={() => scrollTo('faq')} />
+              <FootLink label="Contact" onClick={() => { window.location.href = 'mailto:info@slayerterminal.com'; }} external />
+            </div>
+          </div>
+          {/* access */}
+          <div>
+            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Access</div>
+            <div className="flex flex-col gap-2">
+              <FootLink label="Launch Terminal" onClick={onLaunch} />
+              <FootLink label="Log in / Sign up" onClick={onLaunch} />
+              <FootLink label="Plans" onClick={() => onEnter('subscription')} />
+            </div>
+          </div>
+        </div>
+        <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t pt-6 sm:flex-row sm:items-center" style={{ borderColor: line }}>
+          <span className="text-[10px] font-medium uppercase tracking-[0.16em]" style={{ color: faint }}>© 2026 Slayer Terminal · SkyVision · Pinpoint AI · Arbor</span>
+          <span className="max-w-lg text-[10px] leading-relaxed sm:text-right" style={{ color: faint }}>
+            For informational purposes only. Not investment advice. Analytics platform — not guaranteed profit.
+          </span>
+        </div>
       </div>
     </footer>
   );
@@ -750,6 +897,7 @@ function Footer() {
 export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [], pressure = [], spark = [], onEnter, onLaunch }: SlayerLandingProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const lenisRef = useRef<Lenis | null>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ container: rootRef });
   // hero drifts up + dims as the page scrolls (parallax hand-off to the sections);
@@ -758,6 +906,19 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
   const heroOpacityRaw = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
   const heroY = reduce ? 0 : heroYRaw;
   const heroOpacity = reduce ? 1 : heroOpacityRaw;
+
+  // Smooth-scroll to a section within the landing's own scroll container
+  // (footer links → pricing / product / faq). No hash nav — this scroller is
+  // `fixed inset-0`, so the document never scrolls. When Lenis is driving the
+  // wrapper it owns scrollTop, so route through its scrollTo; native scrollTo
+  // would be reverted next frame. Falls back to native under reduced-motion.
+  const scrollTo = (id: string) => {
+    const root = rootRef.current;
+    const el = root?.querySelector<HTMLElement>(`#${id}`);
+    if (!root || !el) return;
+    if (lenisRef.current) lenisRef.current.scrollTo(el, { offset: -8 });
+    else root.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' });
+  };
 
   // Lenis smooth scroll on the landing's own scroll container (wrapper mode, so
   // it drives real scrollTop — the progress rail + reveals keep working). Off
@@ -771,6 +932,7 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
     });
+    lenisRef.current = lenis;
     let raf = 0;
     const loop = (time: number) => {
       lenis.raf(time);
@@ -780,6 +942,7 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
     return () => {
       cancelAnimationFrame(raf);
       lenis.destroy();
+      lenisRef.current = null;
     };
   }, [reduce]);
 
@@ -793,11 +956,11 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
 
       {/* main scroll area (its own scroller, so Lenis + progress rail + reveals work) */}
       <div ref={rootRef} className="slayer-scrollbar relative flex-1 overflow-y-auto overflow-x-hidden">
-        {/* scroll-progress rail — GEX gradient, pinned to the top of the main area */}
+        {/* scroll-progress rail — neutral steel→amber→green→red, pinned to top */}
         <motion.div
           aria-hidden="true"
           className="pointer-events-none sticky left-0 top-0 z-[60] h-[2px] w-full origin-left"
-          style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.gex[0]}, ${PALETTE.gex[1]}, ${PALETTE.gex[2]}, ${PALETTE.gex[3]})` }}
+          style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.accent[0]}, ${PALETTE.accent[1]}, ${PALETTE.accent[2]}, ${PALETTE.accent[3]})` }}
         />
         <LandingMobileNav onLaunch={onLaunch} onEnter={onEnter} />
         <div ref={contentRef} className="relative z-10">
@@ -810,10 +973,10 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
           <Reveal><FeatureSection metrics={metrics} onEnter={onEnter} /></Reveal>
           <Reveal><HowItWorks /></Reveal>
           <Reveal><ComparisonSection /></Reveal>
-          <Reveal><GetStartedSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
+          <Reveal><PricingSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
           <Reveal><FaqSection /></Reveal>
           <Reveal><FinalCta onLaunch={onLaunch} /></Reveal>
-          <Footer />
+          <Footer onLaunch={onLaunch} onEnter={onEnter} scrollTo={scrollTo} />
         </div>
       </div>
     </div>

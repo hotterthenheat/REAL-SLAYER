@@ -132,8 +132,11 @@ export default function SlayerCodeRain() {
           ))}
         </div>
       ))}
-      {/* scrim — keeps hero text legible while letting the drift read behind it */}
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 66% 56% at 50% 42%, rgba(8,9,10,0.7) 0%, rgba(8,9,10,0.32) 46%, transparent 80%)' }} />
+      {/* scrim — keeps hero text legible while letting the drift read behind it.
+          Two layers: a wide radial centred on the hero, plus a left-weighted
+          wash so the hero copy column (left of the split layout) stays clean. */}
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 72% 62% at 44% 44%, rgba(8,9,10,0.86) 0%, rgba(8,9,10,0.42) 48%, transparent 82%)' }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(8,9,10,0.72) 0%, rgba(8,9,10,0.28) 34%, transparent 60%)' }} />
       {/* vignette */}
       <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 220px 50px rgba(0,0,0,0.85)', background: 'radial-gradient(ellipse at center, transparent 56%, rgba(0,0,0,0.5) 100%)' }} />
       {/* bottom fade — ramps the rain into solid #08090A so it dissolves cleanly
