@@ -9,7 +9,6 @@ import { formatTime } from './lib/timeUtils';
 // Import Workspace Modular Views — eager imports are the shell + landing path.
 import { DiscoveryView } from './components/DiscoveryView';
 import SlayerLanding from './components/SlayerLanding';
-import { SkyseyeAlertHub } from './components/SkyseyeAlertHub';
 import TierGuard from './components/TierGuard';
 import { ClerkGate } from './components/ClerkGate';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
@@ -995,12 +994,9 @@ export default function App() {
 
   // Determine if alert notifications are allowed to display.
   // Alert notifications are only allowed if purchasedTier > 1 (paid tiers).
-  // Additionally, alerts are never allowed on the landing page ('home'), for any tier.
-  // Flow-alert popups belong only on trading-analysis routes. Suppress them on Home and on
-  // content/config routes (Settings, Admin, Community, Trade History, Workspace) where a
-  // floating trade alert overlaps the page and reads as intrusive / demo-unsafe.
-  const ALERT_ROUTES = new Set(['skyvision', 'pinpoint', 'quant']);
-  const showAlerts = purchasedTier > 1 && ALERT_ROUTES.has(activeTab);
+  // The floating trade-alert popup (SkyseyeAlertHub) is retired: it docked bottom-right
+  // over the Selected-Setup rail / Watchlist panels, isn't part of any page render, and
+  // surfaced sample-scored alerts. Real alerts live inline on the pages instead.
 
   return (
     <AppShell
@@ -1022,7 +1018,6 @@ export default function App() {
             IMPERSONATING USER - CLICK HERE TO TERMINATE SESSION
           </div>
         )}
-        {showAlerts && <SkyseyeAlertHub />}
 
         <div className="flex-1 flex flex-col w-full mx-auto relative z-10 h-full overflow-hidden">
           {/* Feed-honesty banner: surface SSE disconnects AND a quiet-but-open stream inside the
