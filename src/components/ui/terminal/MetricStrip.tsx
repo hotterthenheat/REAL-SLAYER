@@ -24,7 +24,7 @@ export type Metric = {
 
 type MetricStripProps = {
   metrics: Metric[];
-  columns?: 4 | 5 | 6 | 7 | 8;
+  columns?: 4 | 5 | 6 | 7 | 8 | 9;
   className?: string;
 };
 
@@ -43,6 +43,7 @@ const columnClass: Record<NonNullable<MetricStripProps['columns']>, string> = {
   6: 'xl:grid-cols-6',
   7: 'xl:grid-cols-7',
   8: 'xl:grid-cols-8',
+  9: 'xl:grid-cols-9',
 };
 
 export function MetricStrip({ metrics, columns = 8, className }: MetricStripProps) {
