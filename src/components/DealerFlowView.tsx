@@ -12,24 +12,14 @@ import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore } from '../lib/store';
 import PinpointChart from './PinpointChart';
-import { ToggleGroup } from './ui/ToggleGroup';
 import { Popover } from './ui/Popover';
 import { Sheet } from './ui/Sheet';
 import { Badge } from './ui/Badge';
 import { Switch } from './ui/Switch';
 import { LiveValue } from './ui/LiveValue';
-import { IntradayTargetsView } from './IntradayTargetsView';
-import { DealerDynamicsPanel } from './DealerDynamicsPanel';
-import { GexReadCard } from './GexReadCard';
 import { TerminalReadCard } from './TerminalReadCard';
-import { EdgeTrackRecord } from './EdgeTrackRecord';
-import { LevelAlerts } from './LevelAlerts';
-import { ZeroDtePanel } from './ZeroDtePanel';
-import PinpointTerminal from './PinpointTerminal';
-import { DealerFlowMap } from './DealerFlowMap';
 import { PanelSkeleton } from './PanelSkeleton';
 import { PinpointTrackButton } from './PinpointTrackButton';
-import { SearchInput } from './ui/SearchInput';
 import { DataStateBadge } from './ui/DataStateBadge';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
@@ -1205,10 +1195,16 @@ export function DealerFlowView() {
       tone: 'warning',
     },
     {
-      label: 'Net GEX / DEX',
+      label: 'GEX',
       value: view.netGex != null ? fmtGreek(view.netGex) : '—',
-      sub: <span className="slayer-num">DEX {view.netDex != null ? fmtGreek(view.netDex) : '—'}</span>,
+      sub: view.netGex != null ? (view.netGex >= 0 ? 'Net Positive' : 'Net Negative') : undefined,
       tone: (view.netGex ?? 0) >= 0 ? 'positive' : 'negative',
+    },
+    {
+      label: 'Net DEX',
+      value: view.netDex != null ? fmtGreek(view.netDex) : '—',
+      sub: view.netDex != null ? (view.netDex >= 0 ? 'dealers long delta' : 'dealers short delta') : undefined,
+      tone: (view.netDex ?? 0) >= 0 ? 'positive' : 'negative',
     },
   ];
 
@@ -1381,346 +1377,122 @@ export function DealerFlowView() {
   const isModelSplit = isMultiExpiry || expiryTab !== 'aggregated';
 
   return (
-    <div className={`w-full tabular-data ${activeEngineView === 'terminal' ? 'h-full flex flex-col min-h-0' : 'space-y-6'}`} id="dealerflow-main-workspace-view">
-      {/* ============== HEADER STRIP ============== */}
-      <div className={`${theme.cardBg} rounded-lg px-3 py-3 sm:px-5 sm:py-4 flex flex-col gap-3`} id="dealerflow-header-strip">
-        {/* Row 1: identity + Track. flex-wrap so the data-state badge and the Track control
-            never collide (they overlapped on mobile in the single-row layout). */}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className={`w-9 h-9 rounded-md flex items-center justify-center shrink-0 ${theme.headerIconBg}`}>
-              <Waves className={`w-4.5 h-4.5 ${theme.iconColor}`} />
+    <div className="w-full space-y-[var(--gap)]" id="dealerflow-main-workspace-view">
+      {/* ============== KPI STRIP (9 tiles — render parity, real GEX/dealer fields) ============== */}
+      <MetricStrip metrics={kpiMetrics} columns={9} />
+
+      {/* ============== ROW 1 — dealer flow chart + dealer pressure matrix ============== */}
+      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+        <TerminalPanel
+          className="xl:col-span-7"
+          title={`Dealer Flow Chart · ${selectedAsset.ticker}`}
+          subtitle="real candles · dealer levels overlay"
+          actions={<FeedChip feed={serverState?.candle_feed} />}
+          padded={false}
+        >
+          <div className="h-[420px] w-full p-[var(--panel-pad)]">
+            <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={380} />
+          </div>
+        </TerminalPanel>
+        <TerminalPanel
+          className="xl:col-span-5"
+          title="Dealer Pressure Matrix"
+          subtitle={expiryStatus}
+          actions={expirySelector}
+          padded={false}
+        >
+          <div className="max-h-[420px] overflow-y-auto">
+            <DataTable
+              columns={matrixColumns}
+              rows={matrixData.rows}
+              rowKey={(r) => r.strike}
+              className="border-0"
+              rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+              emptyState="Chain profile pending."
+            />
+          </div>
+        </TerminalPanel>
+      </div>
+
+      {/* ============== ROW 2 — order flow + key levels rail + options chain ============== */}
+      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+        <TerminalPanel className="xl:col-span-4" title="Order Flow" subtitle="cumulative tape delta · live regime">
+          <div className="space-y-4">
+            <div>
+              <div className="slayer-subtitle">Cumulative Δ · session tape</div>
+              <div
+                className={`mt-1 slayer-num text-[26px] font-semibold leading-none ${
+                  cumulativeDelta == null
+                    ? 'text-[var(--text-faint)]'
+                    : cumulativeDelta >= 0
+                      ? 'text-[var(--positive-ink)]'
+                      : 'text-[var(--negative-ink)]'
+                }`}
+              >
+                {cumulativeDelta == null
+                  ? 'No tape'
+                  : `${cumulativeDelta >= 0 ? '+' : ''}${Math.round(cumulativeDelta).toLocaleString('en-US')}`}
+              </div>
+              <div className="mt-1 text-[11px] slayer-muted">
+                {chartTape.length
+                  ? `${chartTape.length.toLocaleString('en-US')} prints in window`
+                  : 'streaming tape unavailable for this feed'}
+              </div>
             </div>
-            <h1 className="text-sm font-black tracking-widest text-[var(--text-primary)] uppercase font-sans truncate">
-              Pinpoint GEX · {selectedAsset.ticker}
-            </h1>
-            <FeedChip feed={filteredProfile?.feed || profile?.feed} />
-            <span className="hidden sm:inline text-[9px] font-mono font-black text-[var(--text-tertiary)] uppercase tracking-widest shrink-0">{selectedTimeframe}</span>
-          </div>
-          <PinpointTrackButton
-            spot={filteredProfile?.spot}
-            gammaFlip={filteredProfile?.gammaFlip}
-            feedLive={(filteredProfile?.feed || profile?.feed) === 'LIVE_TRADIER' || (filteredProfile?.feed || profile?.feed) === 'LIVE_POLYGON'}
-          />
-        </div>
-
-      </div>
-
-      {/* ============== KPI STRIP (render parity — real GEX/dealer fields) ============== */}
-      <MetricStrip metrics={kpiMetrics} columns={8} />
-
-      {/* ============== SUB-TABS & SEARCH ============== */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-0.5" id="dealerflow-subtabs-bar">
-        <div className="flex flex-nowrap overflow-x-auto scrollbar-none gap-2.5 justify-start items-center">
-          <ToggleGroup<'profile' | 'targets' | 'terminal'>
-            ariaLabel="Engine view"
-            size="sm"
-            value={activeEngineView}
-            onChange={setActiveEngineView}
-            options={[
-              { value: 'profile', label: 'Hedging Profile', icon: <Layers className="text-[var(--accent-color)]" /> },
-              { value: 'targets', label: 'Ranked Targets', icon: <Target className="text-[var(--danger)]" /> },
-              { value: 'terminal', label: 'Live Terminal Flow', icon: <Activity className="text-[var(--accent-color)]" /> },
-            ]}
-          />
-        </div>
-
-        {/* Global Market Search */}
-        <div className="relative w-full sm:w-[360px] shrink-0 group">
-          <SearchInput
-            ariaLabel="Search ticker or company"
-            value={searchQuery}
-            onChange={(v) => { setSearchQuery(v); setShowSearch(true); }}
-            onFocus={() => setShowSearch(true)}
-            onClick={() => setShowSearch(true)}
-            onClear={() => { setSearchQuery(''); setShowSearch(false); }}
-            onKeyDown={(e) => { if (e.key === 'Escape') { setShowSearch(false); (e.target as HTMLInputElement).blur(); } }}
-            placeholder="Search ticker or company…"
-            variant="accent"
-            pulseDot
-            className="w-full cursor-text"
-          />
-
-          {showSearch && (
-            <>
-              <div 
-                className="fixed inset-0 z-[55]"
-                onClick={() => setShowSearch(false)}
-              />
-              <div role="listbox" aria-label="Search securities" className="absolute top-full mt-2 left-0 sm:left-auto right-0 w-full sm:w-[480px] max-w-[calc(100vw-1.5rem)] bg-[var(--surface)] border border-[var(--accent-color)]/40 shadow-[0_0_30px_rgba(0,0,0,0.9)] z-[60] max-h-[440px] overflow-y-auto python-scrollbar origin-top-right animate-in fade-in zoom-in-95 duration-150">
-                <div className="sticky top-0 bg-[var(--surface)]/95 backdrop-blur-sm border-b border-[var(--accent-color)]/20 px-3 py-2 z-10 flex justify-between items-center">
-                  <span className="text-[9px] font-mono text-[var(--accent-color)] tracking-widest uppercase opacity-80">Search securities</span>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="slayer-panel px-3 py-2">
+                <div className="slayer-subtitle">Dealer Bias</div>
+                <div
+                  className={`mt-0.5 slayer-num text-[14px] font-semibold ${
+                    biasTone === 'positive'
+                      ? 'text-[var(--positive-ink)]'
+                      : biasTone === 'negative'
+                        ? 'text-[var(--negative-ink)]'
+                        : 'text-[var(--text-primary)]'
+                  }`}
+                >
+                  {(gauge.bias || '—').toUpperCase()}
                 </div>
-                {(() => {
-                  const query = searchQuery.toLowerCase().trim();
-                  
-                  if (!query) {
-                    const categories = [
-                      { name: 'INDEXES & MACRO', filter: (a: any) => ['SPX','QQQ','NDX','DJX','SOX','XSP','VIX','RUT'].includes(a.ticker) },
-                      { name: 'ETFS & FUNDS', filter: (a: any) => a.type === 'ETFS' && !['SPX','QQQ'].includes(a.ticker) },
-                      { name: 'BIG TECH & AI', filter: (a: any) => ['AAPL','MSFT','GOOGL','AMZN','META','TSLA','NVDA','AMD','AVGO','PLTR', 'TSM', 'ASML', 'ARM'].includes(a.ticker) },
-                      { name: 'SOFTWARE & CLOUD', filter: (a: any) => ['SNOW','CRWD','PANW','CRM','NOW','SHOP','MSTR'].includes(a.ticker) },
-                      { name: 'MEDICINE & HEALTH', filter: (a: any) => ['LLY','NVO','JNJ','UNH'].includes(a.ticker) },
-                      { name: 'FINANCE & BANKING', filter: (a: any) => ['JPM','BAC','WFC','V','PYPL','SQ','HOOD'].includes(a.ticker) }
-                    ];
-
-                    return (
-                      <div className="pb-2">
-                        {categories.map(cat => {
-                          const assets = ASSET_LIST.filter(cat.filter);
-                          if (!assets.length) return null;
-                          return (
-                            <div key={cat.name} className="mb-0">
-                               <div className="px-3 py-1.5 bg-[var(--accent-color)]/5 border-y border-[var(--accent-color)]/10 mt-2 first:mt-0">
-                                 <span className="text-[10px] font-mono text-[var(--accent-color)] tracking-widest font-bold">{cat.name}</span>
-                               </div>
-                               <div className="px-2 py-1.5 grid grid-cols-2 gap-1.5">
-                                 {assets.map(asset => (
-                                    <div
-                                       key={asset.ticker}
-                                       onClick={() => { 
-                                         setSelectedAsset(asset);
-                                         setSearchQuery('');
-                                         setShowSearch(false);
-                                       }}
-                                       className="px-2 py-2 hover:bg-[var(--accent-color)]/10 cursor-pointer border border-[var(--accent-color)]/5 hover:border-[var(--accent-color)]/30 transition-colors flex flex-col group rounded-sm"
-                                    >
-                                        <div className="flex justify-between items-center mb-0.5">
-                                          <span className="text-[11px] font-mono font-bold text-zinc-300 group-hover:text-[var(--accent-color)] transition-colors">{asset.ticker}</span>
-                                          <span className="text-[8px] font-mono text-[var(--accent-color)]/40 group-hover:text-[var(--accent-color)]/70 transition-colors">{asset.type}</span>
-                                        </div>
-                                        <span className="text-[9px] text-zinc-500 truncate font-sans">{asset.name}</span>
-                                    </div>
-                                 ))}
-                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-
-                  const filtered = ASSET_LIST.filter(a => a.ticker.toLowerCase().includes(query) || a.name.toLowerCase().includes(query));
-                  const exactMatch = ASSET_LIST.find(a => a.ticker.toLowerCase() === query);
-                  
-                  return (
-                    <div className="py-1">
-                      {filtered.map(asset => (
-                        <div
-                          key={asset.ticker}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-[var(--accent-color)]/10 cursor-pointer transition-colors border-b border-[var(--accent-color)]/5"
-                          onClick={() => {
-                            setSelectedAsset(asset);
-                            setSearchQuery('');
-                            setShowSearch(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-[12px] font-mono font-bold text-[var(--accent-color)]">{asset.ticker}</span>
-                            <span className="text-[10px] font-sans text-zinc-500">{asset.name}</span>
-                          </div>
-                          <span className="text-[8px] font-mono tracking-widest text-[var(--accent-color)]/70">
-                            {asset.type}
-                          </span>
-                        </div>
-                      ))}
-                      
-                      {query && !exactMatch && (
-                        <div
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-[var(--accent-color)]/20 cursor-pointer transition-colors border-b border-[var(--accent-color)]/10"
-                          onClick={() => {
-                            const t = query.toUpperCase();
-                            const newAsset = {
-                              key: t,
-                              ticker: t,
-                              name: `${t} Asset`,
-                              type: 'STOCKS',
-                              defaultPrice: 150.00,
-                              decimals: 2,
-                              spread: 0.05,
-                              volatility: 1.0,
-                              unit: 'USD',
-                              forecastScale: 0.15,
-                              stabilityMax: 0.06,
-                              optionsStyle: 'weekly'
-                            };
-                            setSelectedAsset(newAsset as any);
-                            setSearchQuery('');
-                            setShowSearch(false);
-                          }}
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-[12px] font-mono font-bold text-[var(--accent-color)]">OPEN [ {query.toUpperCase()} ]</span>
-                            <span className="text-[10px] font-sans text-[var(--accent-color)]/70">Model profile — resolves to live chain if your feed covers this symbol</span>
-                          </div>
-                          <span className="text-[8px] font-mono tracking-widest text-[var(--info)] border border-[var(--info)]/40 bg-[var(--info)]/10 px-1 py-0.5">
-                            Model
-                          </span>
-                        </div>
-                      )}
-                      
-                      {filtered.length === 0 && (
-                        <div className="px-4 py-6 text-center">
-                          <Search className="w-5 h-5 text-[var(--accent-color)]/50 mx-auto mb-2" />
-                          <div className="text-[10px] uppercase font-mono tracking-widest text-[var(--accent-color)]/50">Type a ticker to search</div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
               </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {activeEngineView === 'profile' ? (
-        <>
-          {/* ============================================================
-              RENDER-PARITY DEALER FLOW DASHBOARD
-              Row order mirrors the mock: price + key levels · pressure
-              matrix + order flow · gamma map · exposure profiles ·
-              options chain · market read. Every figure is a real field
-              off serverState / profile / dealer gauge / streamed tape.
-              ============================================================ */}
-
-          {/* Row 1 — price action (left) + key levels rail (right) */}
-          <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
-            <TerminalPanel
-              className="xl:col-span-8"
-              title="Price Action"
-              subtitle="real candles · supply / demand & imbalance overlay"
-              actions={<FeedChip feed={serverState?.candle_feed} />}
-              padded={false}
-            >
-              <div className="h-[340px] w-full p-[var(--panel-pad)]">
-                <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={300} />
-              </div>
-            </TerminalPanel>
-            <TerminalPanel
-              className="xl:col-span-4"
-              title="Key Levels"
-              subtitle="dealer levels ranked vs spot"
-              padded={false}
-            >
-              <DataTable
-                columns={keyLevelColumns}
-                rows={keyLevels}
-                rowKey={(r) => r.id}
-                className="border-0"
-                emptyState="No dealer levels resolved for this chain yet."
-              />
-            </TerminalPanel>
-          </div>
-
-          {/* Row 2 — dealer pressure matrix (left) + order flow (right) */}
-          <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
-            <TerminalPanel
-              className="xl:col-span-8"
-              title="Dealer Pressure Matrix"
-              subtitle={expiryStatus}
-              actions={expirySelector}
-              padded={false}
-            >
-              <div className="max-h-[440px] overflow-y-auto">
-                <DataTable
-                  columns={matrixColumns}
-                  rows={matrixData.rows}
-                  rowKey={(r) => r.strike}
-                  className="border-0"
-                  rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
-                  emptyState="Chain profile pending."
-                />
-              </div>
-            </TerminalPanel>
-            <TerminalPanel
-              className="xl:col-span-4"
-              title="Order Flow"
-              subtitle="cumulative tape delta · live regime"
-            >
-              <div className="space-y-4">
-                <div>
-                  <div className="slayer-subtitle">Cumulative Δ · session tape</div>
-                  <div
-                    className={`mt-1 slayer-num text-[26px] font-semibold leading-none ${
-                      cumulativeDelta == null
-                        ? 'text-[var(--text-faint)]'
-                        : cumulativeDelta >= 0
-                          ? 'text-[var(--positive-ink)]'
-                          : 'text-[var(--negative-ink)]'
-                    }`}
-                  >
-                    {cumulativeDelta == null
-                      ? 'No tape'
-                      : `${cumulativeDelta >= 0 ? '+' : ''}${Math.round(cumulativeDelta).toLocaleString('en-US')}`}
-                  </div>
-                  <div className="mt-1 text-[11px] slayer-muted">
-                    {chartTape.length
-                      ? `${chartTape.length.toLocaleString('en-US')} prints in window`
-                      : 'streaming tape unavailable for this feed'}
-                  </div>
+              <div className="slayer-panel px-3 py-2">
+                <div className="slayer-subtitle">Pressure</div>
+                <div className="mt-0.5 slayer-num text-[14px] font-semibold text-[var(--text-primary)]">
+                  {gauge.pressure != null ? `${gauge.pressure > 0 ? '+' : ''}${Math.round(gauge.pressure)}` : '—'}
                 </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="slayer-panel px-3 py-2">
-                    <div className="slayer-subtitle">Dealer Bias</div>
-                    <div
-                      className={`mt-0.5 slayer-num text-[14px] font-semibold ${
-                        biasTone === 'positive'
-                          ? 'text-[var(--positive-ink)]'
-                          : biasTone === 'negative'
-                            ? 'text-[var(--negative-ink)]'
-                            : 'text-[var(--text-primary)]'
-                      }`}
-                    >
-                      {(gauge.bias || '—').toUpperCase()}
-                    </div>
-                  </div>
-                  <div className="slayer-panel px-3 py-2">
-                    <div className="slayer-subtitle">Pressure</div>
-                    <div className="mt-0.5 slayer-num text-[14px] font-semibold text-[var(--text-primary)]">
-                      {gauge.pressure != null ? `${gauge.pressure > 0 ? '+' : ''}${Math.round(gauge.pressure)}` : '—'}
-                    </div>
-                  </div>
-                </div>
-                {multiTickerRows.length > 1 ? (
-                  <div>
-                    <div className="slayer-subtitle mb-1.5">Live tape · tracked tickers</div>
-                    <DataTable
-                      columns={multiTickerColumns}
-                      rows={multiTickerRows}
-                      rowKey={(r) => r.ticker}
-                      className="border-0"
-                    />
-                  </div>
-                ) : null}
               </div>
-            </TerminalPanel>
+              <div className="slayer-panel px-3 py-2">
+                <div className="slayer-subtitle">Net GEX</div>
+                <div className={`mt-0.5 slayer-num text-[13px] font-semibold ${(view.netGex ?? 0) >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
+                  {view.netGex != null ? fmtGreek(view.netGex) : '—'}
+                </div>
+              </div>
+              <div className="slayer-panel px-3 py-2">
+                <div className="slayer-subtitle">Net DEX</div>
+                <div className={`mt-0.5 slayer-num text-[13px] font-semibold ${(view.netDex ?? 0) >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
+                  {view.netDex != null ? fmtGreek(view.netDex) : '—'}
+                </div>
+              </div>
+            </div>
           </div>
+        </TerminalPanel>
 
-          {/* Row 3 — dealer net gamma map (real GEX inventory by strike) */}
-          <TerminalPanel title="Dealer Net Gamma Map" subtitle="inventory & pin levels by strike">
-            <DealerFlowMap profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
-          </TerminalPanel>
+        <TerminalPanel className="xl:col-span-3" title="Key Levels Rail" subtitle="dealer levels vs spot" padded={false}>
+          <DataTable
+            columns={keyLevelColumns}
+            rows={keyLevels}
+            rowKey={(r) => r.id}
+            className="border-0"
+            emptyState="No dealer levels resolved yet."
+          />
+        </TerminalPanel>
 
-          {/* Row 4 — exposure profiles GEX / DEX / VEX */}
-          <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-3">
-            {([
-              { type: 'gex' as const, label: 'Gamma Exposure', unit: '$ per 1% move' },
-              { type: 'dex' as const, label: 'Delta Exposure', unit: '$ per 1% spot move' },
-              { type: 'vex' as const, label: 'Vega Exposure', unit: '$ per 1% vol shift' },
-            ]).map((p) => (
-              <TerminalPanel key={p.type} title={p.label} subtitle={p.unit}>
-                <ExposureProfileChart profile={filteredProfile || profile} decimals={selectedAsset.decimals} type={p.type} />
-              </TerminalPanel>
-            ))}
-          </div>
-
-          {/* Row 5 — options chain (near-the-money, live) */}
-          <TerminalPanel
-            title="Options Chain"
-            subtitle={chainView.atmStrike != null ? `near-the-money · ATM ${fmtNum(chainView.atmStrike)}` : 'near-the-money'}
-            padded={false}
-          >
+        <TerminalPanel
+          className="xl:col-span-5"
+          title="Options Chain"
+          subtitle={chainView.atmStrike != null ? `near-the-money · ATM ${fmtNum(chainView.atmStrike)}` : 'near-the-money'}
+          padded={false}
+        >
+          <div className="overflow-x-auto">
             <DataTable
               columns={chainColumns}
               rows={chainView.rows}
@@ -1729,48 +1501,57 @@ export function DealerFlowView() {
               rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
               emptyState={`This feed does not stream a per-contract chain for ${selectedAsset.ticker}.`}
             />
-          </TerminalPanel>
-
-          {/* Row 6 — market read + supporting analysis (all real, real-data seams) */}
-          {(filteredProfile || profile) && (
-            <TerminalReadCard
-              profile={filteredProfile || profile}
-              candles={chartCandles}
-              ticker={selectedAsset.ticker}
-              decimals={selectedAsset.decimals}
-              isLive={!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC'}
-            />
-          )}
-          <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-2 items-start">
-            <GexReadCard />
-            <ZeroDtePanel />
           </div>
-          <DealerDynamicsPanel />
-          {(filteredProfile || profile) && (
-            <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-2 items-start">
-              <EdgeTrackRecord
-                profile={filteredProfile || profile}
-                candles={chartCandles}
-                ticker={selectedAsset.ticker}
-                provenance={serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC' ? 'live' : 'model'}
+        </TerminalPanel>
+      </div>
+
+      {/* ============== ROW 3 — real-time multi-ticker flow + market notes ============== */}
+      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+        <TerminalPanel className="xl:col-span-7" title="Real-Time Flow" subtitle="multi-ticker · live spots" padded={false}>
+          <DataTable
+            columns={multiTickerColumns}
+            rows={multiTickerRows}
+            rowKey={(r) => r.ticker}
+            className="border-0"
+            emptyState="Only one ticker is streaming right now."
+          />
+        </TerminalPanel>
+        <TerminalPanel className="xl:col-span-5" title="Market Notes" subtitle="your session read">
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <input
+                value={noteDraft}
+                onChange={(e) => setNoteDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') addUserNote(); }}
+                placeholder="Add note…"
+                className="slayer-control flex-1 text-[12px]"
+                aria-label="Add a market note"
               />
-              <LevelAlerts
-                ticker={selectedAsset.ticker}
-                decimals={selectedAsset.decimals}
-                spot={(filteredProfile || profile)?.spot}
-                callWall={(filteredProfile || profile)?.callWall}
-                putWall={(filteredProfile || profile)?.putWall}
-                gammaFlip={(filteredProfile || profile)?.gammaFlip}
-                magnet={(filteredProfile || profile)?.magnet}
-              />
+              <button
+                type="button"
+                onClick={addUserNote}
+                className="slayer-control cursor-pointer text-[11px] font-semibold uppercase tracking-[0.12em]"
+              >
+                Add
+              </button>
             </div>
-          )}
-        </>
-      ) : activeEngineView === 'targets' ? (
-        <IntradayTargetsView profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
-      ) : (
-        <PinpointTerminal ticker={selectedAsset.ticker} />
-      )}
+            {userNotes.length ? (
+              <div className="max-h-[220px] space-y-2 overflow-y-auto">
+                {userNotes.map((n, i) => (
+                  <div key={i} className="flex gap-2 text-[12px]">
+                    <span className="slayer-num shrink-0 text-[var(--text-muted)]">
+                      {new Date(n.ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    <span className="text-[var(--text-secondary)]">{n.text}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[12px] slayer-muted">No notes yet — add your read on the flow.</div>
+            )}
+          </div>
+        </TerminalPanel>
+      </div>
     </div>
   );
 }
