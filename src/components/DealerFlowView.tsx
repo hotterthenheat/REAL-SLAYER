@@ -1247,10 +1247,10 @@ export function DealerFlowView() {
             <span className="rounded-[4px] border border-[var(--border-strong)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">SPOT</span>
           )}
           {r.strike === matrixData.pinStrike && (
-            <span className="rounded-[4px] border border-[color:rgba(44,104,123,0.55)] bg-[rgba(44,104,123,0.16)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">PIN</span>
+            <span className="rounded-[4px] border border-[color-mix(in_srgb,var(--pin)_55%,transparent)] bg-[color-mix(in_srgb,var(--pin)_16%,transparent)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">PIN</span>
           )}
           {r.strike === matrixData.flipStrike && (
-            <span className="rounded-[4px] border border-[color:rgba(196,154,58,0.5)] bg-[rgba(196,154,58,0.14)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--warning)]">FLIP</span>
+            <span className="rounded-[4px] border border-[color-mix(in_srgb,var(--warning)_50%,transparent)] bg-[color-mix(in_srgb,var(--warning)_14%,transparent)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--warning)]">FLIP</span>
           )}
         </span>
       ),
@@ -1338,7 +1338,7 @@ export function DealerFlowView() {
         <span className="flex items-center gap-2">
           <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>
           {r.ticker === selectedAsset.ticker && (
-            <span className="rounded-[4px] border border-[color:rgba(44,104,123,0.55)] bg-[rgba(44,104,123,0.16)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">IN VIEW</span>
+            <span className="rounded-[4px] border border-[color-mix(in_srgb,var(--pin)_55%,transparent)] bg-[color-mix(in_srgb,var(--pin)_16%,transparent)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">IN VIEW</span>
           )}
         </span>
       ),
@@ -1378,7 +1378,7 @@ export function DealerFlowView() {
   const expiryStatus = isMultiExpiry
     ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'expiry' : 'expiries'} · model split`
     : expiryTab === 'aggregated'
-      ? 'all dates · live aggregate'
+      ? 'all dates · aggregate profile'
       : (() => {
           const t = tickerExpirations.find((x) => x.id === expiryTab);
           return t ? `${t.date} · ${t.dteDays}DTE · model split` : 'select expiry';
@@ -1406,7 +1406,9 @@ export function DealerFlowView() {
       {activeEngineView === 'profile' && (
       <div className="space-y-[var(--gap)]">
       {/* ============== ROW 1 — dealer net gamma map + dealer pressure matrix ============== */}
-      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+      {/* items-start: each panel sizes to its own content so a short matrix never
+          stretches into an empty black interior next to the fixed-height gamma map. */}
+      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel
           className="xl:col-span-7"
           title={`Dealer Net Gamma Map · ${selectedAsset.ticker}`}
@@ -1427,14 +1429,17 @@ export function DealerFlowView() {
             rows={matrixData.rows}
             rowKey={(r) => r.strike}
             className="max-h-[420px] border-0"
-            rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+            rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]' : undefined)}
             emptyState="Chain profile pending."
           />
         </TerminalPanel>
       </div>
 
       {/* ============== ROW 2 — order flow + key levels rail + options chain ============== */}
-      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+      {/* items-start: the short Order Flow and Key Levels Rail panels size to their
+          own content instead of stretching to match the tall Options Chain table,
+          eliminating the ~430px / ~290px empty interiors below their content. */}
+      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel className="xl:col-span-4" title="Order Flow" subtitle="cumulative tape delta · live regime">
           <div className="space-y-3">
             <div>
@@ -1504,20 +1509,23 @@ export function DealerFlowView() {
             rows={chainView.rows}
             rowKey={(r) => r.strike}
             className="border-0"
-            rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+            rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color-mix(in_srgb,var(--text-primary)_4%,transparent)]' : undefined)}
             emptyState={`This feed does not stream a per-contract chain for ${selectedAsset.ticker}.`}
           />
         </TerminalPanel>
       </div>
 
       {/* ============== ROW 3 — real-time multi-ticker flow + market notes ============== */}
-      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+      {/* items-start: Market Notes sizes to its small form + list instead of
+          stretching to match a long multi-ticker Real-Time Flow list (was ~990px
+          of empty interior). The Real-Time Flow table is capped + scrolls below. */}
+      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel className="xl:col-span-7" title="Real-Time Flow" subtitle="multi-ticker · live spots" padded={false}>
           <DataTable
             columns={multiTickerColumns}
             rows={multiTickerRows}
             rowKey={(r) => r.ticker}
-            className="border-0"
+            className="max-h-[420px] border-0"
             emptyState="Only one ticker is streaming right now."
           />
         </TerminalPanel>

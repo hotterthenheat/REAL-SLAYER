@@ -333,7 +333,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
             transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="group rounded-[10px] p-6 pt-7 flex flex-col relative bg-[var(--bg-panel-raised)] border border-[var(--border-strong)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] transition-colors duration-200"
           >
-            <div className="absolute -top-2.5 left-6 bg-[var(--gex-2)] text-[var(--text-primary)] text-[9px] font-semibold uppercase tracking-[0.16em] px-2.5 py-1 rounded-[5px] whitespace-nowrap z-10">
+            <div className="absolute -top-2.5 left-6 bg-[var(--text-primary)] text-[#0A0806] text-[9px] font-semibold uppercase tracking-[0.16em] px-2.5 py-1 rounded-[5px] whitespace-nowrap z-10">
               Most Popular
             </div>
 
@@ -499,8 +499,9 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                 </div>
                 <button
                   onClick={() => setSelectedPlanForCheckout(null)}
-                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer -mr-1 hover:bg-[var(--bg-panel-soft)] rounded-[7px] flex items-center justify-center min-w-[40px] min-h-[40px]"
+                  className="text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer -mr-1 hover:bg-[var(--bg-panel-soft)] rounded-[7px] flex items-center justify-center min-w-[40px] min-h-[40px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
                   title="Close (Esc)"
+                  aria-label="Close checkout"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -557,7 +558,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   <div className="rounded-[7px] border border-[var(--negative)]/40 bg-[var(--negative-soft)] text-[var(--negative-ink)] px-4 py-3 text-[12px] flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
                     <span>{checkoutError}</span>
-                    <button onClick={() => setCheckoutError('')} className="ml-auto shrink-0 hover:opacity-70 transition-opacity"><X className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => setCheckoutError('')} aria-label="Dismiss error" className="ml-auto shrink-0 hover:opacity-70 transition-opacity cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] rounded"><X className="w-3.5 h-3.5" /></button>
                   </div>
                 )}
 

@@ -77,11 +77,17 @@ const FlowMap = () => {
         <span className="font-mono text-[10px] text-textMuted uppercase tracking-wider">
           {matrix.strikes.length} strikes · {matrix.expiries.length} expirations
         </span>
+        {/* Honest data-provenance badge: this surface runs on the built-in
+            simulator until a live feed is wired — never label it "live". Warn
+            tone (theme token) reads as a caution chip, never a green live badge. */}
+        <span className="ml-auto rounded border border-warn/30 bg-warn/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-warn">
+          Simulated Feed
+        </span>
       </div>
 
       {/* Key level stats */}
       <MetricGrid min="140px">
-        <StatCard label="Spot" value={`$${levels.spot.toFixed(2)}`} sub="live tick" />
+        <StatCard label="Spot" value={`$${levels.spot.toFixed(2)}`} sub="simulated tick" />
         <StatCard label={<Term id="king">King</Term>} value={`$${levels.king.toFixed(2)}`} tone="warn" sub="max |exposure| strike" />
         <StatCard label={<Term id="callWall">Call Wall</Term>} value={`$${levels.callWall.toFixed(2)}`} tone="bull" sub="dealer supply" />
         <StatCard label={<Term id="putWall">Put Wall</Term>} value={`$${levels.putWall.toFixed(2)}`} tone="bear" sub="dealer support" />
@@ -106,8 +112,8 @@ const FlowMap = () => {
         max={0.72}
         left={
           <Panel
-            title={`${activeTicker} — ${metric} nodes + levels`}
-            subtitle="live tick feed"
+            title={`${activeTicker} — GEX nodes + levels`}
+            subtitle="simulated feed · metric toggle drives the matrix"
             className="h-full w-full"
             bodyClassName="flex flex-col"
           >

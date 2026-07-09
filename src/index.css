@@ -81,6 +81,27 @@ html, body, #root {
      is what introduces color — the default stays on-brand. */
   --accent-color: #FAFAFA;
 
+  /* ── TERMINAL DESIGN-SYSTEM ALIASES (mirror of src/styles/slayer-terminal.css) ──
+     The Slayer Terminal pages (QuantSuite / QuantAudit / Pinpoint) and many shared
+     panels reference these names. Declaring them here too makes index.css a COMPLETE
+     source of truth (no dependence on stylesheet load order) and gives the .light-theme
+     block below a place to supply light-mode values — without which terminal panels
+     rendered near-black text on near-black surfaces in light mode. Dark values match
+     slayer-terminal.css exactly, so the dark UI is unchanged. */
+  --bg-app: #000000;
+  --bg-shell: #050505;
+  --bg-panel: #080706;
+  --bg-panel-soft: #0d0a08;
+  --bg-panel-raised: #100c08;
+  --border-subtle: rgba(248, 248, 255, 0.08);
+  --border-mid: rgba(248, 248, 255, 0.14);
+  --text-muted: rgba(248, 248, 255, 0.50);
+  --text-faint: rgba(248, 248, 255, 0.29);
+  --positive-ink: #2f9d45;
+  --negative-ink: #d94646;
+  --call: #792CA2;
+  --pin: #2C687B;
+
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
      every primitive (card / popover / badge / input / sidebar / chart)
@@ -163,6 +184,10 @@ html, body, #root {
   .sv-maxw { max-width: 2200px; margin-inline: auto; }
 }
 
+/* Single .mirror-panel definition. Previously declared twice with conflicting
+   backgrounds (the token version, then a hardcoded near-black rgba(0,0,0,0.8) that
+   won and also dropped the border-radius). Consolidated to the on-brand token — the
+   design system forbids pure black surfaces (see --bg-surface, "The Mirror Surface"). */
 .mirror-panel {
   background-color: var(--bg-surface) !important;
   backdrop-filter: blur(12px) !important;
@@ -182,14 +207,7 @@ body {
 }
 
 
-/* Mirror Panel Utilities */
-.mirror-panel {
-  background-color: rgba(0, 0, 0, 0.8) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-}
-
+/* Mirror Panel Utilities (see the consolidated .mirror-panel above) */
 .mirror-panel-glass {
   background: rgba(0, 0, 0, 0.65) !important;
   backdrop-filter: blur(24px) saturate(190%) !important;
@@ -938,6 +956,23 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --dealer: #0288D1;             /* §9 — dealer / market-maker tracking */
   --accent-color: #18181B;     /* monochrome brand accent (near-black on white) */
 
+  /* Terminal design-system aliases — light-mode values. Without these, panels/tables
+     that reference --bg-panel / --text-muted / --text-faint / --border-subtle stayed on
+     their near-black dark values in light mode (near-black text on a near-black surface =
+     invisible), because .light-theme only overrode the index.css neutrals. Now the whole
+     terminal follows the theme. */
+  --bg-app: #F4F4F5;
+  --bg-shell: #FFFFFF;
+  --bg-panel: #FFFFFF;
+  --bg-panel-soft: #FAFAFA;
+  --bg-panel-raised: #FFFFFF;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-mid: rgba(0, 0, 0, 0.14);
+  --text-muted: rgba(0, 0, 0, 0.55);
+  --text-faint: rgba(0, 0, 0, 0.40);
+  --positive-ink: #15803D;     /* darker green — readable on white */
+  --negative-ink: #B91C1C;     /* darker red — readable on white */
+
   /* Redefine Tailwind's custom theme variables for light mode */
   --color-black: #ffffff;
   --color-zinc-950: #111827;
@@ -1432,4 +1467,33 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 .text-\[9\.5px\] {
   font-size: 10.5px !important;
   line-height: 1.35 !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BRAND LOGO INK (additive) — BrandLogo.tsx reads these via
+   var(--brand-prompt, #6B7177) / var(--brand-ink, #F4F5F6), so dark themes
+   stay HTML-exact (landing/index.html) with no :root override needed, and
+   light themes swap the white wordmark/caret for near-black ink so the mark
+   stays legible on light surfaces. Prompt ">" keeps the HTML dim grey.
+   ────────────────────────────────────────────────────────────────────────── */
+.light-theme {
+  --brand-prompt: #6B7177;
+  --brand-ink: #18181B;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LANDING MARQUEE (additive) — seamless -50% translateX loop; the track
+   renders its content twice so the wrap is invisible. Transform-only.
+   Paused entirely under reduced motion (the row simply sits static).
+   ────────────────────────────────────────────────────────────────────────── */
+@keyframes slayer-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.slayer-marquee {
+  animation: slayer-marquee 46s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slayer-marquee { animation: none; }
 }

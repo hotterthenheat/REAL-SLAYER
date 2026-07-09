@@ -25,14 +25,16 @@
   --bg-panel-soft: #0d0a08;
   --bg-panel-raised: #100c08;
 
-  /* Border system */
+  /* Border system. NOTE: --border-strong is owned by index.css :root (the shared
+     source of truth). It is intentionally NOT redefined here — this file loads after
+     index.css, so redefining it would silently override the app-wide value in dark
+     mode and leave light mode inconsistent. */
   --border-subtle: rgba(248, 248, 255, 0.08);
   --border-mid: rgba(248, 248, 255, 0.14);
-  --border-strong: rgba(248, 248, 255, 0.22);
 
-  /* Typography */
-  --text-primary: #F8F8FF;
-  --text-secondary: rgba(248, 248, 255, 0.74);
+  /* Typography. NOTE: --text-primary and --text-secondary are owned by index.css :root
+     (source of truth) so the terminal reads the same neutrals as the rest of the app in
+     every theme. Only the terminal-specific muted/faint tones are declared here. */
   --text-muted: rgba(248, 248, 255, 0.50);
   --text-faint: rgba(248, 248, 255, 0.29);
 

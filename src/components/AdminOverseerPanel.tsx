@@ -106,7 +106,7 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
             return (
               <button key={t.id} onClick={() => setTab(t.id)}
                 className={cx(
-                  'flex items-center gap-2.5 whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors',
+                  'flex items-center gap-2.5 whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]',
                   active
                     ? 'border border-[var(--border-mid)] bg-[rgba(248,248,255,0.05)] text-[var(--text-primary)]'
                     : 'border border-transparent text-[var(--text-muted)] hover:bg-[rgba(248,248,255,0.03)] hover:text-[var(--text-primary)]',
@@ -226,7 +226,7 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
             <span className="text-[12px] font-semibold text-[var(--text-primary)]">{overview?.maintenance_mode ? 'Active' : 'Inactive'}</span>
             {overview?.maintenance_mode && <StatusBadge tone="negative">503 Active</StatusBadge>}
           </div>
-          <button onClick={toggleMaintenance} disabled={busy} className="cursor-pointer transition-opacity disabled:opacity-50" aria-label="Toggle maintenance mode">
+          <button onClick={toggleMaintenance} disabled={busy} className="cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] disabled:opacity-50" aria-label="Toggle maintenance mode">
             {overview?.maintenance_mode ? <ToggleRight className="h-9 w-9 text-[var(--negative-ink)]" /> : <ToggleLeft className="h-9 w-9 text-[var(--text-muted)]" />}
           </button>
         </div>
@@ -240,7 +240,8 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
           <div className="divide-y divide-[var(--border-subtle)]">
             {Object.keys(flags).map((k) => (
               <button key={k} onClick={() => toggleFlag(k, !flags[k])}
-                className="group flex w-full items-center justify-between gap-3 py-2.5 text-left first:pt-0 last:pb-0">
+                aria-pressed={!!flags[k]} aria-label={`Toggle ${k.replace(/_/g, ' ')}`}
+                className="group flex w-full items-center justify-between gap-3 rounded-[var(--radius-control)] py-2.5 text-left first:pt-0 last:pb-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">
                 <span className="text-[11px] capitalize text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">{k.replace(/_/g, ' ')}</span>
                 {flags[k] ? <ToggleRight className="h-6 w-6 shrink-0 text-[var(--positive-ink)]" /> : <ToggleLeft className="h-6 w-6 shrink-0 text-[var(--text-muted)]" />}
               </button>
@@ -367,10 +368,10 @@ function UsersTab() {
     ) },
     { key: 'actions', header: 'Actions', align: 'right', render: (u) => (
       <div className="flex items-center justify-end gap-1">
-        <button aria-label={`Impersonate ${u.email}`} onClick={() => impersonate(u.email)} className="cursor-pointer rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)]"><Eye className="h-3.5 w-3.5" /></button>
-        <button aria-label={`${u.suspended ? 'Unsuspend' : 'Suspend'} ${u.email}`} onClick={() => act(u.email, u.suspended ? 'unsuspend' : 'suspend')} className="cursor-pointer rounded p-1.5 text-[var(--warning)] transition-colors hover:bg-[rgba(196,154,58,0.14)]"><UserX className="h-3.5 w-3.5" /></button>
-        <button aria-label={`Force logout ${u.email}`} onClick={() => act(u.email, 'force-logout')} className="cursor-pointer rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)]"><LogOut className="h-3.5 w-3.5" /></button>
-        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded p-1.5 text-[var(--negative-ink)] transition-colors hover:bg-[var(--negative-soft)]"><Ban className="h-3.5 w-3.5" /></button>
+        <button aria-label={`Impersonate ${u.email}`} onClick={() => impersonate(u.email)} className="cursor-pointer rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Eye className="h-3.5 w-3.5" /></button>
+        <button aria-label={`${u.suspended ? 'Unsuspend' : 'Suspend'} ${u.email}`} onClick={() => act(u.email, u.suspended ? 'unsuspend' : 'suspend')} className="cursor-pointer rounded p-1.5 text-[var(--warning)] transition-colors hover:bg-[rgba(196,154,58,0.14)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><UserX className="h-3.5 w-3.5" /></button>
+        <button aria-label={`Force logout ${u.email}`} onClick={() => act(u.email, 'force-logout')} className="cursor-pointer rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><LogOut className="h-3.5 w-3.5" /></button>
+        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded p-1.5 text-[var(--negative-ink)] transition-colors hover:bg-[var(--negative-soft)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Ban className="h-3.5 w-3.5" /></button>
       </div>
     ) },
   ];
@@ -415,7 +416,7 @@ function UsersTab() {
       {actionError && (
         <div role="alert" className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[color:rgba(152,4,4,0.4)] bg-[var(--negative-soft)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--negative-ink)]">
           <span className="min-w-0 break-words">{actionError}</span>
-          <button onClick={() => setActionError('')} aria-label="Dismiss error" className="shrink-0 transition-colors hover:text-[var(--text-primary)]">Dismiss</button>
+          <button onClick={() => setActionError('')} aria-label="Dismiss error" className="shrink-0 rounded-[var(--radius-control)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">Dismiss</button>
         </div>
       )}
 
@@ -582,7 +583,7 @@ function CouponsTab() {
             className={cx(FIELD, 'slayer-num')} />
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={create} disabled={state === 'loading'} className="cursor-pointer rounded-[var(--radius-control)] border border-[color:rgba(13,71,21,0.5)] bg-[var(--positive-soft)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--positive-ink)] transition-colors hover:border-[color:rgba(13,71,21,0.75)] disabled:opacity-50">
+          <button onClick={create} disabled={state === 'loading'} className="cursor-pointer rounded-[var(--radius-control)] border border-[color:rgba(13,71,21,0.5)] bg-[var(--positive-soft)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--positive-ink)] transition-colors hover:border-[color:rgba(13,71,21,0.75)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] disabled:opacity-50">
             {state === 'loading' ? 'Generating…' : 'Generate'}
           </button>
           {msg && <span role="status" className={cx('text-[10px]', state === 'error' ? 'text-[var(--negative-ink)]' : state === 'success' ? 'text-[var(--positive-ink)]' : 'text-[var(--text-secondary)]')}>{msg}</span>}

@@ -140,21 +140,21 @@ export default function ArborCapital() {
       level: 'Foundations',
       desc: 'How GEX, DEX and VEX drive market-maker hedging and where dealers are positioned to push price.',
       Icon: GraduationCap,
-      accent: '#4ADE80',
+      accent: 'var(--success)',
     },
     {
       title: 'Key Price Levels',
       level: 'Foundations',
       desc: 'Identifying major order blocks and displacement zones, and why structure breaks act as magnets for premium.',
       Icon: BookOpen,
-      accent: '#60A5FA',
+      accent: 'var(--info)',
     },
     {
       title: 'Risk Management',
       level: 'Advanced',
       desc: 'A practical framework for expected value, probability-based sizing and drawdown limits across volatility regimes.',
       Icon: Compass,
-      accent: '#FBBF24',
+      accent: 'var(--warning)',
     },
   ];
 
@@ -194,7 +194,7 @@ export default function ArborCapital() {
             <span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Market</span>
             <span
               className="text-xs font-bold tabular-nums"
-              style={{ color: marketState.open ? '#4ADE80' : '#F87171' }}
+              style={{ color: marketState.open ? 'var(--success)' : 'var(--danger)' }}
             >
               {marketState.open ? 'OPEN' : 'CLOSED'}
             </span>
@@ -243,7 +243,8 @@ export default function ArborCapital() {
               <button
                 key={key}
                 onClick={() => setActiveChannel(key)}
-                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors ${
+                aria-pressed={active}
+                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${
                   active
                     ? 'border-[var(--border-strong)] bg-[var(--surface-2)]'
                     : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)]'
@@ -251,7 +252,7 @@ export default function ArborCapital() {
               >
                 <Icon
                   className="w-4 h-4 shrink-0"
-                  style={{ color: active ? '#4ADE80' : 'var(--text-tertiary)' }}
+                  style={{ color: active ? 'var(--success)' : 'var(--text-tertiary)' }}
                 />
                 <div className="flex flex-col">
                   <span
@@ -330,7 +331,8 @@ export default function ArborCapital() {
                     const bullish = t.direction === 'BULLISH';
                     const isWin = WIN_OUTCOMES.includes(t.finalOutcome);
                     const isActive = t.finalOutcome === 'Active';
-                    const outcomeTone = isActive ? '#FBBF24' : isWin ? '#4ADE80' : '#F87171';
+                    const dirTone = bullish ? 'var(--success)' : 'var(--danger)';
+                    const outcomeTone = isActive ? 'var(--warning)' : isWin ? 'var(--success)' : 'var(--danger)';
                     return (
                       <div
                         key={t.id}
@@ -339,12 +341,12 @@ export default function ArborCapital() {
                         <div className="flex items-center gap-3 min-w-0">
                           <div
                             className="w-7 h-7 rounded flex items-center justify-center shrink-0"
-                            style={{ background: `${bullish ? '#4ADE80' : '#F87171'}1a` }}
+                            style={{ background: `color-mix(in srgb, ${dirTone} 10%, transparent)` }}
                           >
                             {bullish ? (
-                              <TrendingUp className="w-4 h-4" style={{ color: '#4ADE80' }} />
+                              <TrendingUp className="w-4 h-4" style={{ color: dirTone }} />
                             ) : (
-                              <TrendingDown className="w-4 h-4" style={{ color: '#F87171' }} />
+                              <TrendingDown className="w-4 h-4" style={{ color: dirTone }} />
                             )}
                           </div>
                           <div className="min-w-0">
@@ -364,14 +366,14 @@ export default function ArborCapital() {
                             </span>
                             <span
                               className="text-xs font-bold tabular-nums"
-                              style={{ color: (t.maxGain ?? 0) >= 0 ? '#4ADE80' : '#F87171' }}
+                              style={{ color: (t.maxGain ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)' }}
                             >
                               {fmtPct(t.maxGain, true)}
                             </span>
                           </div>
                           <span
                             className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-1 rounded whitespace-nowrap"
-                            style={{ color: outcomeTone, background: `${outcomeTone}14`, border: `1px solid ${outcomeTone}55` }}
+                            style={{ color: outcomeTone, background: `color-mix(in srgb, ${outcomeTone} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${outcomeTone} 33%, transparent)` }}
                           >
                             {t.finalOutcome}
                           </span>
@@ -452,7 +454,7 @@ export default function ArborCapital() {
                       <div className="flex items-center justify-between">
                         <div
                           className="w-8 h-8 rounded flex items-center justify-center"
-                          style={{ background: `${m.accent}1a`, border: `1px solid ${m.accent}55` }}
+                          style={{ background: `color-mix(in srgb, ${m.accent} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${m.accent} 33%, transparent)` }}
                         >
                           <Icon className="w-4 h-4" style={{ color: m.accent }} />
                         </div>
@@ -498,7 +500,7 @@ export default function ArborCapital() {
 
                   {requestSubmitted ? (
                     <div className="rounded-lg border border-[var(--success)]/40 bg-[var(--success)]/10 p-4 flex items-start gap-2.5">
-                      <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: '#4ADE80' }} />
+                      <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
                       <div>
                         <span className="text-xs font-bold text-[var(--text-primary)] block">
                           Request submitted
@@ -546,7 +548,7 @@ export default function ArborCapital() {
                       </div>
                       <button
                         type="submit"
-                        className="w-full rounded-lg py-2.5 bg-[var(--success)] hover:bg-[#3fcf72] text-black font-bold uppercase text-[10px] tracking-[0.12em] transition-colors"
+                        className="w-full rounded-lg py-2.5 bg-[var(--success)] hover:opacity-90 text-black font-bold uppercase text-[10px] tracking-[0.12em] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-2)]"
                       >
                         Submit Request
                       </button>
@@ -571,11 +573,11 @@ export default function ArborCapital() {
                     {userRequests.map((req) => {
                       const tone =
                         req.status === 'Completed'
-                          ? '#4ADE80'
+                          ? 'var(--success)'
                           : req.status === 'In Review'
-                          ? '#FBBF24'
+                          ? 'var(--warning)'
                           : req.status === 'Scheduled'
-                          ? '#60A5FA'
+                          ? 'var(--info)'
                           : 'var(--text-tertiary)';
                       return (
                         <div
@@ -590,7 +592,7 @@ export default function ArborCapital() {
                               <span className="text-[var(--text-tertiary)]">·</span>
                               <span
                                 className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-px rounded"
-                                style={{ color: tone, background: `${tone}1a` }}
+                                style={{ color: tone, background: `color-mix(in srgb, ${tone} 10%, transparent)` }}
                               >
                                 {req.status}
                               </span>

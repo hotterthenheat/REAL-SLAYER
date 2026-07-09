@@ -823,7 +823,7 @@ function MeterBar({ pct, tone = 'var(--pin)', showValue = true }: { pct: number;
 
 /** Confidence tier colour — distinct bands so a 95 clearly outreads an 86 at a glance. */
 function confColor(health: number): string {
-  if (health >= 90) return '#2f9d45';        // top tier — high conviction
+  if (health >= 90) return 'var(--positive-ink)';        // top tier — high conviction
   if (health >= 85) return 'var(--warning)'; // upper-mid
   if (health >= 80) return 'var(--pin)';     // mid
   return 'var(--text-muted)';                // low / risk
@@ -925,15 +925,42 @@ export function DiscoveryView({
   const [searchQuery, setSearchQuery] = useState('');
 
   // Redesign filter state — each maps to a real field on the ranked setups.
-  const [universe, setUniverse] = useState<string>('All');
-  const [expiryFilter, setExpiryFilter] = useState<string>('All');
-  const [minConfidence, setMinConfidence] = useState<string>('0');
-  const [minExpMove, setMinExpMove] = useState<string>('0');
-  const [optionTypeFilter, setOptionTypeFilter] = useState<'all' | 'calls' | 'puts'>('all');
+  // Hydrated from the saved view (Save View writes this key) so saving actually
+  // round-trips; falls back to defaults on first visit / bad data.
+  const savedView = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('slayer.skyvision.view.v1');
+      return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  const str = (v: unknown, fb: string) => (typeof v === 'string' ? v : fb);
+  const [universe, setUniverse] = useState<string>(() => str(savedView?.universe, 'All'));
+  const [expiryFilter, setExpiryFilter] = useState<string>(() => str(savedView?.expiryFilter, 'All'));
+  const [minConfidence, setMinConfidence] = useState<string>(() => str(savedView?.minConfidence, '0'));
+  const [minExpMove, setMinExpMove] = useState<string>(() => str(savedView?.minExpMove, '0'));
+  const [optionTypeFilter, setOptionTypeFilter] = useState<'all' | 'calls' | 'puts'>(() => {
+    const v = savedView?.optionTypeFilter;
+    return v === 'calls' || v === 'puts' ? v : 'all';
+  });
+  // activeShelf/searchQuery are declared above the saved-view memo, so restore
+  // them once on mount to complete the round-trip.
+  useEffect(() => {
+    if (!savedView) return;
+    if (typeof savedView.activeShelf === 'string') setActiveShelf(savedView.activeShelf);
+    if (typeof savedView.searchQuery === 'string') setSearchQuery(savedView.searchQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Opportunities pagination — 15/page like the render, so the bottom row stays in view.
   const [oppPage, setOppPage] = useState(1);
   const OPP_PER_PAGE = 15;
+  // Snap back to page 1 whenever any filter narrows/widens the ranked list, so a
+  // deep page never goes stale against a different result set.
+  useEffect(() => {
+    setOppPage(1);
+  }, [universe, activeShelf, expiryFilter, minConfidence, minExpMove, optionTypeFilter, searchQuery]);
 
   // Watchlist / Queue rail
   const [watchQueueTab, setWatchQueueTab] = useState<'watchlist' | 'queue'>('queue');
@@ -1253,8 +1280,8 @@ export function DiscoveryView({
     const bear = rankedSetups.filter(s => s.direction === 'BEARISH' && s.c.shelf !== 'mispriced').length;
     const neutral = rankedSetups.filter(s => s.c.shelf === 'mispriced').length;
     const segments = [
-      { label: 'Bullish', value: bull, color: '#2f9d45' },
-      { label: 'Bearish', value: bear, color: '#d94646' },
+      { label: 'Bullish', value: bull, color: 'var(--positive-ink)' },
+      { label: 'Bearish', value: bear, color: 'var(--negative-ink)' },
       { label: 'Neutral', value: neutral, color: 'var(--pin)' },
     ];
     const byStrategy: { label: string; value: number }[] = [];
@@ -1329,7 +1356,7 @@ export function DiscoveryView({
       {/* HEADER — title · context · data-state · method · refresh */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Target className="w-4 h-4 text-[#2f9d45] shrink-0" />
+          <Target className="w-4 h-4 text-[var(--positive-ink)] shrink-0" />
           <div className="min-w-0">
             <h1 className="slayer-title truncate">SkyVision <span className="text-[var(--text-muted)]">· Options Scanner</span></h1>
             <p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
@@ -1339,7 +1366,10 @@ export function DiscoveryView({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
-          <StatusBadge tone={isMockScanning ? 'warning' : 'live'} dot>{isMockScanning ? 'Scanning' : 'Live'}</StatusBadge>
+          {/* Scan-activity state (never claims "Live" — the data-state badge owns data provenance). */}
+          <StatusBadge tone={feedError ? 'warning' : 'neutral'} dot>
+            {isMockScanning ? 'Scanning' : feedError ? 'Reconnecting' : 'Idle'}
+          </StatusBadge>
           <button
             onClick={() => setIsStrategyExpanded(true)}
             aria-label="How this scan works"
@@ -1353,7 +1383,7 @@ export function DiscoveryView({
             aria-label="Refresh scan"
             className="slayer-control inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.12em] text-[var(--text-primary)] hover:border-[var(--border-strong)] disabled:opacity-60"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isMockScanning ? 'animate-spin text-[#2f9d45]' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isMockScanning ? 'animate-spin text-[var(--positive-ink)]' : ''}`} />
             {isMockScanning ? 'Scanning…' : 'Refresh'}
           </button>
         </div>
@@ -1473,7 +1503,7 @@ export function DiscoveryView({
               { key: 'setup', header: 'Setup', render: (s) => <span className="text-[11px] uppercase tracking-[0.08em] text-[var(--text-secondary)]">{SETUP_LABEL[s.c.shelf] ?? s.c.shelf}</span> },
               {
                 key: 'bias', header: 'Bias', render: (s) => (
-                  <span className={`inline-flex items-center gap-1 font-semibold ${s.direction === 'BULLISH' ? 'text-[#2f9d45]' : 'text-[#d94646]'}`}>
+                  <span className={`inline-flex items-center gap-1 font-semibold ${s.direction === 'BULLISH' ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
                     {s.direction === 'BULLISH' ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                     {s.direction === 'BULLISH' ? 'Bull' : 'Bear'}
                   </span>
@@ -1506,7 +1536,7 @@ export function DiscoveryView({
             const prob = Math.min(99, Math.max(1, Math.abs(s.c.delta ?? 0) * 100));
             const target1 = typeof s.c.t1 === 'number' && s.c.t1 > 0 ? s.c.t1 : null;
             const stopPremium = s.premium * (1 - WORKING_STOP_PCT / 100);
-            const dirColor = s.direction === 'BULLISH' ? 'text-[#2f9d45]' : 'text-[#d94646]';
+            const dirColor = s.direction === 'BULLISH' ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]';
             const asset = ASSET_LIST.find((a) => a.ticker === s.c.ticker);
             const expiry = SHELF_EXPIRY[s.c.shelf] ?? '0DTE';
             const horizon = (SHELF_EXPLANATIONS[s.c.shelf as keyof typeof SHELF_EXPLANATIONS] ?? SHELF_EXPLANATIONS.all).horizon;
@@ -1545,7 +1575,7 @@ export function DiscoveryView({
 
                 {/* rationale */}
                 <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
-                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><ShieldCheck className="h-3 w-3 text-[#2f9d45]" />Setup Rationale</span>
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><ShieldCheck className="h-3 w-3 text-[var(--positive-ink)]" />Setup Rationale</span>
                   <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">{s.c.narrative}</p>
                   <p className="mt-1.5 text-[9px] uppercase tracking-[0.1em] text-[var(--text-faint)]">{s.dealerSupport}</p>
                 </div>
@@ -1571,10 +1601,10 @@ export function DiscoveryView({
 
                 {/* risk parameters */}
                 <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
-                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><AlertTriangle className="h-3 w-3 text-[#d94646]" />Risk Parameters</span>
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><AlertTriangle className="h-3 w-3 text-[var(--negative-ink)]" />Risk Parameters</span>
                   <div className="mt-1.5 space-y-1 text-[11px]">
                     <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Max Risk</span><span className="slayer-num text-[var(--text-primary)]">${(s.premium * 100).toFixed(0)} / contract</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop / Invalidation</span><span className="slayer-num text-[#d94646]">{s.side === 'C' ? 'Below' : 'Above'} {s.invalidation.toLocaleString()}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop / Invalidation</span><span className="slayer-num text-[var(--negative-ink)]">{s.side === 'C' ? 'Below' : 'Above'} {s.invalidation.toLocaleString()}</span></div>
                     <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">Invalidation Reason</span><span className="text-right text-[var(--text-secondary)]">{s.dealerSupport} fails</span></div>
                   </div>
                 </div>
@@ -1584,9 +1614,9 @@ export function DiscoveryView({
                   <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><Droplet className="h-3 w-3 text-[var(--pin)]" />Trade Plan</span>
                   <div className="mt-1.5 space-y-1 text-[11px]">
                     <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Entry</span><span className="slayer-num text-[var(--text-primary)]">${s.premium.toFixed(2)} <span className="text-[9px] text-[var(--text-faint)]">(${(s.c.bid ?? s.premium).toFixed(2)}–${(s.c.ask ?? s.premium).toFixed(2)})</span></span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className="slayer-num text-[#2f9d45]">{target1 == null ? '—' : `$${target1.toFixed(2)} (+${(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className="slayer-num text-[#2f9d45]">${s.fairValue.toFixed(2)} (+{(s.fairGapPct * 100).toFixed(0)}%)</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop</span><span className="slayer-num text-[#d94646]">${stopPremium.toFixed(2)} (−{WORKING_STOP_PCT}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className={`slayer-num ${target1 != null && target1 < s.premium ? 'text-[var(--negative-ink)]' : 'text-[var(--positive-ink)]'}`}>{target1 == null ? '—' : `$${target1.toFixed(2)} (${target1 >= s.premium ? '+' : '−'}${Math.abs(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className={`slayer-num ${s.fairGapPct < 0 ? 'text-[var(--negative-ink)]' : 'text-[var(--positive-ink)]'}`}>${s.fairValue.toFixed(2)} ({s.fairGapPct >= 0 ? '+' : '−'}{Math.abs(s.fairGapPct * 100).toFixed(0)}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop</span><span className="slayer-num text-[var(--negative-ink)]">${stopPremium.toFixed(2)} (−{WORKING_STOP_PCT}%)</span></div>
                     <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Time Stop</span><span className="text-[var(--text-secondary)]">{horizon}</span></div>
                     <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">R / R</span><span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)} : 1`}</span></div>
                   </div>
@@ -1600,7 +1630,7 @@ export function DiscoveryView({
                   {selectedTracked ? (
                     <button
                       onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[#2f9d45]/50 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#2f9d45] transition-colors hover:border-[#2f9d45]"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--positive-ink)]/50 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--positive-ink)] transition-colors hover:border-[var(--positive-ink)]"
                     >
                       <CheckCircle2 className="h-3.5 w-3.5" />In Queue
                     </button>
@@ -1614,7 +1644,7 @@ export function DiscoveryView({
                   )}
                   <button
                     onClick={() => reviewSetup(s)}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[#2f9d45]/40 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#2f9d45] transition-colors hover:border-[#2f9d45]"
+                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--positive-ink)]/40 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--positive-ink)] transition-colors hover:border-[var(--positive-ink)]"
                   >
                     Trade This Setup<ArrowUpRight className="h-3.5 w-3.5" />
                   </button>
@@ -1648,7 +1678,7 @@ export function DiscoveryView({
             {[
               { l: 'Put / Call', v: regime.pcRatio.toFixed(2), tone: 'text-[var(--text-primary)]' },
               { l: 'Avg Exp Move', v: `±${regime.avgMove.toFixed(0)}%`, tone: 'text-[var(--pin)]' },
-              { l: 'Net GEX', v: `${globalGex.toFixed(0)}B`, tone: globalGex >= 0 ? 'text-[#2f9d45]' : 'text-[#d94646]' },
+              { l: 'Net GEX', v: `${globalGex.toFixed(0)}B`, tone: globalGex >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]' },
               { l: 'Scan Rate', v: `${scanRate.toFixed(1)}/s`, tone: 'text-[var(--text-primary)]' },
             ].map((x) => (
               <div key={x.l} className="bg-[var(--bg-panel)] px-2.5 py-2">
@@ -1719,7 +1749,7 @@ export function DiscoveryView({
                     <div className="text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">{STATUS_LABEL[t.status]} · conf {t.confidence}%</div>
                   </div>
                   <span className="slayer-num text-[10px] text-[var(--pin)]">±{t.expectedMovePct != null ? t.expectedMovePct.toFixed(0) : '—'}%</span>
-                  <button onClick={() => cancelTrack(t.id)} aria-label="Remove from queue" className="text-[var(--text-faint)] transition-colors hover:text-[#d94646]"><X className="h-3 w-3" /></button>
+                  <button onClick={() => cancelTrack(t.id)} aria-label="Remove from queue" className="text-[var(--text-faint)] transition-colors hover:text-[var(--negative-ink)]"><X className="h-3 w-3" /></button>
                 </div>
               ))
             ) : (
@@ -1755,8 +1785,9 @@ export function DiscoveryView({
       {/* STATUS BAR */}
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2.5 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
         <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />Last scan <span className="slayer-num normal-case text-[var(--text-secondary)]">{formatTime(new Date(metricsAsOf))}</span></span>
+        <span className="flex items-center gap-1.5 min-w-0"><RefreshCw className={`h-3 w-3 ${isMockScanning ? 'animate-spin text-[var(--positive-ink)]' : ''}`} /><span className="normal-case text-[var(--text-secondary)] truncate">{lastScanMessage}</span></span>
         <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" />Source <span className="text-[var(--text-secondary)]">Sample stream</span></span>
-        <span className="flex items-center gap-1.5"><Signal className="h-3 w-3" />Feed <span className={feedError ? 'text-[var(--warning)]' : 'text-[#2f9d45]'}>{feedError ? 'Reconnecting' : 'Streaming'}</span></span>
+        <span className="flex items-center gap-1.5"><Signal className="h-3 w-3" />Feed <span className={feedError ? 'text-[var(--warning)]' : 'text-[var(--positive-ink)]'}>{feedError ? 'Reconnecting' : 'Streaming'}</span></span>
         <span className="flex items-center gap-1.5"><Activity className="h-3 w-3" />Scanned <span className="slayer-num text-[var(--text-secondary)]">{contracts.length}</span> · Universe <span className="slayer-num text-[var(--text-secondary)]">{UNIVERSE_OPTS.length - 1}</span> · Scans <span className="slayer-num text-[var(--text-secondary)]">{scanHistoryCount}</span></span>
         <span className="flex items-center gap-2">Auto-refresh
           <button
@@ -1812,7 +1843,7 @@ export function DiscoveryView({
                 </div>
                 <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
                   <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Confidence</span>
-                  <span className="block text-[9px] font-bold leading-tight text-[#2f9d45]">{currentManualText.confidenceTier}</span>
+                  <span className="block text-[9px] font-bold leading-tight text-[var(--positive-ink)]">{currentManualText.confidenceTier}</span>
                 </div>
               </div>
               <p className="mt-3 border-t border-[var(--border-subtle)] pt-2 text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Sample data — illustrative, not a live scan.</p>

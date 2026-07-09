@@ -215,14 +215,15 @@ export function CelebrationOverlay({ purchasedTier, isOpen, onComplete }: Celebr
           className="relative pointer-events-auto max-w-sm w-full mx-auto z-10"
         >
           {/* Neon back-glow */}
-          <div className="absolute -inset-0.5 bg-gradient-to-br from-[#4ADE80]/15 to-[#3a86ff]/15 rounded-2xl blur-xl animate-pulse" />
+          <div className="absolute -inset-0.5 bg-gradient-to-br from-[#4ADE80]/15 to-[#4ADE80]/10 rounded-2xl blur-xl animate-pulse" />
           
           <div className={`relative rounded-2xl overflow-hidden backdrop-blur-3xl border ${purchasedTier >= 4 ? 'bg-black/90 border-yellow-500/25 shadow-[0_0_40px_rgba(234,179,8,0.12)]' : 'bg-black/90 border-black shadow-2xl'} p-8 text-center`}>
             
             {/* Close Button */}
             <button
               onClick={() => onCompleteRef.current()}
-              className="absolute top-4 right-4 text-zinc-500 hover:text-[#E5E5E5] p-1 rounded-full bg-black/40 hover:bg-black/60 transition-all cursor-pointer"
+              className="absolute top-4 right-4 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] p-1 rounded-full bg-black/40 hover:bg-black/60 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+              aria-label="Close celebration"
               title="Close Celebration"
             >
               <X className="w-4 h-4" />
@@ -233,7 +234,7 @@ export function CelebrationOverlay({ purchasedTier, isOpen, onComplete }: Celebr
                 {purchasedTier >= 4 ? (
                   <Trophy className="w-8 h-8 text-yellow-400" />
                 ) : (
-                  <Sparkles className="w-8 h-8 text-[#4ADE80]" />
+                  <Sparkles className="w-8 h-8 text-[var(--success)]" />
                 )}
               </div>
             </div>
@@ -243,7 +244,7 @@ export function CelebrationOverlay({ purchasedTier, isOpen, onComplete }: Celebr
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.15 }}
             >
-              <h2 className="text-xl font-black text-[#E5E5E5] tracking-widest mb-2 uppercase">
+              <h2 className="text-xl font-black text-[var(--text-primary)] tracking-widest mb-2 uppercase">
                 {purchasedTier >= 5 ? 'Lifetime Unlocked' :
                  purchasedTier === 4 ? 'SkyVision Unlocked' :
                  purchasedTier === 3 ? 'SkyVision Unlocked' :
@@ -251,11 +252,11 @@ export function CelebrationOverlay({ purchasedTier, isOpen, onComplete }: Celebr
                  purchasedTier === 1 ? 'Discord Unlocked' : 'Upgraded'}
               </h2>
 
-              <p className="text-zinc-400 text-[10.5px] font-mono mb-6 leading-relaxed">
+              <p className="text-[var(--text-tertiary)] text-[10.5px] font-mono mb-6 leading-relaxed">
                 Your new plan is live. All features for your tier are now unlocked.
               </p>
 
-              <div className="inline-block bg-black/65 border border-black rounded-lg px-4 py-2.5 text-[9px] font-mono font-bold text-zinc-400 uppercase tracking-widest select-none">
+              <div className="inline-block bg-black/65 border border-black rounded-lg px-4 py-2.5 text-[9px] font-mono font-bold text-[var(--text-tertiary)] uppercase tracking-widest select-none">
                 Ready
               </div>
             </motion.div>

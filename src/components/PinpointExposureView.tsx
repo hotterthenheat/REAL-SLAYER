@@ -17,7 +17,6 @@
 
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { useContractStore } from '../lib/store';
-import EChart from './ui/EChart';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
 import { InsightPanel } from './ui/terminal/InsightPanel';
@@ -73,18 +72,9 @@ function fmtPct(v: number | null | undefined, signed = true): string {
   return `${sign}${v.toFixed(2)}%`;
 }
 
-// Resolve a CSS custom property to its computed hex (for the canvas chart, which
-// can't read var()). Falls back to the Slayer brand defaults.
-function cssVar(name: string, fallback: string): string {
-  if (typeof window === 'undefined') return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  return v || fallback;
-}
-
 // Brand colours used for inline styles (matrix cells / row markers). Color = data.
 const SLAYER_RED = 'var(--slayer-red)'; // #980404 — deepest put/risk red (bars)
 const CALL_PURPLE = 'var(--call)';       // #792CA2 — calls
-const PIN_TEAL = 'var(--pin)';           // #2C687B — pin
 const NEG_RED = '#d94646';               // .slayer-neg — legible negative
 const POS_GREEN = '#2f9d45';             // .slayer-pos — legible positive
 
@@ -100,36 +90,6 @@ const TONE_TEXT: Record<MetricTone, string> = {
 // ────────────────────────────────────────────────────────────────────────────
 // Small presentational atoms
 // ────────────────────────────────────────────────────────────────────────────
-
-/** A styled native <select> using the shared `.slayer-control` chrome. */
-function TerminalSelect({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: string[];
-}) {
-  return (
-    <label className="flex items-center gap-1.5">
-      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{label}</span>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="slayer-control slayer-num cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
-      >
-        {options.map((o) => (
-          <option key={o} value={o}>
-            {o}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
 
 /** A single greek cell: right-aligned tabular number over a thin proportional bar. */
 function MatrixCell({
@@ -193,7 +153,6 @@ function LevelCell({
 
 export default function PinpointExposureView() {
   const selectedAsset = useContractStore((s) => s.selectedAsset);
-  const themeMode = useContractStore((s) => s.themeMode);
 
   // Gate the streamed server state to the asset currently in view so switching
   // tickers can't briefly paint the previous ticker's dealer data — the exact
@@ -351,19 +310,6 @@ export default function PinpointExposureView() {
     return best;
   }, [asc, spot]);
 
-  const nearestIdx = (level: number | undefined) => {
-    if (level == null || asc.length === 0) return -1;
-    let best = -1;
-    let bd = Infinity;
-    asc.forEach((r, i) => {
-      const d = Math.abs(r.strike - level);
-      if (d < bd) {
-        bd = d;
-        best = i;
-      }
-    });
-    return best;
-  };
 
   // Matrix window: ±10 strikes around spot.
   const matrixRows = useMemo(() => {
@@ -388,165 +334,6 @@ export default function PinpointExposureView() {
   // the spot position.
   const matrixDesc = useMemo(() => [...matrixRows].sort((a, b) => b.strike - a.strike), [matrixRows]);
 
-  // ── Positioning-map chart window (wider; includes walls/pin) ────────────────
-  const chartRows = useMemo(() => {
-    if (asc.length === 0) return [];
-    let lo = Math.max(0, centerIdx - 20);
-    let hi = Math.min(asc.length - 1, centerIdx + 20);
-    for (const lvl of [callWall, putWall, magnet]) {
-      const i = nearestIdx(lvl);
-      if (i >= 0) {
-        lo = Math.min(lo, i);
-        hi = Math.max(hi, i);
-      }
-    }
-    return asc.slice(lo, hi + 1);
-  }, [asc, centerIdx, callWall, putWall, magnet]);
-
-  // ── ECharts option factory (diverging horizontal net-dealer-pressure bars) ──
-  const chartOption = useMemo(() => {
-    if (chartRows.length === 0) return null;
-    // themeMode referenced so the memo recomputes (and re-reads tokens) on toggle.
-    void themeMode;
-    // Brand palette (short-gamma = purple→teal, long-gamma = red gradient).
-    const cRed = cssVar('--slayer-red', '#980404');
-    const cRedLite = cssVar('--gex-4', '#e05454');
-    const cCall = cssVar('--call', '#792ca2');
-    const cPin = cssVar('--pin', '#2c687b');
-    const cGhost = cssVar('--slayer-ghost', '#f8f8ff');
-    const cMuted = cssVar('--text-muted', 'rgba(248,248,255,0.46)');
-    const cBorder = cssVar('--border-mid', 'rgba(248,248,255,0.14)');
-
-    const cats = chartRows.map((r) => String(r.strike)); // ascending → highest at top
-    const values = chartRows.map((r) => r.netGex ?? 0);
-    const maxAbs = Math.max(1, ...values.map((v) => Math.abs(v)));
-
-    const fmtAxis = (v: number) => {
-      const a = Math.abs(v);
-      const s = v < 0 ? '-' : '';
-      if (a >= 1e9) return `${s}${(a / 1e9).toFixed(1)}B`;
-      if (a >= 1e6) return `${s}${(a / 1e6).toFixed(0)}M`;
-      if (a >= 1e3) return `${s}${(a / 1e3).toFixed(0)}K`;
-      return `${s}${a.toFixed(0)}`;
-    };
-
-    const nearestCat = (lvl: number | undefined) => {
-      if (lvl == null) return null;
-      let best: string | null = null;
-      let bd = Infinity;
-      chartRows.forEach((r) => {
-        const d = Math.abs(r.strike - lvl);
-        if (d < bd) {
-          bd = d;
-          best = String(r.strike);
-        }
-      });
-      return best;
-    };
-
-    // Merge reference levels that snap to the SAME strike row into one combined
-    // label (e.g. pin == callWall → "CW·PIN 5,500"), shorten the codes, and
-    // stagger labels top/bottom by row order so they never collide.
-    type MLDef = { lvl: number | undefined; short: string; color: string; dash: number[] | 'solid' };
-    const levelDefs: MLDef[] = [
-      { lvl: spot, short: 'SPOT', color: cGhost, dash: 'solid' },
-      { lvl: putWall, short: 'PW', color: cRed, dash: [5, 4] },
-      { lvl: callWall, short: 'CW', color: cCall, dash: [5, 4] },
-      { lvl: magnet, short: 'PIN', color: cPin, dash: [2, 3] },
-    ];
-    const merged = new Map<string, { parts: string[]; color: string; dash: number[] | 'solid' }>();
-    for (const d of levelDefs) {
-      if (d.lvl == null) continue;
-      const cat = nearestCat(d.lvl);
-      if (cat == null) continue;
-      const ex = merged.get(cat);
-      if (ex) ex.parts.push(d.short);
-      else merged.set(cat, { parts: [d.short], color: d.color, dash: d.dash });
-    }
-    const catIndex = (cat: string) => cats.indexOf(cat);
-    const markLineData: any[] = Array.from(merged.entries())
-      .sort((a, b) => catIndex(a[0]) - catIndex(b[0]))
-      .map(([cat, info], i) => ({
-        yAxis: cat,
-        lineStyle: { color: info.color, type: info.dash, width: 1.2, opacity: 0.9 },
-        label: {
-          formatter: `${info.parts.join('·')} ${fmtLevel(Number(cat))}`,
-          color: info.color,
-          fontSize: 9,
-          fontFamily: 'JetBrains Mono, ui-monospace, monospace',
-          fontWeight: 700,
-          // Right-aligned; alternate top/bottom of the line so adjacent rows don't overlap.
-          position: i % 2 === 0 ? 'insideEndTop' : 'insideEndBottom',
-          backgroundColor: 'rgba(0,0,0,0.72)',
-          padding: [2, 4],
-          borderRadius: 2,
-        },
-      }));
-
-    // Factory form so we can build LinearGradient fills via the echarts instance.
-    return (echarts: any) => {
-      // POSITIVE (dealer short gamma, extends right): purple → teal.
-      const posGrad = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-        { offset: 0, color: cCall },
-        { offset: 1, color: cPin },
-      ]);
-      // NEGATIVE (dealer long gamma, extends left): deep red → lighter red.
-      const negGrad = new echarts.graphic.LinearGradient(0, 0, 1, 0, [
-        { offset: 0, color: cRed },
-        { offset: 1, color: cRedLite },
-      ]);
-      return {
-        grid: { top: 16, right: 22, bottom: 34, left: 64 },
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: (params: any) => {
-            const p = Array.isArray(params) ? params[0] : params;
-            const v = p?.value ?? 0;
-            return `<span style="font-family:JetBrains Mono,monospace;font-size:11px">STRIKE ${p?.name}<br/>Net pressure <b style="color:${v < 0 ? cRedLite : cPin}">${v < 0 ? '' : '+'}${fmtAxis(v)}</b></span>`;
-          },
-        },
-        xAxis: {
-          type: 'value',
-          min: -maxAbs * 1.08,
-          max: maxAbs * 1.08,
-          name: 'NET DEALER PRESSURE (Σγ, $ / 1% MOVE)',
-          nameLocation: 'middle',
-          nameGap: 22,
-          nameTextStyle: { color: cMuted, fontSize: 9, fontWeight: 700 },
-          axisLabel: { formatter: (v: number) => fmtAxis(v), fontSize: 9, color: cMuted },
-          splitLine: { show: true, lineStyle: { color: 'rgba(248,248,255,0.05)' } },
-        },
-        yAxis: {
-          type: 'category',
-          data: cats,
-          axisLabel: { fontSize: 9, color: cMuted },
-          axisTick: { show: false },
-          axisLine: { lineStyle: { color: cBorder } },
-        },
-        series: [
-          {
-            type: 'bar',
-            data: values,
-            barWidth: '62%',
-            itemStyle: {
-              borderRadius: 2,
-              color: (p: any) => (p.value < 0 ? negGrad : posGrad),
-              opacity: 0.95,
-            },
-            markLine: {
-              silent: true,
-              symbol: 'none',
-              data: [
-                { xAxis: 0, lineStyle: { color: cBorder, type: 'solid', width: 1 }, label: { show: false } },
-                ...markLineData,
-              ],
-            },
-          },
-        ],
-      };
-    };
-  }, [chartRows, spot, callWall, putWall, magnet, themeMode]);
 
   // ── Positioning insight bullets (only when their inputs are real) ───────────
   const insights = useMemo(() => {
@@ -634,27 +421,22 @@ export default function PinpointExposureView() {
     [serverState]
   );
 
-  // Expiry / date select state (reflects the real aggregated-chain reality; the
-  // server ships one aggregated chain across all dates — no fabricated per-expiry).
-  const expiryOptions = useMemo(() => {
-    const opts: string[] = [`${selectedAsset.ticker} PIPELINE`];
+  // The server ships ONE aggregated chain across all dates — there is nothing to
+  // select, so render the expiry as an honest read-only label instead of a
+  // dropdown that implies per-expiry filtering it can't perform.
+  const expiry = useMemo(() => {
     if (profile?.expiryDate) {
-      opts.unshift(profile.expiryLabel ? `${profile.expiryDate} · ${profile.expiryLabel}` : String(profile.expiryDate));
+      return profile.expiryLabel ? `${profile.expiryDate} · ${profile.expiryLabel}` : String(profile.expiryDate);
     }
-    return opts;
+    return `${selectedAsset.ticker} PIPELINE`;
   }, [selectedAsset.ticker, profile?.expiryDate, profile?.expiryLabel]);
-  const [expiry, setExpiry] = useState(expiryOptions[0]);
-  useEffect(() => {
-    if (!expiryOptions.includes(expiry)) setExpiry(expiryOptions[0]);
-  }, [expiryOptions, expiry]);
-  const [dateSel, setDateSel] = useState('All Dates');
 
-  // Shared selects rendered in each panel's actions slot.
+  // Shared read-only chain descriptor rendered in each panel's actions slot.
   const panelActions = (
-    <>
-      <TerminalSelect label="Expiry" value={expiry} onChange={setExpiry} options={expiryOptions} />
-      <TerminalSelect label="Date" value={dateSel} onChange={setDateSel} options={['All Dates']} />
-    </>
+    <div className="flex items-center gap-1.5">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Expiry</span>
+      <span className="slayer-control slayer-num cursor-default select-none">{expiry} · All Dates</span>
+    </div>
   );
 
   // ── Honest pending state (mirrors DealerFlowView) ───────────────────────────
@@ -758,7 +540,7 @@ export default function PinpointExposureView() {
       <MetricStrip metrics={topMetrics} />
 
       {/* ─────────────── 2. MAIN TWO-COLUMN GRID ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] gap-3 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] gap-3 items-stretch">
         {/* LEFT — EXPOSURE MATRIX */}
         <TerminalPanel
           title="Exposure Matrix"

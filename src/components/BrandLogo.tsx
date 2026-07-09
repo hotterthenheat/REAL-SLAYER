@@ -7,10 +7,15 @@ import React from 'react';
  * Exact colors / weights / caret timing lifted from the source site:
  *   prompt ">" = #6B7177 (weight 700, .84em) · wordmark/caret = #F4F5F6 (weight 800)
  *   caret blink = `slayer-caret` (1.08s steps(1)) defined in index.css.
+ *
+ * Theme legibility: the HTML-exact colors are the DEFAULTS of two CSS vars —
+ * var(--brand-prompt, #6B7177) / var(--brand-ink, #F4F5F6) — which .light-theme
+ * overrides in index.css (ink → near-black) so the mark never disappears on
+ * light surfaces. The caret + its glow follow --brand-ink via color-mix.
  */
 
-const PROMPT = '#6B7177'; // --dim  : the ">" terminal prompt
-const WHITE = '#F4F5F6';  // --white : the S / wordmark / caret
+const PROMPT = 'var(--brand-prompt, #6B7177)'; // --dim  : the ">" terminal prompt
+const WHITE = 'var(--brand-ink, #F4F5F6)';     // --white : the S / wordmark / caret
 
 export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
   const fontSize = expanded ? 18 : 24;
@@ -44,7 +49,7 @@ export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
           marginLeft: expanded ? '0.14em' : '0.125em',
           borderRadius: expanded ? 2 : 1,
           background: WHITE,
-          boxShadow: `0 0 ${expanded ? 18 : 12}px rgba(244,245,246,0.5)`,
+          boxShadow: `0 0 ${expanded ? 18 : 12}px color-mix(in srgb, ${WHITE} 50%, transparent)`,
         }}
       />
     </span>

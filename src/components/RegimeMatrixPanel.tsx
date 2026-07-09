@@ -60,12 +60,18 @@ export function RegimeMatrixPanel() {
 
   const regimeTone = reg.state === 'TAIL_RISK' ? C.danger : reg.state === 'TREND_EXPANSION' ? C.success : C.info;
 
+  // Honest signal count (base grid + whichever optional signals the feed actually carries)
+  // and a truthful source badge — the streamed edge is only "live" when the chain is live;
+  // in keyless/sandbox mode it is a model computation, so we never assert "live" there.
+  const signalCount = 11 + (pca ? 1 : 0) + (edge.hawkes ? 1 : 0) + (edge.netDelta ? 1 : 0) + (edge.fisher ? 1 : 0) + (edge.leadLag ? 1 : 0);
+  const isLive = !!serverState?.chain_live;
+
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 flex flex-col gap-4" style={{ borderLeftColor: 'var(--info)', borderLeftWidth: '3px' }}>
       <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
         <Radar className="w-4 h-4 text-[var(--info)]" />
         <h2 className="text-xs font-black tracking-widest uppercase text-[var(--text-primary)]">Market State — {selectedAsset?.ticker}</h2>
-        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest ml-auto">11 signals · live</span>
+        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest ml-auto">{signalCount} signals · {isLive ? 'live' : 'model'}</span>
       </div>
 
       <Section title="Trend and Mean-Reversion Signals" icon={<GitBranch className="w-3 h-3 text-[var(--info)]" />}>

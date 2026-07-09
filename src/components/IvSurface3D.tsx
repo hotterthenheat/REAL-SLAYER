@@ -12,7 +12,7 @@
  * separates measured from modelled.
  *
  * Rendering shares the platform's surface conventions with the GEX surface: real
- * OrbitControls (rotate/zoom/pan, damped), a three-point light rig, raycast hover
+ * OrbitControls (rotate/zoom/pan, damped), an unlit brutalist wireframe, raycast hover
  * readout (K · DTE · IV), camera-facing axis labels, and reset / fullscreen /
  * PNG / CSV controls. Static data ⇒ the loop only advances controls and renders.
  */
@@ -193,7 +193,7 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
     model.dtes.forEach((d, ei) => model.strikes.forEach((k, ki) => rows.push([d, ei === 0 ? 'real' : 'model', k.toFixed(2), model.iv[ei][ki].toFixed(5)])));
     exportCsv(['dte', 'source', 'strike', 'iv'], rows, `iv-surface-${ticker || 'spx'}`);
   };
-  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded';
+  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
 
   if (!model) {
     return (

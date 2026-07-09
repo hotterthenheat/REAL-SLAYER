@@ -11,7 +11,7 @@
  * decorative wave: the mesh is the data.
  *
  * Rendering: WebGL (three.js) with real OrbitControls (rotate / zoom / pan,
- * damped), a three-point light rig, per-vertex diverging colour (green = dealers
+ * damped), an unlit brutalist wireframe (Directive 08 — no lighting), per-vertex diverging colour (green = dealers
  * long gamma / pinning, red = short gamma / amplifying), camera-facing axis
  * labels for the strike / DTE extents, raycast hover readout, and a spot
  * reference plane. Static data ⇒ the animation loop only advances the controls
@@ -297,7 +297,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
   const sliceMaxAbs = Math.max(1, ...sliceCells.map((c) => Math.abs(c.gex)));
   const sliceNet = sliceCells.reduce((a, c) => a + c.gex, 0);
 
-  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded';
+  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
 
   return (
     <div ref={wrapRef} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
@@ -322,7 +322,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
         {hover && (
           <div
             className="pointer-events-none absolute z-10 px-2 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg"
-            style={{ left: Math.min(hover.x + 12, 9999), top: hover.y + 12 }}
+            style={{ left: Math.min(hover.x + 12, (mountRef.current?.clientWidth ?? 800) - 140), top: hover.y + 12 }}
           >
             <div className="text-[var(--text-primary)] font-bold">K {fmt(hover.strike)} · {hover.dte}DTE</div>
             <div style={{ color: hover.gex >= 0 ? 'var(--success)' : 'var(--danger)' }}>{hover.gex >= 0 ? '+' : ''}{(hover.gex / 1e9).toFixed(2)}B net γ</div>

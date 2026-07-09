@@ -91,14 +91,15 @@ export default function SlayerCodeRain() {
     const cols = 8; // stable count; CSS handles width via left%
     return Array.from({ length: cols }, (_, c) => {
       const rnd = seeded(c + 1);
-      const dur = 36 + rnd() * 42;
+      // Perceptible drift: full-cycle 20–34s (was 36–78s, which read as static).
+      const dur = 20 + rnd() * 14;
       const lines = Array.from({ length: 22 }, () => POOL[Math.floor(rnd() * POOL.length)]);
       return {
         left: c * (100 / cols) + (rnd() * 4 - 2),
         dur,
         delay: -rnd() * dur,
         up: rnd() > 0.5,
-        opacity: 0.42 + rnd() * 0.22,
+        opacity: 0.5 + rnd() * 0.22,
         lines: lines.concat(lines), // duplicate for a seamless -50% loop
       };
     });
@@ -131,13 +132,16 @@ export default function SlayerCodeRain() {
           ))}
         </div>
       ))}
-      {/* scrim — darkens the centre so hero content stays legible */}
-      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 72% 62% at 50% 44%, rgba(8,9,10,0.9) 0%, rgba(8,9,10,0.55) 44%, transparent 78%)' }} />
+      {/* scrim — keeps hero text legible while letting the drift read behind it.
+          Two layers: a wide radial centred on the hero, plus a left-weighted
+          wash so the hero copy column (left of the split layout) stays clean. */}
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 72% 62% at 44% 44%, rgba(8,9,10,0.86) 0%, rgba(8,9,10,0.42) 48%, transparent 82%)' }} />
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(90deg, rgba(8,9,10,0.72) 0%, rgba(8,9,10,0.28) 34%, transparent 60%)' }} />
       {/* vignette */}
-      <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 260px 70px rgba(0,0,0,0.92)', background: 'radial-gradient(ellipse at center, transparent 52%, rgba(0,0,0,0.62) 100%)' }} />
+      <div className="absolute inset-0" style={{ boxShadow: 'inset 0 0 220px 50px rgba(0,0,0,0.85)', background: 'radial-gradient(ellipse at center, transparent 56%, rgba(0,0,0,0.5) 100%)' }} />
       {/* bottom fade — ramps the rain into solid #08090A so it dissolves cleanly
           into the sections below the hero */}
-      <div className="absolute inset-x-0 bottom-0 h-1/2" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(8,9,10,0.85) 62%, #08090A 100%)' }} />
+      <div className="absolute inset-x-0 bottom-0 h-2/5" style={{ background: 'linear-gradient(to bottom, transparent 0%, rgba(8,9,10,0.8) 66%, #08090A 100%)' }} />
     </div>
   );
 }

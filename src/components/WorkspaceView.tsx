@@ -73,7 +73,9 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
         .then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); })
         .catch(() => {
           if (attempt < 2) { setTimeout(() => syncCloud(attempt + 1), 4000); return; }
-          notifyError('Saved locally. Cloud sync will retry automatically.');
+          // We've exhausted this save's retries; the next edit starts a fresh
+          // sync. Say exactly that instead of implying a background retry loop.
+          notifyError('Saved locally. Cloud sync will retry on your next change.');
         });
     };
     saveTimer.current = setTimeout(() => syncCloud(0), 1000);
@@ -349,6 +351,30 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
                 </div>
               );
             })}
+            {layout.length === 0 && !loading && (
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <div className="flex flex-col items-center gap-3 text-center max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-6 py-8">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Empty Workspace</span>
+                  <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
+                    No panes yet. Add a widget, or load a template to get started.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => { setAddOpen(true); setLoadOpen(false); setShowSaveOverlay(false); }}
+                      className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+                    >
+                      <Plus className="w-3 h-3 text-[var(--success)]" /> Add Widget
+                    </button>
+                    <button
+                      onClick={() => { setLoadOpen(true); setAddOpen(false); setShowSaveOverlay(false); }}
+                      className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+                    >
+                      Templates
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
             {layout.length === 0 && loading && (
               <div className="absolute inset-0 p-2" aria-busy="true" aria-label="Loading workspace">
                 <div className="grid grid-cols-2 lg:grid-cols-3 auto-rows-[160px] gap-2">
@@ -424,7 +450,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               <button
                 onClick={saveCustomLayout}
                 disabled={!saveName.trim()}
-                className="text-[10px] uppercase font-semibold tracking-[0.12em] bg-[var(--success)] text-[#04140A] hover:opacity-90 rounded-[3px] px-4 py-2 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                className="text-[10px] uppercase font-semibold tracking-[0.12em] bg-[var(--success)] text-[var(--primary-contrast)] hover:opacity-90 rounded-[3px] px-4 py-2 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Save
               </button>

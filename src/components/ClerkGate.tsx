@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Lock, Mail, User, Info, Check, X } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, User, Check, X } from 'lucide-react';
 import { useLegal } from './LegalCenter';
 import { Spinner } from './ui/Spinner';
+import { TerminalLogo } from './BrandLogo';
 
 interface ClerkGateProps {
   onSuccess: (userData: any) => void;
@@ -19,7 +20,6 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
   const [referralCode, setReferralCode] = useState(referralCodeFromUrl || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showRefApplied, setShowRefApplied] = useState(!!referralCodeFromUrl);
   const [twoFactorStage, setTwoFactorStage] = useState(false);
   const [preAuthToken, setPreAuthToken] = useState('');
   const [totpCode, setTotpCode] = useState('');
@@ -98,12 +98,11 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
     <div id="clerk-authentication-gate" className="min-h-screen bg-[var(--bg-app)] text-[var(--text-secondary)] flex flex-col justify-center items-center font-mono selection:bg-[var(--positive-ink)] selection:text-[var(--bg-app)] p-4 relative overflow-hidden">
 
       {/* Restrained structural wash — not a glow */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(900px 460px at 50% -10%, rgba(68,49,153,0.10), transparent 70%)' }} />
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(900px 460px at 50% -10%, rgba(106,147,181,0.10), transparent 70%)' }} />
 
-      <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10">
-        <span className="text-[13px] font-bold tracking-[0.02em] text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-brand)' }}>
-          <span className="text-[var(--text-muted)]">&gt;</span>slayer<span className="text-[var(--text-muted)]">_terminal</span>
-        </span>
+      {/* the ONE canonical logo (BrandLogo.tsx) — HTML-exact wordmark + caret */}
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10 origin-top-left scale-[0.8]">
+        <TerminalLogo expanded />
       </div>
 
       <motion.div
@@ -114,7 +113,8 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         {onClose && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-8 w-8 rounded-[7px] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] hover:border-[var(--border-mid)] flex items-center justify-center z-20"
+            aria-label="Dismiss sign-in"
+            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-8 w-8 rounded-[7px] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] hover:border-[var(--border-mid)] flex items-center justify-center z-20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
             title="Dismiss"
           >
             <X className="w-4 h-4" />
@@ -143,13 +143,15 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         <div className="grid grid-cols-2 gap-1 bg-[var(--bg-panel-soft)] rounded-[8px] p-1 border border-[var(--border-subtle)] text-[12px] font-semibold mb-5">
           <button
             onClick={() => { setActiveMode('signin'); setErrorMessage(null); }}
-            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            aria-pressed={activeMode === 'signin'}
+            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Sign In
           </button>
           <button
             onClick={() => { setActiveMode('signup'); setErrorMessage(null); }}
-            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            aria-pressed={activeMode === 'signup'}
+            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Create Account
           </button>
@@ -166,7 +168,9 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         {referralCode && activeMode === 'signup' && (
           <div className="mb-4 px-3.5 py-2.5 bg-[var(--positive-soft)] border border-[var(--positive-ink)]/35 rounded-[7px] text-[11px] text-[var(--positive-ink)] leading-tight font-sans flex items-center gap-2">
             <Check className="w-3.5 h-3.5 shrink-0" />
-            <span>Referral applied — 5% discount taken at checkout.</span>
+            {/* Honest phrasing: the code is validated at checkout, not here; the
+                referral discount is 10% everywhere else in the product. */}
+            <span>Referral code entered — 10% discount applied at checkout if valid.</span>
           </div>
         )}
 
@@ -194,7 +198,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
             <button
               type="submit"
               disabled={isLoading || totpCode.length < 6}
-              className="w-full py-3.5 mt-1 bg-[var(--text-primary)] hover:opacity-90 text-[#0A0806] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-3.5 mt-1 bg-[var(--text-primary)] hover:opacity-90 text-[#0A0806] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
             >
               {isLoading ? (
                 <>

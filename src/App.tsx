@@ -185,8 +185,11 @@ export default function App() {
     // Override the global Zustand store to trigger the UI changes
     useContractStore.getState().setPurchasedTier(targetTierNum);
     
-    // Route to home so the admin can test the routing locks natively
-    setActiveTab('home');
+    // Route to a gated tab so the admin immediately sees the simulated tier's
+    // locks AND keeps the shell's "Exit preview" banner in view. ('home' is the
+    // full-screen marketing landing, which hides the banner and dead-ends the
+    // simulation.)
+    setActiveTab('pinpoint');
   };
 
   const handleExitSimulation = () => {
@@ -290,21 +293,11 @@ export default function App() {
     }
   }, [purchasedTier]);
 
+  // Route upgrades to the real pricing surface. (The old behavior scrolled to
+  // #pricing-matrices on 'home', but home is the marketing landing now and
+  // SubscriptionPricing only mounts on the 'subscription' tab.)
   const handleUpgradeClick = () => {
-    if (activeTab !== 'home') {
-      setActiveTab('home');
-      setTimeout(() => {
-        const element = document.getElementById('pricing-matrices');
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 150);
-    } else {
-      const element = document.getElementById('pricing-matrices');
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }
+    setActiveTab('subscription');
   };
 
   // Global Command Palette states (Prism Menu) backed by our Zustand store
@@ -1028,17 +1021,17 @@ export default function App() {
           >
             <ErrorBoundary
               label={
-                activeTab === 'subscription' ? 'Subscriptions' :
-                activeTab === 'skyvision' ? 'SkyVision Cockpit' :
+                activeTab === 'subscription' ? 'Pricing' :
+                activeTab === 'skyvision' ? 'SkyVision' :
                 activeTab === 'pinpoint' ? 'Pinpoint GEX' :
                 activeTab === 'dealerflow' ? 'Dealer Flow' :
                 activeTab === 'liveterminal' ? 'Live Terminal' :
                 activeTab === 'quant' ? 'Quant Lab' :
-                activeTab === 'auditor' ? 'Trust Registry' :
-                activeTab === 'community' ? 'Arbor Capital' :
-                activeTab === 'settings' ? 'System Personalization' :
-                activeTab === 'workspace' ? 'Workstation Editor' :
-                activeTab === 'admin' ? 'Admin Overseer' :
+                activeTab === 'auditor' ? 'Trade History' :
+                activeTab === 'community' ? 'Community' :
+                activeTab === 'settings' ? 'Settings' :
+                activeTab === 'workspace' ? 'Workspace' :
+                activeTab === 'admin' ? 'Admin Panel' :
                 'Workspace'
               }
               key={activeTab}
@@ -1153,7 +1146,7 @@ export default function App() {
             )}
 
             {/* Defensive fallback: an unknown tab (e.g. corrupt persisted value) never blanks the workspace. */}
-            {!['home', 'subscription', 'skyvision', 'pinpoint', 'quant', 'auditor', 'community', 'settings', 'workspace', 'admin'].includes(activeTab) && (
+            {!['home', 'subscription', 'skyvision', 'pinpoint', 'dealerflow', 'liveterminal', 'quant', 'auditor', 'community', 'settings', 'workspace', 'admin'].includes(activeTab) && (
               <div className="w-full flex-1 flex flex-col items-center justify-center text-center py-24 px-6 select-none">
                 <div className="text-[var(--text-tertiary)] font-mono text-[11px] uppercase tracking-widest mb-3">View not found</div>
                 <p className="text-[var(--text-secondary)] text-sm max-w-sm mb-6 leading-relaxed">This workspace view isn’t available. Let’s get you back to the home cockpit.</p>
