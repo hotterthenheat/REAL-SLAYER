@@ -808,9 +808,6 @@ function statusMeta(health: number): { label: string; tone: BadgeTone } {
   return { label: 'Monitor', tone: 'neutral' };
 }
 
-const liqTone = (l: DerivedSetup['liquidity']) =>
-  l === 'Tight' ? 'text-[#2f9d45]' : l === 'Wide' ? 'text-[#d94646]' : 'text-[var(--warning)]';
-
 /** A compact confidence/probability bar with a trailing % value. */
 function MeterBar({ pct, tone = 'var(--pin)', showValue = true }: { pct: number; tone?: string; showValue?: boolean }) {
   const w = Math.max(0, Math.min(100, pct));
@@ -820,6 +817,33 @@ function MeterBar({ pct, tone = 'var(--pin)', showValue = true }: { pct: number;
         <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${w}%`, background: tone }} />
       </span>
       {showValue && <span className="slayer-num text-[11px] font-semibold tabular-nums" style={{ color: tone }}>{w.toFixed(0)}%</span>}
+    </span>
+  );
+}
+
+/** Confidence tier colour — distinct bands so a 95 clearly outreads an 86 at a glance. */
+function confColor(health: number): string {
+  if (health >= 90) return '#2f9d45';        // top tier — high conviction
+  if (health >= 85) return 'var(--warning)'; // upper-mid
+  if (health >= 80) return 'var(--pin)';     // mid
+  return 'var(--text-muted)';                // low / risk
+}
+
+/**
+ * Confidence bar for the ranked table. The fill is normalised across the meaningful
+ * 60–100 conviction band (not raw 0–100) so quality differences read at a glance —
+ * a 95 renders clearly longer than an 86 — while the trailing label stays the true
+ * score and the tiered colour reinforces rank.
+ */
+function ConfidenceBar({ health }: { health: number }) {
+  const color = confColor(health);
+  const fill = Math.max(5, Math.min(100, ((health - 60) / 40) * 100));
+  return (
+    <span className="inline-flex items-center gap-2 w-full">
+      <span className="relative h-1.5 flex-1 min-w-[36px] rounded-full bg-[var(--border-subtle)] overflow-hidden">
+        <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${fill}%`, background: color }} />
+      </span>
+      <span className="slayer-num text-[11px] font-semibold tabular-nums" style={{ color }}>{health.toFixed(0)}%</span>
     </span>
   );
 }
@@ -925,13 +949,10 @@ export function DiscoveryView({
   // "reconnecting" chip on the tape (the browser EventSource auto-reconnects).
   const [feedError, setFeedError] = useState(false);
   const [lastFlashingId, setLastFlashingId] = useState<string | null>(null);
-  const [flashDirection, setFlashDirection] = useState<'up' | 'down'>('up');
-  const [metricsPulse, setMetricsPulse] = useState(false);
 
   // Strategy Manual & target logic reasons dictionary (explanations in simple words why they are the best).
   // Collapsed by default per the redesign — education must not dominate the scanner page.
   const [isStrategyExpanded, setIsStrategyExpanded] = useState(false);
-  const [isSupportingOpen, setIsSupportingOpen] = useState(false);
   // The row the right-rail inspector describes; defaults to the top-ranked setup.
   const [selectedSetupId, setSelectedSetupId] = useState<string | null>(null);
   const [isMockScanning, setIsMockScanning] = useState(false);
@@ -983,25 +1004,7 @@ export function DiscoveryView({
     }
   };
 
-  // Helper function to formulate simple human reasons why each specific card is the best
-  const getSimpleWordReason = (c: any) => {
-    const isCall = c.isCall;
-    if (c.shelf === 'conviction') {
-      return `Solid institutional buy walls are supporting price at ${c.strike}. Option market makers are heavily short this strike and must buy stock to remain hedged, forming an automatic protective floor under our entry target.`;
-    } else if (c.shelf === 'improved') {
-      return `Rapid volume surge detected over the last few minutes. Buyers are sweeping contracts on the ask, preparing the asset for a classic option squeeze. High-velocity setup ideal for a quick, fast-exit momentum scalp.`;
-    } else if (c.shelf === 'mispriced') {
-      return `Illustrative example of a model/market gap: a sample ask of $${c.price.toFixed(2)} against a sample model value of $${(c.price * 1.4).toFixed(2)}. Demo data — not a live mispricing.`;
-    } else if (c.shelf === 'invalidation') {
-      return `Option is coming back to primary support buffers. Hovering right near the crucial put wall invalidation level. Entering here offers a safe, highly-defined rebound setup with extremely tight loss limits.`;
-    } else if (c.shelf === 'whale') {
-      return `Multi-million dollar blocks are sweeping this exact strike. This is institutional smart money committing heavy leverage, forcing dealer market makers to rapidly buy hedge blocks. Excellent tailwind trade.`;
-    }
-    return `High-scoring index anomaly active. Positive order flow momentum backing are aligned with dealer positioning and index support.`;
-  };
-
   // Stats tickers that change slightly
-  const [brierScore, setBrierScore] = useState(0.042);
   const [globalGex, setGlobalGex] = useState(485.4);
   const [scanRate, setScanRate] = useState(14.8);
   // Wall-clock of the last sample-metric tick, shown as an "as of" caption so the
@@ -1028,7 +1031,6 @@ export function DiscoveryView({
         const data = JSON.parse(event.data);
         if (data.contracts) setContracts(data.contracts);
         if (data.feedLogs) setFeedLogs(data.feedLogs);
-        if (typeof data.brierScore === 'number') setBrierScore(data.brierScore);
         if (typeof data.globalGex === 'number') setGlobalGex(data.globalGex);
         if (typeof data.scanRate === 'number') setScanRate(data.scanRate);
         if (typeof data.brierScore === 'number' || typeof data.globalGex === 'number' || typeof data.scanRate === 'number') {
@@ -1036,10 +1038,6 @@ export function DiscoveryView({
         }
         if (data.lastFlashingId) {
           setLastFlashingId(data.lastFlashingId);
-          if (data.flashDirection) setFlashDirection(data.flashDirection);
-
-          setMetricsPulse(true);
-          flashTimers.push(setTimeout(() => setMetricsPulse(false), 500));
           flashTimers.push(setTimeout(() => setLastFlashingId(null), 700));
         }
       } catch (err) {
@@ -1069,7 +1067,6 @@ export function DiscoveryView({
     const tickInterval = setInterval(() => {
       // Compute purely inside the updater; collect the flash side-effect to run AFTER.
       let flashedId: any = null;
-      let flashDir: 'up' | 'down' = 'up';
       setContracts(prev => {
         return prev.map(c => {
           // 8% chance of tick fluctuation on any option premium row
@@ -1082,7 +1079,6 @@ export function DiscoveryView({
             const askDev = isUp ? c.ask + (deviation * 1.1) : c.ask - (deviation * 1.1);
 
             flashedId = c.id;
-            flashDir = isUp ? 'up' : 'down';
 
             return {
               ...c,
@@ -1098,7 +1094,6 @@ export function DiscoveryView({
       // StrictMode/concurrent rendering (the updater can run twice).
       if (flashedId) {
         setLastFlashingId(flashedId);
-        setFlashDirection(flashDir);
         flashTimers.push(setTimeout(() => setLastFlashingId(null), 600));
       }
     }, 2800);
@@ -1401,8 +1396,7 @@ export function DiscoveryView({
         {/* LEFT: OPPORTUNITIES */}
         <TerminalPanel
           title={`Opportunities (${rankedSetups.length})`}
-          subtitle="Real ranked setups · strongest first"
-          actions={<StatusBadge tone="neutral">Sample model</StatusBadge>}
+          subtitle="Ranked setups · strongest first"
           bodyClassName="!p-0"
           footer={rankedSetups.length > OPP_PER_PAGE ? (
             <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
@@ -1441,10 +1435,15 @@ export function DiscoveryView({
             rows={pagedSetups}
             rowKey={(s) => s.c.id}
             onRowClick={(s) => setSelectedSetupId(s.c.id)}
-            rowClassName={(s) => [
-              selectedSetup?.c.id === s.c.id ? 'bg-[var(--bg-panel-raised)]' : '',
-              lastFlashingId === s.c.id ? 'bg-[rgba(248,248,255,0.05)]' : '',
-            ].filter(Boolean).join(' ')}
+            rowClassName={(s) => {
+              const isSelected = selectedSetup?.c.id === s.c.id;
+              return [
+                isSelected
+                  ? '[&>td]:bg-[var(--bg-panel-raised)] [&>td:first-child]:shadow-[inset_3px_0_0_0_var(--pin)] [&>td:first-child]:!text-[var(--text-primary)]'
+                  : '',
+                !isSelected && lastFlashingId === s.c.id ? '[&>td]:bg-[rgba(248,248,255,0.05)]' : '',
+              ].filter(Boolean).join(' ');
+            }}
             empty={(
               <div className="flex flex-col items-center gap-2 py-6">
                 <Crosshair className="h-5 w-5 text-[var(--text-faint)]" aria-hidden="true" />
@@ -1480,7 +1479,7 @@ export function DiscoveryView({
                   </span>
                 )
               },
-              { key: 'conf', header: 'Confidence', className: 'min-w-[124px]', render: (s) => <MeterBar pct={s.c.health} tone={s.c.health >= 90 ? '#2f9d45' : s.c.health >= 80 ? 'var(--warning)' : 'var(--pin)'} /> },
+              { key: 'conf', header: 'Confidence', className: 'min-w-[124px]', render: (s) => <ConfidenceBar health={s.c.health} /> },
               { key: 'move', header: 'Exp Move', align: 'right', render: (s) => <span className="slayer-num text-[var(--pin)]">±{s.expectedMovePct.toFixed(0)}%</span> },
               { key: 'rr', header: 'R/R', align: 'right', render: (s) => { const rr = computeRR(s); return <span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)}:1`}</span>; } },
               { key: 'status', header: 'Status', align: 'right', render: (s) => { const m = statusMeta(s.c.health); return <StatusBadge tone={m.tone}>{m.label}</StatusBadge>; } },
@@ -1516,7 +1515,6 @@ export function DiscoveryView({
             return (
               <TerminalPanel
                 title="Selected Setup"
-                actions={<DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />}
                 bodyClassName="!p-3.5 space-y-3"
               >
                 {/* identity */}
@@ -1556,7 +1554,7 @@ export function DiscoveryView({
                 <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5 space-y-2.5">
                   <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Probability &amp; Confidence</span>
                   <LabeledMeter label="Probability (Δ-implied ITM)" pct={prob} tone="var(--pin)" />
-                  <LabeledMeter label="Model confidence" pct={s.c.health} tone={s.c.health >= 90 ? '#2f9d45' : s.c.health >= 80 ? 'var(--warning)' : 'var(--pin)'} />
+                  <LabeledMeter label="Model confidence" pct={s.c.health} tone={confColor(s.c.health)} />
                 </div>
 
                 {/* expected move + target range */}

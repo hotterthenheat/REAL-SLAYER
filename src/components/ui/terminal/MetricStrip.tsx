@@ -47,6 +47,9 @@ const columnClass: Record<NonNullable<MetricStripProps['columns']>, string> = {
 };
 
 export function MetricStrip({ metrics, columns = 8, className }: MetricStripProps) {
+  // Denser strips get a smaller value type so multi-digit prices fit a cell
+  // intact — otherwise a tabular value like "5,453.11" breaks mid-number.
+  const valueSize = columns >= 8 ? 'text-[17px]' : columns >= 6 ? 'text-[19px]' : 'text-[22px]';
   return (
     <div
       className={cx(
@@ -68,7 +71,8 @@ export function MetricStrip({ metrics, columns = 8, className }: MetricStripProp
           </div>
           <div
             className={cx(
-              'mt-1.5 break-words text-[22px] font-semibold leading-[1.05] slayer-num',
+              'mt-1.5 font-semibold leading-[1.1] slayer-num [overflow-wrap:normal] [word-break:keep-all]',
+              valueSize,
               toneClass[metric.tone || 'neutral'],
             )}
           >
