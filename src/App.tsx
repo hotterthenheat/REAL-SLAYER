@@ -9,6 +9,7 @@ import { formatTime } from './lib/timeUtils';
 // Import Workspace Modular Views — eager imports are the shell + landing path.
 import { DiscoveryView } from './components/DiscoveryView';
 import SlayerLanding from './components/SlayerLanding';
+import SlayerLoader from './components/SlayerLoader';
 import TierGuard from './components/TierGuard';
 import { ClerkGate } from './components/ClerkGate';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
@@ -16,7 +17,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette } from './components/CommandPalette';
 import { Toaster } from './components/ui/toast';
 import { useTrackingResolver } from './lib/useTrackingResolver';
-import { Spinner } from './components/ui/Spinner';
 import { LegalCenter, useLegal } from './components/LegalCenter';
 // Eagerly imported — used directly by the Subscription tab; a lazy() wrapper here
 // can't code-split it cleanly and only warns at build.
@@ -898,13 +898,7 @@ export default function App() {
   }
 
   if (session === null) {
-    return (
-      <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-tertiary)] flex flex-col justify-center items-center font-mono select-none antialiased">
-        <Spinner size="lg" tone="primary" label="Connecting to your workspace" className="mb-4" />
-        <div className="tracking-widest uppercase text-xs text-[var(--text-primary)]">Connecting to your workspace…</div>
-        <div className="text-[10px] text-[var(--text-tertiary)] mt-2 uppercase font-mono font-bold">Verifying your secure session</div>
-      </div>
-    );
+    return <SlayerLoader label="Connecting to your workspace" sub="Verifying your secure session" />;
   }
 
   // Gating check has been deferred so that unauthenticated users can view the full homepage landing workspace.
@@ -912,13 +906,7 @@ export default function App() {
 
   // Safe fallback loading state and skeletal setup
   if (!serverState) {
-    return (
-      <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-tertiary)] flex flex-col justify-center items-center font-mono select-none antialiased">
-        <Spinner size="lg" tone="primary" label="Loading live market data" className="mb-4" />
-        <div className="tracking-widest uppercase text-xs text-[var(--text-primary)]">Loading live market data…</div>
-        <div className="text-[10px] text-[var(--text-tertiary)] mt-2 uppercase font-mono">Syncing the analytics engine</div>
-      </div>
-    );
+    return <SlayerLoader label="Loading live market data" sub="Syncing the analytics engine" />;
   }
 
   // ── HOME = full-screen marketing landing for EVERYONE (guest + authenticated).
