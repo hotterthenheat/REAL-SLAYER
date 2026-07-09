@@ -907,6 +907,10 @@ export function DiscoveryView({
   const [minExpMove, setMinExpMove] = useState<string>('0');
   const [optionTypeFilter, setOptionTypeFilter] = useState<'all' | 'calls' | 'puts'>('all');
 
+  // Opportunities pagination — 15/page like the render, so the bottom row stays in view.
+  const [oppPage, setOppPage] = useState(1);
+  const OPP_PER_PAGE = 15;
+
   // Watchlist / Queue rail
   const [watchQueueTab, setWatchQueueTab] = useState<'watchlist' | 'queue'>('queue');
   const [watchlist, setWatchlist] = useState<string[]>(() => loadWatchlist());
@@ -1201,6 +1205,11 @@ export function DiscoveryView({
     () => rankedSetups.find(s => s.c.id === selectedSetupId) ?? rankedSetups[0] ?? null,
     [rankedSetups, selectedSetupId],
   );
+  // Paginate the ranked table (15/page) — clamp the page so filter changes never strand it.
+  const oppTotalPages = Math.max(1, Math.ceil(rankedSetups.length / OPP_PER_PAGE));
+  const oppSafePage = Math.min(oppPage, oppTotalPages);
+  const oppStart = (oppSafePage - 1) * OPP_PER_PAGE;
+  const pagedSetups = rankedSetups.slice(oppStart, oppStart + OPP_PER_PAGE);
   // "Trade This Setup" / "Review" routes the contract into the SkyVision detail page.
   const reviewSetup = (s: { c: ScannerContract; side: 'C' | 'P' }) => {
     const asset = ASSET_LIST.find(a => a.ticker === s.c.ticker);
@@ -1395,9 +1404,41 @@ export function DiscoveryView({
           subtitle="Real ranked setups · strongest first"
           actions={<StatusBadge tone="neutral">Sample model</StatusBadge>}
           bodyClassName="!p-0"
+          footer={rankedSetups.length > OPP_PER_PAGE ? (
+            <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+              <span className="slayer-num">
+                {oppStart + 1}–{Math.min(oppStart + OPP_PER_PAGE, rankedSetups.length)} of {rankedSetups.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setOppPage(Math.max(1, oppSafePage - 1))}
+                  disabled={oppSafePage <= 1}
+                  className="slayer-control px-2 py-0.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  aria-label="Previous page"
+                >‹</button>
+                {Array.from({ length: oppTotalPages }, (_, i) => i + 1).map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => setOppPage(p)}
+                    aria-current={p === oppSafePage}
+                    className={`slayer-control slayer-num px-2 py-0.5 cursor-pointer ${p === oppSafePage ? 'border-[var(--border-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-primary)]' : ''}`}
+                  >{p}</button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setOppPage(Math.min(oppTotalPages, oppSafePage + 1))}
+                  disabled={oppSafePage >= oppTotalPages}
+                  className="slayer-control px-2 py-0.5 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  aria-label="Next page"
+                >›</button>
+              </div>
+            </div>
+          ) : undefined}
         >
           <DataTable<DerivedSetup>
-            rows={rankedSetups}
+            rows={pagedSetups}
             rowKey={(s) => s.c.id}
             onRowClick={(s) => setSelectedSetupId(s.c.id)}
             rowClassName={(s) => [
@@ -1412,7 +1453,7 @@ export function DiscoveryView({
               </div>
             )}
             columns={[
-              { key: 'rank', header: '#', align: 'left', className: 'w-[40px] text-[var(--text-faint)]', render: (_s, i) => <span className="slayer-num">{i + 1}</span> },
+              { key: 'rank', header: '#', align: 'left', className: 'w-[40px] text-[var(--text-faint)]', render: (_s, i) => <span className="slayer-num">{oppStart + i + 1}</span> },
               {
                 key: 'symbol', header: 'Symbol', render: (s) => (
                   <div className="flex items-center gap-1.5">
