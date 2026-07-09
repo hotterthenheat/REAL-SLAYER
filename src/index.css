@@ -2,7 +2,7 @@
    Space Grotesk and Rubik were imported but never rendered (the @theme --font-sans
    resolves to JetBrains Mono and wins the cascade), so they're dropped: 4 font
    downloads → 1, a real first-paint win, with zero visual change. */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -119,9 +119,11 @@ html, body, #root {
      ==================================================================== */
   /* Apple system typography (SF Pro) across the whole app — sans and mono resolve to
      the same San-Francisco stack so headings and data read as one clean system font.
-     Numeric alignment is preserved globally via font-variant-numeric: tabular-nums. */
+     The JetBrains-Mono brand face is reserved for the logo/wordmark only (see
+     --font-brand below), matching slayerterminal.com. */
   --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-mono: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-brand: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, monospace;
   --fs-h-xl: clamp(1.5rem, 1.05rem + 1.3vw, 2.4rem);
   --fs-h-l:  clamp(1.25rem, 1.0rem + 0.8vw, 1.8rem);
   --fs-h-m:  clamp(1.05rem, 0.95rem + 0.35vw, 1.4rem);
@@ -248,6 +250,12 @@ body {
   0%, 48% { opacity: 1; }
   49%, 100% { opacity: 0; }
 }
+
+/* Code-rain background — ported from slayerterminal.com: columns of terminal
+   lines drift up/down endlessly (each column duplicates its lines so -50% loops
+   seamlessly). */
+@keyframes slayerRainUp   { from { transform: translateY(0); }    to { transform: translateY(-50%); } }
+@keyframes slayerRainDown { from { transform: translateY(-50%); } to { transform: translateY(0); } }
 .slayer-caret {
   animation: slayer-caret 1.08s steps(1) infinite;
 }
@@ -258,6 +266,7 @@ body {
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-brand: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Monaco, monospace;
 
   /* High Density Theme Custom Color Mappings — dark greys collapse to the deep-ink base
      (#0A0A0A), never pure #000000, so bg-black / bg-zinc-* utilities honor the theme rule. */

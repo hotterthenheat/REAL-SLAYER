@@ -100,17 +100,24 @@ export default function SlayerLoader({
           className="text-[10px] font-semibold uppercase"
           style={{ letterSpacing: '0.34em', color: 'rgba(245,245,245,0.34)' }}
         >
-          Read Dealer Pressure Before Price Reacts
+          Read the flow. Rank the contract.
         </motion.div>
 
         <motion.h1
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-4 text-center text-[44px] font-semibold leading-none sm:text-[72px]"
-          style={{ color: '#F8F8FF', letterSpacing: '-0.035em' }}
+          className="mt-4 flex items-center justify-center text-center text-[34px] font-extrabold leading-none sm:text-[56px]"
+          style={{ color: '#F8F8FF', letterSpacing: '-0.02em', fontFamily: 'var(--font-brand)' }}
+          aria-label="slayer_terminal"
         >
-          SLAYER<span style={{ color: 'rgba(245,245,245,0.28)' }}> TERMINAL</span>
+          <span aria-hidden="true" style={{ color: 'rgba(245,245,245,0.42)', fontWeight: 700, fontSize: '0.84em', marginRight: '0.04em' }}>&gt;</span>
+          <span>slayer_terminal</span>
+          <span
+            aria-hidden="true"
+            className="slayer-caret"
+            style={{ display: 'inline-block', width: '0.5em', height: '0.92em', marginLeft: '0.14em', borderRadius: 2, background: '#F8F8FF', boxShadow: '0 0 18px rgba(244,245,246,0.5)' }}
+          />
         </motion.h1>
 
         {/* climbing count index — the editorial loader signature */}
@@ -174,7 +181,7 @@ export default function SlayerLoader({
 
       {/* bottom brand rule */}
       <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-        <span className="text-[10px] font-semibold tracking-[0.02em]" style={{ color: 'rgba(245,245,245,0.28)' }}>
+        <span className="text-[10px] font-bold tracking-[0.02em]" style={{ color: 'rgba(245,245,245,0.28)', fontFamily: 'var(--font-brand)' }}>
           &gt;slayer<span style={{ color: 'rgba(245,245,245,0.16)' }}>_terminal</span>
         </span>
       </div>

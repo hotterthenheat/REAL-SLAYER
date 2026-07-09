@@ -101,8 +101,8 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
       <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(900px 460px at 50% -10%, rgba(68,49,153,0.10), transparent 70%)' }} />
 
       <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10">
-        <span className="text-[13px] font-semibold tracking-[0.02em] text-[var(--text-primary)] font-mono">
-          &gt;slayer<span className="text-[var(--text-muted)]">_terminal</span>
+        <span className="text-[13px] font-bold tracking-[0.02em] text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-brand)' }}>
+          <span className="text-[var(--text-muted)]">&gt;</span>slayer<span className="text-[var(--text-muted)]">_terminal</span>
         </span>
       </div>
 
