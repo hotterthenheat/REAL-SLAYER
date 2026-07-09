@@ -32,12 +32,13 @@ const TIER_LOOKUP: Record<string, {
     badgeBg: "bg-[var(--accent-color)]/10 text-[var(--accent-color)] border-[var(--accent-color)]/20"
   },
   pinpoint: {
-    badge: "Tier 2 // Pinpoint GEX",
-    desc: "Track live dealer positioning and key GEX levels in real time — the dealer-GEX tool.",
+    badge: "Tier 2 // Pinpoint",
+    desc: "The dealer-GEX terminal — everything except SkyVision trade picks and Quant Lab.",
     features: [
       "Live dealer positioning (GEX, DEX, VEX)",
       "Gamma exposure by strike",
       "Zero-DTE levels and dealer dynamics",
+      "Dealer Flow, Live Terminal & Trade History",
       "Discord included"
     ],
     accentColor: "zinc",

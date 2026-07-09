@@ -14,6 +14,7 @@ import { NavCtx, FeedPill, renderNavItem } from './AppShell';
 import type { NavCtxValue } from './AppShell';
 import { BrandHeader, TerminalLogo } from './BrandLogo';
 import { NAV_MAIN_VIEWS, NAV_TOOLS, NAV_SETTINGS, SIDEBAR_COLLAPSED_KEY } from '../lib/navItems';
+import { useContractStore } from '../lib/store';
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -578,7 +579,7 @@ function LandingSidebarFooter({ onLaunch, onEnter, expanded }: { onLaunch: () =>
         <CreditCard className="w-4 h-4 shrink-0 text-[var(--text-tertiary)]" />
         <div className={`flex flex-col text-left transition-all duration-300 ${expanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0 overflow-hidden'}`}>
           <span className="text-[12px] font-semibold tracking-wide text-[var(--text-primary)] truncate">Plans &amp; pricing</span>
-          <span className="text-[12px] text-[var(--text-tertiary)] font-medium truncate">From $39/mo · view all</span>
+          <span className="text-[12px] text-[var(--text-tertiary)] font-medium truncate">From $125/mo · view all</span>
         </div>
       </button>
       <button
@@ -738,7 +739,7 @@ function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: () => vo
                 <CreditCard className="w-4 h-4 shrink-0 text-[var(--text-tertiary)]" />
                 <div className="flex flex-col">
                   <span className="text-[13px] font-semibold tracking-wide text-[var(--text-primary)]">Plans &amp; pricing</span>
-                  <span className="text-[12px] text-[var(--text-tertiary)] font-medium">From $39/mo · view all</span>
+                  <span className="text-[12px] text-[var(--text-tertiary)] font-medium">From $125/mo · view all</span>
                 </div>
               </button>
 
@@ -1257,69 +1258,114 @@ function ComparisonSection() {
   );
 }
 
-/* Real plans — mirror SubscriptionPricing (monthly $; annual saves up to 18%).
-   The landing shows the actual prices so "you can't even see pricing" is gone;
-   the CTA opens the live Pricing page (Stripe checkout / lifetime contact). */
-const PLANS: { name: string; price: string; note: string; feats: string[]; featured?: boolean }[] = [
-  { name: 'Discord', price: '$39', note: '/ mo', feats: ['Real-time Discord chat & alerts', 'Daily option discovery reports', 'Verified historic trade archive'] },
-  { name: 'Pinpoint GEX', price: '$99', note: '/ mo', feats: ['Everything in Discord', 'Live dealer positioning (GEX, DEX, VEX)', 'Gamma exposure by strike', 'Zero-DTE levels & dealer dynamics'] },
-  { name: 'SkyVision', price: '$499', note: '/ mo', featured: true, feats: ['Everything in Pinpoint GEX', 'Tells you which options to trade', 'Live volatility surface & expected P&L', 'Trade health score tracker', 'Quant Lab — backtester, order flow & momentum'] },
-  { name: 'Lifetime', price: 'Custom', note: 'talk to us', feats: ['All features unlocked', 'Permanent platform access', 'Private 1-on-1 onboarding', 'Early beta access to tools'] },
+/* Real plans — three tiers, mirroring SubscriptionPricing:
+     01 Pinpoint  $125/mo — everything EXCEPT SkyVision picks & Quant Lab
+     02 SkyVision $275/mo — everything included (flagship)
+     03 Lifetime  contact-only — everything, no listed price
+   The CTA opens the live Pricing page; Lifetime pre-arms the contact form so
+   one click from here puts the visitor straight into "fill your info out". */
+const PLANS: { key: string; name: string; tag: string; price: string; note: string; feats: string[]; featured?: boolean; cta: string }[] = [
+  {
+    key: 'pinpoint', name: 'Pinpoint', tag: 'The dealer-GEX terminal', price: '$125', note: '/ mo', cta: 'Select plan',
+    feats: [
+      'Live dealer positioning (GEX, DEX, VEX)',
+      'Gamma exposure by strike',
+      'Zero-DTE levels & dealer dynamics',
+      'Dealer Flow & Live Terminal',
+      'Trade History tracking',
+      'Real-time Discord chat & alerts',
+    ],
+  },
+  {
+    key: 'skyvision', name: 'SkyVision', tag: 'Everything included', price: '$275', note: '/ mo', featured: true, cta: 'Select plan',
+    feats: [
+      'Everything in Pinpoint',
+      'Tells you which options to trade',
+      'Live volatility surface & expected P&L',
+      'Trade health score tracker',
+      'Quant Lab — backtester, order flow & momentum',
+    ],
+  },
+  {
+    key: 'lifetime', name: 'Lifetime', tag: 'Everything, forever', price: 'Custom', note: 'talk to us', cta: 'Contact us',
+    feats: [
+      'Everything in SkyVision — forever',
+      'One payment, no recurring billing',
+      'Private 1-on-1 onboarding',
+      'Early beta access to new tools',
+    ],
+  },
 ];
 
-function PlanCard({ p, onEnter }: { p: (typeof PLANS)[number]; onEnter: (t?: string) => void }) {
+function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: number; onSelect: (p: (typeof PLANS)[number]) => void }) {
   return (
     <div
-      className="relative flex flex-col rounded-[10px] p-5 transition-colors duration-200"
+      className="group relative flex flex-col overflow-hidden rounded-[12px] p-6 transition-[transform,border-color,box-shadow] duration-200 will-change-transform hover:-translate-y-[3px]"
       style={{
         background: p.featured ? PALETTE.panel : PALETTE.panelSoft,
         border: `1px solid ${p.featured ? lineStrong : line}`,
-        boxShadow: p.featured ? '0 30px 80px -50px rgba(0,0,0,0.9)' : 'none',
+        boxShadow: p.featured ? '0 0 0 1px var(--border-strong), 0 30px 80px -50px rgba(0,0,0,0.9)' : 'none',
       }}
     >
+      {/* featured accent hairline — the flagship card carries the data palette */}
       {p.featured ? (
-        <span className="absolute -top-2.5 left-5 rounded-[5px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${PALETTE.steel}, ${PALETTE.amber}, ${PALETTE.green})` }} />
+      ) : null}
+      {/* oversized editorial tier index */}
+      <span aria-hidden="true" className="pointer-events-none absolute -top-2 right-4 select-none text-[56px] font-extrabold leading-none tabular-nums" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }}>
+        0{index + 1}
+      </span>
+      {p.featured ? (
+        <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[5px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
           Most Popular
         </span>
       ) : null}
-      <div className="border-b pb-4" style={{ borderColor: line }}>
-        <div className="text-[13px] font-semibold" style={{ color: PALETTE.ghost }}>{p.name}</div>
-        <div className="mt-3 flex items-baseline gap-1.5">
-          <span className="text-[30px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text }}>
+      <div className={`border-b pb-5 ${p.featured ? 'pt-6' : ''}`} style={{ borderColor: line }}>
+        <div className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{p.name}</div>
+        <div className="mt-0.5 text-[11px] uppercase tracking-[0.14em]" style={{ color: faint }}>{p.tag}</div>
+        <div className="mt-4 flex items-baseline gap-1.5">
+          <span className="text-[34px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text, letterSpacing: '-0.02em' }}>
             <CountUpPrice price={p.price} />
           </span>
           <span className="text-[11px]" style={{ color: faint }}>{p.note}</span>
         </div>
       </div>
-      <ul className="mt-4 flex-1 space-y-2">
+      <ul className="mt-5 flex-1 space-y-2.5">
         {p.feats.map((f, i) => (
-          <li key={i} className="flex items-start gap-2 text-[12px] leading-snug" style={{ color: muted }}>
+          <li key={i} className="flex items-start gap-2.5 text-[12.5px] leading-snug" style={{ color: muted }}>
             <Check className="mt-[2px] h-3.5 w-3.5 shrink-0" style={{ color: PALETTE.green }} />
-            <span>{f}</span>
+            <span className={i === 0 && index > 0 ? 'font-medium' : ''} style={i === 0 && index > 0 ? { color: PALETTE.text } : undefined}>{f}</span>
           </li>
         ))}
       </ul>
       <button
         type="button"
-        onClick={() => onEnter('subscription')}
-        className="mt-5 w-full cursor-pointer rounded-[7px] px-4 py-2.5 text-[11.5px] font-semibold uppercase tracking-[0.1em] transition-colors"
+        onClick={() => onSelect(p)}
+        className="mt-6 w-full cursor-pointer rounded-[7px] px-4 py-3 text-[11.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform] active:scale-[0.98]"
         style={p.featured ? { background: accentFill, color: accentText } : { background: 'transparent', color: PALETTE.text, border: `1px solid ${lineStrong}` }}
         onMouseEnter={(e) => { if (p.featured) e.currentTarget.style.background = accentBright; else e.currentTarget.style.background = hoverWash; }}
         onMouseLeave={(e) => { if (p.featured) e.currentTarget.style.background = accentFill; else e.currentTarget.style.background = 'transparent'; }}
       >
-        {p.name === 'Lifetime' ? 'Contact sales' : 'Select plan'}
+        {p.cta}
       </button>
     </div>
   );
 }
 
 function PricingSection({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
+  const setCheckoutPlan = useContractStore((s) => s.setCheckoutPlan);
+  // Lifetime is contact-only: pre-arm the plan intent so the Pricing page opens
+  // straight into the contact form ("just fill your info out") — one click.
+  const select = (p: (typeof PLANS)[number]) => {
+    if (p.key === 'lifetime') setCheckoutPlan('lifetime');
+    onEnter('subscription');
+  };
   return (
     <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
-      <div className="mx-auto max-w-6xl">
+      <div className="mx-auto max-w-5xl">
         <SectionHead eyebrow="Pricing" title="Plans & Access" sub="Slayer Terminal is live — no waitlist. Pick a plan and open the full terminal. Annual billing saves up to 18%." />
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-stretch">
-          {PLANS.map((p) => <PlanCard key={p.name} p={p} onEnter={onEnter} />)}
+        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3 md:items-stretch">
+          {PLANS.map((p, i) => <PlanCard key={p.key} p={p} index={i} onSelect={select} />)}
         </div>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
@@ -1556,9 +1602,11 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
           <Reveal><FeatureSection metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
           <Reveal><HowItWorks /></Reveal>
           <Reveal><ComparisonSection /></Reveal>
-          <Reveal><PricingSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
           <Reveal><FaqSection /></Reveal>
           <Reveal><FinalCta onLaunch={onLaunch} /></Reveal>
+          {/* the bottom of the page IS the pricing area — plans sit right under
+              the final CTA, just above the footer */}
+          <Reveal><PricingSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
           <Footer onLaunch={onLaunch} onEnter={onEnter} scrollTo={scrollTo} />
         </div>
       </div>

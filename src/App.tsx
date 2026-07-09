@@ -1057,7 +1057,7 @@ export default function App() {
             {/* TAB 2: SKYVISION (DECISION ENGINE) */}
             {activeTab === 'skyvision' && (
               <div className="view-enter">
-                <TierGuard requiredTier={3} tabKey="skyvision" planKey="skyvision" planName="SkyVision" planPrice="$499">
+                <TierGuard requiredTier={3} tabKey="skyvision" planKey="skyvision" planName="SkyVision" planPrice="$275">
                   <SkyVisionView />
                 </TierGuard>
               </div>
@@ -1067,7 +1067,7 @@ export default function App() {
             {/* TAB: DEALER FLOW — the live-flow terminal page (chart, order flow, chain). */}
             {activeTab === 'dealerflow' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
-                <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
+                <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <DealerFlowView />
                 </TierGuard>
               </div>
@@ -1076,7 +1076,7 @@ export default function App() {
             {/* TAB: LIVE TERMINAL — the GEX-node tick chart + strike×expiry heatmap + flow board. */}
             {activeTab === 'liveterminal' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
-                <TierGuard requiredTier={2} tabKey="live terminal" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
+                <TierGuard requiredTier={2} tabKey="live terminal" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <PinpointTerminal ticker={selectedAsset.ticker} />
                 </TierGuard>
               </div>
@@ -1084,7 +1084,7 @@ export default function App() {
 
             {activeTab === 'pinpoint' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
-                <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
+                <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <PinpointExposureView />
                 </TierGuard>
               </div>
@@ -1093,7 +1093,7 @@ export default function App() {
             {/* TAB: INSTITUTIONAL QUANT LAB */}
             {activeTab === 'quant' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
-                <TierGuard requiredTier={3} tabKey="quant" planKey="skyvision" planName="SkyVision" planPrice="$499">
+                <TierGuard requiredTier={3} tabKey="quant" planKey="skyvision" planName="SkyVision" planPrice="$275">
                   <QuantSuiteView />
                 </TierGuard>
               </div>
@@ -1102,7 +1102,7 @@ export default function App() {
             {/* TAB 5: AUDIT (TRUST ENGINE) */}
             {activeTab === 'auditor' && (
               <div className="view-enter">
-                <TierGuard requiredTier={3} tabKey="trust archive & registry" planKey="skyvision" planName="SkyVision" planPrice="$499">
+                <TierGuard requiredTier={3} tabKey="trust archive & registry" planKey="skyvision" planName="SkyVision" planPrice="$275">
                   <QuantAuditView
                     selectedAsset={selectedAsset}
                     isCall={selectedOptionType === 'C'}
@@ -1118,7 +1118,7 @@ export default function App() {
             {/* TAB 11: RESEARCH & COMMUNITY */}
             {activeTab === 'community' && (
               <div className="view-enter">
-                <TierGuard requiredTier={1} tabKey="research & community" planKey="discord" planName="Discord" planPrice="$39">
+                <TierGuard requiredTier={1} tabKey="research & community" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <ArborCapital />
                 </TierGuard>
               </div>
