@@ -939,8 +939,8 @@ export default function App() {
   const showAlerts = purchasedTier > 1 && ALERT_ROUTES.has(activeTab);
 
   return (
-    <AppShell 
-      session={session} 
+    <AppShell
+      session={session}
       onLogout={handleLogout}
       tierInfo={tierInfo}
       feedStatus={feedStatus}
@@ -983,6 +983,7 @@ export default function App() {
                 activeTab === 'subscription' ? 'Subscriptions' :
                 activeTab === 'skyvision' ? 'SkyVision Cockpit' :
                 activeTab === 'pinpoint' ? 'Pinpoint GEX' :
+                activeTab === 'dealerflow' ? 'Dealer Flow' :
                 activeTab === 'quant' ? 'Quant Lab' :
                 activeTab === 'auditor' ? 'Trust Registry' :
                 activeTab === 'community' ? 'Arbor Capital' :
@@ -994,13 +995,10 @@ export default function App() {
               key={activeTab}
             >
             <Suspense fallback={<div className="w-full min-h-[300px] flex items-center justify-center text-[var(--text-tertiary)] font-mono text-[11px] uppercase tracking-[0.25em] animate-pulse">Loading module…</div>}>
-            {/* TAB 1: HOME */}
-            {/* Authenticated users get the live in-app terminal dashboard; guests keep the
-                marketing / paywall landing (SlayerIntro) so the sign-up entry is preserved. */}
+            {/* TAB 1: HOME — authenticated users get the terminal dashboard in its own
+                TerminalShell chrome (per the refactor report); guests keep the landing. */}
             {activeTab === 'home' && session?.authenticated && (
-              <div className="animate-fadeIn">
-                <SlayerHomeTerminal />
-              </div>
+              <SlayerHomeTerminal />
             )}
             {activeTab === 'home' && !session?.authenticated && (
               <div className="animate-fadeIn">
@@ -1055,6 +1053,15 @@ export default function App() {
             )}
 
             {/* TAB 3: PINPOINT AI (MARKET INTELLIGENCE) */}
+            {/* TAB: DEALER FLOW — the live-flow terminal page (chart, order flow, chain). */}
+            {activeTab === 'dealerflow' && (
+              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+                <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
+                  <DealerFlowView />
+                </TierGuard>
+              </div>
+            )}
+
             {activeTab === 'pinpoint' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">

@@ -12,7 +12,6 @@ import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore } from '../lib/store';
 import PinpointChart from './PinpointChart';
-import { Term } from './ui/Tooltip';
 import { ToggleGroup } from './ui/ToggleGroup';
 import { Popover } from './ui/Popover';
 import { Sheet } from './ui/Sheet';
@@ -32,10 +31,12 @@ import { PanelSkeleton } from './PanelSkeleton';
 import { PinpointTrackButton } from './PinpointTrackButton';
 import { SearchInput } from './ui/SearchInput';
 import { DataStateBadge } from './ui/DataStateBadge';
+import { TerminalPanel } from './ui/terminal/TerminalPanel';
+import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
+import { DataTable, type DataColumn } from './ui/terminal/DataTable';
+import { StatusBadge } from './ui/terminal/StatusBadge';
 import {
   Waves,
-  Crosshair,
-  Magnet,
   Layers,
   Zap,
   ShieldAlert,
@@ -48,6 +49,7 @@ import {
 } from 'lucide-react';
 import { ASSET_LIST } from '../data';
 import { fmtNum } from '../lib/format';
+import type { TimeframeVal } from '../types';
 
 // Row chrome for the expiry-ladder popover — a selected row glows accent, others hover.
 const expiryRowCls = (active: boolean) =>
@@ -57,7 +59,40 @@ const expiryRowCls = (active: boolean) =>
       : 'border-transparent hover:bg-[var(--surface-3)]'
   }`;
 
-const fmtBn = (v: number) => `${v >= 0 ? '+' : '−'}$${(Math.abs(v / 1e9)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}B`;
+// ── Slayer-terminal formatting atoms (presentation only — no data synthesis) ──
+/** Level price with thousands separators, no decimals; "—" when absent. */
+const fmtLevel = (v?: number | null) =>
+  v == null || !isFinite(v) ? '—' : v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+/** Bare compact magnitude (colour encodes sign elsewhere): 1.3B / 212M / 4.1K / 70. */
+const fmtMag = (v?: number | null): string => {
+  if (v == null || !isFinite(v)) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${(a / 1e9).toFixed(a / 1e9 >= 100 ? 0 : 1)}B`;
+  if (a >= 1e6) return `${(a / 1e6).toFixed(0)}M`;
+  if (a >= 1e3) return `${(a / 1e3).toFixed(0)}K`;
+  return a.toFixed(0);
+};
+/** HH:MM:SS stamp for the notes rail. */
+const fmtNoteTime = (ts: number) =>
+  new Date(ts).toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+/** Timeframes offered on the Dealer Flow chart header (all map to the real store timeframe). */
+const CHART_TIMEFRAMES: TimeframeVal[] = ['1m', '5m', '15m', '1h', '1D'];
+
+const NOTE_TONE_TEXT: Record<'neutral' | 'positive' | 'negative' | 'warning', string> = {
+  neutral: 'text-[var(--text-secondary)]',
+  positive: 'text-[var(--positive-ink)]',
+  negative: 'text-[var(--negative-ink)]',
+  warning: 'text-[var(--warning)]',
+};
+
+const LEVEL_TONE_COLOR: Record<string, string> = {
+  call: 'var(--call)',
+  negative: 'var(--negative-ink)',
+  pin: 'var(--pin)',
+  warning: 'var(--warning)',
+  neutral: 'var(--text-primary)',
+};
 const fmtGreek = (v: number) => {
   const abs = Math.abs(v);
   if (abs >= 1e9) {
@@ -385,6 +420,7 @@ export function DealerFlowView() {
   const selectedAsset = useContractStore(s => s.selectedAsset);
   const setSelectedAsset = useContractStore(s => s.setSelectedAsset);
   const selectedTimeframe = useContractStore(s => s.selectedTimeframe);
+  const setSelectedTimeframe = useContractStore(s => s.setSelectedTimeframe);
   // Gate the streamed server state to the asset currently in view so switching
   // tickers doesn't briefly render the previous ticker's dealer data.
   const rawServerState = useContractStore(s => s.serverState);
@@ -791,40 +827,221 @@ export function DealerFlowView() {
   const chartLiquidityEvents = useMemo(() => disp?.sweeps || [], [disp?.sweeps]);
   const chartTape = useMemo(() => serverState?.tape || [], [serverState?.tape]);
 
+  // ────────────────────────────────────────────────────────────────────────
+  // Mock-parity presentation data — every value below is a re-aggregation of
+  // fields the page already streams (profile strikes, dealer gauge, candles,
+  // option chain, live spots). Nothing here is fabricated.
+  // ────────────────────────────────────────────────────────────────────────
+
+  // Spot change over the loaded candle window (real candles only).
+  const spotChange = useMemo(() => {
+    const spot = (filteredProfile || profile)?.spot;
+    const first = chartCandles[0];
+    if (spot == null || !first || !isFinite(first.open) || first.open === 0) return null;
+    const chg = spot - first.open;
+    return { chg, pct: (chg / first.open) * 100 };
+  }, [chartCandles, filteredProfile, profile]);
+
+  // DEALER PRESSURE MATRIX rows — the real per-strike chain profile, sorted
+  // top-down, with the nearest real strike flagged for SPOT / PIN / FLIP.
+  const matrixData = useMemo(() => {
+    const p: any = filteredProfile || profile;
+    const strikes: any[] = p?.strikes || [];
+    if (!strikes.length) return { rows: [] as any[], pinStrike: null as number | null, flipStrike: null as number | null, spotStrike: null as number | null };
+    const sorted = [...strikes].sort((a, b) => b.strike - a.strike);
+    const nearest = (level?: number | null): number | null => {
+      if (level == null || !isFinite(level)) return null;
+      let bestStrike: number | null = null;
+      let best = Infinity;
+      for (const s of sorted) {
+        const d = Math.abs(s.strike - level);
+        if (d < best) { best = d; bestStrike = s.strike; }
+      }
+      return bestStrike;
+    };
+    return {
+      rows: sorted,
+      pinStrike: nearest(p?.magnet),
+      flipStrike: nearest(p?.gammaFlip),
+      spotStrike: nearest(p?.spot),
+    };
+  }, [filteredProfile, profile]);
+
+  // KEY LEVELS RAIL — real levels from the profile; per-level "pressure" is
+  // |netGex| at the nearest real strike (no interpolation, no invention).
+  const keyLevels = useMemo(() => {
+    const p: any = filteredProfile || profile;
+    if (!p || p.spot == null) return [];
+    const strikes: any[] = p.strikes || [];
+    const pressureAt = (level: number): number | null => {
+      if (!strikes.length) return null;
+      let best = Infinity;
+      let hit: any = null;
+      for (const s of strikes) {
+        const d = Math.abs(s.strike - level);
+        if (d < best) { best = d; hit = s; }
+      }
+      return hit ? Math.abs(hit.netGex || 0) : null;
+    };
+    return ([
+      { id: 'callWall', label: 'CALL WALL', price: p.callWall, tone: 'call' },
+      { id: 'spot', label: 'SPOT', price: p.spot, tone: 'neutral' },
+      { id: 'pin', label: 'PIN', price: p.magnet, tone: 'pin' },
+      { id: 'flip', label: 'FLIP', price: p.gammaFlip, tone: 'warning' },
+      { id: 'putWall', label: 'PUT WALL', price: p.putWall, tone: 'negative' },
+    ] as { id: string; label: string; price?: number; tone: string }[])
+      .filter((d) => d.price != null && isFinite(d.price))
+      .map((d) => ({
+        ...d,
+        price: d.price as number,
+        dist: (d.price as number) - p.spot,
+        distPct: p.spot ? (((d.price as number) - p.spot) / p.spot) * 100 : 0,
+        pressure: pressureAt(d.price as number),
+      }))
+      .sort((a, b) => b.price - a.price);
+  }, [filteredProfile, profile]);
+
+  // OPTIONS CHAIN — only the near-the-money chain the server actually streamed
+  // (bid/ask/Δ/OI per side; this feed carries no last-trade field). Volume is
+  // joined from the same real per-strike profile.
+  const chainView = useMemo(() => {
+    const chain = serverState?.option_chain;
+    const p: any = filteredProfile || profile;
+    const spot = p?.spot;
+    if (!chain || chain.length === 0 || spot == null) return { rows: [] as any[], atmStrike: null as number | null };
+    const byStrike = new Map<number, { strike: number; call?: any; put?: any }>();
+    for (const c of chain) {
+      const row = byStrike.get(c.strike) || { strike: c.strike };
+      if (c.type === 'call') row.call = c; else row.put = c;
+      byStrike.set(c.strike, row);
+    }
+    const volByStrike = new Map<number, any>((p?.strikes || []).map((s: any) => [s.strike, s]));
+    const nearSpot = [...byStrike.values()]
+      .map((r) => ({ ...r, vols: volByStrike.get(r.strike) }))
+      .sort((a, b) => Math.abs(a.strike - spot) - Math.abs(b.strike - spot))
+      .slice(0, 15);
+    const atmStrike = nearSpot.length ? nearSpot[0].strike : null;
+    return { rows: nearSpot.sort((a, b) => b.strike - a.strike), atmStrike };
+  }, [serverState?.option_chain, filteredProfile, profile]);
+
+  // ORDER FLOW — cumulative delta summed from the real streamed tape only.
+  const cumulativeDelta = useMemo(() => {
+    if (!chartTape.length) return null;
+    return chartTape.reduce(
+      (acc: number, t: any) => acc + (t.direction === 'sell' ? -1 : 1) * Math.abs(t.size ?? t.qty ?? t.volume ?? 1),
+      0,
+    );
+  }, [chartTape]);
+
+  // Multi-ticker live spots (real engine feed). The panel renders only when the
+  // server truly streams more than one ticker.
+  const multiTickerRows = useMemo(() => {
+    const prices = serverState?.liveSpotPrices;
+    if (!prices) return [];
+    return Object.entries(prices)
+      .filter(([, v]) => typeof v === 'number' && isFinite(v as number))
+      .map(([ticker, price]) => ({ ticker, price: price as number }))
+      .sort((a, b) => a.ticker.localeCompare(b.ticker));
+  }, [serverState?.liveSpotPrices]);
+
+  // MARKET NOTES — timestamped strings the engine already derives from real
+  // numbers (gex_summary text, dealer-flow headline, header analytics).
+  const frameTs = useMemo(() => {
+    const last = chartCandles[chartCandles.length - 1];
+    const t = last?.timestamp;
+    if (!t || !isFinite(t)) return Date.now();
+    return t > 1e12 ? t : t * 1000;
+  }, [chartCandles]);
+
+  const derivedNotes = useMemo(() => {
+    const out: { ts: number; text: string; tone: 'neutral' | 'positive' | 'negative' | 'warning' }[] = [];
+    const p: any = filteredProfile || profile;
+    const summary = serverState?.gex_summary;
+    if (summary?.text) out.push({ ts: summary.generatedAt || frameTs, text: summary.text, tone: 'neutral' });
+    if (gauge?.headline) {
+      out.push({
+        ts: frameTs,
+        text: `${gauge.bias ? `[${gauge.bias}] ` : ''}${gauge.headline}`,
+        tone: (gauge.pressure ?? 0) >= 0 ? 'positive' : 'negative',
+      });
+    }
+    if (headerAnalytics) {
+      out.push({
+        ts: frameTs,
+        text: `${headerAnalytics.regime} · pin risk ${headerAnalytics.pinRiskPct != null ? `${headerAnalytics.pinRiskPct}%` : '—'} · dealer control ${headerAnalytics.dealerControl} · control score ${headerAnalytics.controlScore}/100`,
+        tone: headerAnalytics.positiveGamma ? 'positive' : 'warning',
+      });
+    }
+    if (p?.spot != null && p?.gammaFlip != null && isFinite(p.gammaFlip)) {
+      const d = p.spot - p.gammaFlip;
+      out.push({
+        ts: frameTs,
+        text: `Spot ${p.spot.toFixed(selectedAsset.decimals)} trades ${Math.abs(d).toFixed(1)} pts ${d >= 0 ? 'above' : 'below'} the γ-flip (${fmtLevel(p.gammaFlip)}).`,
+        tone: d >= 0 ? 'positive' : 'negative',
+      });
+    }
+    return out;
+  }, [filteredProfile, profile, serverState?.gex_summary, gauge, headerAnalytics, frameTs, selectedAsset.decimals]);
+
+  // Trader notes — persisted per ticker to localStorage.
+  const notesKey = `slayer-dealerflow-notes:${selectedAsset.ticker}`;
+  const [userNotes, setUserNotes] = useState<{ ts: number; text: string }[]>([]);
+  const [noteDraft, setNoteDraft] = useState('');
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(notesKey);
+      setUserNotes(raw ? JSON.parse(raw) : []);
+    } catch {
+      setUserNotes([]);
+    }
+  }, [notesKey]);
+  const persistUserNotes = (next: { ts: number; text: string }[]) => {
+    setUserNotes(next);
+    try { window.localStorage.setItem(notesKey, JSON.stringify(next)); } catch { /* storage unavailable */ }
+  };
+  const addUserNote = () => {
+    const text = noteDraft.trim();
+    if (!text) return;
+    persistUserNotes([{ ts: Date.now(), text }, ...userNotes].slice(0, 50));
+    setNoteDraft('');
+  };
+
   if (!serverState || !profile || !profile.strikes || !gauge || !disp) {
     return (
-      <div
-        className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-lg p-6 space-y-5"
-        id="dealerflow-data-pending"
-        role="status"
-        aria-busy="true"
-        aria-label="Loading dealer flow data"
-      >
-        <div className="flex flex-col items-center justify-center text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-[var(--surface-2)] border border-[var(--border)] flex items-center justify-center">
-            <Waves className="w-6 h-6 text-[var(--success)]" />
+      <div className="slayer-terminal w-full p-3 sm:p-4">
+        <div
+          className="slayer-panel w-full p-6 space-y-5"
+          id="dealerflow-data-pending"
+          role="status"
+          aria-busy="true"
+          aria-label="Loading dealer flow data"
+        >
+          <div className="flex flex-col items-center justify-center text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-[var(--bg-panel-raised)] border border-[var(--border-subtle)] flex items-center justify-center">
+              <Waves className="w-6 h-6 text-[var(--pin)]" />
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="text-[11px] font-bold tracking-[0.16em] text-[var(--text-primary)] uppercase">
+                LOADING DEALER FLOW DATA
+              </h2>
+              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.14em] leading-relaxed max-w-sm mx-auto">
+                Loading hedging profiles, order flow, and price zones. Select any strike or option type to start the feed.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 justify-center">
+              <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] inline-block animate-pulse" />
+              <span className="text-[9px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">
+                AWAITING FIRST DATA FRAME...
+              </span>
+            </div>
           </div>
-          <div className="space-y-1.5">
-            <h2 className="text-[11px] font-black tracking-widest text-[var(--text-primary)] uppercase font-sans">
-              LOADING DEALER FLOW DATA
-            </h2>
-            <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest leading-relaxed max-w-sm mx-auto">
-              Loading hedging profiles, order flow, and price zones. Select any strike or option type to start the feed.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 justify-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] inline-block animate-pulse" />
-            <span className="text-[8px] font-mono tracking-widest text-[var(--text-tertiary)] font-bold uppercase">
-              AWAITING FIRST DATA FRAME...
-            </span>
-          </div>
-        </div>
 
-        {/* Skeleton mirroring the GEX / DEX / VEX 3-column profile layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <PanelSkeleton label="Gamma Exposure (GEX)" rows={5} />
-          <PanelSkeleton label="Delta Exposure (DEX)" rows={5} />
-          <PanelSkeleton label="Vega Exposure (VEX)" rows={5} />
+          {/* Skeleton mirroring the GEX / DEX / VEX 3-column profile layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-[var(--gap)]">
+            <PanelSkeleton label="Gamma Exposure (GEX)" rows={5} />
+            <PanelSkeleton label="Delta Exposure (DEX)" rows={5} />
+            <PanelSkeleton label="Vega Exposure (VEX)" rows={5} />
+          </div>
         </div>
       </div>
     );
@@ -847,7 +1064,7 @@ export function DealerFlowView() {
       <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" />
     </>
   );
-  const expiryTriggerCls = 'flex items-center gap-2.5 rounded-lg border border-[var(--border-strong)] bg-[var(--surface-3)] px-3 py-2 text-left transition-colors hover:border-[var(--accent-color)]/50 hover:bg-[var(--surface-2)] cursor-pointer';
+  const expiryTriggerCls = 'slayer-control flex items-center gap-2 text-left cursor-pointer hover:border-[var(--border-strong)]';
 
   const expiryLadder = (
     <div className="flex flex-col">
@@ -929,6 +1146,240 @@ export function DealerFlowView() {
     </div>
   );
 
+  // ──────────────────────────────────────────────────────────────────────────
+  // Render-time view models (post-guard: serverState/profile/gauge/disp exist).
+  // Purely presentational re-reads of the real fields above — "—" when absent.
+  // ──────────────────────────────────────────────────────────────────────────
+  const view: any = filteredProfile || profile;
+  const dec = selectedAsset.decimals;
+
+  const distSub = (level?: number | null): string | undefined => {
+    if (level == null || !isFinite(level) || view.spot == null) return undefined;
+    const d = (level as number) - view.spot;
+    return `${d >= 0 ? '+' : ''}${d.toFixed(1)} vs spot`;
+  };
+
+  const biasTone: Metric['tone'] = (gauge.pressure ?? 0) > 0 ? 'positive' : (gauge.pressure ?? 0) < 0 ? 'negative' : 'neutral';
+
+  const kpiMetrics: Metric[] = [
+    {
+      label: 'Spot',
+      value: (
+        <LiveValue
+          value={view.spot}
+          format={(v) => (v as number).toLocaleString('en-US', { minimumFractionDigits: Math.min(2, dec), maximumFractionDigits: 2 })}
+        />
+      ),
+      sub: spotChange ? (
+        <span className={`slayer-num ${spotChange.chg >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
+          {`${spotChange.chg >= 0 ? '+' : ''}${spotChange.chg.toFixed(2)} (${spotChange.pct >= 0 ? '+' : ''}${spotChange.pct.toFixed(2)}%) · window`}
+        </span>
+      ) : '—',
+      tone: 'neutral',
+    },
+    { label: 'Call Wall', value: fmtLevel(view.callWall), sub: distSub(view.callWall), tone: 'call' },
+    { label: 'Put Wall', value: fmtLevel(view.putWall), sub: distSub(view.putWall), tone: 'negative' },
+    { label: 'Pin Level', value: fmtLevel(view.magnet), sub: distSub(view.magnet), tone: 'pin' },
+    {
+      label: 'Dealer Bias',
+      value: <span className="text-[15px] leading-tight">{(gauge.bias || '—').toUpperCase()}</span>,
+      sub: gauge.pressure != null ? `pressure ${gauge.pressure > 0 ? '+' : ''}${Math.round(gauge.pressure)}` : undefined,
+      tone: biasTone,
+    },
+    {
+      label: 'Expected Move',
+      value: view.expectedMovePct != null ? `±${(view.expectedMovePct * 100).toFixed(2)}%` : '—',
+      sub:
+        view.expectedMovePct != null && view.spot != null
+          ? `±${(view.expectedMovePct * view.spot).toFixed(Math.min(dec, 1))} pts · chain-implied`
+          : undefined,
+      tone: 'warning',
+    },
+    {
+      label: 'Flip',
+      value: fmtLevel(view.gammaFlip),
+      sub:
+        view.gammaFlip != null
+          ? `${distSub(view.gammaFlip) ?? ''}${view.gammaFlipConfident === false ? ' · est' : ''}`
+          : undefined,
+      tone: 'warning',
+    },
+    {
+      label: 'Net GEX / DEX',
+      value: view.netGex != null ? fmtGreek(view.netGex) : '—',
+      sub: <span className="slayer-num">DEX {view.netDex != null ? fmtGreek(view.netDex) : '—'}</span>,
+      tone: (view.netGex ?? 0) >= 0 ? 'positive' : 'negative',
+    },
+  ];
+
+  // Cell atoms for the pressure matrix / chain: red negative, info-blue positive.
+  const pressCell = (v?: number | null) => (
+    <span
+      className={`slayer-num text-[11px] font-medium ${
+        v == null || !isFinite(v) ? 'text-[var(--text-faint)]' : v < 0 ? 'text-[var(--negative-ink)]' : 'text-[var(--info)]'
+      }`}
+    >
+      {v == null || !isFinite(v) ? '—' : fmtGreek(v)}
+    </span>
+  );
+  const countCell = (v?: number | null) => (
+    <span className="slayer-num text-[11px] text-[var(--text-secondary)]">
+      {v == null || !isFinite(v) ? '—' : Math.round(v).toLocaleString('en-US')}
+    </span>
+  );
+  const chainNum = (v?: number, digits = 2) => (v == null || !isFinite(v) ? '—' : v.toFixed(digits));
+
+  const matrixColumns: DataColumn<any>[] = [
+    {
+      id: 'strike',
+      title: 'STRIKE',
+      align: 'left',
+      className: 'whitespace-nowrap',
+      render: (r) => (
+        <span className="flex items-center gap-1.5">
+          <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{fmtNum(r.strike)}</span>
+          {r.strike === matrixData.spotStrike && (
+            <span className="rounded-[4px] border border-[var(--border-strong)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">SPOT</span>
+          )}
+          {r.strike === matrixData.pinStrike && (
+            <span className="rounded-[4px] border border-[color:rgba(44,104,123,0.55)] bg-[rgba(44,104,123,0.16)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">PIN</span>
+          )}
+          {r.strike === matrixData.flipStrike && (
+            <span className="rounded-[4px] border border-[color:rgba(196,154,58,0.5)] bg-[rgba(196,154,58,0.14)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--warning)]">FLIP</span>
+          )}
+        </span>
+      ),
+    },
+    { id: 'cPress', title: <span className="text-[var(--call)]">C PRESS</span>, align: 'right', render: (r) => pressCell(r.callGex) },
+    { id: 'cOi', title: <span className="text-[var(--call)]">C OI</span>, align: 'right', render: (r) => countCell(r.callOi) },
+    { id: 'cVol', title: <span className="text-[var(--call)]">C VOL</span>, align: 'right', render: (r) => countCell(r.callVolume) },
+    { id: 'pPress', title: <span className="text-[var(--negative-ink)]">P PRESS</span>, align: 'right', render: (r) => pressCell(r.putGex) },
+    { id: 'pOi', title: <span className="text-[var(--negative-ink)]">P OI</span>, align: 'right', render: (r) => countCell(r.putOi) },
+    { id: 'pVol', title: <span className="text-[var(--negative-ink)]">P VOL</span>, align: 'right', render: (r) => countCell(r.putVolume) },
+    { id: 'net', title: 'NET', align: 'right', render: (r) => pressCell(r.netGex) },
+  ];
+
+  const keyLevelColumns: DataColumn<any>[] = [
+    {
+      id: 'level',
+      title: 'LEVEL',
+      align: 'left',
+      render: (r) => (
+        <span className="flex items-center gap-1.5">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: LEVEL_TONE_COLOR[r.tone] }} />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em]" style={{ color: LEVEL_TONE_COLOR[r.tone] }}>{r.label}</span>
+        </span>
+      ),
+    },
+    {
+      id: 'price',
+      title: 'PRICE',
+      align: 'right',
+      render: (r) => (
+        <span className="slayer-num text-[11.5px] font-semibold text-[var(--text-primary)]">
+          {(r.price as number).toLocaleString('en-US', { maximumFractionDigits: dec })}
+        </span>
+      ),
+    },
+    {
+      id: 'dist',
+      title: 'DIST',
+      align: 'right',
+      render: (r) =>
+        r.id === 'spot' ? (
+          <span className="slayer-num text-[11px] text-[var(--text-muted)]">—</span>
+        ) : (
+          <span className={`slayer-num text-[11px] ${r.dist >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
+            {`${r.dist >= 0 ? '+' : ''}${r.dist.toFixed(1)} (${r.distPct >= 0 ? '+' : ''}${r.distPct.toFixed(2)}%)`}
+          </span>
+        ),
+    },
+    {
+      id: 'pressure',
+      title: 'PRESSURE',
+      align: 'right',
+      render: (r) => (
+        <span className="slayer-num text-[11px] text-[var(--text-primary)]">{r.pressure != null ? `$${fmtMag(r.pressure)}` : '—'}</span>
+      ),
+    },
+  ];
+
+  const chainColumns: DataColumn<any>[] = [
+    { id: 'cBid', title: <span className="text-[var(--call)]">BID</span>, align: 'right', render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-secondary)]">{chainNum(r.call?.bid)}</span> },
+    { id: 'cAsk', title: <span className="text-[var(--call)]">ASK</span>, align: 'right', render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-secondary)]">{chainNum(r.call?.ask)}</span> },
+    { id: 'cDelta', title: <span className="text-[var(--call)]">Δ</span>, align: 'right', render: (r) => <span className="slayer-num text-[10.5px] text-[var(--info)]">{chainNum(r.call?.delta)}</span> },
+    { id: 'cVol', title: <span className="text-[var(--call)]">VOL</span>, align: 'right', render: (r) => countCell(r.vols?.callVolume) },
+    { id: 'cOi', title: <span className="text-[var(--call)]">OI</span>, align: 'right', render: (r) => countCell(r.call?.openInterest) },
+    {
+      id: 'strike',
+      title: 'STRIKE',
+      align: 'center',
+      className: 'whitespace-nowrap',
+      render: (r) => <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{fmtNum(r.strike)}</span>,
+    },
+    { id: 'pBid', title: <span className="text-[var(--negative-ink)]">BID</span>, align: 'right', render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-secondary)]">{chainNum(r.put?.bid)}</span> },
+    { id: 'pAsk', title: <span className="text-[var(--negative-ink)]">ASK</span>, align: 'right', render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-secondary)]">{chainNum(r.put?.ask)}</span> },
+    { id: 'pDelta', title: <span className="text-[var(--negative-ink)]">Δ</span>, align: 'right', render: (r) => <span className="slayer-num text-[10.5px] text-[var(--negative-ink)]">{chainNum(r.put?.delta)}</span> },
+    { id: 'pVol', title: <span className="text-[var(--negative-ink)]">VOL</span>, align: 'right', render: (r) => countCell(r.vols?.putVolume) },
+    { id: 'pOi', title: <span className="text-[var(--negative-ink)]">OI</span>, align: 'right', render: (r) => countCell(r.put?.openInterest) },
+  ];
+
+  const multiTickerColumns: DataColumn<any>[] = [
+    {
+      id: 'ticker',
+      title: 'TICKER',
+      align: 'left',
+      render: (r) => (
+        <span className="flex items-center gap-2">
+          <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>
+          {r.ticker === selectedAsset.ticker && (
+            <span className="rounded-[4px] border border-[color:rgba(44,104,123,0.55)] bg-[rgba(44,104,123,0.16)] px-1 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--pin)]">IN VIEW</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      id: 'last',
+      title: 'LAST',
+      align: 'right',
+      render: (r) => (
+        <span className="slayer-num text-[11.5px] text-[var(--text-primary)]">
+          <LiveValue value={r.price} format={(v) => (v as number).toLocaleString('en-US', { maximumFractionDigits: 2 })} />
+        </span>
+      ),
+    },
+  ];
+
+  // Expiry selector (desktop Popover / phone Sheet) — mounted in the matrix panel actions.
+  const expirySelector = isNarrowExpiry ? (
+    <>
+      <button id="expiry-selector-trigger" onClick={() => setExpirySheetOpen(true)} className={expiryTriggerCls}>
+        {expiryTriggerInner}
+      </button>
+      <Sheet open={expirySheetOpen} onClose={() => setExpirySheetOpen(false)} side="bottom" title="Select Expiry" size="72vh">
+        {expiryLadder}
+      </Sheet>
+    </>
+  ) : (
+    <Popover
+      align="end"
+      width={300}
+      trigger={<button id="expiry-selector-trigger" className={expiryTriggerCls}>{expiryTriggerInner}</button>}
+    >
+      {expiryLadder}
+    </Popover>
+  );
+
+  const expiryStatus = isMultiExpiry
+    ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'expiry' : 'expiries'} · model split`
+    : expiryTab === 'aggregated'
+      ? 'all dates · live aggregate'
+      : (() => {
+          const t = tickerExpirations.find((x) => x.id === expiryTab);
+          return t ? `${t.date} · ${t.dteDays}DTE · model split` : 'select expiry';
+        })();
+  const isModelSplit = isMultiExpiry || expiryTab !== 'aggregated';
+
   return (
     <div className={`w-full tabular-data ${activeEngineView === 'terminal' ? 'h-full flex flex-col min-h-0' : 'space-y-6'}`} id="dealerflow-main-workspace-view">
       {/* ============== HEADER STRIP ============== */}
@@ -953,31 +1404,10 @@ export function DealerFlowView() {
           />
         </div>
 
-        {/* Row 2: dealer-level metric rail */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          {([
-            { label: 'Net GEX', value: filteredProfile ? fmtBn(filteredProfile.netGex) : '—', raw: filteredProfile?.netGex, mode: 'directional', tone: (filteredProfile?.netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', term: 'netGex' },
-            { label: 'Call Wall', value: filteredProfile?.callWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.callWall, mode: 'neutral', tone: 'var(--success)', term: 'callWall' },
-            { label: 'Put Wall', value: filteredProfile?.putWall?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.putWall, mode: 'neutral', tone: 'var(--danger)', term: 'putWall' },
-            { label: 'γ-Flip', value: filteredProfile?.gammaFlip?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.gammaFlip, mode: 'neutral', tone: 'var(--warning)', term: 'gammaFlip' },
-            { label: 'Pin Magnet', value: filteredProfile?.magnet?.toLocaleString(undefined, { maximumFractionDigits: 0 }) ?? '—', raw: filteredProfile?.magnet, mode: 'neutral', tone: 'var(--info)', def: 'Strike acting as the strongest price magnet/pin into expiration.' },
-            { label: 'Dist to Flip', value: filteredProfile?.gammaFlip ? `${Math.abs(filteredProfile.spot - filteredProfile.gammaFlip).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}` : '—', raw: filteredProfile?.gammaFlip ? Math.abs(filteredProfile.spot - filteredProfile.gammaFlip) : undefined, mode: 'neutral', tone: 'var(--text-primary)', def: 'Distance from spot to the gamma-flip level — how far price must travel to change the dealer-hedging regime.' },
-          ] as Array<{ label: string; value: string; raw?: number; mode: 'directional' | 'neutral'; tone: string; term?: string; def?: string }>).map(card => (
-            <div key={card.label} className="relative overflow-hidden bg-[var(--surface-2)] border border-[var(--border)] rounded-md pl-3 pr-3 py-1.5 min-w-0 lg:min-w-[88px] shrink-0" id={`card-${card.label.toLowerCase().replace(/\s+/g, '-')}`}>
-              {/* tone spine — each level carries its semantic colour as a left rail (instrument-panel read) */}
-              <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: card.tone, opacity: 0.75 }} />
-              <div className="text-[8px] font-black tracking-widest text-[var(--text-tertiary)] uppercase truncate">
-                {card.term ? <Term id={card.term as any}>{card.label}</Term> : card.def ? <Term def={card.def}>{card.label}</Term> : card.label}
-              </div>
-              <div className="text-[13px] sm:text-[14px] font-mono font-bold tabular-nums truncate leading-tight" style={{ color: card.tone }}>
-                {card.raw != null
-                  ? <LiveValue value={card.raw} mode={card.mode} format={() => card.value} />
-                  : card.value}
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
+
+      {/* ============== KPI STRIP (render parity — real GEX/dealer fields) ============== */}
+      <MetricStrip metrics={kpiMetrics} columns={8} />
 
       {/* ============== SUB-TABS & SEARCH ============== */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-0.5" id="dealerflow-subtabs-bar">
@@ -1146,7 +1576,162 @@ export function DealerFlowView() {
 
       {activeEngineView === 'profile' ? (
         <>
-          {/* ============== PRE-CALCULATED READ (the conclusion, up top) ============== */}
+          {/* ============================================================
+              RENDER-PARITY DEALER FLOW DASHBOARD
+              Row order mirrors the mock: price + key levels · pressure
+              matrix + order flow · gamma map · exposure profiles ·
+              options chain · market read. Every figure is a real field
+              off serverState / profile / dealer gauge / streamed tape.
+              ============================================================ */}
+
+          {/* Row 1 — price action (left) + key levels rail (right) */}
+          <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+            <TerminalPanel
+              className="xl:col-span-8"
+              title="Price Action"
+              subtitle="real candles · supply / demand & imbalance overlay"
+              actions={<FeedChip feed={serverState?.candle_feed} />}
+              padded={false}
+            >
+              <div className="h-[340px] w-full p-[var(--panel-pad)]">
+                <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={300} />
+              </div>
+            </TerminalPanel>
+            <TerminalPanel
+              className="xl:col-span-4"
+              title="Key Levels"
+              subtitle="dealer levels ranked vs spot"
+              padded={false}
+            >
+              <DataTable
+                columns={keyLevelColumns}
+                rows={keyLevels}
+                rowKey={(r) => r.id}
+                className="border-0"
+                emptyState="No dealer levels resolved for this chain yet."
+              />
+            </TerminalPanel>
+          </div>
+
+          {/* Row 2 — dealer pressure matrix (left) + order flow (right) */}
+          <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
+            <TerminalPanel
+              className="xl:col-span-8"
+              title="Dealer Pressure Matrix"
+              subtitle={expiryStatus}
+              actions={expirySelector}
+              padded={false}
+            >
+              <div className="max-h-[440px] overflow-y-auto">
+                <DataTable
+                  columns={matrixColumns}
+                  rows={matrixData.rows}
+                  rowKey={(r) => r.strike}
+                  className="border-0"
+                  rowClassName={(r) => (r.strike === matrixData.spotStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+                  emptyState="Chain profile pending."
+                />
+              </div>
+            </TerminalPanel>
+            <TerminalPanel
+              className="xl:col-span-4"
+              title="Order Flow"
+              subtitle="cumulative tape delta · live regime"
+            >
+              <div className="space-y-4">
+                <div>
+                  <div className="slayer-subtitle">Cumulative Δ · session tape</div>
+                  <div
+                    className={`mt-1 slayer-num text-[26px] font-semibold leading-none ${
+                      cumulativeDelta == null
+                        ? 'text-[var(--text-faint)]'
+                        : cumulativeDelta >= 0
+                          ? 'text-[var(--positive-ink)]'
+                          : 'text-[var(--negative-ink)]'
+                    }`}
+                  >
+                    {cumulativeDelta == null
+                      ? 'No tape'
+                      : `${cumulativeDelta >= 0 ? '+' : ''}${Math.round(cumulativeDelta).toLocaleString('en-US')}`}
+                  </div>
+                  <div className="mt-1 text-[11px] slayer-muted">
+                    {chartTape.length
+                      ? `${chartTape.length.toLocaleString('en-US')} prints in window`
+                      : 'streaming tape unavailable for this feed'}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="slayer-panel px-3 py-2">
+                    <div className="slayer-subtitle">Dealer Bias</div>
+                    <div
+                      className={`mt-0.5 slayer-num text-[14px] font-semibold ${
+                        biasTone === 'positive'
+                          ? 'text-[var(--positive-ink)]'
+                          : biasTone === 'negative'
+                            ? 'text-[var(--negative-ink)]'
+                            : 'text-[var(--text-primary)]'
+                      }`}
+                    >
+                      {(gauge.bias || '—').toUpperCase()}
+                    </div>
+                  </div>
+                  <div className="slayer-panel px-3 py-2">
+                    <div className="slayer-subtitle">Pressure</div>
+                    <div className="mt-0.5 slayer-num text-[14px] font-semibold text-[var(--text-primary)]">
+                      {gauge.pressure != null ? `${gauge.pressure > 0 ? '+' : ''}${Math.round(gauge.pressure)}` : '—'}
+                    </div>
+                  </div>
+                </div>
+                {multiTickerRows.length > 1 ? (
+                  <div>
+                    <div className="slayer-subtitle mb-1.5">Live tape · tracked tickers</div>
+                    <DataTable
+                      columns={multiTickerColumns}
+                      rows={multiTickerRows}
+                      rowKey={(r) => r.ticker}
+                      className="border-0"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </TerminalPanel>
+          </div>
+
+          {/* Row 3 — dealer net gamma map (real GEX inventory by strike) */}
+          <TerminalPanel title="Dealer Net Gamma Map" subtitle="inventory & pin levels by strike">
+            <DealerFlowMap profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
+          </TerminalPanel>
+
+          {/* Row 4 — exposure profiles GEX / DEX / VEX */}
+          <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-3">
+            {([
+              { type: 'gex' as const, label: 'Gamma Exposure', unit: '$ per 1% move' },
+              { type: 'dex' as const, label: 'Delta Exposure', unit: '$ per 1% spot move' },
+              { type: 'vex' as const, label: 'Vega Exposure', unit: '$ per 1% vol shift' },
+            ]).map((p) => (
+              <TerminalPanel key={p.type} title={p.label} subtitle={p.unit}>
+                <ExposureProfileChart profile={filteredProfile || profile} decimals={selectedAsset.decimals} type={p.type} />
+              </TerminalPanel>
+            ))}
+          </div>
+
+          {/* Row 5 — options chain (near-the-money, live) */}
+          <TerminalPanel
+            title="Options Chain"
+            subtitle={chainView.atmStrike != null ? `near-the-money · ATM ${fmtNum(chainView.atmStrike)}` : 'near-the-money'}
+            padded={false}
+          >
+            <DataTable
+              columns={chainColumns}
+              rows={chainView.rows}
+              rowKey={(r) => r.strike}
+              className="border-0"
+              rowClassName={(r) => (r.strike === chainView.atmStrike ? 'bg-[color:rgba(248,248,255,0.035)]' : undefined)}
+              emptyState={`This feed does not stream a per-contract chain for ${selectedAsset.ticker}.`}
+            />
+          </TerminalPanel>
+
+          {/* Row 6 — market read + supporting analysis (all real, real-data seams) */}
           {(filteredProfile || profile) && (
             <TerminalReadCard
               profile={filteredProfile || profile}
@@ -1156,11 +1741,13 @@ export function DealerFlowView() {
               isLive={!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC'}
             />
           )}
-
-          {/* Edge track record (proves the dealer read's historical hit-rate; self-hides until
-              outcomes resolve) + level-cross alerts — both live off the same GEX profile + spot. */}
+          <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-2 items-start">
+            <GexReadCard />
+            <ZeroDtePanel />
+          </div>
+          <DealerDynamicsPanel />
           {(filteredProfile || profile) && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+            <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-2 items-start">
               <EdgeTrackRecord
                 profile={filteredProfile || profile}
                 candles={chartCandles}
@@ -1178,241 +1765,6 @@ export function DealerFlowView() {
               />
             </div>
           )}
-
-          {/* ============== GEX PAGE HEADER (derived from real GEX profile) ============== */}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-2 mb-2 font-mono">
-            <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Asset</span>
-              <span className="text-sm font-black text-[var(--text-primary)] tabular-nums">{selectedAsset.ticker} <span className="text-[var(--text-tertiary)] font-medium">(<LiveValue value={profile?.spot} format={(v) => (v as number).toLocaleString(undefined, { maximumFractionDigits: 0 })} />)</span></span>
-            </div>
-            <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Regime</span>
-              <span className={`text-sm font-black ${headerAnalytics?.positiveGamma ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{headerAnalytics?.regime ?? '—'}</span>
-            </div>
-            <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Pin Risk</span>
-              <span className="text-sm font-black text-[var(--warning)] tabular-nums">{headerAnalytics?.pinRiskPct != null ? `${headerAnalytics.pinRiskPct}%` : '—'}</span>
-            </div>
-            <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Vol Risk</span>
-              <span className={`text-sm font-black ${headerAnalytics?.volRisk === 'LOW' ? 'text-[var(--info)]' : 'text-[var(--danger)]'}`}>{headerAnalytics?.volRisk ?? '—'}</span>
-            </div>
-            <div className="flex flex-col p-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] justify-center">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] font-bold mb-1">Dealer Control</span>
-              <span className={`text-sm font-black ${headerAnalytics?.dealerControl === 'HIGH' ? 'text-[var(--success)]' : 'text-[var(--warning)]'}`}>{headerAnalytics?.dealerControl ?? '—'}</span>
-            </div>
-            {/* Market Control Score */}
-            <div className="flex flex-col p-3 rounded-lg border border-[var(--accent-color)]/30 bg-[var(--accent-color)]/10 justify-center">
-              <span className="text-[10px] uppercase tracking-widest text-[var(--accent-color)] font-bold mb-1">Market Control</span>
-              <div className="flex items-end gap-2">
-                <span className="text-sm font-black text-[var(--text-primary)] tabular-nums"><LiveValue value={headerAnalytics?.controlScore} />{<span className="text-[10px] text-[var(--text-tertiary)] font-medium">/100</span>}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ============== TRADER INTENT EXPIRY CONTROLLER ============== */}
-          <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg" id="trader-intent-expiries-panel">
-            <div className="flex flex-col gap-1 min-w-0">
-              <span className="text-[10px] font-black uppercase text-[var(--text-secondary)] tracking-widest leading-none flex items-center gap-2 flex-wrap">
-                Expiry
-                <Badge tone="success" size="sm">{selectedAsset.ticker} PIPELINE</Badge>
-                {isMultiExpiry ? (
-                  <Badge tone="accent" size="sm" dot pulse>{activeExpiries.length} {activeExpiries.length === 1 ? 'EXPIRY' : 'EXPIRIES'}</Badge>
-                ) : expiryTab !== 'aggregated' ? (
-                  <Badge tone="warning" size="sm" title="Server delivers one aggregated chain; the per-expiry split shown when a single expiry is selected is a deterministic model, not a per-expiration feed.">MODEL SPLIT</Badge>
-                ) : null}
-              </span>
-              <span className="text-[11px] font-medium text-[var(--text-tertiary)]">Calendar is real; per-expiry hedging split is modeled from the aggregated chain (use All Dates for the live profile)</span>
-            </div>
-
-            {/* Compact expiry selector — full ladder + multi-expiry aggregation lives in a Popover
-                on desktop, a bottom Sheet on phones (a 300px popover is too cramped to scan there). */}
-            {isNarrowExpiry ? (
-              <>
-                <button id="expiry-selector-trigger" onClick={() => setExpirySheetOpen(true)} className={expiryTriggerCls}>
-                  {expiryTriggerInner}
-                </button>
-                <Sheet open={expirySheetOpen} onClose={() => setExpirySheetOpen(false)} side="bottom" title="Select Expiry" size="72vh">
-                  {expiryLadder}
-                </Sheet>
-              </>
-            ) : (
-              <Popover
-                align="end"
-                width={300}
-                trigger={<button id="expiry-selector-trigger" className={expiryTriggerCls}>{expiryTriggerInner}</button>}
-              >
-                {expiryLadder}
-              </Popover>
-            )}
-          </div>
-
-          {/* ============== DEALER FLOW MAP (Hero Chart) ============== */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-sm p-3 sm:p-5 shadow-sm" id="dealerflow-map-panel">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2">
-                <Layers className="w-4 h-4 text-[var(--success)] opacity-80" />
-                <div className="flex flex-col leading-none">
-                  <span className="text-[11px] font-bold tracking-[0.15em] uppercase text-[var(--text-primary)]">
-                    Dealer Net Gamma Map
-                  </span>
-                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-[0.2em] block mt-1.5 font-semibold">
-                    inventory & pin levels by strike
-                  </span>
-                </div>
-              </div>
-
-              {/* Read-only "what's shown" status — the expiry Popover/Sheet up top is the single
-                  control; this only reflects the current selection so the chart header has context. */}
-              <div className="flex items-center gap-2" id="gamma-map-expiry-status">
-                <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] hidden md:inline">Showing</span>
-                <Badge tone={isMultiExpiry ? 'accent' : expiryTab === 'aggregated' ? 'success' : 'warning'} size="sm">
-                  {isMultiExpiry
-                    ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'EXPIRY' : 'EXPIRIES'}`
-                    : expiryTab === 'aggregated'
-                      ? 'ALL DATES'
-                      : (() => { const t = tickerExpirations.find(x => x.id === expiryTab); return t ? `${t.date} · ${t.dteDays}DTE` : 'SELECT'; })()}
-                </Badge>
-              </div>
-            </div>
-            <DealerFlowMap profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
-          </div>
-
-          {/* ============== MAIN GRID (THE CHOSEN ORIGINAL 3-COLUMN LAYOUT) ============== */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5" id="dealerflow-main-grid">
-            
-            {/* GEX PROFILE */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 sm:p-5 flex flex-col justify-between" id="gex-profile-chart-panel">
-              <div>
-                <div className="flex items-center gap-2 text-[9px] font-black tracking-widest uppercase mb-4 text-[var(--success)]">
-                  <Layers className="w-3.5 h-3.5" />
-                  <span className="text-[var(--text-secondary)]">Gamma Exposure (GEX)</span>
-                  <span className="text-[var(--text-tertiary)] font-normal normal-case tracking-normal">· $ per 1% move</span>
-                </div>
-                <ExposureProfileChart profile={filteredProfile || profile} decimals={selectedAsset.decimals} type="gex" />
-              </div>
-
-              {/* GEX footer */}
-              {(filteredProfile || profile) && (
-                <div className="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-3 gap-2 text-center text-[10px] font-mono leading-none border-dashed border-[var(--border)]" id="gex-profile-chart-oi-footer">
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Call GEX</div>
-                    <div className="text-[10px] font-mono text-[var(--success)] font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => cur.callGex || 0).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Put GEX</div>
-                    <div className="text-[10px] font-mono text-[var(--danger)] font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => cur.putGex || 0).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Net GEX</div>
-                    <div className="text-[10px] font-mono text-[var(--text-primary)] font-bold">
-                      {fmtGreek((filteredProfile || profile).netGex)}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* DEX PROFILE */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 sm:p-5 flex flex-col justify-between" id="dex-profile-chart-panel">
-              <div>
-                <div className="flex items-center gap-2 text-[9px] font-black tracking-widest uppercase mb-4 text-[var(--accent-color)]">
-                  <Waves className="w-3.5 h-3.5" />
-                  <span className="text-[var(--text-secondary)]">Delta Exposure (DEX)</span>
-                  <span className="text-[var(--text-tertiary)] font-normal normal-case tracking-normal">· $ per 1% spot move</span>
-                </div>
-                <ExposureProfileChart profile={filteredProfile || profile} decimals={selectedAsset.decimals} type="dex" />
-              </div>
-
-              {/* DEX footer */}
-              {(filteredProfile || profile) && (
-                <div className="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-3 gap-2 text-center text-[10px] font-mono leading-none border-dashed border-[var(--border)]" id="dex-profile-chart-footer">
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Call DEX</div>
-                    <div className="text-[10px] font-mono text-sky-400 font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => cur.callDex || 0).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Put DEX</div>
-                    <div className="text-[10px] font-mono text-[var(--danger)] font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => cur.putDex || 0).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Net DEX</div>
-                    <div className="text-[10px] font-mono text-[var(--text-primary)] font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => (cur.callDex || 0) + (cur.putDex || 0)).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* VEX PROFILE */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 sm:p-5 flex flex-col justify-between" id="vex-profile-chart-panel">
-              <div>
-                <div className="flex items-center gap-2 text-[9px] font-black tracking-widest uppercase mb-4 text-[var(--accent-color)]">
-                  <Zap className="w-3.5 h-3.5" />
-                  <span className="text-[var(--text-secondary)]">Vega Exposure (VEX)</span>
-                  <span className="text-[var(--text-tertiary)] font-normal normal-case tracking-normal">· $ per 1% vol shift</span>
-                </div>
-                <ExposureProfileChart profile={filteredProfile || profile} decimals={selectedAsset.decimals} type="vex" />
-              </div>
-
-              {/* VEX footer */}
-              {(filteredProfile || profile) && (
-                <div className="mt-4 pt-3 border-t border-[var(--border)] grid grid-cols-3 gap-2 text-center text-[10px] font-mono leading-none border-dashed border-[var(--border)]" id="vex-profile-chart-footer">
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Call VEX</div>
-                    <div className="text-[10px] font-mono text-indigo-400 font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => cur.callVex || 0).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Put VEX</div>
-                    <div className="text-[10px] font-mono text-[var(--danger)] font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => cur.putVex || 0).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[8px] text-[var(--text-tertiary)] font-black uppercase tracking-widest mb-1">Net VEX</div>
-                    <div className="text-[10px] font-mono text-[var(--text-primary)] font-bold">
-                      {fmtGreek((filteredProfile || profile).strikes.map((cur: any) => (cur.callVex || 0) + (cur.putVex || 0)).reduce((acc: number, v: number) => acc + v, 0))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-          </div>
-
-          {/* Supportive Side-Insights Row containing GexReadCard and ZeroDtePanel placed beautifully beneath the profiles */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5" id="hedging-side-insights">
-            <GexReadCard />
-            <ZeroDtePanel />
-          </div>
-
-          {/* ============== DEALER DYNAMICS (Supplementary details for profile view) ============== */}
-          <DealerDynamicsPanel />
-
-          {/* ============== FULL WIDTH CHART AT BOTTOM ============== */}
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-lg p-3 sm:p-5 flex flex-col w-full overflow-hidden" id="displacement-overlay-chart-panel" style={{ minHeight: '380px' }}>
-            <div className="flex items-center justify-between mb-3 shrink-0">
-              <div className="flex items-center gap-2 text-[9px] font-black tracking-widest text-[var(--text-secondary)] uppercase">
-                <ShieldAlert className="w-3.5 h-3.5 text-[var(--danger)]" />
-                Price Action — Supply/Demand & Imbalance Overlay
-              </div>
-              <FeedChip feed={serverState?.candle_feed} />
-            </div>
-            <div className="flex-1 w-full h-[320px]">
-              <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={300} />
-            </div>
-          </div>
         </>
       ) : activeEngineView === 'targets' ? (
         <IntradayTargetsView profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
