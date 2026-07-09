@@ -11,7 +11,10 @@
 import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { useContractStore } from '../lib/store';
-import PinpointChart from './PinpointChart';
+import { ToggleGroup } from './ui/ToggleGroup';
+import { IntradayTargetsView } from './IntradayTargetsView';
+import PinpointTerminal from './PinpointTerminal';
+import { DealerFlowMap } from './DealerFlowMap';
 import { Popover } from './ui/Popover';
 import { Sheet } from './ui/Sheet';
 import { Badge } from './ui/Badge';
@@ -1381,18 +1384,30 @@ export function DealerFlowView() {
       {/* ============== KPI STRIP (9 tiles — render parity, real GEX/dealer fields) ============== */}
       <MetricStrip metrics={kpiMetrics} columns={9} />
 
-      {/* ============== ROW 1 — dealer flow chart + dealer pressure matrix ============== */}
+      {/* ============== ENGINE-VIEW SUB-TABS — the restored "other pages" ============== */}
+      <ToggleGroup<'profile' | 'targets' | 'terminal'>
+        ariaLabel="Engine view"
+        size="sm"
+        value={activeEngineView}
+        onChange={setActiveEngineView}
+        options={[
+          { value: 'profile', label: 'Hedging Profile' },
+          { value: 'targets', label: 'Ranked Targets' },
+          { value: 'terminal', label: 'Live Terminal Flow' },
+        ]}
+      />
+
+      {activeEngineView === 'profile' && (
+      <div className="space-y-[var(--gap)]">
+      {/* ============== ROW 1 — dealer net gamma map + dealer pressure matrix ============== */}
       <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-12">
         <TerminalPanel
           className="xl:col-span-7"
-          title={`Dealer Flow Chart · ${selectedAsset.ticker}`}
-          subtitle="real candles · dealer levels overlay"
-          actions={<FeedChip feed={serverState?.candle_feed} />}
-          padded={false}
+          title={`Dealer Net Gamma Map · ${selectedAsset.ticker}`}
+          subtitle="net dealer inventory & pin levels by strike"
+          actions={<FeedChip feed={filteredProfile?.feed || profile?.feed} />}
         >
-          <div className="h-[420px] w-full p-[var(--panel-pad)]">
-            <PinpointChart ticker={selectedAsset.ticker} timeframe={selectedTimeframe as any} height={380} />
-          </div>
+          <DealerFlowMap profile={filteredProfile || profile} decimals={selectedAsset.decimals} />
         </TerminalPanel>
         <TerminalPanel
           className="xl:col-span-5"
@@ -1552,6 +1567,15 @@ export function DealerFlowView() {
           </div>
         </TerminalPanel>
       </div>
+      </div>
+      )}
+
+      {activeEngineView === 'targets' && (
+        <IntradayTargetsView profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
+      )}
+      {activeEngineView === 'terminal' && (
+        <PinpointTerminal ticker={selectedAsset.ticker} />
+      )}
     </div>
   );
 }

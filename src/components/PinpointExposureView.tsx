@@ -22,6 +22,7 @@ import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
 import { InsightPanel } from './ui/terminal/InsightPanel';
 import { StatusBadge } from './ui/terminal/StatusBadge';
+import { DealerPositioningMap } from './pinpoint/DealerPositioningMap';
 import { Download, Waves } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -883,55 +884,22 @@ export default function PinpointExposureView() {
           </div>
         </TerminalPanel>
 
-        {/* RIGHT — DEALER POSITIONING MAP */}
-        <TerminalPanel
-          title="Dealer Positioning Map"
-          subtitle="Net dealer pressure by strike"
+        {/* RIGHT — DEALER POSITIONING MAP (static SVG — matches the render, no live jitter) */}
+        <DealerPositioningMap
+          rows={matrixDesc.map((r) => ({ strike: r.strike, value: r.netGex ?? 0 }))}
+          spot={spot ?? undefined}
+          callWall={callWall ?? undefined}
+          putWall={putWall ?? undefined}
+          pinLevel={magnet ?? undefined}
           actions={panelActions}
-          bodyClassName="flex flex-col gap-2"
-        >
-          {/* Legend */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
-            <span className="flex items-center gap-1.5">
-              <span
-                className="inline-block w-10 h-2 rounded-sm"
-                style={{
-                  background:
-                    'linear-gradient(90deg, var(--slayer-red), var(--gex-4) 42%, var(--call) 58%, var(--pin))',
-                }}
-                aria-hidden="true"
-              />
-              Net Dealer Pressure
-            </span>
-            <span className="flex items-center gap-1"><span className="text-[var(--text-primary)]">—</span> Spot</span>
-            <span className="flex items-center gap-1"><span className="text-[var(--slayer-red)]">—</span> Put Wall</span>
-            <span className="flex items-center gap-1"><span className="text-[var(--pin)]">—</span> Pin Level</span>
-            <span className="flex items-center gap-1"><span className="text-[var(--call)]">—</span> Call Wall</span>
-          </div>
-
-          {hasFriction && (
-            <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
-              Friction Zone {fmtLevel(frictionLo)}–{fmtLevel(frictionHi)}
-            </div>
-          )}
-
-          {/* Chart */}
-          <div style={{ height: 520 }}>
-            {chartOption ? (
-              <EChart option={chartOption} notMerge style={{ width: '100%', height: '100%' }} />
-            ) : (
-              <div className="h-full flex items-center justify-center text-[var(--text-muted)] text-[11px] uppercase tracking-widest">
-                Awaiting strike data…
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="pt-1 space-y-0.5">
-            <div className="text-[9px] tracking-wide" style={{ color: 'var(--pin)' }}>Positive = Dealer short gamma (upside supply)</div>
-            <div className="text-[9px] tracking-wide" style={{ color: 'var(--slayer-red)' }}>Negative = Dealer long gamma (downside support)</div>
-          </div>
-        </TerminalPanel>
+          footer={
+            hasFriction ? (
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
+                Friction Zone {fmtLevel(frictionLo)}–{fmtLevel(frictionHi)}
+              </span>
+            ) : undefined
+          }
+        />
       </div>
 
       {/* ─────────────── 3. BOTTOM STRIP ─────────────── */}
