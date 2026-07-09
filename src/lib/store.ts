@@ -301,17 +301,14 @@ export function useTierValidation() {
 export const useContractStore = create<ContractStore>((set, get) => ({
   activeTab: (() => {
     // Validate the restored tab against real render targets so a corrupt/renamed
-    // localStorage value can't blank the workspace. Legacy 'dealerflow' → 'pinpoint'.
-    const VALID = ['home', 'skyvision', 'pinpoint', 'quant', 'auditor', 'community', 'settings', 'admin', 'subscription', 'workspace'];
+    // localStorage value can't blank the workspace. 'dealerflow' is a first-class tab.
+    const VALID = ['home', 'skyvision', 'pinpoint', 'dealerflow', 'quant', 'auditor', 'community', 'settings', 'admin', 'subscription', 'workspace'];
     const raw = typeof window !== 'undefined' ? localStorage.getItem('lastActiveTab') : null;
-    const norm = raw === 'dealerflow' ? 'pinpoint' : raw;
-    return (norm && VALID.includes(norm) ? norm : 'home') as ContractStore['activeTab'];
+    return (raw && VALID.includes(raw) ? raw : 'home') as ContractStore['activeTab'];
   })(),
   setActiveTab: (tab, keepContract = false) => {
-    // The legacy 'dealerflow' tab was consolidated into 'pinpoint' (which renders
-    // DealerFlowView). Normalize so any lingering 'dealerflow' navigation resolves
-    // to a real, rendered view instead of a blank screen.
-    const normalizedTab = tab === 'dealerflow' ? 'pinpoint' : tab;
+    // 'dealerflow' is a first-class tab (renders DealerFlowView) alongside 'pinpoint'.
+    const normalizedTab = tab;
     localStorage.setItem('lastActiveTab', normalizedTab);
     if (normalizedTab === 'skyvision' && !keepContract) {
       set({ activeTab: normalizedTab, selectedStrike: null, isContractLocked: false, auditSearchQuery: '', expandedAuditId: null });
