@@ -1,4 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
+import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
+import SlayerCodeRain from './SlayerCodeRain';
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -10,8 +12,9 @@ import React, { useMemo, useState } from 'react';
  * — nothing here is fabricated.
  *
  * Rendered full-bleed (its own top nav replaces the app shell); product nav
- * links call `onEnter(tab)` to cross into the terminal, and every waitlist CTA
- * calls `onJoinWaitlist()`.
+ * links call `onEnter(tab)` to cross into the terminal, and every launch CTA
+ * calls `onLaunch()` (which signs the visitor in or opens the terminal). The
+ * product is live — there is no waitlist.
  */
 
 const PALETTE = {
@@ -49,7 +52,7 @@ export interface SlayerLandingProps {
   pressure?: PressureRow[];
   spark?: number[]; // real close series for the mini chart
   onEnter: (tab?: string) => void;
-  onJoinWaitlist: () => void;
+  onLaunch: () => void;
 }
 
 /* ─────────────────────────── formatting ─────────────────────────── */
@@ -289,34 +292,43 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
 }
 
 /* ─────────────────────────── sections ─────────────────────────── */
-const NAV = [
+const NAV: { label: string; href?: string; tab?: string }[] = [
   { label: 'Product', href: '#product' },
-  { label: 'Pinpoint', href: '#features' },
-  { label: 'SkyVision', href: '#features' },
-  { label: 'Pricing', href: '#waitlist' },
+  { label: 'Pinpoint', tab: 'pinpoint' },
+  { label: 'SkyVision', tab: 'skyvision' },
+  { label: 'Pricing', href: '#pricing' },
   { label: 'FAQ', href: '#faq' },
 ];
 
-function TopNav({ onJoinWaitlist }: { onJoinWaitlist: () => void }) {
+function TopNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
   const [open, setOpen] = useState(false);
+  const navStyle = { color: muted } as const;
   return (
     <header className="sticky top-0 z-50 w-full backdrop-blur" style={{ background: 'rgba(0,0,0,0.72)', borderBottom: `1px solid ${line}` }}>
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-semibold tracking-[0.02em]" style={{ color: PALETTE.ghost }}>
-            &gt;slayer<span style={{ color: muted }}>_terminal</span>
+          <span className="text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
+            <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
           </span>
         </div>
         <nav className="hidden items-center gap-7 md:flex">
           {NAV.map((n) => (
-            <a key={n.label} href={n.href} className="text-[12px] font-medium tracking-[0.02em] transition-colors" style={{ color: muted }}
-               onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.text)} onMouseLeave={(e) => (e.currentTarget.style.color = muted)}>
-              {n.label}
-            </a>
+            n.tab ? (
+              <button key={n.label} type="button" onClick={() => onEnter(n.tab)}
+                className="cursor-pointer text-[12px] font-medium tracking-[0.02em] transition-colors" style={navStyle}
+                onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.text)} onMouseLeave={(e) => (e.currentTarget.style.color = muted)}>
+                {n.label}
+              </button>
+            ) : (
+              <a key={n.label} href={n.href} className="text-[12px] font-medium tracking-[0.02em] transition-colors" style={navStyle}
+                 onMouseEnter={(e) => (e.currentTarget.style.color = PALETTE.text)} onMouseLeave={(e) => (e.currentTarget.style.color = muted)}>
+                {n.label}
+              </a>
+            )
           ))}
         </nav>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:block"><PrimaryButton onClick={onJoinWaitlist}>Join Waitlist</PrimaryButton></div>
+          <div className="hidden sm:block"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
           <button type="button" aria-label="Menu" className="cursor-pointer p-2 md:hidden" style={{ color: PALETTE.text }} onClick={() => setOpen((o) => !o)}>
             <div className="space-y-[3px]"><span className="block h-px w-5" style={{ background: PALETTE.text }} /><span className="block h-px w-5" style={{ background: PALETTE.text }} /><span className="block h-px w-5" style={{ background: PALETTE.text }} /></div>
           </button>
@@ -326,9 +338,13 @@ function TopNav({ onJoinWaitlist }: { onJoinWaitlist: () => void }) {
         <div className="md:hidden" style={{ borderTop: `1px solid ${line}` }}>
           <div className="mx-auto flex max-w-6xl flex-col gap-1 px-5 py-3">
             {NAV.map((n) => (
-              <a key={n.label} href={n.href} onClick={() => setOpen(false)} className="py-2 text-[13px]" style={{ color: muted }}>{n.label}</a>
+              n.tab ? (
+                <button key={n.label} type="button" onClick={() => { setOpen(false); onEnter(n.tab); }} className="cursor-pointer py-2 text-left text-[13px]" style={navStyle}>{n.label}</button>
+              ) : (
+                <a key={n.label} href={n.href} onClick={() => setOpen(false)} className="py-2 text-[13px]" style={navStyle}>{n.label}</a>
+              )
             ))}
-            <div className="pt-2"><PrimaryButton onClick={onJoinWaitlist}>Join Waitlist</PrimaryButton></div>
+            <div className="pt-2"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
           </div>
         </div>
       ) : null}
@@ -336,23 +352,37 @@ function TopNav({ onJoinWaitlist }: { onJoinWaitlist: () => void }) {
   );
 }
 
-function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onJoinWaitlist }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onJoinWaitlist'>> & Pick<SlayerLandingProps, 'onEnter' | 'onJoinWaitlist'>) {
+/* Reveal — slides + fades its children in the first time they scroll into view. */
+function Reveal({ children, y = 26, delay = 0 }: { children: React.ReactNode; y?: number; delay?: number }) {
+  const reduce = useReducedMotion();
+  if (reduce) return <>{children}</>;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-12% 0px -8% 0px' }}
+      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
   return (
     <section className="relative overflow-hidden">
-      {/* restrained radial wash — structure, not glow */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(1100px 520px at 50% -10%, rgba(68,49,153,0.12), transparent 70%)' }} />
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
         <div>
-          <Eyebrow>Institutional Options Intelligence</Eyebrow>
+          <Eyebrow>From Traders. For Traders.</Eyebrow>
           <h1 className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
-            Read Dealer Pressure<br />Before Price Reacts
+            Read the flow.<br />Rank the contract.
           </h1>
           <p className="mt-5 max-w-xl text-[15px] leading-relaxed" style={{ color: muted }}>
-            Slayer Terminal combines GEX, DEX, VEX, dealer positioning, volatility structure, and
-            contract ranking into one clean trading command center.
+            SkyVision finds the setup, Pinpoint AI reads the flow. GEX, DEX, VEX, dealer positioning,
+            and volatility structure — one clean trading command center.
           </p>
           <div className="mt-7 flex flex-wrap items-center gap-3">
-            <PrimaryButton onClick={onJoinWaitlist}>Join Waitlist</PrimaryButton>
+            <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
             <GhostButton onClick={() => onEnter('pinpoint')}>View Terminal Preview</GhostButton>
           </div>
           <p className="mt-5 text-[11.5px]" style={{ color: faint }}>
@@ -446,13 +476,13 @@ function FeatureSection({ metrics, onEnter }: { metrics: HeroMetrics; onEnter: (
       visual: <MiniKV rows={[['Call Wall', fmtLvl(metrics.callWall)], ['Put Wall', fmtLvl(metrics.putWall)], ['Pin', fmtLvl(metrics.pin)]]} /> },
     { t: 'SkyVision', tab: 'skyvision', d: 'Ranks trade setups and contracts by structure, momentum, and risk.',
       visual: <MiniBars values={[92, 84, 71, 58]} /> },
-    { t: 'Dealer Flow', tab: 'pinpoint', d: 'Tracks pressure changes across strikes as the tape develops.',
+    { t: 'Dealer Flow', tab: 'dealerflow', d: 'Tracks pressure changes across strikes as the tape develops.',
       visual: <MiniKV rows={[['Net GEX', fmtGex(metrics.netGex)], ['Bias', 'Short γ'], ['Regime', 'Accel.']]} /> },
     { t: 'Quant Lab', tab: 'quant', d: 'Volatility surface, Greeks, regime, and expected move.',
       visual: <MiniKV rows={[['Exp Move', fmtPct(metrics.expectedMovePct)], ['ATM IV', '—'], ['Skew', '—']]} /> },
     { t: 'Trade History', tab: 'auditor', d: 'Tracks setups and outcomes with honest, realized results.',
       visual: <MiniBars values={[40, 62, 55, 78]} /> },
-    { t: 'Command Center', tab: 'home', d: 'One clean workspace for market structure, start to execution.',
+    { t: 'Live Terminal', tab: 'liveterminal', d: 'One clean workspace for market structure, start to execution.',
       visual: <MiniKV rows={[['Spot', fmtPx(metrics.spot)], ['Levels', '5'], ['Setups', 'live']]} /> },
   ];
   return (
@@ -562,19 +592,23 @@ function ComparisonSection() {
   );
 }
 
-function WaitlistSection({ onJoinWaitlist }: { onJoinWaitlist: () => void }) {
+function GetStartedSection({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
   return (
-    <section id="waitlist" className="px-5 py-20" style={{ borderTop: `1px solid ${line}` }}>
+    <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}` }}>
       <div className="mx-auto max-w-2xl text-center">
-        <Eyebrow>Early Access</Eyebrow>
+        <Eyebrow>Live Now</Eyebrow>
         <h2 className="mt-3 text-[28px] font-semibold leading-tight sm:text-[34px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
-          Early Access Is Opening Soon
+          Start Reading Market Structure Today
         </h2>
         <p className="mx-auto mt-4 max-w-lg text-[14px] leading-relaxed" style={{ color: muted }}>
-          Join the waitlist for launch access, product previews, and early pricing.
+          Slayer Terminal is live. Create an account and open the full terminal — Pinpoint GEX,
+          SkyVision ranking, Dealer Flow, and the live command center. No waitlist.
         </p>
-        <div className="mt-7 flex justify-center"><PrimaryButton onClick={onJoinWaitlist}>Join Waitlist</PrimaryButton></div>
-        <p className="mt-4 text-[11px]" style={{ color: faint }}>The first early members may receive launch pricing.</p>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
+          <GhostButton onClick={() => onEnter('pinpoint')}>View Terminal Preview</GhostButton>
+        </div>
+        <p className="mt-4 text-[11px]" style={{ color: faint }}>Sign in to unlock full access. Pricing shown at checkout.</p>
       </div>
     </section>
   );
@@ -587,7 +621,7 @@ function FaqSection() {
     ['Does it choose contracts?', 'It ranks contracts by structure, momentum, and risk, and shows the reasoning. Selection stays with you.'],
     ['What data does it use?', 'Live options chains, dealer-exposure aggregates (GEX/DEX/VEX), candles, and volatility structure. When a live feed is not connected, panels are clearly labeled as model mode.'],
     ['Is it for beginners?', 'It is built for traders who already think in levels and risk. Beginners can use it, but it assumes you want structure, not tips.'],
-    ['When does it launch?', 'Early access is opening soon. Join the waitlist for launch access and previews.'],
+    ['Is it available now?', 'Yes. Slayer Terminal is live — there is no waitlist. Create an account and open the full terminal immediately.'],
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
@@ -611,15 +645,15 @@ function FaqSection() {
   );
 }
 
-function FinalCta({ onJoinWaitlist }: { onJoinWaitlist: () => void }) {
+function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
     <section className="relative overflow-hidden px-5 py-24" style={{ borderTop: `1px solid ${line}` }}>
       <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(800px 360px at 50% 120%, rgba(121,44,162,0.14), transparent 70%)' }} />
       <div className="relative mx-auto max-w-2xl text-center">
         <h2 className="text-[30px] font-semibold leading-tight sm:text-[38px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
-          Trade With Structure, Not Noise
+          From Traders. For Traders.
         </h2>
-        <div className="mt-8 flex justify-center"><PrimaryButton onClick={onJoinWaitlist}>Join Waitlist</PrimaryButton></div>
+        <div className="mt-8 flex justify-center"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
       </div>
     </section>
   );
@@ -629,7 +663,7 @@ function Footer() {
   return (
     <footer className="px-5 py-10" style={{ borderTop: `1px solid ${line}` }}>
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
-        <span className="text-[12px] font-semibold tracking-[0.02em]" style={{ color: PALETTE.ghost }}>&gt;slayer<span style={{ color: muted }}>_terminal</span></span>
+        <span className="text-[12px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}><span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span></span>
         <span className="text-[10px]" style={{ color: faint }}>For informational purposes only. Not investment advice. Analytics platform — not guaranteed profit.</span>
       </div>
     </footer>
@@ -637,24 +671,42 @@ function Footer() {
 }
 
 /* ─────────────────────────── page ─────────────────────────── */
-export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [], pressure = [], spark = [], onEnter, onJoinWaitlist }: SlayerLandingProps) {
+export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [], pressure = [], spark = [], onEnter, onLaunch }: SlayerLandingProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({ container: rootRef });
+  // hero drifts up + dims as the page scrolls (parallax hand-off to the sections)
+  const heroY = useTransform(scrollYProgress, [0, 0.16], [0, -70]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
   return (
     <div
+      ref={rootRef}
       className="fixed inset-0 z-[40] overflow-y-auto overflow-x-hidden font-mono antialiased slayer-scrollbar"
-      style={{ background: PALETTE.bg, color: PALETTE.text }}
+      style={{ background: '#08090A', color: PALETTE.text }}
     >
-      <TopNav onJoinWaitlist={onJoinWaitlist} />
-      <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onJoinWaitlist={onJoinWaitlist} />
-      <ProblemSection />
-      <SolutionSection />
-      <ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} />
-      <FeatureSection metrics={metrics} onEnter={onEnter} />
-      <HowItWorks />
-      <ComparisonSection />
-      <WaitlistSection onJoinWaitlist={onJoinWaitlist} />
-      <FaqSection />
-      <FinalCta onJoinWaitlist={onJoinWaitlist} />
-      <Footer />
+      {/* live code-rain background — ported from slayerterminal.com */}
+      <SlayerCodeRain />
+      {/* scroll-progress rail — GEX gradient, fixed to the top of the canvas */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-[60] h-[2px] origin-left"
+        style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.gex[0]}, ${PALETTE.gex[1]}, ${PALETTE.gex[2]}, ${PALETTE.gex[3]})` }}
+      />
+      <div className="relative z-10">
+        <TopNav onLaunch={onLaunch} onEnter={onEnter} />
+        <motion.div style={{ y: heroY, opacity: heroOpacity }}>
+          <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />
+        </motion.div>
+        <Reveal><ProblemSection /></Reveal>
+        <Reveal><SolutionSection /></Reveal>
+        <Reveal><ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
+        <Reveal><FeatureSection metrics={metrics} onEnter={onEnter} /></Reveal>
+        <Reveal><HowItWorks /></Reveal>
+        <Reveal><ComparisonSection /></Reveal>
+        <Reveal><GetStartedSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
+        <Reveal><FaqSection /></Reveal>
+        <Reveal><FinalCta onLaunch={onLaunch} /></Reveal>
+        <Footer />
+      </div>
     </div>
   );
 }
