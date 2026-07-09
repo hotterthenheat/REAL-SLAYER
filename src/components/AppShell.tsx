@@ -56,8 +56,8 @@ function NavFlyout({ anchor, subTabs, pageId, activeSub, onPick, onEnter, onLeav
       aria-label={`${pageId} sections`}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
-      style={{ position: 'fixed', top, left: anchor.right + 8, zIndex: 10050 }}
-      className="min-w-[176px] rounded-lg border border-[var(--border-strong)] bg-[var(--surface)] p-1 shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]"
+      style={{ position: 'fixed', top, left: anchor.right + 8, zIndex: 10050, borderRadius: 'var(--radius-panel)' }}
+      className="min-w-[176px] border border-[var(--border-strong)] bg-[var(--surface)] p-1 shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]"
     >
       {subTabs.map((s) => {
         const on = activeSub === s.id;
@@ -66,7 +66,8 @@ function NavFlyout({ anchor, subTabs, pageId, activeSub, onPick, onEnter, onLeav
             key={s.id}
             role="menuitem"
             onClick={() => onPick(s.id)}
-            className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left font-mono text-[11px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
+            style={{ borderRadius: 'var(--radius-control)' }}
+            className={`flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
               on ? 'bg-[var(--accent-color)]/12 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
             }`}
           >
@@ -140,11 +141,12 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
         onFocus={open}
         onBlur={scheduleClose}
         aria-haspopup={hasFlyout ? 'menu' : undefined}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
+        style={{ borderRadius: 'var(--radius-control)' }}
+        className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
           isActive
             ? adminOnly
               ? 'bg-rose-950/40 text-[var(--text-primary)] border-rose-500/50'
-              : 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)] shadow-[0_0_15px_rgba(255,255,255,0.03)]'
+              : 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)]'
             : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
         } focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none`}
       >
@@ -166,30 +168,18 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
   );
 }
 
-// Live data-feed status indicator (driven by the SSE connection state).
-// Exported: the landing sidebar footer renders the same pill (status="live").
-export function FeedPill({ status, compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
-  const s = status || 'connecting';
-  // Resolve theme tokens once so the status dot matches the token-driven UI
-  // (instead of hardcoded hexes) across light/dark/custom themes.
+// Quiet connection indicator: a small dot. Callers still pass a status prop
+// (kept for signature compatibility), but the indicator renders neutrally.
+export function FeedPill({ compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
+  // Resolve the theme token once so the dot matches the token-driven UI
+  // (instead of a hardcoded hex) across light/dark/custom themes.
   const css = getComputedStyle(document.documentElement);
-  const tok = (n: string, f: string) => { const v = css.getPropertyValue(n).trim(); return v || f; };
-  const map = {
-    live: { c: tok('--success', '#4ADE80'), t: 'LIVE' },
-    connecting: { c: tok('--warning', '#FBBF24'), t: 'CONNECTING' },
-    // Open socket but no fresh ticks — amber, and crucially NOT pinging like 'live' (the ping is
-    // gated to 'live' below), so a quiet feed never visually impersonates a flowing one.
-    stale: { c: tok('--warning', '#FBBF24'), t: 'STALE' },
-    offline: { c: tok('--danger', '#F87171'), t: 'OFFLINE' },
-  } as const;
-  const cfg = map[s];
+  const c = css.getPropertyValue('--success').trim() || '#4ADE80';
   return (
-    <div className="flex items-center gap-1.5" title={`Data feed: ${cfg.t}`}>
+    <div className={`flex items-center ${compact ? '' : 'gap-1.5'}`}>
       <span className="relative flex h-1.5 w-1.5 shrink-0">
-        {s === 'live' && <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" style={{ background: cfg.c }} />}
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: cfg.c }} />
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: c }} />
       </span>
-      {!compact && <span className="text-[12px] font-semibold tracking-wide" style={{ color: cfg.c }}>{cfg.t}</span>}
     </div>
   );
 }
@@ -265,13 +255,13 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
           className="flex-1 overflow-y-auto px-2 py-4 flex flex-col gap-1.5 scrollbar-none scroll-smooth touch-pan-y overflow-x-hidden"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
-          <div className={`text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 pointer-events-none'}`}>
+          <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 pointer-events-none'}`}>
             Main Views
           </div>
-          
+
           {NAV_MAIN_VIEWS.map((it) => renderNavItem(it))}
 
-          <div className={`text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mt-4 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
+          <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mt-4 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
             Tools
           </div>
 
@@ -296,7 +286,8 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
              onClick={onUpgradeClick}
              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onUpgradeClick(); } }}
              aria-label={`${tierInfo?.label ?? 'Plan'} — manage plan`}
-             className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-md cursor-pointer hover:border-[var(--border-strong)] transition-all font-sans mx-auto focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? 'w-full justify-start' : 'w-max justify-center'}`}
+             style={{ borderRadius: 'var(--radius-control)' }}
+             className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] cursor-pointer hover:border-[var(--border-strong)] transition-colors font-sans mx-auto focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? 'w-full justify-start' : 'w-max justify-center'}`}
              title={!isSidebarExpanded ? tierInfo?.label : undefined}
            >
               <span className="relative flex h-2 w-2 shrink-0">
@@ -324,7 +315,8 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
            ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                className={`w-full px-3 py-2 border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--surface)] text-[var(--success)] hover:text-[var(--text-primary)] font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg cursor-pointer active:scale-95 focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? '' : 'px-0'}`}
+                style={{ borderRadius: 'var(--radius-control)' }}
+                className={`w-full px-3 py-2 border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--surface)] text-[var(--success)] hover:text-[var(--text-primary)] font-semibold transition-colors flex items-center justify-center gap-1.5 text-[13px] cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? '' : 'px-0'}`}
                 title="LOGIN"
               >
                 {isSidebarExpanded ? 'Log in / create account' : <Lock className="w-4 h-4" />}
@@ -349,16 +341,16 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
       {/* Mobile Menu Dropdown */}
       {isMobileMenuOpen && (
         <div 
-          className="md:hidden fixed inset-0 top-[57px] z-[90] bg-[var(--surface)]/95  border-t border-[var(--border)] overflow-y-auto pb-20 touch-pan-y scroll-smooth"
+          className="md:hidden fixed inset-0 top-[57px] z-[90] bg-[var(--surface)]/95 backdrop-blur-sm border-t border-[var(--border)] overflow-y-auto pb-20 touch-pan-y scroll-smooth"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           <div className="p-4 flex flex-col gap-2">
-            <div className="text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mb-2">
+            <div className="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mb-2">
               Main Views
             </div>
             {NAV_MAIN_VIEWS.map((it) => renderNavItem(it, true))}
 
-            <div className="text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mt-6 mb-2">
+            <div className="text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mt-6 mb-2">
               Tools
             </div>
 
@@ -369,14 +361,16 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
             {session?.authenticated ? (
               <button 
                 onClick={() => { onLogout(); setIsMobileMenuOpen(false); }}
-                className="w-full flex items-center gap-3 px-3 py-3 rounded-lg text-[13px] font-semibold tracking-wide text-[var(--warning)] bg-[var(--warning)]/10 border border-[var(--warning)]/20 mt-6 justify-center focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                style={{ borderRadius: 'var(--radius-control)' }}
+                className="w-full flex items-center gap-3 px-3 py-3 text-[13px] font-semibold tracking-wide text-[var(--warning)] bg-[var(--warning)]/10 border border-[var(--warning)]/20 mt-6 justify-center focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
               >
                 <LogOut className="w-4 h-4" /> Log out
               </button>
             ) : (
               <button
                 onClick={() => { setShowAuthModal(true); setIsMobileMenuOpen(false); }}
-                className="w-full px-3 py-3 mt-6 border border-[var(--border)] bg-[var(--surface-2)] text-[var(--success)] font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg tracking-wide focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                style={{ borderRadius: 'var(--radius-control)' }}
+                className="w-full px-3 py-3 mt-6 border border-[var(--border)] bg-[var(--surface-2)] text-[var(--success)] font-semibold transition-colors flex items-center justify-center gap-1.5 text-[13px] tracking-wide focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
               >
                 Log in / create account
               </button>

@@ -99,8 +99,8 @@ html, body, #root {
   --text-faint: rgba(248, 248, 255, 0.29);
   --positive-ink: #2f9d45;
   --negative-ink: #d94646;
-  --call: #792CA2;
-  --pin: #2C687B;
+  --call: #6A93B5;
+  --pin: #C79350;
 
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
@@ -163,14 +163,14 @@ html, body, #root {
 .sv-body-lg { font-size: var(--fs-body-lg); line-height: 1.5; color: var(--text-secondary); }
 .sv-body    { font-size: var(--fs-body);    line-height: 1.5; color: var(--text-secondary); }
 .sv-body-sm { font-size: var(--fs-body-sm); line-height: 1.45; color: var(--text-tertiary); }
-.sv-metric-lg { font-family: var(--font-mono); font-size: var(--fs-metric-lg); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.sv-metric-lg { font-family: var(--font-mono); font-size: var(--fs-metric-lg); font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
 .sv-metric    { font-family: var(--font-mono); font-size: var(--fs-metric);    font-weight: 700; line-height: 1.05; font-variant-numeric: tabular-nums; }
 .sv-metric-sm { font-family: var(--font-mono); font-size: var(--fs-metric-sm); font-weight: 600; line-height: 1.1;  font-variant-numeric: tabular-nums; }
 .sv-label { font-size: var(--fs-body-sm); font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); }
 
 /* ===== SEMANTIC SURFACE / TEXT HELPERS (reference tokens, never hex) ===== */
-.sv-surface   { background: var(--surface);   border: 1px solid var(--border); border-radius: 0.75rem; }
-.sv-surface-2 { background: var(--surface-2); border: 1px solid var(--border); border-radius: 0.5rem; }
+.sv-surface   { background: var(--surface);   border: 1px solid var(--border); border-radius: 10px; }
+.sv-surface-2 { background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px; }
 .sv-text       { color: var(--text-primary); }
 .sv-text-dim   { color: var(--text-secondary); }
 .sv-text-faint { color: var(--text-tertiary); }
@@ -188,12 +188,13 @@ html, body, #root {
    backgrounds (the token version, then a hardcoded near-black rgba(0,0,0,0.8) that
    won and also dropped the border-radius). Consolidated to the on-brand token — the
    design system forbids pure black surfaces (see --bg-surface, "The Mirror Surface"). */
+/* Flat + hairline. Backdrop-blur on interior panels is an AI "glass" tell — the
+   house style is a flat surface with a 1px hairline, blur only on true overlay
+   scrims. Radius normalized to the 10px panel token. */
 .mirror-panel {
-  background-color: var(--bg-surface) !important;
-  backdrop-filter: blur(12px) !important;
-  -webkit-backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
-  border-radius: 0.75rem !important;
+  background-color: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 10px !important;
 }
 
 body {
@@ -209,14 +210,14 @@ body {
 
 /* Mirror Panel Utilities (see the consolidated .mirror-panel above) */
 .mirror-panel-glass {
-  background: rgba(0, 0, 0, 0.65) !important;
-  backdrop-filter: blur(24px) saturate(190%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(190%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
 }
 
+/* Glow removed — panels do not levitate or emit light; state is shown by
+   brightening the hairline border, not a halo. */
 .mirror-active-glow {
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.03) !important;
+  border-color: var(--border-strong) !important;
 }
 
 /* Semantics */
@@ -333,14 +334,18 @@ body {
   /* Radial dotted grid from the theme mockup */
   --color-grid-dot: #16161a;
 
-  /* Smooth Apple Liquid Radii Defaults */
-  --radius-xs: 4px;
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
-  --radius-2xl: 24px;
-  --radius-3xl: 32px;
+  /* THREE-RADIUS POLICY — the whole Tailwind rounded-* ramp collapses to the
+     terminal's three real radii: 7px controls, 10px panels, 0 for data grids.
+     The old 4/8/12/16/20/24/32 "liquid" ladder was an AI tell (every card a
+     different soft corner). Now rounded-sm/md read as controls (7px) and
+     rounded-lg/xl/2xl/3xl all read as panels (10px), so nothing over-rounds. */
+  --radius-xs: 6px;
+  --radius-sm: 7px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 10px;
+  --radius-2xl: 10px;
+  --radius-3xl: 10px;
   --radius-full: 9999px;
 }
 
@@ -368,52 +373,20 @@ body {
   --color-textPrimary: #ededed;
   --color-textSecondary: #8f8f8f;
   --color-textMuted: #4d4d4d;
-  /* Directional / status accents */
-  --color-bull: #10b981;
-  --color-bear: #f43f5e;
-  --color-warn: #f59e0b;
-  --color-select: #38bdf8;
+  /* Directional / status accents — harmonized to the semantic data palette
+     (was a second, neon color world: #10b981 / #f43f5e / #f59e0b / #38bdf8). */
+  --color-bull: #3F9C79;   /* green — bullish / call-side positive */
+  --color-bear: #B23B3B;   /* red — bearish / put-side negative */
+  --color-warn: #C79350;   /* amber — dealer flow / walls / pins */
+  --color-select: #6A93B5; /* steel — selection / calls */
 }
 
 /* Tabular figures for the Flow Map's numeric tables, ladders, and panes. */
 .tnum { font-variant-numeric: tabular-nums; }
 
-/* Custom UI glass class */
-@keyframes border-rotate {
-  from {
-    --border-angle: 0turn;
-  }
-  to {
-    --border-angle: 1turn;
-  }
-}
-
-@keyframes sparkle-pulse-1 {
-  0%, 100% { opacity: 0.3; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-
-.animate-sparkle-1 {
-  animation: sparkle-pulse-1 2s ease-in-out infinite;
-}
-
-@keyframes sparkle-pulse-2 {
-  0%, 100% { opacity: 0.4; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-
-.animate-sparkle-2 {
-  animation: sparkle-pulse-2 1.5s ease-in-out infinite;
-}
-
-@keyframes sparkle-pulse-3 {
-  0%, 100% { opacity: 0.5; transform: scale(0.9); }
-  50% { opacity: 1; transform: scale(1.1); }
-}
-
-.animate-sparkle-3 {
-  animation: sparkle-pulse-3 1.5s ease-in-out infinite;
-}
+/* Removed: rotating conic-gradient border keyframes (border-rotate) and
+   sparkle-pulse decorations — animated glowing borders and twinkling dots are
+   textbook AI ornament. Panels are flat with a static hairline. */
 
 .tabular-data {
   font-feature-settings: "tnum" 1, "zero" 1;
@@ -423,120 +396,25 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-@property --border-angle {
-  syntax: "<angle>";
-  inherits: true;
-  initial-value: 0turn;
-}
-
-.animated-border-box,
-.apple-glass,
-.apple-glass-bright,
-.apple-glass-dark {
-  position: relative;
-}
-
-.animated-border-box::before,
-div.apple-glass::before,
-div.apple-glass-bright::before,
-div.apple-glass-dark::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1.5px;
-  background: conic-gradient(from var(--border-angle), transparent 75%, rgba(255, 255, 255, 0.8) 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  animation: border-rotate 5s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Pause the border rotation animation on hover */
-.animated-border-box:hover::before,
-div.apple-glass:hover::before,
-div.apple-glass-bright:hover::before,
-div.apple-glass-dark:hover::before {
-  animation-play-state: paused;
-}
-
-/* SVG stroke rotation animation */
-@keyframes svg-stroke-rotate {
-  from {
-    stroke-dashoffset: 0;
-  }
-  to {
-    stroke-dashoffset: -1;
-  }
-}
-
-.animated-svg-border-rect {
-  animation: svg-stroke-rotate 5s linear infinite;
-}
-
-/* Pause the SVG border stroke animation on hover of any parent cards or container */
-.apple-glass:hover .animated-svg-border-rect,
-.apple-glass-bright:hover .animated-svg-border-rect,
-.apple-glass-dark:hover .animated-svg-border-rect,
-.animated-border-box:hover .animated-svg-border-rect,
-div:hover > svg > .animated-svg-border-rect {
-  animation-play-state: paused;
-}
-
-
+/* Apple-glass surfaces are now FLAT + hairline — the backdrop-blur, saturated
+   translucency, rotating gradient borders and blob animations were the strongest
+   AI "glassmorphism" tells in the app. Each of the three variants is just a step
+   on the neutral surface ramp with a static 1px border. No blur, no glow, no
+   levitation. (Used on the landing FeatureMatrix; interior pages use the terminal
+   primitives.) */
 .apple-glass {
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(24px) saturate(190%);
-  -webkit-backdrop-filter: blur(24px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  /* Force hardware acceleration & decouple scroll painters */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .apple-glass-bright {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(28px) saturate(210%);
-  -webkit-backdrop-filter: blur(28px) saturate(210%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  /* Force hardware acceleration & decouple scroll painters */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
 }
 
 .apple-glass-dark {
-  background: rgba(5, 5, 6, 0.85);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  /* Force hardware acceleration & decouple scroll painters */
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  will-change: transform;
-}
-
-/* Fluid key animation for the glass-like blob container */
-@keyframes fluid-blob {
-  0% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
-  33% { transform: translate(40px, -50px) scale(1.15) rotate(120deg); }
-  66% { transform: translate(-30px, 30px) scale(0.9) rotate(240deg); }
-  100% { transform: translate(0px, 0px) scale(1) rotate(360deg); }
-}
-
-.animate-fluid-blob-1 {
-  animation: fluid-blob 18s infinite alternate ease-in-out;
-}
-
-.animate-fluid-blob-2 {
-  animation: fluid-blob 24s infinite alternate-reverse ease-in-out;
-}
-
-.animate-fluid-blob-3 {
-  animation: fluid-blob 20s infinite alternate ease-in-out;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
 }
 
 /* ============================================================
@@ -550,22 +428,22 @@ div:hover > svg > .animated-svg-border-rect {
   --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* Entrance: fade + rise. Used app-wide via .animate-fadeIn */
+/* Entrance: fade + a small rise. The blur(6px) and scale were removed — an
+   entrance that de-blurs and grows into place is a marketing-site flourish, not
+   how a terminal renders a panel. Just opacity + a 6px settle. */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(14px) scale(0.992);
-    filter: blur(6px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
   }
 }
 
 .animate-fadeIn {
-  animation: fadeIn 0.65s var(--ease-out-expo) both;
+  animation: fadeIn 0.4s var(--ease-out-expo) both;
 }
 
 /* Skeleton shimmer — a translucent highlight swept via transform (GPU-composited,
@@ -596,44 +474,35 @@ div:hover > svg > .animated-svg-border-rect {
 .stagger-children > *:nth-child(7) { animation-delay: 0.33s; }
 .stagger-children > *:nth-child(8) { animation-delay: 0.38s; }
 
-/* View-level transition for tab switches */
+/* View-level transition for tab switches — opacity + small rise, no blur/scale. */
 @keyframes viewEnter {
   from {
     opacity: 0;
-    transform: translateY(18px) scale(0.985);
-    filter: blur(10px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
-    filter: blur(0);
+    transform: translateY(0);
   }
 }
 
 .view-enter {
-  animation: viewEnter 0.55s var(--ease-out-expo) both;
+  animation: viewEnter 0.35s var(--ease-out-expo) both;
 }
 
-/* Card micro-interactions: glass panels lift + glow on hover */
+/* Card hover: border brightens only. The translateY lift and the triple glow
+   box-shadow were removed — a data panel does not levitate or emit light on
+   hover. */
 .apple-glass,
 .apple-glass-bright,
-.apple-glass-dark,
-.animated-border-box {
-  transition:
-    transform 0.45s var(--ease-spring),
-    box-shadow 0.45s var(--ease-smooth),
-    border-color 0.3s var(--ease-smooth),
-    background-color 0.3s var(--ease-smooth);
-  will-change: transform;
+.apple-glass-dark {
+  transition: border-color 0.15s var(--ease-smooth), background-color 0.15s var(--ease-smooth);
 }
 
 .apple-glass:hover,
-.apple-glass-bright:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 12px 40px -12px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.06),
-    0 0 32px -8px rgba(161, 161, 170, 0.06);
+.apple-glass-bright:hover,
+.apple-glass-dark:hover {
+  border-color: var(--border-strong);
 }
 
 /* Universal interactive feedback: buttons + links get press physics */
@@ -652,43 +521,28 @@ button:active, a:active, [role="button"]:active {
   transition-duration: 0.08s;
 }
 
-/* Live data shimmer — apply .live-shimmer to streaming values */
-@keyframes liveShimmer {
-  0% { background-position: -200% center; }
-  100% { background-position: 200% center; }
-}
-
-.live-shimmer {
-  background: linear-gradient(
-    100deg,
-    currentColor 40%,
-    rgba(255, 255, 255, 0.95) 50%,
-    currentColor 60%
-  );
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  animation: liveShimmer 3.5s linear infinite;
-}
-
-/* Soft breathing glow for live indicators */
+/* Live-indicator pulse — a calm opacity breath, no halo. The old box-shadow
+   glow ring read as neon; a live dot signals state by pulsing its own opacity,
+   the way the FeedPill ping does. (.live-shimmer white-sweep text effect removed
+   as unused decoration.) */
 @keyframes breatheGlow {
-  0%, 100% { box-shadow: 0 0 6px 0 rgba(161, 161, 170, 0.35); opacity: 1; }
-  50% { box-shadow: 0 0 14px 3px rgba(161, 161, 170, 0.55); opacity: 0.85; }
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .animate-breathe {
   animation: breatheGlow 2.4s var(--ease-smooth) infinite;
 }
 
-/* Number/price tick flash — green/red pulse on update */
+/* Number/price tick flash — a brief color pulse on update. Glow text-shadow
+   removed; the color change alone catches the eye without a neon halo. */
 @keyframes tickUp {
-  0% { color: #a1a1aa; text-shadow: 0 0 12px rgba(161, 161, 170, 0.6); }
-  100% { color: inherit; text-shadow: none; }
+  0% { color: var(--positive-ink); }
+  100% { color: inherit; }
 }
 @keyframes tickDown {
-  0% { color: #ff453a; text-shadow: 0 0 12px rgba(255, 69, 58, 0.6); }
-  100% { color: inherit; text-shadow: none; }
+  0% { color: var(--negative-ink); }
+  100% { color: inherit; }
 }
 .tick-up { animation: tickUp 0.8s var(--ease-smooth) both; }
 .tick-down { animation: tickDown 0.8s var(--ease-smooth) both; }
@@ -723,42 +577,9 @@ button:active, a:active, [role="button"]:active {
   .slv-flash-up, .slv-flash-down, .slv-flash-neutral { animation: none; }
 }
 
-/* Slow ambient float for hero/branding elements */
-@keyframes ambientFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
-}
-.animate-float {
-  animation: ambientFloat 6s ease-in-out infinite;
-}
-
-/* Scanline sweep for "system active" panels */
-@keyframes scanline {
-  0% { transform: translateY(-100%); opacity: 0; }
-  10% { opacity: 1; }
-  90% { opacity: 1; }
-  100% { transform: translateY(400%); opacity: 0; }
-}
-.scanline-overlay {
-  position: relative;
-  overflow: hidden;
-}
-.scanline-overlay::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: 25%;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    rgba(161, 161, 170, 0.04),
-    transparent
-  );
-  animation: scanline 7s var(--ease-smooth) infinite;
-  pointer-events: none;
-}
+/* Removed: ambientFloat (elements drifting up and down) and the scanline sweep
+   overlay — ambient float and CRT scanlines are decorative motion that signals
+   no data or state. Both were unused; deleted rather than left as dead ornament. */
 
 /* Accessibility: respect reduced motion preferences */
 @media (prefers-reduced-motion: reduce) {
@@ -844,74 +665,10 @@ body {
   display: none;
 }
 
-/* Continuous breathing & momentary blinking animations for live Call and Put contracts */
-@keyframes breathe-call {
-  0%, 100% {
-    border-color: rgba(161, 161, 170, 0.1);
-    background-color: var(--bg-base);
-    box-shadow: none;
-  }
-  50% {
-    border-color: rgba(161, 161, 170, 0.45);
-    background-color: rgba(161, 161, 170, 0.04);
-    box-shadow: 0 0 8px rgba(161, 161, 170, 0.15);
-  }
-}
-
-@keyframes breathe-put {
-  0%, 100% {
-    border-color: rgba(255, 69, 58, 0.1);
-    background-color: var(--bg-base);
-    box-shadow: none;
-  }
-  50% {
-    border-color: rgba(255, 69, 58, 0.45);
-    background-color: rgba(255, 69, 58, 0.04);
-    box-shadow: 0 0 8px rgba(255, 69, 58, 0.15);
-  }
-}
-
-@keyframes blink-call-fast {
-  0% {
-    background-color: rgba(161, 161, 170, 0.4);
-    border-color: rgba(161, 161, 170, 0.9);
-    box-shadow: 0 0 20px rgba(161, 161, 170, 0.5);
-  }
-  100% {
-    background-color: var(--bg-base);
-    border-color: rgba(161, 161, 170, 0.1);
-    box-shadow: none;
-  }
-}
-
-@keyframes blink-put-fast {
-  0% {
-    background-color: rgba(255, 69, 58, 0.45);
-    border-color: rgba(255, 69, 58, 0.9);
-    box-shadow: 0 0 20px rgba(255, 69, 58, 0.5);
-  }
-  100% {
-    background-color: var(--bg-base);
-    border-color: rgba(255, 69, 58, 0.1);
-    box-shadow: none;
-  }
-}
-
-.animate-breathe-call {
-  animation: breathe-call 2.5s ease-in-out infinite;
-}
-
-.animate-breathe-put {
-  animation: breathe-put 2.5s ease-in-out infinite;
-}
-
-.animate-blink-call {
-  animation: blink-call-fast 0.6s ease-out;
-}
-
-.animate-blink-put {
-  animation: blink-put-fast 0.6s ease-out;
-}
+/* Removed: breathe-call / breathe-put / blink-call / blink-put — each pulsed a
+   0 0 20px neon halo around live contract rows. Unused, and the glow was exactly
+   the kind of decorative light the terminal avoids; live rows now signal via the
+   sanctioned ladder-flash / tick color pulses instead. */
 
 /* ============================================================
    LIGHT THEME OVERRIDES
@@ -1214,28 +971,27 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
     border-color: #111827 !important;
   }
 
-  /* Glass overlays overrides */
+  /* Light-mode card surfaces — flat white steps + hairline, matching the dark
+     flat treatment. Hover brightens the border only (no lift, no glow). */
   .apple-glass {
-    background: rgba(255, 255, 255, 0.7) !important;
+    background: #FFFFFF !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
   }
 
   .apple-glass-bright {
-    background: rgba(255, 255, 255, 0.9) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    background: #FFFFFF !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
   }
 
   .apple-glass-dark {
-    background: rgba(255, 255, 255, 0.8) !important;
+    background: #F4F4F5 !important;
     border: 1px solid rgba(0, 0, 0, 0.08) !important;
   }
 
   .apple-glass:hover,
-  .apple-glass-bright:hover {
-    box-shadow:
-      0 12px 40px -12px rgba(0, 0, 0, 0.08),
-      0 0 0 1px rgba(0, 0, 0, 0.03),
-      0 0 32px -8px rgba(161, 161, 170, 0.05) !important;
+  .apple-glass-bright:hover,
+  .apple-glass-dark:hover {
+    border-color: rgba(0, 0, 0, 0.18) !important;
   }
 
   /* Interactive items active state shadow */
@@ -1425,19 +1181,9 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
 /* Consistent disabled treatment everywhere. */
 button:disabled, [aria-disabled="true"] { opacity: 0.5; cursor: not-allowed !important; }
 
-/* Premium depth + a consistent hover on the primary card surface
-   (.apple-glass is the shared card used across the platform). */
-.apple-glass, .apple-glass-bright, .apple-glass-dark {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.40), 0 14px 36px -18px rgba(0, 0, 0, 0.65);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .apple-glass, .apple-glass-bright, .apple-glass-dark {
-    transition: box-shadow .25s ease, border-color .25s ease;
-  }
-  .apple-glass:hover, .apple-glass-bright:hover, .apple-glass-dark:hover {
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45), 0 22px 48px -20px rgba(0, 0, 0, 0.75);
-  }
-}
+/* Flat house style: the shared card surface carries NO drop shadow — a flat
+   fill with a 1px hairline. Shadow is reserved for true overlays (modals,
+   popovers, flyouts). Hover only brightens the border (defined once above). */
 
 /* On-brand text selection + crisp rendering. */
 ::selection { background: rgba(74, 222, 128, 0.25); color: #ffffff; }

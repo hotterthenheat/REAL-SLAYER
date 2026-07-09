@@ -111,8 +111,8 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
 
   if (!result) {
     return (
-      <div className="h-full min-h-[220px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
-        <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest">Monte Carlo needs spot, vol & horizon</span>
+      <div className="h-full min-h-[220px] rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] flex items-center justify-center">
+        <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.14em]">Monte Carlo needs spot, vol & horizon</span>
       </div>
     );
   }
@@ -131,42 +131,33 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
   const hbProb = hbCount != null ? hbCount / result.nPaths : null;
 
   const Cell = ({ label, value, tone }: { label: string; value: string; tone?: string }) => (
-    <div className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)]">
-      <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] leading-none">{label}</span>
-      <span className="text-[12px] font-bold tabular-nums leading-tight" style={{ color: tone || 'var(--text-primary)' }}>{value}</span>
+    <div className="flex flex-col gap-0.5">
+      <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)] leading-none">{label}</span>
+      <span className="text-[12px] font-bold tabular-nums leading-tight slayer-num" style={{ color: tone || 'var(--text-primary)' }}>{value}</span>
     </div>
   );
 
   return (
-    <div ref={wrapRef} className="flex h-full min-h-0 flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)] gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="w-[3px] h-3.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
-          <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-[var(--text-primary)]">
-            Monte Carlo{ticker ? ` · ${ticker}` : ''}
-          </span>
+    <div ref={wrapRef} className="flex h-full min-h-0 flex-col bg-[var(--surface)] overflow-hidden">
+      <div className="flex items-center justify-end px-2 py-2 border-b border-[var(--border-subtle)] gap-2 flex-wrap">
+        <div className="flex rounded-[var(--radius-control)] overflow-hidden border border-[var(--border-subtle)]" role="group" aria-label="Process model">
+          {MODELS.map((m) => (
+            <button key={m.key} type="button" onClick={() => setModel(m.key)} aria-pressed={model === m.key} aria-label={`${m.label} process`}
+              className={`text-[10px] font-semibold uppercase tracking-[0.1em] px-2 py-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${model === m.key ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>
+              {m.label}
+            </button>
+          ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex rounded-md overflow-hidden border border-[var(--border)]" role="group" aria-label="Process model">
-            {MODELS.map((m) => (
-              <button key={m.key} type="button" onClick={() => setModel(m.key)} aria-pressed={model === m.key} aria-label={`${m.label} process`}
-                className={`text-[9.5px] font-bold uppercase tracking-wider px-2 py-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${model === m.key ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-          <div className="flex rounded-md overflow-hidden border border-[var(--border)]" role="group" aria-label="Path count">
-            {PATH_COUNTS.map((n) => (
-              <button key={n} type="button" onClick={() => setNPaths(n)} aria-pressed={nPaths === n} aria-label={`${pathLabel(n)} paths`}
-                className={`text-[9.5px] font-bold tabular-nums px-2 py-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${nPaths === n ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}>
-                {pathLabel(n)}
-              </button>
-            ))}
-          </div>
-          <ChartTools name={`monte-carlo-${ticker || 'spx'}-${model}`} svgRef={svgRef} fullscreenRef={wrapRef}
-            csv={() => ({ headers: ['bin_low', 'bin_high', 'count', 'probability'], rows: result.histogram.counts.map((c, i) => [result.histogram.edges[i].toFixed(2), (result.histogram.edges[i + 1] ?? result.histogram.edges[i]).toFixed(2), c, (c / result.nPaths).toFixed(6)]) })} />
-          <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={{ color: 'var(--info)', background: 'color-mix(in srgb, var(--info) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--info) 30%, transparent)' }}>Model</span>
+        <div className="flex rounded-[var(--radius-control)] overflow-hidden border border-[var(--border-subtle)]" role="group" aria-label="Path count">
+          {PATH_COUNTS.map((n) => (
+            <button key={n} type="button" onClick={() => setNPaths(n)} aria-pressed={nPaths === n} aria-label={`${pathLabel(n)} paths`}
+              className={`text-[10px] font-semibold tabular-nums px-2 py-1 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${nPaths === n ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>
+              {pathLabel(n)}
+            </button>
+          ))}
         </div>
+        <ChartTools name={`monte-carlo-${ticker || 'spx'}-${model}`} svgRef={svgRef} fullscreenRef={wrapRef}
+          csv={() => ({ headers: ['bin_low', 'bin_high', 'count', 'probability'], rows: result.histogram.counts.map((c, i) => [result.histogram.edges[i].toFixed(2), (result.histogram.edges[i + 1] ?? result.histogram.edges[i]).toFixed(2), c, (c / result.nPaths).toFixed(6)]) })} />
       </div>
 
       {/* Sample-path cloud grows to fill the panel height (min 220px) so the summary
@@ -186,19 +177,19 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
           {hb != null && <rect x={hb * bw} y={0} width={Math.max(1, bw)} height={HH} fill="color-mix(in srgb, var(--accent-color) 22%, transparent)" />}
         </svg>
         {hb != null && hbLo != null && hbHi != null && (
-          <div className="pointer-events-none absolute top-0.5 px-2 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg" style={{ left: `${Math.min(80, (hb * bw / HW) * 100)}%` }}>
-            <div className="text-[var(--text-primary)] font-bold">{fmt(hbLo)} – {fmt(hbHi)}</div>
-            <div style={{ color: hbLo >= spot ? 'var(--success)' : 'var(--danger)' }}>P {(hbProb! * 100).toFixed(2)}% · {hbCount!.toLocaleString()} paths</div>
+          <div className="pointer-events-none absolute top-0.5 px-2 py-1 rounded-[var(--radius-panel)] bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]" style={{ left: `${Math.min(80, (hb * bw / HW) * 100)}%` }}>
+            <div className="text-[var(--text-primary)] font-bold slayer-num">{fmt(hbLo)} – {fmt(hbHi)}</div>
+            <div className="slayer-num" style={{ color: hbLo >= spot ? 'var(--success)' : 'var(--danger)' }}>P {(hbProb! * 100).toFixed(2)}% · {hbCount!.toLocaleString()} paths</div>
           </div>
         )}
       </div>
-      <div className="flex items-center justify-between px-3 pb-1 text-[9px] text-[var(--text-tertiary)] tabular-nums">
+      <div className="flex items-center justify-between px-2 pb-1 text-[9px] text-[var(--text-muted)] tabular-nums slayer-num">
         <span>{fmt(result.histogram.edges[0])}</span>
-        <span className="uppercase tracking-widest">terminal price · {result.nPaths.toLocaleString()} paths · {model}</span>
+        <span className="uppercase tracking-[0.14em]">terminal price · {result.nPaths.toLocaleString()} paths · {model}</span>
         <span>{fmt(result.histogram.edges[result.histogram.edges.length - 1])}</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1.5 px-3.5 py-2.5 border-t border-[var(--border)]">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-x-4 gap-y-2 px-2 py-3 border-t border-[var(--border-subtle)] [&>*]:border-l [&>*]:border-[var(--border-subtle)] [&>*]:pl-3 [&>*:first-child]:border-l-0 [&>*:first-child]:pl-0">
         <Cell label="Expected price" value={fmt(result.terminalMean)} />
         <Cell label="Expected return" value={pct(result.expectedReturnPct)} tone={result.expectedReturnPct >= 0 ? 'var(--success)' : 'var(--danger)'} />
         <Cell label="P(up)" value={pct(result.probUp)} tone="var(--success)" />
@@ -207,10 +198,10 @@ export function MonteCarloPanel({ spot, r, sigma, tYears, ticker, decimals = 0 }
         <Cell label="ES 95 / 99" value={`${pct(result.es95)} / ${pct(result.es99)}`} tone="var(--danger)" />
       </div>
 
-      <div className="px-3.5 py-2 border-t border-[var(--border)] text-[9px] text-[var(--text-tertiary)] leading-relaxed">
-        <span className="font-bold text-[var(--text-secondary)]">Process</span> {model === 'gbm' ? 'geometric Brownian motion dS=rS dt+σS dW' : model === 'jump' ? 'Merton jump-diffusion (compensated Poisson log-normal jumps)' : 'Heston stochastic vol dv=κ(θ−v)dt+ξ√v dW₂'} ·{' '}
-        <span className="font-bold text-[var(--text-secondary)]">Inputs</span> spot {fmt(spot)}, r={(r * 100).toFixed(1)}%, σ={(sigma * 100).toFixed(1)}%, T={(tYears * 365).toFixed(0)}d, {result.nPaths.toLocaleString()} seeded paths ·{' '}
-        <span className="font-bold text-[var(--text-secondary)]">Validated</span> GBM mean ≡ S·e^{'{rT}'} (tests/monteCarlo)
+      <div className="px-2 py-2 border-t border-[var(--border-subtle)] text-[9px] text-[var(--text-muted)] leading-relaxed">
+        <span className="font-semibold text-[var(--text-secondary)]">Process</span> {model === 'gbm' ? 'geometric Brownian motion dS=rS dt+σS dW' : model === 'jump' ? 'Merton jump-diffusion (compensated Poisson log-normal jumps)' : 'Heston stochastic vol dv=κ(θ−v)dt+ξ√v dW₂'} ·{' '}
+        <span className="font-semibold text-[var(--text-secondary)]">Inputs</span> spot {fmt(spot)}, r={(r * 100).toFixed(1)}%, σ={(sigma * 100).toFixed(1)}%, T={(tYears * 365).toFixed(0)}d, {result.nPaths.toLocaleString()} seeded paths ·{' '}
+        <span className="font-semibold text-[var(--text-secondary)]">Validated</span> GBM mean ≡ S·e^{'{rT}'} (tests/monteCarlo)
       </div>
     </div>
   );

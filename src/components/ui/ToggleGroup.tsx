@@ -53,7 +53,7 @@ export function ToggleGroup<V extends string>(props: SingleProps<V> | MultiProps
     <div
       role="group"
       aria-label={ariaLabel}
-      className={`inline-flex items-center gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-1 ${className}`}
+      className={`inline-flex items-center gap-1 rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] p-1 ${className}`}
     >
       {options.map(opt => {
         const active = isActive(opt.value);
@@ -64,7 +64,7 @@ export function ToggleGroup<V extends string>(props: SingleProps<V> | MultiProps
             onClick={() => toggle(opt.value)}
             aria-pressed={active}
             title={opt.hint}
-            className={`inline-flex items-center gap-1.5 rounded-md font-mono font-medium uppercase tracking-wide transition-colors ${pad} ${
+            className={`inline-flex items-center gap-1.5 rounded-[5px] font-mono font-medium uppercase tracking-wide transition-colors ${pad} ${
               active
                 ? 'bg-[var(--surface-3)] text-[var(--text-primary)] shadow-[inset_0_0_0_1px_var(--border-strong)]'
                 : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] hover:bg-[var(--surface-3)]/50'

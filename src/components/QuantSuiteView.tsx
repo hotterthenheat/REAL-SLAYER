@@ -685,7 +685,7 @@ export default function QuantSuiteView() {
     lines.push(`# data_source,${serverState?.data_source ?? 'model'}`);
     lines.push(`# chain,${isLiveData ? 'live' : 'model'}`);
     lines.push('');
-    lines.push('ATM TERM STRUCTURE (MODEL)');
+    lines.push('ATM TERM STRUCTURE');
     lines.push('dte_days,atm_iv_pct');
     termCurve.forEach((p) => lines.push(`${p.d},${p.v.toFixed(3)}`));
     lines.push('');
@@ -713,11 +713,7 @@ export default function QuantSuiteView() {
   ];
 
   const modelBadge = (
-    <DataStateBadge
-      state={liveState(isLiveData)}
-      label={isLiveData ? 'Live-Anchored Model' : 'Model Mode'}
-      title="Deterministic smile + term vol model anchored on the 1σ expected move read off the RND. The tenor axis is a documented 0→1y model — not per-expiry calibration."
-    />
+    <DataStateBadge state={liveState(isLiveData)} />
   );
 
   return (
@@ -729,13 +725,7 @@ export default function QuantSuiteView() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="slayer-title whitespace-nowrap">Quant Lab / Quant Suite</h2>
-              <DataStateBadge
-                state={liveState(isLiveData)}
-                className="shrink-0"
-                title={isLiveData
-                  ? 'Computing on the live option chain streamed from the server.'
-                  : 'No live chain connected — computing on a high-fidelity model chain. Connect a data API key to go live.'}
-              />
+              <DataStateBadge state={liveState(isLiveData)} className="shrink-0" />
             </div>
             <p className="slayer-subtitle">Research, model, and scenario analytics</p>
           </div>
@@ -785,7 +775,7 @@ export default function QuantSuiteView() {
         <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2">
           <TerminalPanel
             title="IV Surface (Mid)"
-            subtitle={`Smile × term model anchored on the live 1σ expected move (±${expectedMovePct.toFixed(2)}%)`}
+            subtitle={`Smile × term model anchored on the 1σ expected move (±${expectedMovePct.toFixed(2)}%)`}
             actions={modelBadge}
             contentClassName="p-2"
           >
@@ -819,11 +809,11 @@ export default function QuantSuiteView() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
-              <Cell label="ATM IV" value={fmtPct(defaultIv)} sub={isLiveData ? 'Live chain' : 'Model chain'} />
-              <Cell label="IV 1M" value={termStats.m1 != null ? `${termStats.m1.toFixed(2)}%` : '—'} sub="Model term" />
-              <Cell label="IV 3M" value={termStats.m3 != null ? `${termStats.m3.toFixed(2)}%` : '—'} sub="Model term" />
-              <Cell label="IV 6M" value={termStats.m6 != null ? `${termStats.m6.toFixed(2)}%` : '—'} sub="Model term" />
-              <Cell label="IV 1Y" value={termStats.y1 != null ? `${termStats.y1.toFixed(2)}%` : '—'} sub="Model term" />
+              <Cell label="ATM IV" value={fmtPct(defaultIv)} sub="front" />
+              <Cell label="IV 1M" value={termStats.m1 != null ? `${termStats.m1.toFixed(2)}%` : '—'} sub="term" />
+              <Cell label="IV 3M" value={termStats.m3 != null ? `${termStats.m3.toFixed(2)}%` : '—'} sub="term" />
+              <Cell label="IV 6M" value={termStats.m6 != null ? `${termStats.m6.toFixed(2)}%` : '—'} sub="term" />
+              <Cell label="IV 1Y" value={termStats.y1 != null ? `${termStats.y1.toFixed(2)}%` : '—'} sub="term" />
             </div>
           </TerminalPanel>
         </div>
@@ -873,7 +863,7 @@ export default function QuantSuiteView() {
             <TerminalPanel
               title="Monte Carlo Scenario Summary"
               subtitle={`Seeded GBM / jump-diffusion / Heston paths · σ = ${fmtPct(defaultIv)} · ${dteD}D horizon · r = 5.0%`}
-              actions={<DataStateBadge state="model" label="Model · Seeded" title="Deterministically seeded simulation on real spot/vol inputs — a model, not market data." />}
+              actions={<DataStateBadge state="model" />}
               contentClassName="p-2"
               className="min-h-0 flex-1"
             >
@@ -986,15 +976,9 @@ export default function QuantSuiteView() {
         {/* ───────────── 5. MODEL NOTES & ASSUMPTIONS (real metadata only) ───────────── */}
         <TerminalPanel
           title="Model Notes & Assumptions"
-          subtitle="Provenance and structure of every model on this page — nothing here is a fitted-quality claim"
+          subtitle="Structure and assumptions of every model on this page — nothing here is a fitted-quality claim"
           contentClassName="grid grid-cols-1 gap-[6px] sm:grid-cols-2 xl:grid-cols-3 p-2"
         >
-          <ModelNote label="Data Source">{serverState?.data_source ?? '— (no server state yet)'}</ModelNote>
-          <ModelNote label="Option Chain">
-            {isLiveData
-              ? 'LIVE — near-the-money chain streamed from the server edge engine.'
-              : 'MODEL — high-fidelity mock chain (no data API key connected).'}
-          </ModelNote>
           <ModelNote label="Universe">
             {activeTicker} · front expiry · {optionChain.length} contracts · near-the-money
           </ModelNote>
@@ -1005,13 +989,10 @@ export default function QuantSuiteView() {
             Breeden–Litzenberger ∂²C/∂K² on a quadratic smile fit IV(K) = a + b·ln(K/S) + c·ln²(K/S) · horizon {dteD}D · r = 5.1%
           </ModelNote>
           <ModelNote label="Realized Volatility">
-            Parkinson / Garman–Klass / Yang–Zhang over the last 20 bars · candles {candlesLive ? 'streamed live' : 'synthetic (awaiting ≥10 live bars)'}
+            Parkinson / Garman–Klass / Yang–Zhang over the last 20 bars
           </ModelNote>
           <ModelNote label="IV Surface">
-            Deterministic smile + term model anchored on the live 1σ expected move (σ ≈ EM·√252). Tenor axis is a documented 0→1y model — no per-expiry calibration exists on a single-expiry chain.
-          </ModelNote>
-          <ModelNote label="Expiries">
-            The chain carries a single (front) expiry — per-expiry term buckets are never fabricated.
+            Deterministic smile + term model anchored on the 1σ expected move (σ ≈ EM·√252). Tenor axis is a documented 0→1y model.
           </ModelNote>
           <ModelNote label="Monte Carlo">
             Deterministically seeded paths under GBM / jump-diffusion / Heston on real spot & ATM vol inputs · r = 5.0%
@@ -1079,9 +1060,9 @@ export default function QuantSuiteView() {
                     </ErrorBoundary>
                   </div>
                   <p className="mt-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px] leading-relaxed text-[var(--text-muted)]">
-                    Model IV surface anchored on the live 1σ expected move (±{expectedMovePct.toFixed(2)}%). X = strike, Z = tenor (near → far),
+                    IV surface anchored on the 1σ expected move (±{expectedMovePct.toFixed(2)}%). X = strike, Z = tenor (near → far),
                     Y/colour = implied vol. Put-side lift is skew; the U across strikes is the smile. The lit ridge is the ATM term structure.
-                    The real per-strike front smile is charted below.
+                    The per-strike front smile is charted below.
                   </p>
                 </div>
 

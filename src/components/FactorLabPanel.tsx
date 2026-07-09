@@ -27,7 +27,10 @@ const BASKET: { t: string; role: Role }[] = [
   { t: 'QQQ', role: 'tech' }, { t: 'NVDA', role: 'tech' }, { t: 'AAPL', role: 'tech' }, { t: 'TSLA', role: 'tech' },
   { t: 'JPM', role: 'fin' }, { t: 'TLT', role: 'haven' }, { t: 'GLD', role: 'haven' }, { t: 'VIX', role: 'vol' },
 ];
-const ROLE_CSS: Record<Role, string> = { equity: '#3b82f6', tech: '#22c55e', haven: '#eab308', vol: '#ef4444', fin: '#a855f7' };
+// Categorical role encoding drawn from the app's semantic accent family (theme-aware
+// tokens, never raw Tailwind hexes): index→dealer cyan, tech→greek, haven→amber,
+// vol→danger, financials→call steel.
+const ROLE_CSS: Record<Role, string> = { equity: 'var(--dealer)', tech: 'var(--greek)', haven: 'var(--warning)', vol: 'var(--danger)', fin: 'var(--call)' };
 const ROLE_LABEL: Record<Role, string> = { equity: 'Index', tech: 'Tech / Semis', haven: 'Haven', vol: 'Vol', fin: 'Financials' };
 
 const MAX_SAMPLES = 90;   // rolling window of live snapshots
@@ -49,11 +52,11 @@ function pushSnapshot(prices: Record<string, number | undefined>) {
   if (priceBuffer.length > MAX_SAMPLES) priceBuffer.shift();
 }
 
-// diverging ρ → colour (red neg · slate 0 · green pos)
+// diverging ρ → colour (danger neg · neutral surface 0 · success pos)
 function corrCss(r: number): string {
   const t = (r + 1) / 2;
-  if (t < 0.5) return `color-mix(in srgb, #ef4444 ${((0.5 - t) * 2 * 82 + 8).toFixed(0)}%, #1e293b)`;
-  return `color-mix(in srgb, #22c55e ${((t - 0.5) * 2 * 82 + 8).toFixed(0)}%, #1e293b)`;
+  if (t < 0.5) return `color-mix(in srgb, var(--danger) ${((0.5 - t) * 2 * 82 + 8).toFixed(0)}%, var(--surface-2))`;
+  return `color-mix(in srgb, var(--success) ${((t - 0.5) * 2 * 82 + 8).toFixed(0)}%, var(--surface-2))`;
 }
 
 // ── MODEL MODE shared-factor simulator ──────────────────────────────────────
@@ -166,19 +169,19 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
     ? 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10'
     : state === 'model' ? 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10'
       : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]';
-  const stateLabel = state === 'live' ? 'Live Chain' : state === 'model' ? 'Model Mode' : 'Collecting';
+  const stateLabel = state === 'warming' ? 'Collecting' : '';
   const method = `Pearson · log returns · ${lookback}D`;
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)]">
+    <div className="rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--surface)] overflow-hidden">
+      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border-subtle)]">
         <div className="flex items-center gap-2">
           <Boxes className="w-3.5 h-3.5 text-[var(--accent-color)]" />
-          <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-[var(--text-primary)]">Factor Lab{ticker ? ` · ${ticker}` : ''}</span>
+          <span className="text-[11px] font-semibold tracking-[0.14em] uppercase text-[var(--text-secondary)]">Factor Lab{ticker ? ` · ${ticker}` : ''}</span>
         </div>
         <div className="flex items-center gap-2">
           {/* Lookback window control — drives the correlation/PCA sample window. */}
-          <div className="hidden sm:flex items-center rounded border border-[var(--border)] overflow-hidden" role="group" aria-label="Correlation lookback window">
+          <div className="hidden sm:flex items-center rounded-[var(--radius-control)] border border-[var(--border-subtle)] overflow-hidden" role="group" aria-label="Correlation lookback window">
             {LOOKBACKS.map((lb) => (
               <button
                 key={lb}
@@ -186,22 +189,22 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
                 onClick={() => setLookback(lb)}
                 aria-pressed={lookback === lb}
                 aria-label={`${lb} day lookback`}
-                className={`px-1.5 py-0.5 font-mono text-[8px] font-bold tracking-widest uppercase transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${lookback === lb ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'}`}
+                className={`px-2 py-0.5 text-[10px] font-semibold tracking-[0.1em] uppercase tabular-nums transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--accent-color)] ${lookback === lb ? 'bg-[var(--accent-color)]/15 text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}
               >
                 {lb}D
               </button>
             ))}
           </div>
-          <span className={`text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded border uppercase ${stateCss}`}>{stateLabel}</span>
+          {stateLabel && <span className={`text-[9px] font-semibold tracking-[0.14em] px-1.5 py-0.5 rounded-[var(--radius-control)] border uppercase ${stateCss}`}>{stateLabel}</span>}
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3">
         {/* Correlation heatmap */}
-        <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3">
+        <div className="rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <div className="flex items-center justify-between mb-2 gap-2">
-            <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] flex items-center gap-1.5 min-w-0"><Layers className="w-3 h-3 shrink-0" /> <span className="truncate">Cross-Asset Correlation</span></span>
-            {ready && <span className="text-[8px] tabular-nums text-[var(--text-tertiary)] shrink-0">{method} · ⟨|ρ|⟩ {factors.avgAbs!.toFixed(2)}</span>}
+            <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)] flex items-center gap-1.5 min-w-0"><Layers className="w-3 h-3 shrink-0" /> <span className="truncate">Cross-Asset Correlation</span></span>
+            {ready && <span className="text-[8px] tabular-nums text-[var(--text-muted)] shrink-0">{method} · ⟨|ρ|⟩ {factors.avgAbs!.toFixed(2)}</span>}
           </div>
           {ready ? (
             <div className="overflow-x-auto">
@@ -221,8 +224,8 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
                         key={j}
                         onMouseEnter={() => setHover({ i, j })}
                         onMouseLeave={() => setHover(null)}
-                        className="flex-1 min-w-[16px] aspect-square flex items-center justify-center text-[6px] tabular-nums cursor-crosshair transition-transform hover:scale-110"
-                        style={{ background: i === j ? '#334155' : corrCss(r), color: Math.abs(r) > 0.55 ? '#0a0a0b' : 'rgba(255,255,255,0.55)' }}
+                        className="flex-1 min-w-[16px] aspect-square flex items-center justify-center text-[6px] tabular-nums cursor-crosshair"
+                        style={{ background: i === j ? 'var(--surface-3)' : corrCss(r), color: Math.abs(r) > 0.55 ? 'var(--bg-panel)' : 'var(--text-secondary)' }}
                         title={`${BASKET[i].t} · ${BASKET[j].t}: ρ ${r.toFixed(2)}`}
                       >
                         {i === j ? '' : (r * 100).toFixed(0)}
@@ -230,8 +233,8 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
                     ))}
                   </div>
                 ))}
-                <div className="mt-1.5 h-1 rounded-full" style={{ background: 'linear-gradient(to right, #ef4444, #334155, #22c55e)' }} />
-                <div className="flex justify-between text-[7px] tabular-nums text-[var(--text-tertiary)] mt-0.5"><span>−1</span><span>0</span><span>+1</span></div>
+                <div className="mt-1.5 h-1 rounded-[1px]" style={{ background: 'linear-gradient(to right, var(--danger), var(--surface-3), var(--success))' }} />
+                <div className="flex justify-between text-[7px] tabular-nums text-[var(--text-muted)] mt-0.5"><span>−1</span><span>0</span><span>+1</span></div>
                 {hover && (
                   <div className="mt-1.5 text-[9px] tabular-nums text-[var(--text-secondary)]">
                     {BASKET[hover.i].t} × {BASKET[hover.j].t}: <span className="font-bold" style={{ color: factors.corr![hover.i][hover.j] < 0 ? 'var(--danger)' : 'var(--success)' }}>ρ {factors.corr![hover.i][hover.j].toFixed(3)}</span>
@@ -245,15 +248,15 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
         </div>
 
         {/* PCA cluster map */}
-        <div className="rounded-md border border-[var(--border)] bg-[var(--surface-2)] p-3">
+        <div className="rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] flex items-center gap-1.5"><GitBranch className="w-3 h-3" /> PCA Cluster Map</span>
-            {ready && <span className="text-[9px] tabular-nums text-[var(--text-tertiary)]">PC1 {(factors.pca!.explained[0] * 100).toFixed(0)}% · PC2 {(factors.pca!.explained[1] * 100).toFixed(0)}%</span>}
+            <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)] flex items-center gap-1.5"><GitBranch className="w-3 h-3" /> PCA Cluster Map</span>
+            {ready && <span className="text-[9px] tabular-nums text-[var(--text-muted)]">PC1 {(factors.pca!.explained[0] * 100).toFixed(0)}% · PC2 {(factors.pca!.explained[1] * 100).toFixed(0)}%</span>}
           </div>
           {ready ? <PcaScatter pca={factors.pca!} /> : <Warming samples={factors.samples!} min={MIN_SAMPLES} />}
           <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
             {(['equity', 'tech', 'fin', 'haven', 'vol'] as Role[]).map((r) => (
-              <span key={r} className="flex items-center gap-1 text-[8px] uppercase tracking-wider text-[var(--text-tertiary)]">
+              <span key={r} className="flex items-center gap-1 text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: ROLE_CSS[r] }} /> {ROLE_LABEL[r]}
               </span>
             ))}
@@ -262,8 +265,8 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
       </div>
 
       {/* IV smile factor decomposition */}
-      <div className="border-t border-[var(--border)] p-3">
-        <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">Implied-Vol Smile Factors (level / slope / curvature · least-squares on the real smile)</span>
+      <div className="border-t border-[var(--border-subtle)] p-3">
+        <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Implied-Vol Smile Factors (level / slope / curvature · least-squares on the real smile)</span>
         {smile ? (
           <div className="mt-2 grid grid-cols-1 sm:grid-cols-4 gap-2">
             <FactorTile label="Level" value={`${(smile.f.level * 100).toFixed(1)}%`} sub="ATM vol" tone="var(--accent-color)" />
@@ -272,7 +275,7 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
             <FactorTile label="Fit R²" value={`${(smile.f.r2 * 100).toFixed(1)}%`} sub="variance explained" tone="var(--info)" />
           </div>
         ) : (
-          <div className="mt-2 text-[10px] text-[var(--text-tertiary)] uppercase tracking-wide">Data required — chain smile unavailable.</div>
+          <div className="mt-2 text-[10px] text-[var(--text-muted)] uppercase tracking-[0.14em]">Data required — chain smile unavailable.</div>
         )}
       </div>
     </div>
@@ -283,11 +286,11 @@ function Warming({ samples, min }: { samples: number; min: number }) {
   const pct = Math.min(100, (samples / min) * 100);
   return (
     <div className="h-[150px] flex flex-col items-center justify-center gap-2 text-center px-4">
-      <div className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">Warming up live return history</div>
-      <div className="w-40 h-1.5 rounded-full bg-[var(--surface)] overflow-hidden border border-[var(--border)]">
+      <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Warming up live return history</div>
+      <div className="w-40 h-1.5 rounded-[2px] bg-[var(--surface)] overflow-hidden border border-[var(--border-subtle)]">
         <div className="h-full bg-[var(--accent-color)] transition-all" style={{ width: `${pct}%` }} />
       </div>
-      <div className="text-[9px] tabular-nums text-[var(--text-tertiary)]">Correlation and PCA unlock after {min} return snapshots ({samples}/{min}). IV smile factors are available below now.</div>
+      <div className="text-[9px] tabular-nums text-[var(--text-muted)]">Correlation and PCA available after {min} return snapshots ({samples}/{min}). IV smile factors are shown below now.</div>
     </div>
   );
 }
@@ -319,11 +322,11 @@ function PcaScatter({ pca }: { pca: ReturnType<typeof pcaFromCorrelation> }) {
 
 function FactorTile({ label, value, sub, tone }: { label: string; value: string; sub: string; tone: string }) {
   return (
-    <div className="relative overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1.5">
-      <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: tone, opacity: 0.7 }} />
-      <div className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] truncate">{label}</div>
-      <div className="text-[15px] font-bold tabular-nums leading-tight" style={{ color: tone }}>{value}</div>
-      <div className="text-[8px] text-[var(--text-tertiary)] uppercase tracking-wide truncate">{sub}</div>
+    <div className="relative overflow-hidden rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2.5 py-1.5">
+      <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: tone }} />
+      <div className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)] truncate">{label}</div>
+      <div className="text-[15px] font-bold tabular-nums leading-tight slayer-num" style={{ color: tone }}>{value}</div>
+      <div className="text-[8px] text-[var(--text-muted)] uppercase tracking-[0.1em] truncate">{sub}</div>
     </div>
   );
 }

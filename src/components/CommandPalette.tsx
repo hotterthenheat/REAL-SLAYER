@@ -29,9 +29,10 @@ function PaletteItem({
     <Command.Item
       value={label + (keywords ? ' ' + keywords : '')}
       onSelect={onRun}
-      className="group flex items-center gap-3 px-3 py-2.5 rounded-md text-sm cursor-pointer text-[var(--text-secondary)] transition-colors data-[selected=true]:bg-[var(--surface-3)] data-[selected=true]:text-[var(--text-primary)] data-[selected=true]:shadow-[inset_2px_0_0_var(--accent-color)]"
+      style={{ borderRadius: 'var(--radius-control)' }}
+      className="group flex items-center gap-3 px-3 py-2.5 text-sm cursor-pointer text-[var(--text-secondary)] transition-colors data-[selected=true]:bg-[var(--surface-3)] data-[selected=true]:text-[var(--text-primary)] data-[selected=true]:shadow-[inset_2px_0_0_var(--accent-color)]"
     >
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-tertiary)] group-data-[selected=true]:border-[var(--accent-color)]/40 group-data-[selected=true]:text-[var(--accent-color)] [&>svg]:h-3.5 [&>svg]:w-3.5">
+      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text-tertiary)] group-data-[selected=true]:border-[var(--accent-color)]/40 group-data-[selected=true]:text-[var(--accent-color)] [&>svg]:h-3.5 [&>svg]:w-3.5">
         {icon}
       </span>
       <span className="flex-1 truncate">{label}</span>
@@ -77,7 +78,8 @@ export function CommandPalette() {
         loop
         onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); setOpen(false); } }}
         onMouseDown={(e) => e.stopPropagation()}
-        className="w-full max-w-xl mx-4 overflow-hidden rounded-xl border border-[var(--border-strong)] bg-[var(--surface)] font-mono shadow-[0_24px_70px_-12px_rgba(0,0,0,0.8)] animate-[cmdpop_140ms_cubic-bezier(.16,1,.3,1)]"
+        style={{ borderRadius: 'var(--radius-panel)' }}
+        className="w-full max-w-xl mx-4 overflow-hidden border border-[var(--border-strong)] bg-[var(--surface)] font-mono shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] animate-[cmdpop_140ms_cubic-bezier(.16,1,.3,1)]"
       >
         <div className="flex items-center gap-2 border-b border-[var(--border)] px-4 py-3">
           <Search className="h-4 w-4 text-[var(--text-tertiary)]" />
@@ -89,7 +91,7 @@ export function CommandPalette() {
           <kbd className="rounded border border-[var(--border)] px-1.5 py-0.5 text-[9px] text-[var(--text-tertiary)]">ESC</kbd>
         </div>
 
-        <Command.List className="max-h-[52vh] overflow-y-auto p-1.5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[9px] [&_[cmdk-group-heading]]:font-black [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.16em] [&_[cmdk-group-heading]]:text-[var(--text-tertiary)]">
+        <Command.List className="max-h-[52vh] overflow-y-auto p-1.5 [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:pt-2 [&_[cmdk-group-heading]]:pb-1 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-[0.16em] [&_[cmdk-group-heading]]:text-[var(--text-muted)]">
           <Command.Empty className="px-3 py-10 text-center text-xs text-[var(--text-tertiary)]">No matching commands.</Command.Empty>
 
           <Command.Group heading="Navigation">
@@ -116,7 +118,7 @@ export function CommandPalette() {
             {ASSET_LIST.map(a => (
               <PaletteItem
                 key={a.ticker}
-                icon={<span className="text-[9px] font-black tabular-nums">{a.ticker.slice(0, 3)}</span>}
+                icon={<span className="text-[10px] font-semibold tabular-nums">{a.ticker.slice(0, 3)}</span>}
                 label={`${a.ticker} · ${a.name}`}
                 hint="Symbol"
                 keywords={a.ticker + ' ' + a.name}

@@ -47,8 +47,8 @@
   --positive-soft: rgba(13, 71, 21, 0.22);
 
   /* Market-specific accents */
-  --call: #792CA2;
-  --pin: #2C687B;
+  --call: #6A93B5;
+  --pin: #C79350;
   --warning: #C49A3A;
   --info: #4A6FB8;
   --neutral: rgba(248, 248, 255, 0.55);
@@ -65,25 +65,25 @@
   --gap: 10px;
   --panel-pad: 14px;
 
-  /* Shadows kept subtle */
-  --shadow-panel: 0 0 0 1px rgba(248, 248, 255, 0.03), 0 14px 40px rgba(0, 0, 0, 0.25);
+  /* Overlay shadow — the single shadow token, reserved for things that truly
+     float (modals, popovers, flyouts). Panels stay flat, so this is no longer
+     applied to .slayer-panel. Mirrors NavFlyout's overlay elevation. */
+  --shadow-panel: 0 16px 44px -12px rgba(0, 0, 0, 0.8);
 }
 
 .slayer-terminal {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(248, 248, 255, 0.035), transparent 28%),
-    linear-gradient(180deg, var(--bg-shell) 0%, var(--bg-app) 100%);
+  /* Flat shell. The radial "hero wash" at 20% 0% was pure ornament — removed. */
+  background: var(--bg-shell);
   color: var(--text-primary);
 }
 
 .slayer-panel {
-  background:
-    linear-gradient(180deg, rgba(248, 248, 255, 0.025), transparent 42%),
-    var(--bg-panel);
+  /* Flat fill + 1px hairline, no top-sheen gradient, no drop shadow. A data
+     panel sits in the page; it does not glow or lift off it. */
+  background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-panel);
-  box-shadow: var(--shadow-panel);
 }
 
 .slayer-panel-header {

@@ -18,8 +18,8 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 // Deliberately NOT forcing uppercase/tracking here — Slayer's CTAs are a mix of small-caps and
 // title-case (e.g. "Enable 2FA"), so casing stays the caller's choice to avoid changing copy.
-// Radius defaults to rounded-md but is overridable via className.
-const BASE = 'inline-flex items-center justify-center gap-1.5 rounded-md font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
+// Radius defaults to the 7px control radius but is overridable via className.
+const BASE = 'inline-flex items-center justify-center gap-1.5 rounded-[7px] font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
 
 const SIZE: Record<Size, string> = {
   sm: 'px-2.5 py-1.5 text-[10px]',

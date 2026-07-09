@@ -89,7 +89,7 @@ export function Tooltip({ content, children, side = 'top', width = 260, disabled
           id={id}
           role="tooltip"
           style={{ position: 'fixed', top: pos.top, left: pos.left, maxWidth: width, zIndex: 9999 }}
-          className="pointer-events-none animate-[stip_120ms_ease-out] rounded-md border border-[var(--border-strong)] bg-[var(--surface-2)] px-2.5 py-2 text-[11px] leading-snug text-[var(--text-secondary)] shadow-[0_8px_28px_-8px_rgba(0,0,0,0.7)]"
+          className="pointer-events-none animate-[stip_120ms_ease-out] rounded-[7px] border border-[var(--border-strong)] bg-[var(--surface-2)] px-2.5 py-2 text-[11px] leading-snug text-[var(--text-secondary)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]"
         >
           {content}
           <span

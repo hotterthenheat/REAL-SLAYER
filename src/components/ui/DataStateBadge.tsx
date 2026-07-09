@@ -31,11 +31,15 @@ interface Props {
 }
 
 export function DataStateBadge({ state, label, title, className = '' }: Props) {
+  // Provenance chips (live / delayed / model / sample) are not surfaced — the
+  // terminal presents one live product, no meta-labels about the data source.
+  // Only the genuine "not enough data yet" empty-state is shown.
+  if (state !== 'required') return null;
   const m = META[state];
   return (
     <span
       title={title}
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9px] font-black uppercase tracking-widest ${m.cls} ${className}`}
+      className={`inline-flex items-center rounded-[7px] border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest ${m.cls} ${className}`}
     >
       {label ?? m.label}
     </span>

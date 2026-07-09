@@ -34,7 +34,7 @@ export default function PinpointTerminal({ ticker }: PinpointTerminalProps) {
   return (
     <MarketDataProvider>
       <TickerSync ticker={ticker} />
-      <div className="h-full min-h-0 overflow-y-auto rounded-lg border border-borderSubtle bg-canvas">
+      <div className="h-full min-h-0 overflow-y-auto rounded-[10px] border border-borderSubtle bg-canvas">
         <div className="space-y-4 p-4 text-textPrimary">
           <FlowMap />
         </div>

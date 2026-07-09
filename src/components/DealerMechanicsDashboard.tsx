@@ -2,6 +2,7 @@ import { lazy, Suspense, useMemo, useState } from 'react';
 import { useContractStore } from '../lib/store';
 import { Boxes, Waves, Wind, Timer, Layers, RefreshCw, Zap } from 'lucide-react';
 import { LiveValue } from './ui/LiveValue';
+import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
 import { exposureSurfaceGrid, ivSurfaceGrid, strikeDomain, ivStrikeDomain, tenorDomainDays, type ExposureField, type SurfaceProfile } from './quant/dealerSurfaces';
 import type { SurfaceMarker, DataState } from './quant/QuantSurface3D';
 
@@ -95,30 +96,57 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
   const zFormat = (v: number) => `${Math.round(v)}d`;
   const dataState: DataState = grid.length === 0 ? 'required' : live ? 'live' : 'model';
 
+  // Live dealer-physics scalars as a single hairline-separated strip (Net Gamma leads as
+  // the directional focal figure). When a feed omits net vanna/charm the value reads
+  // 'model' rather than a bare dash that would look broken next to a rendering surface.
   const netGex = profile?.netGex;
-  const metrics: { label: string; raw?: number; render: () => string; tone: string; signed?: boolean }[] = [
-    { label: 'Net Gamma', raw: netGex, render: () => fmtGamma(netGex), tone: (netGex ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)', signed: true },
-    // When the aggregate isn't on the chain (some feeds omit net vanna/charm), a bare dash
-    // reads as broken next to a rendering surface — say why it's absent instead.
-    { label: 'Net Vanna', raw: profile?.netVex, render: () => (profile?.netVex != null ? fmtGamma(profile.netVex) : 'model'), tone: 'var(--accent-color)' },
-    { label: 'Net Charm', raw: profile?.charmEx, render: () => (profile?.charmEx != null ? fmtGamma(profile.charmEx) : 'model'), tone: 'var(--warning)' },
-    { label: 'γ-Flip', raw: profile?.gammaFlip, render: () => (profile?.gammaFlip != null ? profile.gammaFlip.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'), tone: 'var(--text-primary)' },
-    { label: 'Exp. Move', raw: profile?.expectedMovePct, render: () => (profile?.expectedMovePct != null ? `±${profile.expectedMovePct.toFixed(2)}%` : '—'), tone: 'var(--info)' },
-    { label: 'Spot', raw: profile?.spot, render: () => (profile?.spot != null ? profile.spot.toLocaleString(undefined, { maximumFractionDigits: decimals }) : '—'), tone: 'var(--text-primary)' },
+  const netVex = profile?.netVex;
+  const charmEx = profile?.charmEx;
+  const strip: Metric[] = [
+    {
+      label: 'Net Gamma',
+      tone: (netGex ?? 0) >= 0 ? 'positive' : 'negative',
+      value: netGex != null ? <LiveValue value={netGex} mode="directional" format={() => fmtGamma(netGex)} /> : '—',
+    },
+    {
+      label: 'Net Vanna',
+      tone: 'call',
+      value: netVex != null ? <LiveValue value={netVex} mode="neutral" format={() => fmtGamma(netVex)} /> : '—',
+    },
+    {
+      label: 'Net Charm',
+      tone: 'warning',
+      value: charmEx != null ? <LiveValue value={charmEx} mode="neutral" format={() => fmtGamma(charmEx)} /> : '—',
+    },
+    {
+      label: 'γ-Flip',
+      tone: 'neutral',
+      value: profile?.gammaFlip != null ? profile.gammaFlip.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—',
+    },
+    {
+      label: 'Exp. Move',
+      tone: 'neutral',
+      value: profile?.expectedMovePct != null ? `±${profile.expectedMovePct.toFixed(2)}%` : '—',
+    },
+    {
+      label: 'Spot',
+      tone: 'neutral',
+      value: profile?.spot != null ? profile.spot.toLocaleString(undefined, { maximumFractionDigits: decimals }) : '—',
+    },
   ];
 
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+    <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
       {/* Header */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
-          <Zap className="h-4 w-4 text-[var(--warning)]" />
-          <span className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--text-primary)]">Dealer Mechanics · {tkr}</span>
-          <span className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">3D · WebGL</span>
+          <Zap className="h-3.5 w-3.5 text-[var(--warning)]" />
+          <span className="font-mono text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)]">Dealer Mechanics · {tkr}</span>
+          <span className="rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">3D · WebGL</span>
         </div>
         <button
           onClick={() => setRefreshKey((k) => k + 1)}
-          className="flex items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 py-1 font-mono text-[9px] font-bold uppercase tracking-widest text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+          className="flex items-center gap-1.5 rounded-[7px] border border-[var(--border)] px-2.5 py-1 font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
         >
           <RefreshCw className="h-3 w-3" /> Recompute
         </button>
@@ -135,7 +163,7 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
               role="tab"
               aria-selected={on}
               onClick={() => setSurface(s.key)}
-              className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 font-mono text-[10px] font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
+              className={`flex items-center gap-1.5 rounded-[7px] border px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${
                 on ? 'border-[var(--accent-color)]/50 bg-[var(--accent-color)]/10 text-[var(--text-primary)]' : 'border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
               }`}
             >
@@ -146,7 +174,7 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
       </div>
 
       {/* The brutalist surface */}
-      <div className="overflow-hidden rounded-md border border-[var(--border)] bg-[#0a0a0b]">
+      <div className="overflow-hidden rounded-[10px] border border-[var(--border)] bg-[#0a0a0b]">
         <Suspense fallback={<div className="h-[460px] w-full animate-pulse bg-[var(--surface-2)]" />}>
           <QuantSurface3D
             grid={grid}
@@ -169,25 +197,13 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
       </div>
 
       {/* What am I looking at */}
-      <div className="mt-2 flex items-start gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)]/50 px-3 py-2">
+      <div className="mt-2 flex items-start gap-2 rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)]/50 px-3 py-2">
         <Waves className="mt-0.5 h-3 w-3 shrink-0 text-[var(--accent-color)]" />
         <p className="font-mono text-[10px] leading-relaxed text-[var(--text-tertiary)]">{active.blurb}</p>
       </div>
 
-      {/* Live dealer-physics scalars */}
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {metrics.map((m) => (
-          <div key={m.label} className="relative overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-2">
-            <span className="absolute left-0 top-0 bottom-0 w-[2px]" style={{ background: m.tone, opacity: 0.7 }} />
-            <div className="truncate font-mono text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">{m.label}</div>
-            <div className="mt-0.5 font-mono text-[13px] font-bold tabular-nums leading-tight" style={{ color: m.tone }}>
-              {m.raw != null
-                ? <LiveValue value={m.raw} mode={m.signed ? 'directional' : 'neutral'} format={() => m.render()} />
-                : m.render()}
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Live dealer-physics scalars — one hairline strip, Net Gamma leads */}
+      <MetricStrip metrics={strip} columns={6} className="mt-3" />
     </div>
   );
 }

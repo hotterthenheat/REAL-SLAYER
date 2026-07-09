@@ -10,8 +10,9 @@ import * as THREE from 'three';
  *     high-performance mathematical plot; clouds are `PointsMaterial`; axes/ticks/markers
  *     are `LineBasicMaterial`/`MeshBasicMaterial`. It looks like a plot, not a video game.
  *   • DATA-STATUS PALETTE. Floor grid is stark #27272a. Surface colour maps to data
- *     intensity: diverging signed data → red #ef4444 (neg) · slate (zero) · green
- *     #22c55e (pos); sequential unsigned data → blue (low) → amber → red #ef4444 (high).
+ *     intensity on Slayer's brand accents: diverging signed data → red #B23B3B (neg) ·
+ *     slate (zero) · green #3F9C79 (pos); sequential unsigned → steel #6A93B5 (low) →
+ *     amber #C79350 → red #B23B3B (high). No neon.
  *   • REAL SPATIAL CONTEXT. Optional strike/tenor domains drive axis ticks + numeric
  *     readouts; optional market markers (spot / γ-flip / call wall / put wall) render as
  *     vertical reference walls; a floor heatmap projects the field; hover raycasts the
@@ -80,16 +81,16 @@ interface QuantSurface3DProps {
   sliceRow?: number | null;
 }
 
-// ── Directive-08 data-status palette (0..255 → 0..1 baked below) ──────────────
-const RED: [number, number, number] = [0xef / 255, 0x44 / 255, 0x44 / 255];   // #ef4444
-const GREEN: [number, number, number] = [0x22 / 255, 0xc5 / 255, 0x5e / 255]; // #22c55e
+// ── Directive-08 data-status palette, on Slayer's brand data accents (not neon) ──
+const RED: [number, number, number] = [0xb2 / 255, 0x3b / 255, 0x3b / 255];   // #B23B3B bearish / short-γ
+const GREEN: [number, number, number] = [0x3f / 255, 0x9c / 255, 0x79 / 255]; // #3F9C79 bullish / long-γ
 const SLATE: [number, number, number] = [0x33 / 255, 0x41 / 255, 0x55 / 255]; // #334155 (dim neutral so red/green extremes pop)
-const BLUE: [number, number, number] = [0x25 / 255, 0x63 / 255, 0xeb / 255];  // #2563eb
-const AMBER: [number, number, number] = [0xea / 255, 0xb3 / 255, 0x08 / 255]; // #eab308
+const BLUE: [number, number, number] = [0x6a / 255, 0x93 / 255, 0xb5 / 255];  // #6A93B5 steel (low intensity)
+const AMBER: [number, number, number] = [0xc7 / 255, 0x93 / 255, 0x50 / 255]; // #C79350 (mid intensity)
 
-// Marker wall colours (hex ints for three, css for the chip legend).
-const MARKER_HEX: Record<SurfaceMarker['kind'], number> = { spot: 0xe5e7eb, flip: 0xeab308, callWall: 0x22c55e, putWall: 0xef4444 };
-const MARKER_CSS: Record<SurfaceMarker['kind'], string> = { spot: '#e5e7eb', flip: '#eab308', callWall: '#22c55e', putWall: '#ef4444' };
+// Marker wall colours (hex ints for three, css for the chip legend) — brand accents.
+const MARKER_HEX: Record<SurfaceMarker['kind'], number> = { spot: 0xe5e7eb, flip: 0xc79350, callWall: 0x3f9c79, putWall: 0xb23b3b };
+const MARKER_CSS: Record<SurfaceMarker['kind'], string> = { spot: '#e5e7eb', flip: '#C79350', callWall: '#3F9C79', putWall: '#B23B3B' };
 
 function lerp3(a: readonly number[], b: readonly number[], f: number, out: THREE.Color) {
   out.setRGB(a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f);
@@ -429,8 +430,8 @@ export default function QuantSurface3D({
 
   const mid = stats ? (ramp === 'diverging' ? 0 : (stats.vMin + stats.vMax) / 2) : 0;
   const gradient = ramp === 'diverging'
-    ? 'linear-gradient(to top, #ef4444, #334155 50%, #22c55e)'
-    : 'linear-gradient(to top, #2563eb, #eab308 50%, #ef4444)';
+    ? 'linear-gradient(to top, #B23B3B, #334155 50%, #3F9C79)'
+    : 'linear-gradient(to top, #6A93B5, #C79350 50%, #B23B3B)';
 
   return (
     <Frame height={height}>
@@ -445,7 +446,7 @@ export default function QuantSurface3D({
           <div className="flex flex-col justify-between py-0.5 font-mono text-[8px] tabular-nums text-[var(--text-tertiary)] text-right leading-none">
             <span>{valueFormat(stats.vMax)}</span><span>{valueFormat(mid)}</span><span>{valueFormat(stats.vMin)}</span>
           </div>
-          <div className="w-2 rounded-sm border border-white/10" style={{ background: gradient, height: 74 }} />
+          <div className="w-2 rounded-[2px] border border-white/10" style={{ background: gradient, height: 74 }} />
         </div>
       )}
 
@@ -474,12 +475,12 @@ export default function QuantSurface3D({
       {/* Hover readout. */}
       {hover && (
         <div
-          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded border border-[var(--border-strong,#3f3f46)] bg-[#0a0a0b]/95 px-2 py-1 font-mono text-[9px] leading-tight tabular-nums shadow-lg"
+          className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-full rounded-[7px] border border-[var(--border-strong,#3f3f46)] bg-[#0a0a0b]/95 px-2 py-1 font-mono text-[9px] leading-tight tabular-nums shadow-lg"
           style={{ left: hover.left, top: hover.top - 10 }}
         >
           <div className="text-[var(--text-tertiary)]">{axisLabels?.[0] ?? 'x'} <span className="text-[var(--text-primary)]">{hover.xv}</span></div>
           <div className="text-[var(--text-tertiary)]">{axisLabels?.[1] ?? 'z'} <span className="text-[var(--text-primary)]">{hover.zv}</span></div>
-          <div className="text-[var(--text-tertiary)]">{axisLabels?.[2] ?? 'y'} <span style={{ color: hover.sign < 0 ? '#ef4444' : hover.sign > 0 ? '#22c55e' : 'var(--text-primary)' }}>{hover.v}</span></div>
+          <div className="text-[var(--text-tertiary)]">{axisLabels?.[2] ?? 'y'} <span style={{ color: hover.sign < 0 ? '#B23B3B' : hover.sign > 0 ? '#3F9C79' : 'var(--text-primary)' }}>{hover.v}</span></div>
         </div>
       )}
     </Frame>
@@ -493,16 +494,19 @@ const Frame: React.FC<{ height: number; children: React.ReactNode }> = ({ height
 );
 
 const STATE_META: Record<DataState, { label: string; css: string }> = {
-  live: { label: 'Live Chain', css: 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10' },
-  delayed: { label: 'Delayed Data', css: 'text-[var(--warning)] border-[var(--warning)]/40 bg-[var(--warning)]/10' },
-  model: { label: 'Model Mode', css: 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10' },
+  live: { label: '', css: 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10' },
+  delayed: { label: '', css: 'text-[var(--warning)] border-[var(--warning)]/40 bg-[var(--warning)]/10' },
+  model: { label: '', css: 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10' },
   required: { label: 'Data Required', css: 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]' },
 };
 
 function StatePill({ state }: { state: DataState }) {
+  // Provenance stamps (live / delayed / model) are not surfaced — only the genuine
+  // "not enough data yet" empty-state is shown.
+  if (state !== 'required') return null;
   const m = STATE_META[state];
   return (
-    <div className={`pointer-events-none absolute left-3 top-2 z-10 rounded border px-1.5 py-0.5 font-mono text-[8px] font-black uppercase tracking-widest ${m.css}`}>
+    <div className={`pointer-events-none absolute left-3 top-2 z-10 rounded-[7px] border px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-widest ${m.css}`}>
       {m.label}
     </div>
   );
@@ -512,8 +516,7 @@ function State({ tone, title, sub }: { tone: 'danger' | 'warn' | 'muted'; title:
   const c = tone === 'danger' ? 'var(--danger)' : tone === 'warn' ? 'var(--warning)' : 'var(--text-tertiary)';
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-6 text-center">
-      <div className="h-8 w-8 rounded-full border" style={{ borderColor: `color-mix(in srgb, ${c} 45%, transparent)` }} />
-      <div className="font-mono text-[11px] font-black uppercase tracking-widest" style={{ color: c }}>{title}</div>
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-widest" style={{ color: c }}>{title}</div>
       <div className="max-w-[240px] font-mono text-[10px] leading-relaxed text-[var(--text-tertiary)]">{sub}</div>
     </div>
   );
@@ -522,8 +525,8 @@ function State({ tone, title, sub }: { tone: 'danger' | 'warn' | 'muted'; title:
 function Sk() {
   return (
     <div className="absolute inset-0 p-4">
-      <div className="mb-3 h-3 w-40 animate-pulse rounded bg-white/10" />
-      <div className="h-[calc(100%-1.5rem)] w-full animate-pulse rounded-lg bg-white/[0.04]" />
+      <div className="mb-3 h-3 w-40 animate-pulse rounded-[7px] bg-white/10" />
+      <div className="h-[calc(100%-1.5rem)] w-full animate-pulse rounded-[10px] bg-white/[0.04]" />
     </div>
   );
 }

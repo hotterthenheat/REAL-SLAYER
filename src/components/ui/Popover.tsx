@@ -125,7 +125,7 @@ export function Popover({
             width: pos.width ?? (typeof width === 'number' ? width : undefined),
             zIndex: 9998,
           }}
-          className={`animate-[spop_130ms_cubic-bezier(.16,1,.3,1)] overflow-hidden rounded-lg border border-[var(--border-strong)] bg-[var(--surface-2)] shadow-[0_18px_50px_-12px_rgba(0,0,0,0.8)] backdrop-blur-md ${className}`}
+          className={`animate-[spop_130ms_cubic-bezier(.16,1,.3,1)] overflow-hidden rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface-2)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] ${className}`}
         >
           {children}
         </div>,

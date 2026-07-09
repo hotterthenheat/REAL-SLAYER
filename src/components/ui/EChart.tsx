@@ -30,25 +30,30 @@ let themeRegistered = false;
 function registerSlayerTheme(echarts: EChartsModule) {
   if (themeRegistered) return;
   themeRegistered = true;
+  // Data font is a neutral system mono (tabular digits, clean axes) — the brand
+  // face (JetBrains Mono) is reserved for the wordmark, never chart data.
+  const dataFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
   const axis = {
     axisLine: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
     axisTick: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
-    axisLabel: { color: '#8A8A92', fontFamily: 'JetBrains Mono, ui-monospace, monospace', fontSize: 10 },
+    axisLabel: { color: '#8A8A92', fontFamily: dataFont, fontSize: 10 },
     splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
     splitArea: { areaStyle: { color: ['rgba(255,255,255,0.012)', 'transparent'] } },
   };
+  // Series palette = the terminal's semantic data accents (steel/amber/green/red
+  // + muted greek/dealer tones), not generic bright chart hues.
   echarts.registerTheme('slayer-dark', {
-    color: ['#4ADE80', '#60A5FA', '#F87171', '#FBBF24', '#B06FE6', '#29B6F6', '#34D399', '#F472B6'],
+    color: ['#6A93B5', '#C79350', '#3F9C79', '#B23B3B', '#7C6DA8', '#5E8C8C', '#8A8A92', '#A66FA0'],
     backgroundColor: 'transparent',
-    textStyle: { fontFamily: 'JetBrains Mono, ui-monospace, monospace', color: '#A3A3A3' },
+    textStyle: { fontFamily: dataFont, color: '#A3A3A3' },
     title: { textStyle: { color: '#E5E5E5', fontWeight: 700 }, subtextStyle: { color: '#71717A' } },
-    legend: { textStyle: { color: '#A3A3A3', fontFamily: 'JetBrains Mono, monospace' }, inactiveColor: '#3f3f46' },
+    legend: { textStyle: { color: '#A3A3A3', fontFamily: dataFont }, inactiveColor: '#3f3f46' },
     tooltip: {
       backgroundColor: 'rgba(10,10,11,0.96)',
       borderColor: 'rgba(255,255,255,0.10)',
       borderWidth: 1,
-      textStyle: { color: '#E5E5E5', fontFamily: 'JetBrains Mono, monospace', fontSize: 11 },
-      extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px;',
+      textStyle: { color: '#E5E5E5', fontFamily: dataFont, fontSize: 11 },
+      extraCssText: 'border-radius: 7px;',
     },
     axisPointer: { lineStyle: { color: '#3f3f46' }, crossStyle: { color: '#3f3f46' }, label: { backgroundColor: '#1c1c1e' } },
     categoryAxis: axis,
@@ -59,9 +64,9 @@ function registerSlayerTheme(echarts: EChartsModule) {
     toolbox: { iconStyle: { borderColor: '#71717A' }, emphasis: { iconStyle: { borderColor: '#E5E5E5' } } },
     dataZoom: {
       borderColor: 'rgba(255,255,255,0.08)',
-      fillerColor: 'rgba(74,222,128,0.10)',
-      handleStyle: { color: '#4ADE80' },
-      moveHandleStyle: { color: '#4ADE80' },
+      fillerColor: 'rgba(106,147,181,0.12)',
+      handleStyle: { color: '#6A93B5' },
+      moveHandleStyle: { color: '#6A93B5' },
       dataBackground: { lineStyle: { color: '#3f3f46' }, areaStyle: { color: 'rgba(255,255,255,0.04)' } },
       textStyle: { color: '#71717A' },
     },

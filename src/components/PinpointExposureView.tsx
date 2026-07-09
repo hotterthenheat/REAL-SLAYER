@@ -20,9 +20,8 @@ import { useContractStore } from '../lib/store';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
 import { InsightPanel } from './ui/terminal/InsightPanel';
-import { StatusBadge } from './ui/terminal/StatusBadge';
 import { DealerPositioningMap } from './pinpoint/DealerPositioningMap';
-import { Download, Waves } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Formatting helpers (compact $ magnitudes, tabular-friendly)
@@ -246,9 +245,6 @@ export default function PinpointExposureView() {
     return { label: bias ?? '—', tone, sub };
   }, [gauge]);
 
-  // Feed provenance.
-  const isLive = !!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC';
-
   // ── Strike windowing / interval ────────────────────────────────────────────
   const asc = useMemo(() => {
     const s: any[] = profile?.strikes ? [...profile.strikes] : [];
@@ -443,40 +439,59 @@ export default function PinpointExposureView() {
   if (!serverState || !profile || !profile.strikes || profile.strikes.length === 0) {
     return (
       <div
-        className="slayer-panel w-full p-6 space-y-5"
+        className="slayer-terminal w-full font-mono space-y-3 p-0.5"
         id="pinpoint-data-pending"
         role="status"
         aria-busy="true"
         aria-label="Loading pinpoint exposure data"
       >
-        <div className="flex flex-col items-center justify-center text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] flex items-center justify-center">
-            <Waves className="w-6 h-6 text-[var(--pin)]" />
-          </div>
-          <div className="space-y-1.5">
-            <h2 className="slayer-title">LOADING PINPOINT EXPOSURE</h2>
-            <p className="text-[11px] text-[var(--text-muted)] tracking-wide leading-relaxed max-w-sm mx-auto">
-              Loading dealer inventory &amp; sensitivity by strike. Select any strike or option type to start the feed.
-            </p>
-          </div>
-          <div className="flex items-center gap-2 justify-center">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] inline-block animate-pulse" />
-            <span className="text-[9px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">
-              AWAITING FIRST DATA FRAME...
-            </span>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {['Exposure Matrix', 'Dealer Positioning Map'].map((label) => (
-            <div key={label} className="slayer-panel p-4 space-y-2">
-              <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {Array.from({ length: 8 }).map((_, i) => (
-                  <div key={i} className="h-9 rounded bg-[var(--bg-panel-soft)] animate-pulse" />
-                ))}
-              </div>
+        {/* KPI strip skeleton — one hairline strip, mirrors the live MetricStrip
+            rather than a wall of rounded placeholder cards. */}
+        <div className="slayer-panel grid grid-cols-2 overflow-hidden md:grid-cols-4 xl:grid-cols-8">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className={`px-4 py-3 ${i !== 0 ? 'border-l border-[var(--border-subtle)]' : ''}`}>
+              <div className="h-[7px] w-10 bg-[var(--bg-panel-soft)]" />
+              <div className="mt-2 h-4 w-16 bg-[var(--bg-panel-soft)] animate-pulse" style={{ opacity: i === 0 ? 1 : 0.6 }} />
             </div>
           ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,48fr)_minmax(0,52fr)] gap-3 items-stretch">
+          {/* Matrix placeholder — the focal instrument gets the honest status line */}
+          <div className="slayer-panel flex flex-col">
+            <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
+              <div className="min-w-0">
+                <div className="slayer-title">Exposure Matrix</div>
+                <div className="text-[10px] tracking-wide text-[var(--text-muted)]">Inventory &amp; sensitivity by strike</div>
+              </div>
+              <span className="flex shrink-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--warning)] animate-pulse" />
+                Awaiting feed
+              </span>
+            </div>
+            <div className="flex flex-1 flex-col gap-px p-2">
+              {Array.from({ length: 12 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-5 bg-[var(--bg-panel-soft)] animate-pulse"
+                  style={{ opacity: Math.max(0.2, 0.9 - i * 0.06) }}
+                />
+              ))}
+            </div>
+          </div>
+          {/* Positioning-map placeholder — plain-language pending state, no hero icon */}
+          <div className="slayer-panel flex flex-col">
+            <div className="border-b border-[var(--border-subtle)] px-3 py-2">
+              <div className="slayer-title">Dealer Positioning Map</div>
+              <div className="text-[10px] tracking-wide text-[var(--text-muted)]">Net gamma by strike</div>
+            </div>
+            <div className="flex flex-1 items-center px-4 py-6">
+              <p className="max-w-md text-[11px] leading-relaxed text-[var(--text-muted)]">
+                No dealer profile — waiting on {selectedAsset.ticker} feed. Select any strike or option type to start the
+                stream.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -545,14 +560,7 @@ export default function PinpointExposureView() {
         <TerminalPanel
           title="Exposure Matrix"
           subtitle="Inventory & sensitivity by strike"
-          actions={
-            <>
-              <StatusBadge tone={isLive ? 'live' : 'neutral'} dot>
-                {isLive ? 'Live Chain' : 'Model'}
-              </StatusBadge>
-              {panelActions}
-            </>
-          }
+          actions={panelActions}
           bodyClassName="flex flex-col gap-2"
         >
           <div className="text-[10px] text-[var(--text-muted)] tracking-wide flex flex-wrap gap-x-4 gap-y-0.5">
@@ -562,7 +570,7 @@ export default function PinpointExposureView() {
           </div>
 
           {/* TABLE — fits without scroll at ≥1280px (xl); scrolls in-container below that. */}
-          <div className="overflow-x-auto rounded-md border border-[var(--border-subtle)]">
+          <div className="overflow-x-auto border border-[var(--border-subtle)]">
             <div className="min-w-[500px] xl:min-w-0">
               {/* Group header */}
               <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] items-end border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
@@ -685,7 +693,7 @@ export default function PinpointExposureView() {
       {/* The three net-greek totals side by side. Level/wall/bias figures live in
           the top KPI strip — not duplicated here. */}
       <TerminalPanel title="Aggregate Net Exposure" subtitle="Net dealer greeks across the visible chain">
-        <div className="grid grid-cols-1 sm:grid-cols-3 overflow-hidden rounded-md border-t border-l border-[var(--border-subtle)] bg-[var(--bg-panel)]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 overflow-hidden border-t border-l border-[var(--border-subtle)] bg-[var(--bg-panel)]">
           <LevelCell label="Net GEX" value={fmtBnSigned(netGex)} sub={netGexTrend} tone={netGex == null ? 'neutral' : netGex < 0 ? 'negative' : 'positive'} />
           <LevelCell label="Net DEX" value={fmtCompact(netDexAgg, true)} sub={netDexAgg == null ? '—' : netDexAgg < 0 ? 'Downside tilt' : 'Upside tilt'} tone={netDexAgg == null ? 'neutral' : netDexAgg < 0 ? 'negative' : 'positive'} />
           <LevelCell label="Net VEX" value={fmtCompact(netVexAgg, true)} sub={netVexAgg == null ? '—' : netVexAgg < 0 ? 'Short vega' : 'Long vega'} tone={netVexAgg == null ? 'neutral' : netVexAgg < 0 ? 'negative' : 'positive'} />

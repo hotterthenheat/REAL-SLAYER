@@ -31,13 +31,12 @@ interface ThreeSurfaceProps {
   error?: string | null;
 }
 
-// Slayer height colormap (low → high): deep indigo → sky → green → amber → pink.
+// Sequential height ramp on Slayer's data accents (low → high): steel → amber → red.
+// A single-hue-family sweep reads as a measured intensity scale, not a decorative rainbow.
 const STOPS: Array<[number, [number, number, number]]> = [
-  [0.0, [0.16, 0.11, 0.55]],
-  [0.25, [0.16, 0.45, 0.90]],
-  [0.5, [0.29, 0.87, 0.50]],
-  [0.75, [0.98, 0.72, 0.06]],
-  [1.0, [0.96, 0.28, 0.40]],
+  [0.0, [0.42, 0.58, 0.71]],  // steel  #6A93B5
+  [0.5, [0.78, 0.58, 0.31]],  // amber  #C79350
+  [1.0, [0.70, 0.23, 0.23]],  // red    #B23B3B
 ];
 function heightColor(t: number, out: THREE.Color) {
   t = Math.max(0, Math.min(1, t));
@@ -220,7 +219,7 @@ export default function ThreeSurface({ grid, points, height = 380, axisLabels, a
 
   // ── Terminal-grade states (never a white box) ──────────────────────
   const Frame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <div style={{ height }} className="relative w-full overflow-hidden bg-[radial-gradient(circle_at_50%_-10%,color-mix(in_srgb,var(--accent-color)_9%,transparent),transparent_45%)]">
+    <div style={{ height }} className="relative w-full overflow-hidden bg-[#0a0a0b]">
       {children}
     </div>
   );
@@ -248,8 +247,7 @@ function State({ tone, title, sub }: { tone: 'danger' | 'warn' | 'muted'; title:
   const c = tone === 'danger' ? 'var(--danger)' : tone === 'warn' ? 'var(--warning)' : 'var(--text-tertiary)';
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 px-6 text-center">
-      <div className="h-8 w-8 rounded-full border" style={{ borderColor: `color-mix(in srgb, ${c} 45%, transparent)` }} />
-      <div className="font-mono text-[11px] font-black uppercase tracking-widest" style={{ color: c }}>{title}</div>
+      <div className="font-mono text-[11px] font-semibold uppercase tracking-widest" style={{ color: c }}>{title}</div>
       <div className="max-w-[240px] font-mono text-[10px] leading-relaxed text-[var(--text-tertiary)]">{sub}</div>
     </div>
   );
@@ -258,8 +256,8 @@ function State({ tone, title, sub }: { tone: 'danger' | 'warn' | 'muted'; title:
 function Skeleton() {
   return (
     <div className="absolute inset-0 p-4">
-      <div className="mb-3 h-3 w-40 animate-pulse rounded bg-white/10" />
-      <div className="h-[calc(100%-1.5rem)] w-full animate-pulse rounded-lg bg-white/[0.04]" />
+      <div className="mb-3 h-3 w-40 animate-pulse rounded-[7px] bg-white/10" />
+      <div className="h-[calc(100%-1.5rem)] w-full animate-pulse rounded-[10px] bg-white/[0.04]" />
     </div>
   );
 }

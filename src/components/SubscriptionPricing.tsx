@@ -187,31 +187,31 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
     <>
       <motion.section
         id="pricing-matrices"
-        initial={{ opacity: 0, y: 50, scale: 0.98 }}
-        whileInView={{ opacity: 1, y: 0, scale: 1 }}
+        initial={{ opacity: 0, y: 12 }}
+        whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, margin: "-100px" }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 py-12 sm:py-20 px-4 sm:px-6 max-w-[1320px] mx-auto w-full"
       >
-        <div className="text-center mb-10 sm:mb-12">
-          <span className="text-[var(--text-faint)] text-[10px] font-semibold uppercase tracking-[0.28em] block mb-3">
-            Plans &amp; Pricing
-          </span>
-          <h2 className="text-[28px] sm:text-[34px] font-semibold text-[var(--text-primary)] tracking-tight font-sans leading-tight">
-            Choose your plan
-          </h2>
-          <p className="text-[var(--text-muted)] text-[13.5px] mt-3 max-w-md mx-auto leading-relaxed">
-            Every tier builds on the one before it. Upgrade or cancel anytime.
-          </p>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10 max-w-5xl mx-auto w-full">
+          <div>
+            <span className="text-[var(--text-faint)] text-[10px] font-semibold uppercase tracking-[0.18em] block mb-2">
+              Access
+            </span>
+            <h2 className="text-[22px] sm:text-[24px] font-semibold text-[var(--text-primary)] tracking-tight font-sans leading-none">
+              Plans &amp; pricing
+            </h2>
+            <p className="text-[var(--text-muted)] text-[12.5px] mt-2 leading-relaxed">
+              Each tier includes everything below it. Cancel anytime.
+            </p>
+          </div>
 
-        <div className="flex justify-center mb-10 sm:mb-12 w-full">
-          <div role="radiogroup" aria-label="Billing cycle" className="inline-flex items-center gap-1 bg-[var(--bg-panel)] border border-[var(--border-subtle)] p-1 rounded-[8px]">
+          <div role="radiogroup" aria-label="Billing cycle" className="inline-flex items-center gap-1 bg-[var(--bg-panel)] border border-[var(--border-subtle)] p-1 rounded-[7px] shrink-0 self-start sm:self-auto">
             <button
               role="radio"
               aria-checked={billingCycle === 'monthly'}
               onClick={() => setBillingCycle('monthly')}
-              className={`px-5 sm:px-6 py-2 min-h-[38px] rounded-[6px] text-[12px] font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] border ${
+              className={`px-4 py-1.5 min-h-[34px] rounded-[7px] text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] border ${
                 billingCycle === 'monthly' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border-transparent'
               }`}
             >
@@ -221,11 +221,11 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               role="radio"
               aria-checked={billingCycle === 'annual'}
               onClick={() => setBillingCycle('annual')}
-              className={`px-5 sm:px-6 py-2 min-h-[38px] rounded-[6px] text-[12px] font-semibold tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] flex items-center gap-2 border ${
+              className={`px-4 py-1.5 min-h-[34px] rounded-[7px] text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] flex items-center gap-2 border ${
                 billingCycle === 'annual' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border-transparent'
               }`}
             >
-              Annual <span className="text-[9px] bg-[var(--positive-soft)] text-[var(--positive-ink)] px-2 py-0.5 rounded-[4px] font-semibold uppercase tracking-wide">Save up to 18%</span>
+              Annual <span className="text-[9px] text-[var(--positive-ink)] tabular-nums font-semibold tracking-wide">−18%</span>
             </button>
           </div>
         </div>
@@ -297,10 +297,11 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[10px] p-6 pt-7 flex flex-col relative bg-[var(--bg-panel-raised)] border border-[var(--border-strong)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] transition-colors duration-200"
+            className="group rounded-[10px] p-6 pt-7 flex flex-col relative bg-[var(--bg-panel-raised)] border border-[var(--border-strong)] transition-colors duration-200"
           >
-            <div className="absolute -top-2.5 left-6 bg-[var(--text-primary)] text-[#0A0806] text-[9px] font-semibold uppercase tracking-[0.16em] px-2.5 py-1 rounded-[5px] whitespace-nowrap z-10">
-              Most Popular
+            <div className="absolute top-0 left-0 h-full w-[2px] bg-[var(--accent-color)] rounded-l-[10px]" aria-hidden="true" />
+            <div className="absolute -top-2.5 left-6 bg-[var(--text-primary)] text-[#0A0806] text-[9px] font-semibold uppercase tracking-[0.16em] px-2.5 py-1 rounded-[7px] whitespace-nowrap z-10">
+              Flagship
             </div>
 
             <div className="flex flex-col flex-grow">
@@ -454,7 +455,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.96, y: 16 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-[var(--bg-panel)] border border-[var(--border-subtle)] rounded-[10px] w-full max-w-2xl my-auto overflow-hidden shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] flex flex-col"
+              className="bg-[var(--bg-panel)] border border-[var(--border-subtle)] rounded-[10px] w-full max-w-2xl my-auto overflow-hidden shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] flex flex-col"
             >
               {/* Modal Top Ribbon Header */}
               <div className="border-b border-[var(--border-subtle)] px-4 sm:px-6 py-4 flex items-center justify-between">
@@ -478,11 +479,11 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               <div className="flex-grow overflow-y-auto p-4 sm:p-6 space-y-5">
 
                 {/* 1. PLAN SUMMARY CARD */}
-                <div className="bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] p-5 rounded-[8px]">
+                <div className="bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] p-5 rounded-[10px]">
                   <div className="flex justify-between items-start gap-4">
                     <div>
                       <span className="text-[10px] text-[var(--text-faint)] uppercase tracking-[0.18em] block font-semibold">Your plan</span>
-                      <h3 className="text-[19px] font-semibold text-[var(--text-primary)] mt-1.5 tracking-tight font-sans">
+                      <h3 className="text-[17px] font-semibold text-[var(--text-primary)] mt-1.5 tracking-tight font-sans">
                         {selectedPlanForCheckout === 'skyvision' && "SkyVision"}
                         {selectedPlanForCheckout === 'pinpoint' && "Pinpoint"}
                         {selectedPlanForCheckout === 'lifetime' && "Lifetime"}
@@ -528,7 +529,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                 )}
 
                 {selectedPlanForCheckout === 'lifetime' && !contactSubmitted && (
-                  <div className="border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] rounded-[8px] p-4">
+                  <div className="border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] rounded-[10px] p-4">
                         <div className="space-y-4 flex flex-col justify-between h-full">
                           <div className="space-y-3.5">
                             <p className="text-[11px] text-[var(--text-muted)] leading-relaxed">
@@ -764,7 +765,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                 )}
 
                 {selectedPlanForCheckout === 'lifetime' && contactSubmitted && (
-                  <div className="border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] rounded-[8px] p-6 text-center space-y-3">
+                  <div className="border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] rounded-[10px] p-6 text-center space-y-3">
                     <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center bg-[var(--positive-soft)] border border-[var(--positive-ink)]/40">
                       <CheckCircle2 className="w-7 h-7 text-[var(--positive-ink)]" />
                     </div>

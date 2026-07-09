@@ -43,7 +43,7 @@ const Panel = ({
   children,
 }: PanelProps) => {
   return (
-    <section className={`border ${toneSurface[tone]} rounded-lg flex flex-col min-w-0 ${className}`}>
+    <section className={`border ${toneSurface[tone]} rounded-[10px] flex flex-col min-w-0 ${className}`}>
       {(title || actions) && (
         <header className={`flex items-center justify-between gap-3 px-4 h-10 border-b ${toneDivider[tone]} shrink-0`}>
           <div className="flex items-baseline gap-2 min-w-0">

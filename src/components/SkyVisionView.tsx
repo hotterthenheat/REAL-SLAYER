@@ -63,19 +63,17 @@ function OptionCard({ strikeLabel, health, move, price, action, isSelected, isCa
   const tickClass = tickDirection === 'up' ? 'tick-up' : tickDirection === 'down' ? 'tick-down' : '';
 
   return (
-    <motion.div
-      whileHover={{ scale: 1.01 }}
-      whileTap={{ scale: 0.99 }}
+    <div
       onClick={onClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); } }}
       aria-label={`Select ${strikeLabel} ${isCall ? 'call' : 'put'}, ${action}`}
-      className={`p-3 border rounded-lg cursor-pointer transition-colors flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${cardBgClass}`}
+      className={`px-3 py-2 border cursor-pointer transition-colors flex flex-col gap-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${isSelected ? `border-l-2 ${isCall ? 'border-l-[var(--success)]' : 'border-l-[var(--danger)]'}` : ''} ${cardBgClass}`}
     >
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1 text-left min-w-0">
-          <span className="text-[13px] font-black font-sans text-[var(--text-primary)]">{strikeLabel}</span>
+          <span className="text-[13px] font-bold font-sans text-[var(--text-primary)]">{strikeLabel}</span>
           <div className="flex items-center gap-1.5">
             <span className="text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] tabular-nums">HEALTH {health}</span>
             <span className="w-10 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden shrink-0">
@@ -91,23 +89,23 @@ function OptionCard({ strikeLabel, health, move, price, action, isSelected, isCa
         </div>
         <div className="flex items-center gap-3">
           <div className="flex flex-col items-end gap-0.5 text-right">
-            <span className={`text-xs font-black font-mono text-[var(--text-primary)] tabular-nums ${tickClass}`}>
+            <span className={`text-xs font-bold font-mono text-[var(--text-primary)] tabular-nums ${tickClass}`}>
               ${price.toFixed(2)}
             </span>
             <span className={`font-bold font-mono text-[10px] tabular-nums ${isCall ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
               +{move}%
             </span>
           </div>
-          <span className={`px-2 py-0.5 rounded text-[10px] font-black tracking-widest border uppercase shrink-0 ${actionColor}`}>
+          <span className={`px-2 py-0.5 rounded text-[10px] font-bold tracking-widest border uppercase shrink-0 ${actionColor}`}>
             {action}
           </span>
         </div>
       </div>
       <div className="flex pt-2 border-t border-[var(--border)] justify-between items-center">
          <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider font-mono">Momentum</span>
-         <span className={`text-[10px] font-black uppercase ${momentum === 'STRENGTHENING' ? 'text-[var(--success)]' : momentum === 'WEAKENING' ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'}`}>{momentum}</span>
+         <span className={`text-[10px] font-bold uppercase ${momentum === 'STRENGTHENING' ? 'text-[var(--success)]' : momentum === 'WEAKENING' ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'}`}>{momentum}</span>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
@@ -489,7 +487,7 @@ export function SkyVisionView() {
   }
 
   return (
-    <div className="w-full text-[var(--text-secondary)] flex flex-col font-mono select-none antialiased space-y-6">
+    <div className="w-full text-[var(--text-secondary)] flex flex-col font-mono select-none antialiased space-y-5">
 
       {/* Back Button to list */}
       <div className="w-full flex items-center justify-between gap-2 pb-2 border-b border-[var(--border)]">
@@ -497,28 +495,28 @@ export function SkyVisionView() {
           onClick={() => {
             setSelectedStrike(null);
           }}
-          className="flex shrink-0 items-center gap-2 text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] uppercase tracking-widest font-black py-2 px-3 bg-[var(--surface-2)] border border-[var(--border)] rounded hover:bg-[var(--surface-3)] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+          className="flex shrink-0 items-center gap-2 text-[10px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] uppercase tracking-widest font-bold py-2 px-3 bg-[var(--surface-2)] border border-[var(--border)] rounded hover:bg-[var(--surface-3)] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
         >
           ← Back to Signals
         </button>
-        <span className="text-[10px] text-[var(--text-tertiary)] uppercase font-black tracking-wider tabular-nums truncate text-right">Selected: {selectedAsset.ticker} {activeStrike}{selectedOptionType}</span>
+        <span className="text-[10px] text-[var(--text-tertiary)] uppercase font-bold tracking-wider tabular-nums truncate text-right">Selected: {selectedAsset.ticker} {activeStrike}{selectedOptionType}</span>
       </div>
 
       {/* Index + timeframe selector */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--surface)] border border-[var(--border)] p-3 rounded-lg gap-3">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--surface)] border border-[var(--border)] p-3 rounded-[var(--radius-control)] gap-3">
         <div className="flex gap-2 items-center">
-          <Zap className="w-4 h-4 text-[var(--success)]" />
-          <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest font-black">Slayer Terminal</span>
+          <Zap className="w-4 h-4 text-[var(--text-tertiary)]" />
+          <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest font-bold">Slayer Terminal</span>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
-          <div className="flex items-center bg-[var(--surface-2)] p-0.5 border border-[var(--border)] rounded-md gap-x-1 overflow-x-auto scrollbar-none max-w-full">
+          <div className="flex items-center bg-[var(--surface-2)] p-0.5 border border-[var(--border)] rounded-[var(--radius-control)] gap-x-1 overflow-x-auto scrollbar-none max-w-full">
             {ASSET_LIST.map(asset => (
               <button
                 key={asset.ticker}
                 type="button"
                 onClick={() => setSelectedAsset(asset)}
-                className={`flex shrink-0 items-center gap-2 px-3 py-1.5 text-[10px] uppercase font-black tracking-widest rounded transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
+                className={`flex shrink-0 items-center gap-2 px-3 py-1.5 text-[10px] uppercase font-bold tracking-widest rounded transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
                   selectedAsset.ticker === asset.ticker
                     ? 'bg-[var(--surface-3)] text-[var(--text-primary)] border border-white/5'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border border-transparent'
@@ -533,14 +531,14 @@ export function SkyVisionView() {
           </div>
 
           <div className="flex items-center gap-1.5 pl-0 sm:pl-2.5 sm:border-l border-[var(--border)]">
-            <span className="text-[10px] text-[var(--text-tertiary)] font-black uppercase tracking-wider mr-1 hidden sm:inline">Timeframe</span>
-            <div className="flex items-center bg-[var(--surface-2)] p-0.5 border border-[var(--border)] rounded-md">
+            <span className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider mr-1 hidden sm:inline">Timeframe</span>
+            <div className="flex items-center bg-[var(--surface-2)] p-0.5 border border-[var(--border)] rounded-[var(--radius-control)]">
               {(['5m', '15m', '1h', '4h', '1D'] as const).map(tf => (
                 <button
                   key={tf}
                   type="button"
                   onClick={() => useContractStore.getState().setSelectedTimeframe(tf)}
-                  className={`px-3 py-1 text-[10px] uppercase font-black tracking-wider rounded transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
+                  className={`px-3 py-1 text-[10px] uppercase font-bold tracking-wider rounded transition-colors cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
                     selectedTimeframe === tf
                       ? 'bg-[var(--surface-3)] text-[var(--text-primary)]'
                       : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)]'
@@ -564,38 +562,34 @@ export function SkyVisionView() {
           Bottom: Full-Width High-Precision Chart View
           ===================================================================== */}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start w-full">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start w-full">
         
         {/* LEFT COLUMN: PROVENANCE EVALUATION MATRIX & METRICS */}
         <div className="lg:col-span-6 flex flex-col gap-4 w-full">
           
           {/* TRADE VERDICT CARD */}
-          <div
-            className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-xl p-4 sm:p-6 flex flex-col gap-4 shadow-lg"
-            style={{ minHeight: '340px' }}
-          >
-            {/* Header: verdict + live mid */}
-            <div className="flex justify-between items-start border-b border-[var(--border)] pb-4">
-              <div className="text-left space-y-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-tertiary)] block">Your Trade</span>
-                <div className={`inline-flex items-center px-3 py-1.5 rounded-lg border font-black text-2xl md:text-3xl uppercase tracking-tight leading-none ${
+          <div className="w-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-4 flex flex-col gap-4">
+            {/* Header: verdict is the focal figure; ticker + mid step down as hairline-split supports */}
+            <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-[var(--border)] pb-4">
+              <div className="text-left">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-tertiary)] block">Verdict · {selectedAsset.ticker} {activeStrike}{selectedOptionType}</span>
+                <div className={`mt-1 font-bold text-[26px] uppercase tracking-tight leading-none tabular-nums ${
                   activeRecommendation === 'ENTER'
-                    ? 'bg-[var(--success)]/10 border-[var(--success)]/40 text-[var(--success)]'
+                    ? 'text-[var(--success)]'
                     : activeRecommendation === 'SELL'
-                    ? 'bg-[var(--danger)]/10 border-[var(--danger)]/40 text-[var(--danger)]'
+                    ? 'text-[var(--danger)]'
                     : activeRecommendation === 'REDUCE'
-                    ? 'bg-[var(--warning)]/10 border-[var(--warning)]/40 text-[var(--warning)]'
-                    : 'bg-[var(--info)]/10 border-[var(--info)]/40 text-[var(--info)]'
+                    ? 'text-[var(--warning)]'
+                    : 'text-[var(--info)]'
                 }`}>
                   {activeRecommendation}
                 </div>
-                <h1 className="text-base md:text-lg font-black text-[var(--text-secondary)] font-sans tracking-tight uppercase leading-none tabular-nums">
-                  {selectedAsset.ticker} {activeStrike}{selectedOptionType}
-                </h1>
               </div>
-              <div className="text-right bg-[var(--surface-2)] p-2.5 border border-[var(--border)] rounded-lg">
-                <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-wider">{isPriceLive ? 'Live Mid' : 'Model Mid'}</span>
-                <span className="text-[var(--text-primary)] font-black block text-sm font-mono tabular-nums">${(activePrice ?? 0).toFixed(2)}</span>
+              <div className="flex items-stretch">
+                <div className="pl-6 border-l border-[var(--border)] text-right">
+                  <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-[0.16em] font-bold">Mid</span>
+                  <span className="text-[var(--text-primary)] font-semibold block text-[17px] font-mono tabular-nums leading-tight mt-0.5">${(activePrice ?? 0).toFixed(2)}</span>
+                </div>
               </div>
             </div>
 
@@ -603,10 +597,10 @@ export function SkyVisionView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch flex-1">
 
               {/* Thesis */}
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-lg flex flex-col justify-between text-left gap-3">
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-[var(--radius-control)] flex flex-col justify-between text-left gap-3">
                 <div className="space-y-1.5 text-left">
-                  <span className="text-[10px] text-[var(--text-tertiary)] tracking-widest uppercase block font-black">The Setup</span>
-                  <span className={`text-[13px] md:text-sm font-black font-sans uppercase block tracking-tight leading-tight ${forensicThesis.color}`}>
+                  <span className="text-[10px] text-[var(--text-tertiary)] tracking-widest uppercase block font-bold">The Setup</span>
+                  <span className={`text-[13px] md:text-sm font-bold font-sans uppercase block tracking-tight leading-tight ${forensicThesis.color}`}>
                     {forensicThesis.title}
                   </span>
                   <div className="text-[10px]/[14px] text-[var(--text-secondary)] font-sans tracking-wide">
@@ -614,10 +608,10 @@ export function SkyVisionView() {
                   </div>
                 </div>
                 <div className="border-t border-[var(--border)] pt-3">
-                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-black block mb-1.5">Why</span>
+                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold block mb-1.5">Why</span>
                   <div className="flex flex-wrap gap-1">
                     {forensicThesis.badges.map((b, idx) => (
-                      <span key={idx} className="px-1.5 py-0.5 bg-[var(--surface-3)] border border-[var(--border)] rounded text-[var(--success)] font-bold text-[10px] tracking-wider uppercase">
+                      <span key={idx} className="px-1.5 py-0.5 bg-[var(--surface-3)] border border-[var(--border)] rounded-[var(--radius-control)] text-[var(--text-secondary)] font-semibold text-[10px] tracking-wider uppercase">
                         {b}
                       </span>
                     ))}
@@ -626,21 +620,14 @@ export function SkyVisionView() {
               </div>
 
               {/* Confidence + greeks + expected move */}
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-lg flex flex-col justify-between text-left gap-4">
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] p-4 rounded-[var(--radius-control)] flex flex-col justify-between text-left gap-4">
 
                 <div className="space-y-1.5 text-left">
                   <div className="flex justify-between items-center">
-                    <span className="text-[var(--text-tertiary)] uppercase text-[10px] font-black flex items-center gap-1.5">
+                    <span className="text-[var(--text-tertiary)] uppercase text-[10px] font-bold flex items-center gap-1.5">
                       Confidence
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                        isConfidenceLive
-                          ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
-                          : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-3)]'
-                      }`}>
-                        {isConfidenceLive ? 'Live' : 'Model Est.'}
-                      </span>
                     </span>
-                    <span className="font-black text-[var(--text-primary)] text-[10px] font-mono tabular-nums">{tradeHealthValue}%</span>
+                    <span className="font-bold text-[var(--text-primary)] text-[10px] font-mono tabular-nums">{tradeHealthValue}%</span>
                   </div>
                   <div className="w-full bg-[var(--surface-3)] h-1.5 rounded-full overflow-hidden">
                     <motion.div
@@ -652,62 +639,47 @@ export function SkyVisionView() {
                   </div>
                   {!isConfidenceLive && (
                     <span className="block text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider leading-snug">
-                      Model estimate · not investment advice
+                      Not investment advice
                     </span>
                   )}
                 </div>
 
-                {/* Greeks 2x2 grid — labelled by provenance so a model/estimate
-                    fallback is never presented as live data. */}
+                {/* Greeks 2x2 grid */}
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Greeks</span>
-                  <span className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                    derivedGreeks.source === 'live'
-                      ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
-                      : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-3)]'
-                  }`}>
-                    {derivedGreeks.source === 'live' ? 'Live' : derivedGreeks.source === 'chain' ? 'Model Chain' : 'Model Est.'}
-                  </span>
+                  <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">Greeks</span>
                 </div>
-                <div className="grid grid-cols-2 gap-1.5 border-t border-b border-[var(--border)] py-3 font-mono text-[10px]">
-                  <div className="flex justify-between px-1.5 py-1 bg-[var(--surface-3)] border border-[var(--border)] rounded">
-                    <span className="text-[var(--text-tertiary)] font-semibold tracking-wider">DELTA</span>
-                    <span className={`font-bold tabular-nums ${derivedGreeks.delta > 0 ? 'text-[var(--success)]' : derivedGreeks.delta < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'}`}>
-                      <span aria-hidden="true">{derivedGreeks.delta > 0 ? '▲ ' : derivedGreeks.delta < 0 ? '▼ ' : ''}</span>{derivedGreeks.delta > 0 ? '+' : ''}{derivedGreeks.delta}
+                <div className="grid grid-cols-4 border-t border-b border-[var(--border)] py-2.5 font-mono text-[10px]">
+                  <div className="flex flex-col gap-0.5 pr-2">
+                    <span className="text-[var(--text-tertiary)] font-semibold tracking-[0.12em]">DELTA</span>
+                    <span className={`text-[13px] font-semibold tabular-nums ${derivedGreeks.delta > 0 ? 'text-[var(--success)]' : derivedGreeks.delta < 0 ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'}`}>
+                      {derivedGreeks.delta > 0 ? '+' : ''}{derivedGreeks.delta}
                     </span>
                   </div>
-                  <div className="flex justify-between px-1.5 py-1 bg-[var(--surface-3)] border border-[var(--border)] rounded">
-                    <span className="text-[var(--text-tertiary)] font-semibold tracking-wider">GAMMA</span>
-                    <span className="text-[var(--text-primary)] font-bold tabular-nums">{derivedGreeks.gamma}</span>
+                  <div className="flex flex-col gap-0.5 px-2 border-l border-[var(--border)]">
+                    <span className="text-[var(--text-tertiary)] font-semibold tracking-[0.12em]">GAMMA</span>
+                    <span className="text-[13px] text-[var(--text-primary)] font-semibold tabular-nums">{derivedGreeks.gamma}</span>
                   </div>
-                  <div className="flex justify-between px-1.5 py-1 bg-[var(--surface-3)] border border-[var(--border)] rounded">
-                    <span className="text-[var(--text-tertiary)] font-semibold tracking-wider">THETA</span>
-                    <span className="text-[var(--warning)] font-bold tabular-nums">{derivedGreeks.theta}</span>
+                  <div className="flex flex-col gap-0.5 px-2 border-l border-[var(--border)]">
+                    <span className="text-[var(--text-tertiary)] font-semibold tracking-[0.12em]">THETA</span>
+                    <span className="text-[13px] text-[var(--warning)] font-semibold tabular-nums">{derivedGreeks.theta}</span>
                   </div>
-                  <div className="flex justify-between px-1.5 py-1 bg-[var(--surface-3)] border border-[var(--border)] rounded">
-                    <span className="text-[var(--text-tertiary)] font-semibold tracking-wider">VEGA</span>
-                    <span className="text-[var(--info)] font-bold tabular-nums"><span aria-hidden="true">{derivedGreeks.vega > 0 ? '▲ ' : derivedGreeks.vega < 0 ? '▼ ' : ''}</span>{derivedGreeks.vega > 0 ? '+' : ''}{derivedGreeks.vega}</span>
+                  <div className="flex flex-col gap-0.5 pl-2 border-l border-[var(--border)]">
+                    <span className="text-[var(--text-tertiary)] font-semibold tracking-[0.12em]">VEGA</span>
+                    <span className="text-[13px] text-[var(--info)] font-semibold tabular-nums">{derivedGreeks.vega > 0 ? '+' : ''}{derivedGreeks.vega}</span>
                   </div>
                 </div>
 
                 {/* Expected move */}
                 <div className="space-y-1">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-[var(--text-tertiary)] tracking-widest font-black uppercase flex items-center gap-1.5">
+                    <span className="text-[10px] text-[var(--text-tertiary)] tracking-widest font-bold uppercase flex items-center gap-1.5">
                       Expected Move
-                      <span className={`text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                        isExpectedMoveLive
-                          ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
-                          : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-3)]'
-                      }`}>
-                        {isExpectedMoveLive ? 'Live' : 'Model Est.'}
-                      </span>
                     </span>
-                    <span className="font-black text-[var(--info)] text-sm font-mono tabular-nums">+{expectedMoveField}%</span>
+                    <span className="font-bold text-[var(--info)] text-sm font-mono tabular-nums">+{expectedMoveField}%</span>
                   </div>
                   {!isExpectedMoveLive && (
                     <span className="block text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider leading-snug">
-                      Model estimate · not investment advice
+                      Not investment advice
                     </span>
                   )}
                 </div>
@@ -718,28 +690,28 @@ export function SkyVisionView() {
 
             {/* SETUP RATIONALE — dealer support / invalidation / liquidity / horizon, so the
                 verdict always answers "why this, what invalidates it, is it tradeable". */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 border-t border-[var(--border)] pt-3">
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
-                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Dealer support</span>
-                <span className="block text-[11px] font-bold mt-0.5" style={{ color: setupRationale.support === 'Supportive' ? 'var(--success)' : setupRationale.support === 'Against' ? 'var(--danger)' : 'var(--text-secondary)' }}>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 border-t border-[var(--border)] pt-3">
+              <div className="sm:pl-0">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-[0.14em] font-bold">Dealer support</span>
+                <span className="block text-[12px] font-semibold mt-1" style={{ color: setupRationale.support === 'Supportive' ? 'var(--success)' : setupRationale.support === 'Against' ? 'var(--danger)' : 'var(--text-secondary)' }}>
                   {setupRationale.support ?? 'Awaiting flip'}
                 </span>
               </div>
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
-                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Invalidation</span>
-                <span className="block text-[11px] font-bold mt-0.5 text-[var(--warning)] tabular-nums">
+              <div className="sm:pl-4 sm:border-l border-[var(--border)]">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-[0.14em] font-bold">Invalidation</span>
+                <span className="block text-[12px] font-semibold mt-1 text-[var(--warning)] tabular-nums">
                   {setupRationale.flip != null ? `${setupRationale.isCall ? 'Lose' : 'Reclaim'} ${setupRationale.flip.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : 'Flip pending'}
                 </span>
               </div>
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
-                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Liquidity</span>
-                <span className="block text-[11px] font-bold mt-0.5 tabular-nums" style={{ color: setupRationale.liquidity === 'Tight' ? 'var(--success)' : setupRationale.liquidity === 'Wide' ? 'var(--danger)' : 'var(--text-secondary)' }}>
+              <div className="sm:pl-4 sm:border-l border-[var(--border)]">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-[0.14em] font-bold">Liquidity</span>
+                <span className="block text-[12px] font-semibold mt-1 tabular-nums" style={{ color: setupRationale.liquidity === 'Tight' ? 'var(--success)' : setupRationale.liquidity === 'Wide' ? 'var(--danger)' : 'var(--text-secondary)' }}>
                   {setupRationale.liquidity ? `${setupRationale.liquidity}${setupRationale.spreadPct != null ? ` · ${(setupRationale.spreadPct * 100).toFixed(0)}% spr` : ''}` : 'No quote'}
                 </span>
               </div>
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-2.5 py-2">
-                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-widest font-black">Horizon</span>
-                <span className="block text-[11px] font-bold mt-0.5 text-[var(--info)]">Swing · ≤ 2 wks</span>
+              <div className="sm:pl-4 sm:border-l border-[var(--border)]">
+                <span className="block text-[9px] text-[var(--text-tertiary)] uppercase tracking-[0.14em] font-bold">Horizon</span>
+                <span className="block text-[12px] font-semibold mt-1 text-[var(--info)]">Swing · ≤ 2 wks</span>
               </div>
             </div>
 
@@ -749,7 +721,7 @@ export function SkyVisionView() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 border-t border-[var(--border)] pt-3">
               <button
                 onClick={() => useContractStore.getState().setActiveTab('pinpoint', true)}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+                className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
               >
                 <span className="text-left">
                   <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-primary)]">Confirm in Pinpoint</span>
@@ -759,7 +731,7 @@ export function SkyVisionView() {
               </button>
               <button
                 onClick={() => useContractStore.getState().setActiveTab('quant', true)}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+                className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--surface-3)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
               >
                 <span className="text-left">
                   <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--text-primary)]">Prove in Quant Lab</span>
@@ -771,7 +743,7 @@ export function SkyVisionView() {
                 <button
                   onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
                   aria-label="This setup is tracked — open Trade History"
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--success)]/50 bg-[var(--success)]/10 px-3 py-2 transition-colors hover:border-[var(--success)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[var(--success)]/50 bg-[var(--success)]/10 px-3 py-2 transition-colors hover:border-[var(--success)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
                 >
                   <span className="text-left">
                     <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-[var(--success)]"><CheckCircle2 className="w-3 h-3" />Tracking</span>
@@ -783,7 +755,7 @@ export function SkyVisionView() {
                 <button
                   onClick={handleTrackSetup}
                   aria-label="Track this setup in Trade History"
-                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 transition-colors hover:border-[var(--success)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
+                  className="flex items-center justify-between gap-2 rounded-[var(--radius-control)] border border-[var(--success)]/30 bg-[var(--success)]/5 px-3 py-2 transition-colors hover:border-[var(--success)]/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--success)]"
                 >
                   <span className="text-left">
                     <span className="block text-[10px] font-bold uppercase tracking-widest text-[var(--success)]">Track setup</span>
@@ -804,53 +776,53 @@ export function SkyVisionView() {
           <StrikeGravityPanel />
 
           {/* ANALYSIS SUMMARY */}
-          <div className="w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-xl text-left space-y-3">
+          <div className="w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-[var(--radius-panel)] text-left space-y-3">
             <div className="flex items-center gap-2 border-b border-[var(--border)] pb-2.5">
-              <FileText className="w-3.5 h-3.5 text-[var(--success)]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)]">
+              <FileText className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]">
                 Analysis Summary
               </span>
             </div>
-            <div className="text-[11px] leading-relaxed text-[var(--text-secondary)] space-y-2 bg-[var(--surface-2)] p-3 rounded-lg border border-[var(--border)]">
+            <div className="text-[11px] leading-relaxed text-[var(--text-secondary)] space-y-2 bg-[var(--surface-2)] p-3 rounded-[var(--radius-control)] border border-[var(--border)]">
               <p>
-                <span className="text-[var(--text-tertiary)] uppercase text-[10px] tracking-wider font-black">Decision Logic</span>{' '}
+                <span className="text-[var(--text-tertiary)] uppercase text-[10px] tracking-wider font-bold">Decision Logic</span>{' '}
                 {serverState?.position_management?.decision_reason || 'High confidence condition detected.'}
               </p>
               <p>
                 Order book flows indicate {serverState?.position_management?.momentum === 'ACCELERATING' ? 'concentrated execution pressure' : 'neutral shifts'}.
-                Recommended action is <span className="text-[var(--success)] font-black">{activeRecommendation}</span> with momentum biased {tradeHealthValue > 70 ? 'upwards' : 'downwards'}.
+                Recommended action is <span className={`font-semibold ${activeRecommendation === 'ENTER' ? 'text-[var(--success)]' : activeRecommendation === 'SELL' ? 'text-[var(--danger)]' : activeRecommendation === 'REDUCE' ? 'text-[var(--warning)]' : 'text-[var(--info)]'}`}>{activeRecommendation}</span> with momentum biased {tradeHealthValue > 70 ? 'upwards' : 'downwards'}.
               </p>
               {serverState?.deep_intelligence && (
-                <div className="mt-2 pt-2 border-t border-[var(--border)] space-y-1">
+                <div className="mt-2 pt-2 border-t border-[var(--border)] space-y-1 text-[var(--text-secondary)]">
                   {serverState.deep_intelligence.strike_metrics?.gammaContribution && (
-                    <p className="text-[var(--success)] font-bold tabular-nums">• {activeStrike} contains {serverState.deep_intelligence.strike_metrics.gammaContribution} of total {selectedOptionType === 'C' ? 'call' : 'put'} gamma.</p>
+                    <p className="tabular-nums"><span className="text-[var(--pin)]">•</span> {activeStrike} contains <span className="text-[var(--text-primary)] font-semibold">{serverState.deep_intelligence.strike_metrics.gammaContribution}</span> of total {selectedOptionType === 'C' ? 'call' : 'put'} gamma.</p>
                   )}
                   {serverState.deep_intelligence.dealer_metrics?.flipLevel && serverState.deep_intelligence.dealer_metrics.flipLevel > 0 ? (
-                    <p className="text-[var(--success)] font-bold tabular-nums">• Dealers become aggressive {selectedOptionType === 'C' ? 'buyers above' : 'sellers below'} {serverState.deep_intelligence.dealer_metrics.flipLevel.toFixed(2)}.</p>
+                    <p className="tabular-nums"><span className="text-[var(--pin)]">•</span> Dealers become aggressive {selectedOptionType === 'C' ? 'buyers above' : 'sellers below'} <span className="text-[var(--pin)] font-semibold">{serverState.deep_intelligence.dealer_metrics.flipLevel.toFixed(2)}</span>.</p>
                   ) : null}
                   {serverState.deep_intelligence.dealer_metrics?.putWall && serverState.deep_intelligence.dealer_metrics.putWall > 0 ? (
-                    <p className="text-[var(--success)] font-bold tabular-nums">• {serverState.deep_intelligence.dealer_metrics.putWall.toFixed(2)} remains strongest downside support.</p>
+                    <p className="tabular-nums"><span className="text-[var(--pin)]">•</span> <span className="text-[var(--pin)] font-semibold">{serverState.deep_intelligence.dealer_metrics.putWall.toFixed(2)}</span> remains strongest downside support.</p>
                   ) : null}
                   {serverState.deep_intelligence.dealer_metrics?.magnetStrike && serverState.deep_intelligence.dealer_metrics.magnetStrike > 0 ? (
-                    <p className="text-[var(--success)] font-bold tabular-nums">• {serverState.deep_intelligence.dealer_metrics.magnetStrike.toFixed(2)} remains primary magnet strike.</p>
+                    <p className="tabular-nums"><span className="text-[var(--pin)]">•</span> <span className="text-[var(--pin)] font-semibold">{serverState.deep_intelligence.dealer_metrics.magnetStrike.toFixed(2)}</span> remains primary magnet strike.</p>
                   ) : null}
                 </div>
               )}
             </div>
-            <div className="pt-2 border-t border-[var(--border)] flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)] uppercase font-black tracking-wider">
-              <CheckCircle2 className="w-3 h-3 text-[var(--success)]" />
-              <span>Checked across multiple timeframes</span>
+            <div className="pt-2 border-t border-[var(--border)] flex items-center gap-1.5 text-[10px] text-[var(--text-tertiary)] uppercase font-bold tracking-wider">
+              <CheckCircle2 className="w-3 h-3 text-[var(--text-tertiary)]" />
+              <span>Cross-checked · 5m – 1D</span>
             </div>
           </div>
 
         </div>
 
         {/* RIGHT COLUMN: OPTIONS CHAIN */}
-        <div className="lg:col-span-6 w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-xl flex flex-col" style={{ minHeight: '520px' }}>
+        <div className="lg:col-span-6 w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-[var(--radius-panel)] flex flex-col">
 
           <div className="border-b border-[var(--border)] pb-3 text-left">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] inline-flex items-center gap-2">
-              <FileText className="w-3.5 h-3.5 text-[var(--success)]" />
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] inline-flex items-center gap-2">
+              <FileText className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
               Contract Chain
             </span>
             <p className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-wider mt-1">
@@ -861,7 +833,7 @@ export function SkyVisionView() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 flex-1">
             {/* CALLS */}
             <div className="space-y-2.5">
-              <span className="text-[10px] text-[var(--success)] uppercase tracking-widest block text-left font-black pl-1">
+              <span className="text-[10px] text-[var(--success)] uppercase tracking-widest block text-left font-bold pl-1">
                 Calls
               </span>
               <div className="flex flex-col gap-2">
@@ -891,7 +863,7 @@ export function SkyVisionView() {
 
             {/* PUTS */}
             <div className="space-y-2.5">
-              <span className="text-[10px] text-[var(--danger)] uppercase tracking-widest block text-left font-black pl-1">
+              <span className="text-[10px] text-[var(--danger)] uppercase tracking-widest block text-left font-bold pl-1">
                 Puts
               </span>
               <div className="flex flex-col gap-2">
@@ -934,7 +906,7 @@ export function SkyVisionView() {
           onClick={() => setIsDeepSkyseyeExpanded(!isDeepSkyseyeExpanded)}
           disabled={!serverState?.deep_intelligence}
           title={!serverState?.deep_intelligence ? 'Advanced intelligence populates once the deep read resolves for this contract' : undefined}
-          className="w-full bg-[var(--surface)] border border-[var(--border)] enabled:hover:bg-[var(--surface-2)] enabled:hover:border-[var(--border-strong)] transition-colors p-3 rounded-lg flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full bg-[var(--surface)] border border-[var(--border)] enabled:hover:bg-[var(--surface-2)] enabled:hover:border-[var(--border-strong)] transition-colors p-3 rounded-[var(--radius-control)] flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest text-[var(--text-secondary)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {!serverState?.deep_intelligence ? 'Advanced Details · Awaiting Deep Read' : isDeepSkyseyeExpanded ? 'Hide Advanced Details' : 'Show Advanced Details'}
         </button>
@@ -948,24 +920,24 @@ export function SkyVisionView() {
             {/* COLUMN 1: CONTRACT & STRIKE INTELLIGENCE */}
             <div className="lg:col-span-8 flex flex-col gap-4">
                {/* Largest Impact Contracts */}
-               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-5">
+               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-3 sm:p-5">
                   <div className="border-b border-[var(--border)] pb-2.5 mb-4 flex justify-between items-center">
-                    <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5 text-[var(--success)]" /> Largest Impact Contracts
+                    <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Layers className="w-3.5 h-3.5 text-[var(--text-tertiary)]" /> Largest Impact Contracts
                     </span>
-                    <span className="text-[10px] text-[var(--info)] uppercase px-2 py-0.5 border border-[var(--info)]/30 bg-[var(--info)]/10 rounded tracking-wider font-black">
+                    <span className="text-[10px] text-[var(--info)] uppercase px-2 py-0.5 border border-[var(--info)]/30 bg-[var(--info)]/10 rounded tracking-wider font-bold">
                       Gamma Ranking
                     </span>
                   </div>
                   {/* Mobile card list — md and below */}
                   <div className="md:hidden flex flex-col gap-2">
                     {(serverState.deep_intelligence.impact_contracts || []).map((c: any) => (
-                      <div key={c.contract} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3 flex flex-col gap-1.5 font-mono">
+                      <div key={c.contract} className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3 flex flex-col gap-1.5 font-mono">
                         <div className="flex items-center justify-between">
-                          <span className={`text-[10px] font-black tabular-nums ${c.rank === 1 ? 'text-[var(--danger)]' : c.rank === 2 ? 'text-[var(--info)]' : 'text-[var(--text-tertiary)]'}`}>
+                          <span className={`text-[10px] font-bold tabular-nums ${c.rank === 1 ? 'text-[var(--danger)]' : c.rank === 2 ? 'text-[var(--info)]' : 'text-[var(--text-tertiary)]'}`}>
                             #{c.rank}
                           </span>
-                          <span className="text-[11px] font-black text-[var(--text-primary)]">{c.contract}</span>
+                          <span className="text-[11px] font-bold text-[var(--text-primary)]">{c.contract}</span>
                         </div>
                         <div className="grid grid-cols-3 gap-1 text-[10px]">
                           <div>
@@ -1004,8 +976,8 @@ export function SkyVisionView() {
                       <TBody>
                         {(serverState.deep_intelligence.impact_contracts || []).map((c: any) => (
                           <TR key={c.contract} interactive>
-                            <TD className={`font-black ${c.rank === 1 ? 'text-[var(--danger)]' : c.rank === 2 ? 'text-[var(--info)]' : 'text-[var(--text-tertiary)]'}`}>#{c.rank}</TD>
-                            <TD className="font-black text-[var(--text-primary)]">{c.contract}</TD>
+                            <TD className={`font-bold ${c.rank === 1 ? 'text-[var(--danger)]' : c.rank === 2 ? 'text-[var(--info)]' : 'text-[var(--text-tertiary)]'}`}>#{c.rank}</TD>
+                            <TD className="font-bold text-[var(--text-primary)]">{c.contract}</TD>
                             <TD>{c.expiration}</TD>
                             <TD align="right" className="text-[var(--success)]">{c.oi != null ? c.oi.toLocaleString() : '--'}</TD>
                             <TD align="right" className="text-[var(--success)]">{c.volume != null ? c.volume.toLocaleString() : '--'}</TD>
@@ -1019,44 +991,44 @@ export function SkyVisionView() {
                </div>
 
                {/* Strike Breakdown (Strike Intelligence) */}
-               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-5">
+               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-3 sm:p-5">
                   <div className="border-b border-[var(--border)] pb-2.5 mb-4">
-                    <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest flex items-center gap-2 tabular-nums">
-                       <Target className="w-3.5 h-3.5 text-[var(--success)]" />
+                    <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest flex items-center gap-2 tabular-nums">
+                       <Target className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
                        Strike Detail · {(activeStrike ?? 0).toFixed(2)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono">
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3">
                       <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Total OI</span>
-                      <span className="font-black text-[var(--text-primary)] tabular-nums">{(serverState.deep_intelligence.strike_metrics?.totalOi || 0).toLocaleString()}</span>
+                      <span className="font-bold text-[var(--text-primary)] tabular-nums">{(serverState.deep_intelligence.strike_metrics?.totalOi || 0).toLocaleString()}</span>
                     </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3">
                       <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Net Exposure</span>
-                      <span className={`font-black tabular-nums ${serverState.deep_intelligence.strike_metrics?.netExposure?.includes('+') ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
+                      <span className={`font-bold tabular-nums ${serverState.deep_intelligence.strike_metrics?.netExposure?.includes('+') ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>
                          {serverState.deep_intelligence.strike_metrics?.netExposure}
                       </span>
                     </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3">
                       <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Call / Put Ratio</span>
-                      <span className="font-black text-[var(--text-primary)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.callPutRatio}</span>
+                      <span className="font-bold text-[var(--text-primary)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.callPutRatio}</span>
                     </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3">
                       <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Hedge Sensitivity</span>
-                      <span className="font-black text-[var(--danger)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.hedgeSensitivity}</span>
+                      <span className="font-bold text-[var(--danger)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.hedgeSensitivity}</span>
                     </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3">
                       <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Dealer Exposure</span>
-                      <span className="font-black text-[var(--info)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.dealerExposure}</span>
+                      <span className="font-bold text-[var(--info)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.dealerExposure}</span>
                     </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3">
                       <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Gamma Contribution</span>
-                      <span className="font-black text-[var(--text-primary)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.gammaContribution}</span>
+                      <span className="font-bold text-[var(--text-primary)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.gammaContribution}</span>
                     </div>
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-3 col-span-2 flex items-center justify-between gap-3">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-3 col-span-2 flex items-center justify-between gap-3">
                       <div>
                         <span className="text-[10px] text-[var(--text-tertiary)] uppercase block mb-1 tracking-wider">Delta Contribution</span>
-                        <span className="font-black text-[var(--text-primary)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.deltaContribution}</span>
+                        <span className="font-bold text-[var(--text-primary)] tabular-nums">{serverState.deep_intelligence.strike_metrics?.deltaContribution}</span>
                       </div>
                       <div className="w-1/2 h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
                          <div className="h-full bg-[var(--info)]" style={{ width: serverState.deep_intelligence.strike_metrics?.deltaContribution }} />
@@ -1069,16 +1041,16 @@ export function SkyVisionView() {
             {/* COLUMN 2: WHALE DETECTION & FLOW FEED */}
             <div className="lg:col-span-4 flex flex-col gap-4">
                {/* Live Dealer Commentary Card */}
-               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-5">
+               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-3 sm:p-5">
                   <div className="border-b border-[var(--border)] pb-2.5 mb-3">
-                    <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest flex items-center gap-2">
-                      <FileText className="w-3.5 h-3.5 text-[var(--success)]" />
+                    <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest flex items-center gap-2">
+                      <FileText className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
                       Dealer Notes
                     </span>
                   </div>
                   <div className="space-y-2">
                      {serverState.deep_intelligence.commentary?.map((point: string, idx: number) => (
-                       <div key={idx} className="p-2.5 border border-[var(--border)] rounded-lg bg-[var(--surface-2)] text-[10px] font-sans text-[var(--text-secondary)] leading-relaxed flex gap-2">
+                       <div key={idx} className="p-2.5 border border-[var(--border)] rounded-[var(--radius-control)] bg-[var(--surface-2)] text-[10px] font-sans text-[var(--text-secondary)] leading-relaxed flex gap-2">
                           <span className="text-[var(--info)] mt-0.5 select-none text-[10px]">■</span>
                           <span>{point}</span>
                        </div>
@@ -1090,56 +1062,56 @@ export function SkyVisionView() {
                </div>
 
                {/* Whale Detection */}
-               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-5">
+               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-3 sm:p-5">
                   <div className="border-b border-[var(--border)] pb-2.5 mb-3">
-                    <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest flex items-center gap-2">
-                      <Activity className="w-3.5 h-3.5 text-[var(--success)]" />
+                    <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest flex items-center gap-2">
+                      <Activity className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
                       Biggest Trades
                     </span>
                   </div>
                   <div className="space-y-2 text-xs font-mono">
-                    <div className="flex justify-between items-center gap-2 p-2.5 bg-[var(--success)]/5 border border-[var(--success)]/20 rounded-lg">
+                    <div className="flex justify-between items-center gap-2 p-2.5 bg-[var(--success)]/5 border border-[var(--success)]/20 rounded-[var(--radius-control)]">
                       <div className="min-w-0">
-                        <span className="text-[10px] text-[var(--success)] uppercase block font-black tracking-wider">Largest Bullish</span>
+                        <span className="text-[10px] text-[var(--success)] uppercase block font-bold tracking-wider">Largest Bullish</span>
                         <span className="text-[var(--text-primary)] font-bold block truncate">{serverState.deep_intelligence.whale_detection?.bullish?.contract} • {optionExpiryLabel(selectedAsset)}</span>
                       </div>
-                      <span className="font-black text-[var(--text-primary)] tabular-nums shrink-0">{serverState.deep_intelligence.whale_detection?.bullish?.size}</span>
+                      <span className="font-bold text-[var(--text-primary)] tabular-nums shrink-0">{serverState.deep_intelligence.whale_detection?.bullish?.size}</span>
                     </div>
-                    <div className="flex justify-between items-center gap-2 p-2.5 bg-[var(--danger)]/5 border border-[var(--danger)]/20 rounded-lg">
+                    <div className="flex justify-between items-center gap-2 p-2.5 bg-[var(--danger)]/5 border border-[var(--danger)]/20 rounded-[var(--radius-control)]">
                       <div className="min-w-0">
-                        <span className="text-[10px] text-[var(--danger)] uppercase block font-black tracking-wider">Largest Bearish</span>
+                        <span className="text-[10px] text-[var(--danger)] uppercase block font-bold tracking-wider">Largest Bearish</span>
                         <span className="text-[var(--text-primary)] font-bold block truncate">{serverState.deep_intelligence.whale_detection?.bearish?.contract} • {optionExpiryLabel(selectedAsset)}</span>
                       </div>
-                      <span className="font-black text-[var(--text-primary)] tabular-nums shrink-0">{serverState.deep_intelligence.whale_detection?.bearish?.size}</span>
+                      <span className="font-bold text-[var(--text-primary)] tabular-nums shrink-0">{serverState.deep_intelligence.whale_detection?.bearish?.size}</span>
                     </div>
-                    <div className="flex justify-between items-center p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg gap-3">
+                    <div className="flex justify-between items-center p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] gap-3">
                       <div>
-                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-black tracking-wider">Largest Call</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-bold tracking-wider">Largest Call</span>
                         <span className="text-[var(--text-primary)] font-bold tabular-nums">{serverState.deep_intelligence.whale_detection?.largestCall}</span>
                       </div>
-                      <span className="font-black text-[var(--text-tertiary)] block text-right text-[10px]">HEDGE</span>
+                      <span className="font-bold text-[var(--text-tertiary)] block text-right text-[10px]">HEDGE</span>
                     </div>
-                    <div className="flex justify-between items-center p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg gap-3">
+                    <div className="flex justify-between items-center p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] gap-3">
                       <div>
-                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-black tracking-wider">Largest Put</span>
+                        <span className="text-[10px] text-[var(--text-tertiary)] uppercase block font-bold tracking-wider">Largest Put</span>
                         <span className="text-[var(--text-primary)] font-bold tabular-nums">{serverState.deep_intelligence.whale_detection?.largestPut}</span>
                       </div>
-                      <span className="font-black text-[var(--text-tertiary)] block text-right text-[10px]">HEDGE</span>
+                      <span className="font-bold text-[var(--text-tertiary)] block text-right text-[10px]">HEDGE</span>
                     </div>
                   </div>
                </div>
 
                {/* Institutional Flow Feed */}
-               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-3 sm:p-5 flex-1 flex flex-col h-[300px]">
+               <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-3 sm:p-5 flex-1 flex flex-col h-[300px]">
                   <div className="border-b border-[var(--border)] pb-2.5 mb-3 shrink-0 flex justify-between items-center">
-                    <span className="text-[10px] text-[var(--text-secondary)] font-black uppercase tracking-widest flex items-center gap-2">
-                       <Activity className="w-3.5 h-3.5 text-[var(--success)]" />
-                       {(!!serverState?.data_source && serverState.data_source !== 'SANDBOX_SYNTHETIC') ? 'Live Order Flow' : 'Model Order Flow'}
+                    <span className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest flex items-center gap-2">
+                       <Activity className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+                       Order Flow
                     </span>
                   </div>
                   <div className="flex flex-col gap-2 overflow-y-auto text-[10px] font-mono pr-1 flex-1">
                      {(serverState.deep_intelligence.flow_feed || []).slice(0, 10).map((f: any) => (
-                       <div key={f.id} className={`flex flex-col gap-1.5 p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg transition-colors hover:bg-[var(--surface-3)] ${f.type === 'UNUSUAL' ? 'border-l-2 border-l-[var(--info)]' : ''}`}>
+                       <div key={f.id} className={`flex flex-col gap-1.5 p-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] transition-colors hover:bg-[var(--surface-3)] ${f.type === 'UNUSUAL' ? 'border-l-2 border-l-[var(--info)]' : ''}`}>
                           <div className="flex justify-between gap-2">
                              <span className={`${f.type === 'SWEEP' ? 'text-[var(--success)]' : f.type === 'BLOCK' ? 'text-[var(--danger)]' : 'text-[var(--info)]'} font-bold shrink-0`}>{f.type}</span>
                              <span className="text-[var(--text-primary)] font-bold truncate text-right">{f.contract}</span>
@@ -1160,10 +1132,10 @@ export function SkyVisionView() {
       {/* CHART */}
       <div className="w-full mt-2">
 
-        <div className="w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-xl space-y-3">
+        <div className="w-full bg-[var(--surface)] border border-[var(--border)] p-3 sm:p-5 rounded-[var(--radius-panel)] space-y-3">
           <div className="flex justify-between items-center pb-2.5 border-b border-[var(--border)]">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
-              <Activity className={`w-3.5 h-3.5 ${isChartLive ? 'text-[var(--success)]' : 'text-[var(--info)]'}`} /> {isChartLive ? 'Live Chart' : 'Model Chart'}
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] flex items-center gap-2">
+              <Activity className={`w-3.5 h-3.5 ${isChartLive ? 'text-[var(--success)]' : 'text-[var(--info)]'}`} /> Chart
             </span>
             <button
               onClick={() => setIsChartExpanded(!isChartExpanded)}
@@ -1190,7 +1162,6 @@ export function SkyVisionView() {
               showFVGs={true}
               showLiquiditySweeps={true}
               showDisplacementEvents={true}
-              watermarkText={isChartLive ? 'LIVE CHART' : 'MODEL CHART'}
               gexLevels={serverState?.deep_intelligence?.dealer_metrics ? {
                 callWall: serverState.deep_intelligence.dealer_metrics.callWall,
                 putWall: serverState.deep_intelligence.dealer_metrics.putWall,

@@ -53,7 +53,7 @@ export function SearchInput({
   return (
     <div
       onClick={onClick}
-      className={`relative flex items-center gap-2 rounded-md border px-3 transition-colors ${SIZE[size]} ${
+      className={`relative flex items-center gap-2 rounded-[7px] border px-3 transition-colors ${SIZE[size]} ${
         accent
           ? 'bg-[var(--surface)] border-[var(--accent-color)]/30 hover:border-[var(--accent-color)] focus-within:border-[var(--border-strong)]'
           : 'bg-[var(--surface-2)] border-[var(--border)] focus-within:border-[var(--border-strong)]'
@@ -83,7 +83,7 @@ export function SearchInput({
           type="button"
           onClick={(e) => { e.stopPropagation(); onClear(); }}
           aria-label="Clear search"
-          className="shrink-0 rounded p-0.5 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
+          className="shrink-0 rounded-[7px] p-0.5 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
         >
           <X className="w-3 h-3" />
         </button>

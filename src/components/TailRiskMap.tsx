@@ -134,14 +134,6 @@ export function TailRiskMap({ rnd, spot, dteDays, callWall, putWall, gammaFlip, 
           <span className="w-[3px] h-3.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--danger) 55%, transparent)' }} />
           <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-[var(--text-primary)]">Tail Risk Map{ticker ? ` · ${ticker}` : ''}</span>
         </div>
-        <span
-          className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase"
-          style={live
-            ? { color: 'var(--success)', background: 'color-mix(in srgb, var(--success) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--success) 30%, transparent)' }
-            : { color: 'var(--info)', background: 'color-mix(in srgb, var(--info) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--info) 30%, transparent)' }}
-        >
-          {live ? 'Live Chain' : 'Model Mode'}
-        </span>
       </div>
 
       {/* Tail probability map + expected-move bands over the density */}

@@ -27,7 +27,7 @@ interface CopyButtonProps {
 }
 
 const SIZE: Record<Size, string> = {
-  sm: 'px-2 py-1 text-[9px] gap-1',
+  sm: 'px-2 py-1 text-[10px] gap-1',
   md: 'px-3 py-2 text-[10px] gap-1.5',
   icon: 'p-1.5',
 };
@@ -66,7 +66,7 @@ export function CopyButton({ content, label = 'Copy', size = 'md', variant = 'de
       onClick={copy}
       title={title}
       aria-label={copied ? 'Copied to clipboard' : `Copy ${label.toLowerCase()}`}
-      className={`inline-flex items-center justify-center rounded-md border font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${SIZE[size]} ${
+      className={`inline-flex items-center justify-center rounded-[7px] border font-bold uppercase tracking-widest transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${SIZE[size]} ${
         copied ? 'border-[var(--success)]/50 bg-[var(--success)]/10 text-[var(--success)]' : IDLE[variant]
       } ${className}`}
     >

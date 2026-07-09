@@ -401,9 +401,8 @@ export function SkyseyeAlertHub() {
                     </span>
                     <span
                       className="text-[10px] text-[var(--text-tertiary)] tracking-wider font-mono tabular-nums"
-                      title="Premium, move and health are model estimates — not a live quoted value"
                     >
-                      {toast.timestamp} • EST.
+                      {toast.timestamp}
                     </span>
                   </div>
                 </div>

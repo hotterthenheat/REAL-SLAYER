@@ -6,18 +6,18 @@ import { PanelSkeleton } from './PanelSkeleton';
 const num = (v: any, d = 2) => (typeof v === 'number' && isFinite(v) ? v.toFixed(d) : '—');
 
 /** A single ACTIVE/INACTIVE regime flag tile. */
-function Flag({ label, value, active, tone = '#4ADE80' }: { label: string; value: string; active: boolean; tone?: string }) {
+function Flag({ label, value, active, tone = 'var(--success)' }: { label: string; value: string; active: boolean; tone?: string }) {
   return (
     <div
-      className="rounded-md border p-2.5 flex flex-col gap-1 transition-colors bg-[var(--surface-2)]"
+      className="rounded-[var(--radius-control)] border p-2 flex flex-col gap-1 bg-[var(--bg-panel-soft)]"
       style={{
-        borderColor: active ? `${tone}66` : 'var(--border)',
-        background: active ? `${tone}12` : undefined,
+        borderColor: active ? `color-mix(in srgb, ${tone} 40%, transparent)` : 'var(--border-subtle)',
+        background: active ? `color-mix(in srgb, ${tone} 9%, var(--bg-panel-soft))` : undefined,
       }}
     >
-      <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)] leading-tight">{label}</span>
-      <span className="text-[13px] font-bold tabular-nums leading-none transition-colors duration-300" style={{ color: active ? tone : 'var(--text-primary)' }}>{value}</span>
-      <span className="text-[10px] font-black tracking-widest transition-colors duration-300" style={{ color: active ? tone : 'var(--text-tertiary)' }}>
+      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] leading-tight">{label}</span>
+      <span className="text-[13px] font-bold tabular-nums leading-none slayer-num" style={{ color: active ? tone : 'var(--text-primary)' }}>{value}</span>
+      <span className="text-[10px] font-semibold tracking-[0.14em]" style={{ color: active ? tone : 'var(--text-faint)' }}>
         {active ? '● ACTIVE' : '○ INACTIVE'}
       </span>
     </div>
@@ -29,7 +29,7 @@ function Section({ title, icon, children }: { title: string; icon: React.ReactNo
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-2">
         {icon}
-        <h3 className="text-[10px] font-black tracking-widest uppercase text-[var(--text-secondary)]">{title}</h3>
+        <h3 className="text-[10px] font-semibold tracking-[0.16em] uppercase text-[var(--text-muted)]">{title}</h3>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">{children}</div>
     </div>
@@ -60,18 +60,15 @@ export function RegimeMatrixPanel() {
 
   const regimeTone = reg.state === 'TAIL_RISK' ? C.danger : reg.state === 'TREND_EXPANSION' ? C.success : C.info;
 
-  // Honest signal count (base grid + whichever optional signals the feed actually carries)
-  // and a truthful source badge — the streamed edge is only "live" when the chain is live;
-  // in keyless/sandbox mode it is a model computation, so we never assert "live" there.
+  // Signal count (base grid + whichever optional signals the feed actually carries).
   const signalCount = 11 + (pca ? 1 : 0) + (edge.hawkes ? 1 : 0) + (edge.netDelta ? 1 : 0) + (edge.fisher ? 1 : 0) + (edge.leadLag ? 1 : 0);
-  const isLive = !!serverState?.chain_live;
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 flex flex-col gap-4" style={{ borderLeftColor: 'var(--info)', borderLeftWidth: '3px' }}>
-      <div className="flex items-center gap-2 pb-3 border-b border-[var(--border)]">
-        <Radar className="w-4 h-4 text-[var(--info)]" />
-        <h2 className="text-xs font-black tracking-widest uppercase text-[var(--text-primary)]">Market State — {selectedAsset?.ticker}</h2>
-        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest ml-auto">{signalCount} signals · {isLive ? 'live' : 'model'}</span>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 pb-2 border-b border-[var(--border-subtle)]">
+        <Radar className="w-3.5 h-3.5 text-[var(--info)]" />
+        <h3 className="text-[10px] font-semibold tracking-[0.16em] uppercase text-[var(--text-secondary)]">Market State · {selectedAsset?.ticker}</h3>
+        <span className="slayer-num text-[10px] text-[var(--text-muted)] uppercase tracking-[0.14em] ml-auto">{signalCount} signals</span>
       </div>
 
       <Section title="Trend and Mean-Reversion Signals" icon={<GitBranch className="w-3 h-3 text-[var(--info)]" />}>
@@ -82,13 +79,13 @@ export function RegimeMatrixPanel() {
         <Flag label="Mean-Reversion Strength" value={ou.meanReverting ? `θ ${num(ou.theta, 4)}` : 'none'} active={ou.meanReverting} tone={C.info} />
       </Section>
 
-      <Section title="Volatility State" icon={<Waves className="w-3 h-3 text-[#C084FC]" />}>
+      <Section title="Volatility State" icon={<Waves className="w-3 h-3 text-[var(--greek)]" />}>
         <Flag label="Volatility Compression" value={comp?.detail || '—'} active={!!comp?.active} tone={C.warning} />
         <Flag label="Volatility Expansion" value={exp?.detail || '—'} active={!!exp?.active} tone={C.danger} />
-        <Flag label="Realized-Vol Term Structure" value={fwd?.detail || '—'} active={!!fwd?.active} tone="#C084FC" />
+        <Flag label="Realized-Vol Term Structure" value={fwd?.detail || '—'} active={!!fwd?.active} tone="var(--greek)" />
       </Section>
 
-      <Section title="Order-Flow Analysis" icon={<Gauge className="w-3 h-3 text-[#34D399]" />}>
+      <Section title="Order-Flow Analysis" icon={<Gauge className="w-3 h-3 text-[var(--success)]" />}>
         <Flag label="Informed-trading pressure (VPIN)" value={num(vpin?.vpin, 3)} active={!!vpin?.toxic} tone={C.danger} />
         <Flag label="Order flow quality" value={vpin?.toxic ? 'INFORMED (TOXIC)' : 'NORMAL'} active={!!vpin?.toxic} tone={C.danger} />
         <Flag label="Price impact of size (Kyle lambda)" value={`${num(kyle?.impactPct, 3)}%`} active={!!kyle?.slippageRisk} tone={C.warning} />
@@ -97,15 +94,15 @@ export function RegimeMatrixPanel() {
         )}
       </Section>
 
-      <Section title="Order Clustering and Cross-Asset Signals" icon={<AlertTriangle className="w-3 h-3 text-[#FB923C]" />}>
-        {edge.hawkes && <Flag label="Order-burst risk (Hawkes)" value={num(edge.hawkes.cascadeProbability, 2)} active={!!edge.hawkes.ignition} tone="#FB923C" />}
+      <Section title="Order Clustering and Cross-Asset Signals" icon={<AlertTriangle className="w-3 h-3 text-[var(--warning)]" />}>
+        {edge.hawkes && <Flag label="Order-burst risk (Hawkes)" value={num(edge.hawkes.cascadeProbability, 2)} active={!!edge.hawkes.ignition} tone="var(--warning)" />}
         {edge.netDelta && <Flag label={`Aggressive net delta (${edge.netDelta.direction})`} value={`${edge.netDelta.netDelta >= 0 ? '+' : ''}${num(edge.netDelta.netDelta, 0)}`} active={!!edge.netDelta.anomaly} tone={edge.netDelta.netDelta >= 0 ? C.success : C.danger} />}
-        {edge.fisher && <Flag label="Market structure shift score" value={num(edge.fisher.divergence, 2)} active={!!edge.fisher.structuralShift} tone="#F472B6" />}
+        {edge.fisher && <Flag label="Market structure shift score" value={num(edge.fisher.divergence, 2)} active={!!edge.fisher.structuralShift} tone="var(--dealer)" />}
         {edge.leadLag && <Flag label="Which market leads (transfer entropy)" value={`${edge.leadLag.leader}→${edge.leadLag.follower}`} active={!!edge.leadLag.active} tone={C.info} />}
       </Section>
 
       {reg.state === 'TAIL_RISK' && (
-        <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--danger)] bg-[var(--danger)]/10 border border-[var(--danger)]/40 rounded px-3 py-2">
+        <div className="flex items-center gap-2 text-[10px] font-semibold text-[var(--danger)] bg-[var(--danger)]/10 border border-[var(--danger)]/40 rounded-[var(--radius-control)] px-3 py-2">
           <AlertTriangle className="w-3.5 h-3.5" /> EXTREME-MOVE RISK — unusually large moves possible; reduce position size.
         </div>
       )}

@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo } from 'react';
 import { tierConversionOption, type TierBar } from '../quant/echartOptions';
+import { TerminalPanel } from '../ui/terminal/TerminalPanel';
 
 const EChart = lazy(() => import('../ui/EChart'));
 
@@ -43,8 +44,6 @@ function isLightSurface(): boolean {
   return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140;
 }
 
-const CARD = 'bg-[var(--surface)] border border-[var(--border)] rounded-lg';
-
 export function ConversionCard({ overview }: { overview: any }) {
   const total: number | null = typeof overview?.total_users === 'number' ? overview.total_users : null;
   const paid: number = typeof overview?.paid_users === 'number' ? overview.paid_users : 0;
@@ -78,68 +77,55 @@ export function ConversionCard({ overview }: { overview: any }) {
 
   if (total == null) {
     return (
-      <div className={`${CARD} p-5`}>
-        <SectionLabel />
-        <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest py-4">Loading conversion snapshot…</div>
-      </div>
+      <TerminalPanel title="Visitors vs Buyers" subtitle="Conversion by access tier">
+        <div className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Waiting on user counts…</div>
+      </TerminalPanel>
     );
   }
 
   if (total === 0) {
     return (
-      <div className={`${CARD} p-5`}>
-        <SectionLabel />
-        <div className="text-[10px] text-[var(--text-tertiary)] leading-relaxed py-4">No users yet. Once accounts exist, this shows how many visitors convert to a paid tier.</div>
-      </div>
+      <TerminalPanel title="Visitors vs Buyers" subtitle="Conversion by access tier">
+        <div className="text-[11px] leading-relaxed text-[var(--text-muted)]">No users yet. Once accounts exist, this shows how many visitors convert to a paid tier.</div>
+      </TerminalPanel>
     );
   }
 
   const chartHeight = Math.max(90, bars.length * 30 + 30);
 
   return (
-    <div className={`${CARD} p-5`}>
-      <SectionLabel />
-
-      {/* Hero conversion rate + supporting counts */}
-      <div className="flex flex-wrap items-end gap-x-8 gap-y-3 mb-4">
+    <TerminalPanel title="Visitors vs Buyers" subtitle="Conversion by access tier">
+      {/* Focal conversion rate, supporting counts stepped down and hairline-split */}
+      <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
         <div>
-          <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1">Conversion rate</div>
-          <div className="text-4xl font-black leading-none text-[var(--info)]">{(rate * 100).toFixed(rate >= 0.1 ? 0 : 1)}%</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Conversion Rate</div>
+          <div className="mt-1 slayer-num text-[28px] font-bold leading-none text-[var(--info)]">{(rate * 100).toFixed(rate >= 0.1 ? 0 : 1)}%</div>
         </div>
-        <div className="flex gap-6">
+        <div className="flex items-end gap-6 border-l border-[var(--border-subtle)] pl-6">
           <Stat label="Buyers" value={paid} color="text-[var(--info)]" />
-          <Stat label="Visitors (unpaid)" value={total - paid} color="text-[var(--text-secondary)]" />
-          <Stat label="Online now" value={online} color="text-[var(--success)]" />
+          <Stat label="Visitors" value={total - paid} color="text-[var(--text-secondary)]" />
+          <Stat label="Online" value={online} color="text-[var(--success)]" />
         </div>
       </div>
 
       {/* Real tier breakdown */}
-      <div style={{ height: chartHeight }} className="w-full">
-        <Suspense fallback={<div className="w-full h-full animate-pulse bg-[var(--surface-2)] rounded" />}>
+      <div style={{ height: chartHeight }} className="mt-4 w-full">
+        <Suspense fallback={<div className="h-full w-full animate-pulse bg-[var(--surface-2)]" />}>
           <EChart option={() => tierConversionOption(bars, chartColors)} />
         </Suspense>
       </div>
-      <p className="mt-2 text-[9px] text-[var(--text-tertiary)] leading-relaxed uppercase tracking-wider">
+      <p className="mt-2 text-[10px] leading-relaxed text-[var(--text-muted)]">
         Snapshot from current access tiers — a buyer is any non-guest account. No time axis: the user store keeps no signup history to chart honestly.
       </p>
-    </div>
-  );
-}
-
-function SectionLabel() {
-  return (
-    <div className="flex items-center gap-2 mb-3">
-      <span className="w-1.5 h-1.5 rounded-full bg-[var(--info)]" />
-      <span className="text-[11px] font-bold uppercase tracking-widest text-[var(--text-primary)]">Visitors vs Buyers</span>
-    </div>
+    </TerminalPanel>
   );
 }
 
 function Stat({ label, value, color }: { label: string; value: number; color: string }) {
   return (
     <div>
-      <div className="text-[9px] text-[var(--text-tertiary)] uppercase font-bold tracking-widest mb-1">{label}</div>
-      <div className={`text-lg font-bold tabular-nums leading-none ${color}`}>{value}</div>
+      <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</div>
+      <div className={`slayer-num text-[17px] font-semibold leading-none ${color}`}>{value}</div>
     </div>
   );
 }

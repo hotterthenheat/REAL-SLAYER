@@ -29,7 +29,7 @@ const EXIT_MS = 190;
 const anim: Record<SheetSide, { from: string; base: string }> = {
   right: { from: 'translateX(16px)', base: 'top-0 right-0 h-full border-l' },
   left: { from: 'translateX(-16px)', base: 'top-0 left-0 h-full border-r' },
-  bottom: { from: 'translateY(16px)', base: 'bottom-0 left-0 w-full border-t rounded-t-xl' },
+  bottom: { from: 'translateY(16px)', base: 'bottom-0 left-0 w-full border-t rounded-t-[10px]' },
 };
 
 export function Sheet({ open, onClose, side = 'right', title, description, size, children, footer, className = '' }: SheetProps) {
@@ -78,18 +78,18 @@ export function Sheet({ open, onClose, side = 'right', title, description, size,
       />
       <div
         style={{ ...sizeStyle, animation: panelAnim }}
-        className={`absolute ${cfg.base} flex flex-col border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_0_60px_-8px_rgba(0,0,0,0.85)] ${className}`}
+        className={`absolute ${cfg.base} flex flex-col border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] ${className}`}
       >
         {(title || description) && (
           <div className="flex items-start justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
             <div className="flex flex-col gap-0.5 min-w-0">
-              {title && <span className="font-mono text-[11px] font-black uppercase tracking-widest text-[var(--text-primary)]">{title}</span>}
+              {title && <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-[var(--text-primary)]">{title}</span>}
               {description && <span className="text-[11px] text-[var(--text-tertiary)]">{description}</span>}
             </div>
             <button
               onClick={onClose}
               aria-label="Close"
-              className="shrink-0 rounded-md border border-[var(--border)] px-1.5 py-1 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]"
+              className="shrink-0 rounded-[7px] border border-[var(--border)] px-1.5 py-1 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
             </button>

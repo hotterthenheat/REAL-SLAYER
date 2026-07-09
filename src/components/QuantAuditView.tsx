@@ -409,7 +409,7 @@ export function QuantAuditView({
           formatter: (ps: any) => {
             const p = Array.isArray(ps) ? ps[0] : ps;
             const row = pts[p.dataIndex]?.row;
-            return `<span style="font-family:JetBrains Mono,monospace;font-size:11px">Trade #${p.name} · ${row?.symbol ?? ''} ${row?.contract ?? ''}<br/>Cumulative <b style="color:${p.value < 0 ? negText : posText}">${fmtVal(p.value)}</b><br/><span style="color:${muted}">${row?.time ?? ''}</span></span>`;
+            return `<span style="font-size:11px;font-variant-numeric:tabular-nums">Trade #${p.name} · ${row?.symbol ?? ''} ${row?.contract ?? ''}<br/>Cumulative <b style="color:${p.value < 0 ? negText : posText}">${fmtVal(p.value)}</b><br/><span style="color:${muted}">${row?.time ?? ''}</span></span>`;
           },
         },
         xAxis: { type: 'category', data: cats, name: 'TRADE #', nameLocation: 'middle', nameGap: 20, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700 }, axisLabel: { fontSize: 9, color: muted } },
@@ -449,11 +449,11 @@ export function QuantAuditView({
       grid: { top: 18, right: 18, bottom: 40, left: 52 },
       tooltip: {
         trigger: 'axis', axisPointer: { type: 'shadow' },
-        formatter: (ps: any) => { const p = Array.isArray(ps) ? ps[0] : ps; return `<span style="font-family:JetBrains Mono,monospace;font-size:11px">${p.name}<br/><b style="color:${p.value < 0 ? negText : posText}">${fmtVal(p.value)}</b></span>`; },
+        formatter: (ps: any) => { const p = Array.isArray(ps) ? ps[0] : ps; return `<span style="font-size:11px;font-variant-numeric:tabular-nums">${p.name}<br/><b style="color:${p.value < 0 ? negText : posText}">${fmtVal(p.value)}</b></span>`; },
       },
       xAxis: { type: 'category', data: keys, axisLabel: { fontSize: 9, color: muted, rotate: perfTab === 'daily' ? 40 : 0, formatter: (v: string) => (perfTab === 'daily' ? v.slice(5) : v) } },
       yAxis: { type: 'value', name: `${perfTab === 'daily' ? 'DAILY' : 'MONTHLY'} ${unitLabel}`, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700, align: 'right' }, axisLabel: { fontSize: 9, color: muted, formatter: (v: number) => (perfMode === 'r' ? `${v.toFixed(1)}` : `$${Math.round(v)}`) }, splitLine: { lineStyle: { color: 'rgba(248,248,255,0.05)' } } },
-      series: [{ type: 'bar', data: vals, barMaxWidth: 34, itemStyle: { borderRadius: 2, color: (p: any) => (p.value < 0 ? negText : posText) } }],
+      series: [{ type: 'bar', data: vals, barMaxWidth: 34, itemStyle: { borderRadius: 0, color: (p: any) => (p.value < 0 ? negText : posText) } }],
     });
   }, [closedOrdered, perfTab, perfMode, unitLabel, themeMode]);
 
@@ -538,10 +538,11 @@ export function QuantAuditView({
   return (
     <div className="slayer-terminal w-full font-mono select-none antialiased space-y-3 p-0.5" id="quant-audit-view">
       {/* ─────────────── HEADER ─────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <span className="text-[10px] text-[var(--text-muted)] font-semibold tracking-[0.2em] uppercase block">Trade History</span>
-          <h1 className="text-[18px] font-bold text-[var(--text-primary)] tracking-tight">Auditor · Trade Record</h1>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <div className="flex items-baseline gap-2 min-w-0">
+          <h1 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)] whitespace-nowrap">Auditor</h1>
+          <span className="text-[var(--border-strong)]" aria-hidden="true">/</span>
+          <span className="text-[11px] text-[var(--text-muted)] tracking-wide truncate">Unified trade record · archive + tracked</span>
         </div>
         <div className="flex items-center gap-2">
           <StatusBadge tone="neutral" dot>{nowLabel}</StatusBadge>
@@ -565,9 +566,9 @@ export function QuantAuditView({
       {/* ─────────────── Tracked-setup performance (Live vs Model — never mixed) ─────────────── */}
       {anyTracked && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <StatBlock title="Live tracks" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
+          <StatBlock title="Tracked setups" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
           <StatBlock
-            title="Model / Sample" icon={<FlaskConical className="w-3 h-3" />} stats={modelStats} live={false}
+            title="Additional tracks" icon={<FlaskConical className="w-3 h-3" />} stats={modelStats} live={false}
             action={liveStats.resolved + modelStats.resolved > 0 ? (
               <button onClick={clearResolved} className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:underline rounded transition-colors">Clear resolved</button>
             ) : undefined}
@@ -593,13 +594,16 @@ export function QuantAuditView({
               {colMenuOpen && (
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setColMenuOpen(false)} />
-                  <div className="absolute right-0 z-30 mt-1 w-44 rounded-[var(--radius-control)] border border-[var(--border-mid)] bg-[var(--bg-panel-raised)] p-1.5 shadow-xl">
+                  <div
+                    className="absolute right-0 z-30 mt-1 w-44 rounded-[var(--radius-panel)] border border-[var(--border-mid)] bg-[var(--bg-panel-raised)] p-1.5"
+                    style={{ boxShadow: '0 16px 44px -12px rgba(0,0,0,0.8)' }}
+                  >
                     {COLUMN_DEFS.map(c => (
                       <button
                         key={c.key}
                         onClick={() => toggleCol(c.key)}
                         disabled={c.locked}
-                        className={`flex w-full items-center justify-between rounded px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${c.locked ? 'cursor-default text-[var(--text-faint)]' : 'cursor-pointer text-[var(--text-secondary)] hover:bg-[rgba(248,248,255,0.04)] hover:text-[var(--text-primary)]'}`}
+                        className={`flex w-full items-center justify-between rounded-[var(--radius-control)] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${c.locked ? 'cursor-default text-[var(--text-faint)]' : 'cursor-pointer text-[var(--text-secondary)] hover:bg-[rgba(248,248,255,0.04)] hover:text-[var(--text-primary)]'}`}
                       >
                         {c.label}
                         {visibleCols.has(c.key) && <Check className="w-3 h-3 text-[var(--positive-ink)]" />}
@@ -663,9 +667,9 @@ export function QuantAuditView({
           title="Selected Trade"
           actions={
             <div className="flex items-center gap-1">
-              <button onClick={() => stepSelection(-1)} disabled={filteredRows.length === 0} aria-label="Previous trade" className="rounded border border-[var(--border-subtle)] p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button onClick={() => stepSelection(-1)} disabled={filteredRows.length === 0} aria-label="Previous trade" className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
               <span className="text-[9px] text-[var(--text-muted)] slayer-num w-10 text-center">{selectedIdx >= 0 ? `${selectedIdx + 1}/${filteredRows.length}` : '—'}</span>
-              <button onClick={() => stepSelection(1)} disabled={filteredRows.length === 0} aria-label="Next trade" className="rounded border border-[var(--border-subtle)] p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"><ChevronRight className="w-3.5 h-3.5" /></button>
+              <button onClick={() => stepSelection(1)} disabled={filteredRows.length === 0} aria-label="Next trade" className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"><ChevronRight className="w-3.5 h-3.5" /></button>
             </div>
           }
           bodyClassName="p-0"
@@ -712,7 +716,7 @@ export function QuantAuditView({
           </>
         ) : (
           <div className="flex items-start gap-3 py-3">
-            <span className="mt-1 w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--warning)] animate-pulse" />
+            <span className="mt-1 w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--warning)]" />
             <div className="min-w-0">
               <div className="text-[10px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">Awaiting closed trades</div>
               <p className="text-[10px] text-[var(--text-faint)] tracking-wide mt-1 max-w-[520px] leading-relaxed">
@@ -726,7 +730,7 @@ export function QuantAuditView({
       {/* ─────────────── FOOTER ─────────────── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-1 pt-1 text-[9px] text-[var(--text-muted)] tracking-wide">
         <span>Disclaimer: For informational purposes only. Not investment advice.</span>
-        <span>{kpis.total} logged · Live tracks & model/sample kept separate</span>
+        <span>{kpis.total} logged</span>
         <span className="font-bold tracking-[0.16em] text-[var(--text-secondary)]">REAL-SLAYER</span>
       </div>
     </div>
@@ -774,7 +778,7 @@ function DetailStat({ label, value, cls, sub }: { label: string; value: React.Re
 }
 
 function LabelBadge({ children }: { children: React.ReactNode }) {
-  return <span className="rounded border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{children}</span>;
+  return <span className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{children}</span>;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -789,7 +793,7 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
   // Thesis (real fields only).
   const thesis = useMemo(() => {
     if (t) {
-      return `${t.recommendation} · ${t.structureState}. ${t.vwapState}, ${t.rsiState}. ${t.dealerPositioning}. Model: +${t.expectedReturn}% expected return vs -${t.expectedDrawdown}% expected drawdown · P(win) ${t.probabilityPositive}% · stability ${t.thesisStability}%.`;
+      return `${t.recommendation} · ${t.structureState}. ${t.vwapState}, ${t.rsiState}. ${t.dealerPositioning}. +${t.expectedReturn}% expected return vs -${t.expectedDrawdown}% expected drawdown · P(win) ${t.probabilityPositive}% · stability ${t.thesisStability}%.`;
     }
     if (s) {
       const bits = [s.dealerReason, s.volatilityReason].filter(x => x && x !== '—');
@@ -899,14 +903,14 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
       {ladder.length > 0 && (
         <div className="p-3">
           <SectionTitle>Target Ladder</SectionTitle>
-          <div className="space-y-1">
+          <div className="border-t border-[var(--border-subtle)]">
             {ladder.map((l) => (
-              <div key={l.label} className="flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2 py-1.5">
+              <div key={l.label} className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-2 py-1.5">
                 <span className="w-6 text-[9px] font-bold text-[var(--text-muted)]">{l.label}</span>
                 <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">${l.price.toFixed(2)}</span>
                 <span className={`slayer-num text-[10px] ml-auto ${signClass(l.r)}`}>{fmtR(l.r)}</span>
                 {l.hit ? (
-                  <span className="rounded border border-[var(--positive-ink)]/40 bg-[var(--positive-soft)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-[var(--positive-ink)]">Hit{typeof l.time === 'number' ? ` ${l.time}m` : ''}</span>
+                  <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--positive-ink)]">Hit{typeof l.time === 'number' ? ` ${l.time}m` : ''}</span>
                 ) : (
                   <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-faint)]">Pending</span>
                 )}
@@ -920,12 +924,12 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
       {stop && (
         <div className="p-3">
           <SectionTitle>Stop</SectionTitle>
-          <div className="flex items-center gap-2 rounded border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2 py-1.5">
+          <div className="flex items-center gap-2 border-y border-[var(--border-subtle)] px-2 py-1.5">
             <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{stop.label}</span>
             <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{stop.level}</span>
             <span className="slayer-num text-[10px] ml-auto text-[var(--negative-ink)]">-1.00R</span>
             {stop.breached
-              ? <span className="rounded border border-[var(--slayer-red)]/50 bg-[var(--negative-soft)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-[var(--negative-ink)]">Breached</span>
+              ? <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--negative-ink)]">Breached</span>
               : <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-faint)]">{open ? 'Live' : 'Held'}</span>}
           </div>
         </div>

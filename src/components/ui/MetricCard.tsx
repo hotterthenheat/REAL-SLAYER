@@ -31,12 +31,12 @@ interface MetricCardProps {
 
 export function MetricCard({ label, value, unit, footnote, icon, tone = 'default', className = '' }: MetricCardProps) {
   return (
-    <div className={`bg-[var(--surface)] border border-[var(--border)] p-4 rounded-xl ${className}`}>
+    <div className={`bg-[var(--surface)] border border-[var(--border)] p-4 rounded-[10px] ${className}`}>
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
         {icon && <span aria-hidden="true">{icon}</span>}
       </div>
-      <h3 className={`text-2xl font-black mt-2 tabular-nums ${TONE_VALUE[tone]}`}>
+      <h3 className={`text-2xl font-bold mt-2 tabular-nums ${TONE_VALUE[tone]}`}>
         {value}
         {unit && <span className="text-sm font-bold text-[var(--text-tertiary)]"> {unit}</span>}
       </h3>

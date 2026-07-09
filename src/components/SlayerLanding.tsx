@@ -109,7 +109,7 @@ const fmtGex = (v?: number | null) => {
   if (a >= 1e9) return `${sign}$${(a / 1e9).toFixed(2)}B`;
   return `${sign}$${(a / 1e6).toFixed(1)}M`;
 };
-const fmtPct = (v?: number | null) => (isNum(v) ? `±${(v * 100).toFixed(2)}%` : '—');
+const fmtPct = (v?: number | null) => (isNum(v) ? `${(v * 100).toFixed(2)}%` : '—');
 
 /* ─────────────────────────── atoms ─────────────────────────── */
 function Eyebrow({ children, onDark = false }: { children: React.ReactNode; onDark?: boolean }) {
@@ -275,19 +275,19 @@ function Panel({ children, className = '', soft = false, style }: { children: Re
 
 function PrimaryButton({ children, onClick, onDark = false }: { children: React.ReactNode; onClick?: () => void; onDark?: boolean }) {
   // Below the hero: themeable accent fill. On the (always-dark) hero: fixed
-  // light-on-dark so the CTA reads on the code-rain in every theme.
+  // light-on-dark so the CTA reads on the code-rain in every theme. No lift, no
+  // glow — the fill just brightens on hover (a control reacts, it doesn't float).
   const bg = onDark ? '#F8F8FF' : accentFill;
   const fg = onDark ? '#0A0806' : accentText;
   const bgHover = onDark ? '#ffffff' : accentBright;
-  const glow = onDark ? '0 6px 20px rgba(248,248,255,0.14)' : '0 6px 20px color-mix(in srgb, var(--accent-color) 22%, transparent)';
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,box-shadow] duration-200 will-change-transform"
+      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background] duration-150"
       style={{ background: bg, color: fg }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = glow; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = bg; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = bg; }}
     >
       {children}
     </button>
@@ -303,10 +303,10 @@ function GhostButton({ children, onClick, onDark = false }: { children: React.Re
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,border-color] duration-200 will-change-transform"
+      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,border-color] duration-150"
       style={{ background: 'transparent', color: fg, border: `1px solid ${bd}` }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = bdHover; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = bd; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.borderColor = bdHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = bd; }}
     >
       {children}
     </button>
@@ -439,21 +439,27 @@ function MiniPositioningMap({ rows, metrics }: { rows: PressureRow[]; metrics: H
 }
 
 /* Minimal real-close sparkline (no glow, thin stroke) */
+/* Live intraday tape — a scrolling random-walk sparkline (mean-reverts toward
+   the current print so it chops around the level instead of running off the
+   right edge). The dot at the head marks the live print. */
 function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
-  const pts = useMemo(() => {
+  const geom = useMemo(() => {
     if (!data || data.length < 2) return null;
-    const min = Math.min(...data);
-    const max = Math.max(...data);
+    const min = Math.min(...data), max = Math.max(...data);
     const span = max - min || 1;
     const n = data.length;
-    return data
-      .map((v, i) => `${(i / (n - 1)) * 100},${height - ((v - min) / span) * height}`)
-      .join(' ');
+    const y = (v: number) => height - ((v - min) / span) * (height - 6) - 3;
+    const line = data.map((v, i) => `${(i / (n - 1)) * 100},${y(v).toFixed(2)}`).join(' ');
+    const lastY = y(data[n - 1]);
+    return { line, lastY };
   }, [data, height]);
   return (
     <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="h-full w-full">
-      {pts ? (
-        <polyline points={pts} fill="none" stroke={PALETTE.steel} strokeWidth={0.8} vectorEffect="non-scaling-stroke" />
+      {geom ? (
+        <>
+          <polyline points={geom.line} fill="none" stroke={PALETTE.steel} strokeWidth={0.9} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <line x1="99.6" y1={geom.lastY} x2="99.6" y2={geom.lastY} stroke={PALETTE.steel} strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        </>
       ) : (
         <line x1="0" y1={height / 2} x2="100" y2={height / 2} stroke={line} strokeWidth={0.6} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
       )}
@@ -461,47 +467,134 @@ function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
   );
 }
 
-/* ─────────────────────────── the terminal mockup (real data) ─────────────────────────── */
+/* Live mock state — the hero card presents as a live desk: KPIs tick, the tape
+   scrolls, the positioning bars breathe, and an ET clock runs. Seeded from real
+   store fields when present, else from a plausible SPX 0DTE snapshot so a first
+   visitor always sees a populated, moving terminal. Frozen under reduced-motion. */
+type MockState = {
+  spot: number; netGex: number; emPct: number; callWall: number; putWall: number; pin: number;
+  series: number[]; pressure: PressureRow[]; ranked: RankedRow[];
+};
+
+function seedMock(m: HeroMetrics, pressure: PressureRow[], ranked: RankedRow[]): MockState {
+  const spot = isNum(m.spot) ? m.spot : 5497.59;
+  const callWall = isNum(m.callWall) ? m.callWall : Math.round((spot + 2) / 50) * 50;
+  const putWall = isNum(m.putWall) ? m.putWall : Math.round((spot - 97) / 50) * 50;
+  const pin = isNum(m.pin) ? m.pin : callWall;
+  const netGex = isNum(m.netGex) ? m.netGex : -89.7e6;
+  const emPct = isNum(m.expectedMovePct) ? m.expectedMovePct : 0.0072;
+  // 46-point intraday walk centred just under spot so it reads as live chop
+  const series: number[] = [];
+  let p = spot - spot * 0.0012;
+  for (let i = 0; i < 46; i++) {
+    p += (Math.random() - 0.5) * spot * 0.0009 + (spot - p) * 0.04;
+    series.push(p);
+  }
+  const pr: PressureRow[] = pressure.length ? pressure : (() => {
+    const rows: PressureRow[] = [];
+    for (let k = 5; k >= -4; k--) {
+      const strike = Math.round((spot + k * 50) / 50) * 50;
+      const above = strike >= spot;
+      const mag = (2 + Math.random() * 8) * 1e7 * (1 - Math.abs(k) * 0.08);
+      rows.push({ strike, net: above ? mag : -mag, kind: strike === callWall ? 'callWall' : strike === putWall ? 'putWall' : undefined });
+    }
+    return rows;
+  })();
+  const rk: RankedRow[] = ranked.length ? ranked : [
+    { symbol: 'SPX 5450P', setup: 'Mispriced', bias: 'BEAR', confidence: 93, expMovePct: emPct },
+    { symbol: 'SPX 5550C', setup: 'Mispriced', bias: 'BULL', confidence: 91, expMovePct: emPct },
+    { symbol: 'NDX 19150P', setup: 'Mispriced', bias: 'BEAR', confidence: 90, expMovePct: emPct },
+    { symbol: 'SPY 545C', setup: 'Mispriced', bias: 'BULL', confidence: 89, expMovePct: emPct },
+    { symbol: 'QQQ 485C', setup: 'Mispriced', bias: 'BULL', confidence: 86, expMovePct: emPct },
+  ];
+  return { spot, netGex, emPct, callWall, putWall, pin, series, pressure: pr, ranked: rk };
+}
+
+function stepMock(s: MockState): MockState {
+  const last = s.series[s.series.length - 1];
+  const next = last + (Math.random() - 0.5) * s.spot * 0.0009 + (s.spot - last) * 0.05;
+  const series = s.series.slice(1).concat(next);
+  const spot = next;
+  const netGex = s.netGex + (Math.random() - 0.5) * 1.6e6;
+  const emPct = Math.max(0.003, s.emPct + (Math.random() - 0.5) * 0.00018);
+  const pressure = s.pressure.map((r) => ({ ...r, net: r.net * (1 + (Math.random() - 0.5) * 0.06) }));
+  // occasionally nudge one confidence so the ranked board isn't frozen
+  const ranked = Math.random() < 0.5
+    ? s.ranked.map((r, i) => (i === (Math.random() * s.ranked.length | 0) ? { ...r, confidence: Math.max(70, Math.min(97, r.confidence + (Math.random() < 0.5 ? -1 : 1))) } : r))
+    : s.ranked;
+  return { ...s, spot, netGex, emPct, series, pressure, ranked };
+}
+
+function useEtClock(active: boolean) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    if (!active) return;
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, [active]);
+  return now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/New_York' }) + ' ET';
+}
+
+/* ─────────────────────────── the terminal mockup (live) ─────────────────────────── */
 function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pick<SlayerLandingProps, 'metrics' | 'ranked' | 'pressure' | 'spark'>> & { ticker: string }) {
-  const m = metrics;
-  const emPts = isNum(m.expectedMovePct) && isNum(m.spot) ? m.expectedMovePct * m.spot : null;
+  const reduce = useReducedMotion();
+  const [s, setS] = useState<MockState>(() => seedMock(metrics, pressure, ranked));
+  // re-seed if real store data arrives after mount
+  useEffect(() => { setS(seedMock(metrics, pressure, ranked)); /* eslint-disable-next-line */ }, [metrics.spot, pressure.length, ranked.length]);
+  useEffect(() => {
+    if (reduce) return;
+    const id = setInterval(() => setS((prev) => stepMock(prev)), 900);
+    return () => clearInterval(id);
+  }, [reduce]);
+  const clock = useEtClock(!reduce);
+  const emPts = s.emPct * s.spot;
+  const series = reduce ? (spark.length ? spark : s.series) : s.series;
+
   return (
-    <Panel className="overflow-hidden" style={{ boxShadow: '0 30px 80px -40px rgba(0,0,0,0.9)' }}>
-      {/* window bar */}
+    <Panel className="overflow-hidden">
+      {/* window bar — the real slayerterminal.com wordmark + a running ET clock */}
       <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${line}` }}>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: PALETTE.ghost }}>SLAYER_TERMINAL</span>
+          <span className="inline-flex items-center text-[12px] font-bold leading-none" style={{ fontFamily: 'var(--font-brand)', letterSpacing: '-0.01em' }}>
+            <span style={{ color: 'var(--brand-prompt, #6B7177)', fontWeight: 700, fontSize: '0.84em', marginRight: '0.05em' }}>&gt;</span>
+            <span style={{ color: 'var(--brand-ink, #F4F5F6)' }}>slayer_terminal</span>
+            <span aria-hidden="true" className="slayer-caret ml-[2px] inline-block" style={{ width: '0.42em', height: '0.86em', borderRadius: 1, background: 'var(--brand-ink, #F4F5F6)' }} />
+          </span>
           <span className="text-[9px] tabular-nums" style={{ color: faint }}>· {ticker} · 0DTE</span>
         </div>
-        <span className="rounded-[4px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.steel, border: `1px solid ${line}` }}>
-          Model preview
+        <span className="flex items-center gap-1.5 text-[9px] tabular-nums" style={{ color: muted }}>
+          <span className="relative flex h-1.5 w-1.5">
+            {!reduce && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: PALETTE.green }} />}
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.green }} />
+          </span>
+          {clock}
         </span>
       </div>
 
       {/* KPI strip — same labels/order as the real Pinpoint page's top strip */}
       <div className="grid grid-cols-3 sm:grid-cols-6" style={{ borderBottom: `1px solid ${line}` }}>
-        <Kpi label="Net GEX" value={fmtGex(m.netGex)} tone={isNum(m.netGex) && m.netGex < 0 ? '#d9736f' : '#6fae7d'} />
-        <Kpi label="Spot" value={fmtPx(m.spot)} tone={PALETTE.ghost} />
-        <Kpi label="Call Wall" value={fmtLvl(m.callWall)} tone={PALETTE.steel} />
-        <Kpi label="Put Wall" value={fmtLvl(m.putWall)} tone={PALETTE.red} />
-        <Kpi label="Pin Level" value={fmtLvl(m.pin)} tone={PALETTE.amber} />
-        <Kpi label="Exp Move" value={fmtPct(m.expectedMovePct)} sub={isNum(emPts) ? `±${emPts.toFixed(1)} pts` : undefined} tone={PALETTE.text} />
+        <Kpi label="Net GEX" value={fmtGex(s.netGex)} tone={s.netGex < 0 ? '#d9736f' : '#6fae7d'} />
+        <Kpi label="Spot" value={fmtPx(s.spot)} tone={PALETTE.ghost} />
+        <Kpi label="Call Wall" value={fmtLvl(s.callWall)} tone={PALETTE.steel} />
+        <Kpi label="Put Wall" value={fmtLvl(s.putWall)} tone={PALETTE.red} />
+        <Kpi label="Pin Level" value={fmtLvl(s.pin)} tone={PALETTE.amber} />
+        <Kpi label="Exp Move" value={fmtPct(s.emPct)} sub={`${emPts.toFixed(1)} pts`} tone={PALETTE.text} />
       </div>
 
-      {/* body: chart + pressure map + ranked */}
+      {/* body: chart + pressure map */}
       <div className="grid grid-cols-1 gap-px lg:grid-cols-[1.5fr_1fr]" style={{ background: line }}>
         <div className="p-3" style={{ background: PALETTE.panel }}>
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Price · Key Levels</span>
-            <span className="text-[9px] tabular-nums" style={{ color: muted }}>{fmtPx(m.spot)}</span>
+            <span className="text-[9px] tabular-nums" style={{ color: muted }}>{fmtPx(s.spot)}</span>
           </div>
           <div className="mt-2 h-[96px] w-full">
-            <Spark data={spark} />
+            <Spark data={series} />
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[8.5px] uppercase tracking-[0.12em]" style={{ color: muted }}>
-            <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(m.callWall)}</span>
-            <span style={{ color: PALETTE.amber }}>▬ Pin {fmtLvl(m.pin)}</span>
-            <span style={{ color: PALETTE.red }}>▬ Put Wall {fmtLvl(m.putWall)}</span>
+            <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(s.callWall)}</span>
+            <span style={{ color: PALETTE.amber }}>▬ Pin {fmtLvl(s.pin)}</span>
+            <span style={{ color: PALETTE.red }}>▬ Put Wall {fmtLvl(s.putWall)}</span>
           </div>
         </div>
         <div className="p-3" style={{ background: PALETTE.panel }}>
@@ -512,7 +605,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
             </span>
           </div>
           <div className="mt-2">
-            {pressure.length ? <MiniPositioningMap rows={pressure} metrics={metrics} /> : <div className="py-6 text-center text-[10px]" style={{ color: faint }}>awaiting chain</div>}
+            <MiniPositioningMap rows={s.pressure} metrics={{ spot: s.spot, callWall: s.callWall, putWall: s.putWall, pin: s.pin }} />
           </div>
         </div>
       </div>
@@ -534,7 +627,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
             </tr>
           </thead>
           <tbody>
-            {ranked.length ? ranked.map((r, i) => (
+            {s.ranked.map((r, i) => (
               <tr key={i} style={{ borderTop: `1px solid ${line}` }}>
                 <td className="py-1 tabular-nums" style={{ color: PALETTE.ghost }}>{r.symbol}</td>
                 <td className="py-1" style={{ color: muted }}>{r.setup}</td>
@@ -542,9 +635,7 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
                 <td className="py-1 text-right tabular-nums" style={{ color: PALETTE.text }}>{r.confidence}%</td>
                 <td className="py-1 text-right tabular-nums" style={{ color: muted }}>{fmtPct(r.expMovePct)}</td>
               </tr>
-            )) : (
-              <tr><td colSpan={5} className="py-4 text-center text-[10px]" style={{ color: faint }}>awaiting ranked setups</td></tr>
-            )}
+            ))}
           </tbody>
         </table>
       </div>
@@ -941,8 +1032,10 @@ function SolutionSection() {
         </div>
         <div className="space-y-2.5">
           {bullets.map((b, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-[8px] p-3" style={{ background: PALETTE.panel, border: `1px solid ${line}` }}>
-              <span className="mt-[3px] h-3 w-3 shrink-0 rounded-[3px]" style={{ background: PALETTE.accent[i % 4] }} />
+            <div key={i} className="flex items-start gap-3 rounded-[10px] p-3" style={{ background: PALETTE.panel, border: `1px solid ${line}` }}>
+              {/* uniform quiet marker — a bullet is not data, so it stays grey
+                  rather than cycling the data-accent quartet decoratively */}
+              <span className="mt-[6px] h-px w-2.5 shrink-0" style={{ background: lineStrong }} />
               <span className="text-[13.5px]" style={{ color: PALETTE.text }}>{b}</span>
             </div>
           ))}
@@ -963,7 +1056,7 @@ function ProductPreview({ ticker, metrics, ranked, pressure, spark, onEnter }: R
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {modules.map((m) => (
-            <span key={m} className="rounded-[6px] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em]" style={{ color: muted, border: `1px solid ${line}` }}>{m}</span>
+            <span key={m} className="rounded-[7px] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em]" style={{ color: muted, border: `1px solid ${line}` }}>{m}</span>
           ))}
         </div>
         <div className="mt-8 text-center"><GhostButton onClick={() => onEnter('pinpoint')}>Open the Terminal</GhostButton></div>
@@ -996,16 +1089,18 @@ function FeatureSection({ metrics, ranked, pressure, spark, onEnter }: { metrics
             key={f.t}
             type="button"
             onClick={() => onEnter(f.tab)}
-            className="group cursor-pointer text-left transition-transform duration-200 will-change-transform hover:-translate-y-[2px]"
+            className="group h-full cursor-pointer rounded-[10px] p-5 text-left transition-colors duration-150"
+            style={{ background: PALETTE.panel, border: `1px solid ${line}` }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = lineStrong)}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = line)}
           >
-            <Panel className="h-full p-5 transition-shadow duration-200 group-hover:shadow-[0_0_0_1px_var(--border-strong),0_10px_30px_rgba(0,0,0,0.4)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
-                <span className="text-[10px]" style={{ color: faint }}>→</span>
-              </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{f.d}</p>
-              <div className="mt-4">{f.visual}</div>
-            </Panel>
+            {/* no lift, no glow — hover only brightens the hairline border */}
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
+              <span className="text-[10px]" style={{ color: faint }}>→</span>
+            </div>
+            <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{f.d}</p>
+            <div className="mt-4">{f.visual}</div>
           </button>
         ))}
       </div>
@@ -1033,7 +1128,7 @@ function MicroPositioning({ rows, spot }: { rows: PressureRow[]; spot?: number |
   let spotI = rows.length ? rows.slice(0, 7).findIndex((r) => r.kind === 'spot') : -1;
   if (spotI < 0) { spotI = nets.findIndex((v, i) => i > 0 && nets[i - 1] >= 0 && v < 0); if (spotI < 0) spotI = Math.floor(nets.length / 2); }
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[64px] w-full" role="img" aria-label="Dealer positioning preview">
         <line x1={cx} x2={cx} y1={2} y2={H - 2} stroke={lineStrong} strokeWidth="1" />
         {nets.map((v, i) => {
@@ -1061,7 +1156,7 @@ function MicroRanked({ rows }: { rows: RankedRow[] }) {
     ? real.map((r) => ({ sym: r.symbol, conf: r.confidence, live: true }))
     : fallback.map((w) => ({ sym: '—', conf: w, live: false }));
   return (
-    <div className="space-y-[5px] rounded-[6px] p-2.5" style={MICRO_FRAME}>
+    <div className="space-y-[5px] rounded-[7px] p-2.5" style={MICRO_FRAME}>
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-2">
           <span className="w-9 shrink-0 text-[9px] font-semibold tabular-nums" style={{ color: it.live ? PALETTE.ghost : faint }}>{it.sym}</span>
@@ -1093,7 +1188,7 @@ function MicroGamma({ rows, spot, callWall, putWall }: { rows: PressureRow[]; sp
   };
   const cwI = idxNear(callWall); const pwI = idxNear(putWall); const spotI = idxNear(spot);
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[64px] w-full" role="img" aria-label="Net gamma by strike preview">
         <line x1={4} x2={W - 4} y1={mid} y2={mid} stroke={lineStrong} strokeWidth="1" />
         {nets.map((v, i) => {
@@ -1120,7 +1215,7 @@ function MicroHeatmap() {
     return `rgb(${c[0]},${c[1]},${c[2]})`;
   };
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }} role="img" aria-label="IV surface preview">
         {Array.from({ length: rowsN * cols }, (_, k) => {
           const r = Math.floor(k / cols); const c = k % cols;
@@ -1143,7 +1238,7 @@ function MicroHeatmap() {
 function MicroBlotter() {
   const ticks = [0.62, -0.28, 0.85, 0.4, -0.5]; // silhouette only — no numbers
   return (
-    <div className="rounded-[6px] px-2.5 py-1.5" style={MICRO_FRAME}>
+    <div className="rounded-[7px] px-2.5 py-1.5" style={MICRO_FRAME}>
       {ticks.map((v, i) => (
         <div key={i} className="flex items-center gap-2 py-[3px]" style={{ borderTop: i === 0 ? 'none' : `1px solid ${line}` }}>
           <span className="h-[5px] w-9 rounded-[2px]" style={{ background: 'color-mix(in srgb, var(--text-tertiary) 28%, transparent)' }} />
@@ -1177,7 +1272,7 @@ function MicroTicks({ data }: { data: number[] }) {
   }, [data]);
   const nodes = pts ? [0.25, 0.55, 0.85].map((f) => pts[Math.min(pts.length - 1, Math.round(f * (pts.length - 1)))]) : null;
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[60px] w-full" role="img" aria-label="Live tick chart preview">
         {pts ? (
           <>
@@ -1300,23 +1395,23 @@ const PLANS: { key: string; name: string; tag: string; price: string; note: stri
 function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: number; onSelect: (p: (typeof PLANS)[number]) => void }) {
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-[12px] p-6 transition-[transform,border-color,box-shadow] duration-200 will-change-transform hover:-translate-y-[3px]"
+      className="group relative flex flex-col overflow-hidden rounded-[10px] p-6 transition-colors duration-150"
       style={{
         background: p.featured ? PALETTE.panel : PALETTE.panelSoft,
         border: `1px solid ${p.featured ? lineStrong : line}`,
-        boxShadow: p.featured ? '0 0 0 1px var(--border-strong), 0 30px 80px -50px rgba(0,0,0,0.9)' : 'none',
       }}
     >
-      {/* featured accent hairline — the flagship card carries the data palette */}
+      {/* featured accent hairline — a single semantic bar marks the recommended
+          tier (theme accent), not a decorative three-colour rainbow */}
       {p.featured ? (
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${PALETTE.steel}, ${PALETTE.amber}, ${PALETTE.green})` }} />
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: accentFill }} />
       ) : null}
       {/* oversized editorial tier index */}
-      <span aria-hidden="true" className="pointer-events-none absolute -top-2 right-4 select-none text-[56px] font-extrabold leading-none tabular-nums" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }}>
+      <span aria-hidden="true" className="pointer-events-none absolute -top-2 right-4 select-none text-[56px] font-semibold leading-none tabular-nums" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }}>
         0{index + 1}
       </span>
       {p.featured ? (
-        <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[5px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
+        <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[7px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
           Most Popular
         </span>
       ) : null}
@@ -1398,7 +1493,7 @@ function FaqSection() {
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2 py-4 text-left transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[7px] px-2 py-4 text-left transition-colors"
                 onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
@@ -1417,7 +1512,6 @@ function FaqSection() {
 function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
     <section className="relative overflow-hidden px-5 py-24" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(800px 360px at 50% 120%, rgba(106,147,181,0.12), transparent 70%)' }} />
       <div className="relative mx-auto max-w-2xl text-center">
         <h2 className="text-[30px] font-semibold leading-tight sm:text-[38px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
           From Traders. For Traders.
@@ -1583,11 +1677,12 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
 
       {/* main scroll area (its own scroller, so Lenis + progress rail + reveals work) */}
       <div ref={rootRef} className="slayer-scrollbar relative flex-1 overflow-y-auto overflow-x-hidden">
-        {/* scroll-progress rail — neutral steel→amber→green→red, pinned to top */}
+        {/* scroll-progress rail — a single flat accent hairline (theme accent),
+            not a decorative four-colour rainbow sweep */}
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none sticky left-0 top-0 z-[60] h-[2px] w-full origin-left"
-          style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.accent[0]}, ${PALETTE.accent[1]}, ${PALETTE.accent[2]}, ${PALETTE.accent[3]})` }}
+          className="pointer-events-none sticky left-0 top-0 z-[60] h-px w-full origin-left"
+          style={{ scaleX: scrollYProgress, background: accentFill }}
         />
         <LandingMobileNav onLaunch={onLaunch} onEnter={onEnter} scrollTop={scrollTop} />
         <div ref={contentRef} className="relative z-10">

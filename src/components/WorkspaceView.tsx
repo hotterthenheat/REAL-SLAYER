@@ -18,6 +18,9 @@ import {
 
 const ROW_HEIGHT = 40;
 const GAP = 8;
+// Single overlay-shadow token for every true floating surface (dropdowns, modal,
+// toast) — matches NavFlyout so the app has exactly one elevation, not per-widget shadows.
+const OVERLAY_SHADOW = '0 16px 44px -12px rgba(0,0,0,0.8)';
 
 interface Props { isSuperAdmin?: boolean; }
 
@@ -263,23 +266,27 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
         <div className="flex-none bg-[var(--surface)] border-b border-[var(--border)] px-3 py-2 flex items-center justify-between gap-3 z-40">
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Workspace Editor</span>
           <div className="flex items-center gap-1.5">
-            <button ref={saveTriggerRef} onClick={() => { setShowSaveOverlay(true); setLoadOpen(false); setAddOpen(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
+            <span className="hidden lg:flex items-center gap-1.5 mr-1 text-[10px] font-medium tabular-nums text-[var(--text-tertiary)]">
+              <span className="text-[var(--text-secondary)]">{layout.length}</span> panes
+            </span>
+            <button ref={saveTriggerRef} onClick={() => { setShowSaveOverlay(true); setLoadOpen(false); setAddOpen(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
               <Plus className="w-3 h-3" /> <span className="hidden md:inline">Save</span>
             </button>
 
             <div className="relative">
-              <button onClick={() => { setLoadOpen(!loadOpen); setAddOpen(false); setShowSaveOverlay(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
+              <button onClick={() => { setLoadOpen(!loadOpen); setAddOpen(false); setShowSaveOverlay(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
                 <span className="hidden md:inline">Workspaces</span><ChevronDown className="w-3 h-3 text-[var(--text-tertiary)]" />
               </button>
               {loadOpen && (
-                <div className="absolute right-0 md:left-0 mt-1.5 w-64 bg-[var(--surface)] border border-[var(--border)] rounded-[3px] z-50 p-1.5 shadow-2xl overflow-y-auto max-h-96 text-left">
+                <div className="absolute right-0 md:left-0 mt-1.5 w-72 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] z-50 overflow-hidden max-h-[26rem] overflow-y-auto text-left" style={{ boxShadow: OVERLAY_SHADOW }}>
                   {Object.keys(customLayouts).length > 0 && (
-                    <div className="mb-1.5 pb-1.5 border-b border-[var(--border)]">
-                      <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-2 pb-1 tracking-[0.14em]">Saved</div>
+                    <div className="border-b border-[var(--border)]">
+                      <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Saved · this browser</div>
                       {Object.keys(customLayouts).map(name => (
-                        <div key={name} className="flex justify-between items-center gap-2 group w-full px-2 py-1.5 text-[10px] hover:bg-[var(--surface-3)] rounded-[2px] transition-colors">
-                          <button onClick={() => { commit(customLayouts[name].map(p => ({...p}))); setLoadOpen(false); setMaximized(null); }} className="flex-1 text-[var(--text-secondary)] font-medium text-left truncate hover:text-[var(--text-primary)]">
-                            {name}
+                        <div key={name} className="flex justify-between items-center gap-2 group w-full pl-3 pr-2 py-1.5 hover:bg-[var(--surface-3)] transition-colors">
+                          <button onClick={() => { commit(customLayouts[name].map(p => ({...p}))); setLoadOpen(false); setMaximized(null); }} className="flex-1 flex items-baseline justify-between gap-3 text-left min-w-0">
+                            <span className="text-[11px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{name}</span>
+                            <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{customLayouts[name].length}p</span>
                           </button>
                           <button onClick={(e) => deleteCustomLayout(name, e)} title="Delete" aria-label={`Delete saved layout ${name}`} className="text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]">
                             <X className="w-3 h-3" />
@@ -289,28 +296,33 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
                     </div>
                   )}
 
-                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-2 py-1 tracking-[0.14em]">Templates</div>
-                  {templateKeys.map((k) => (
-                    <button key={k} onClick={() => loadTemplate(k)} className="w-full flex items-center justify-between text-left px-2 py-1.5 text-[10px] text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] font-medium rounded-[2px] transition-colors">
-                      {TEMPLATES[k].name}
-                    </button>
-                  ))}
+                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Templates</div>
+                  <div className="pb-1.5">
+                    {templateKeys.map((k) => (
+                      <button key={k} onClick={() => loadTemplate(k)} className="w-full flex items-baseline justify-between gap-3 text-left px-3 py-1.5 hover:bg-[var(--surface-3)] transition-colors group">
+                        <span className="text-[11px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{TEMPLATES[k].name}</span>
+                        <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{TEMPLATES[k].layout.length}p</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
             <div className="relative">
-              <button onClick={() => { setAddOpen(!addOpen); setLoadOpen(false); setShowSaveOverlay(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
+              <button onClick={() => { setAddOpen(!addOpen); setLoadOpen(false); setShowSaveOverlay(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
                 <Plus className="w-3 h-3 text-[var(--success)]" /> <span className="hidden md:inline">Add Widget</span>
               </button>
               {addOpen && (
-                <div className="absolute right-0 mt-1.5 w-64 max-h-96 overflow-y-auto bg-[var(--surface)] border border-[var(--border)] rounded-[3px] z-50 p-1.5 shadow-2xl text-left">
-                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-2 py-1 tracking-[0.14em]">Available Widgets</div>
-                  {visibleWidgets.map((w) => (
-                    <button key={w.type} onClick={() => addWidget(w.type)} className="w-full text-left px-2 py-1.5 text-[10px] font-medium text-[var(--text-secondary)] hover:text-[var(--success)] hover:bg-[var(--surface-3)] rounded-[2px] transition-colors">
-                      {w.title}
-                    </button>
-                  ))}
+                <div className="absolute right-0 mt-1.5 w-72 max-h-[26rem] overflow-y-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] z-50 overflow-hidden text-left" style={{ boxShadow: OVERLAY_SHADOW }}>
+                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Add widget</div>
+                  <div className="pb-1.5">
+                    {visibleWidgets.map((w) => (
+                      <button key={w.type} onClick={() => addWidget(w.type)} className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors">
+                        {w.title}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -352,42 +364,73 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               );
             })}
             {layout.length === 0 && !loading && (
-              <div className="absolute inset-0 flex items-center justify-center p-6">
-                <div className="flex flex-col items-center gap-3 text-center max-w-xs bg-[var(--surface)] border border-[var(--border)] rounded-[4px] px-6 py-8">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Empty Workspace</span>
-                  <p className="text-[11px] leading-relaxed text-[var(--text-secondary)]">
-                    No panes yet. Add a widget, or load a template to get started.
-                  </p>
-                  <div className="flex items-center gap-2 pt-1">
-                    <button
-                      onClick={() => { setAddOpen(true); setLoadOpen(false); setShowSaveOverlay(false); }}
-                      className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
-                    >
-                      <Plus className="w-3 h-3 text-[var(--success)]" /> Add Widget
-                    </button>
-                    <button
-                      onClick={() => { setLoadOpen(true); setAddOpen(false); setShowSaveOverlay(false); }}
-                      className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[3px] px-3 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
-                    >
-                      Templates
-                    </button>
+              // Not a centered hero — a working saved-layouts manager anchored top-left,
+              // listing every layout the desk can restore with its pane count.
+              <div className="absolute inset-0 overflow-auto p-2">
+                <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] overflow-hidden">
+                  <div className="flex items-baseline justify-between gap-3 px-3.5 py-2.5 border-b border-[var(--border)]">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Load a layout</span>
+                    <span className="text-[10px] text-[var(--text-tertiary)]">no active panes</span>
                   </div>
+
+                  {Object.keys(customLayouts).length > 0 && (
+                    <div className="border-b border-[var(--border)]">
+                      <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3.5 pt-2.5 pb-1 tracking-[0.16em]">Saved · this browser</div>
+                      {Object.keys(customLayouts).map((name) => (
+                        <div key={name} className="flex items-center gap-2 group pl-3.5 pr-2 hover:bg-[var(--surface-2)] transition-colors">
+                          <button onClick={() => { commit(customLayouts[name].map(p => ({ ...p }))); setMaximized(null); }} className="flex-1 flex items-baseline justify-between gap-3 py-2 text-left min-w-0 focus-visible:outline-none">
+                            <span className="text-[12px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{name}</span>
+                            <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{customLayouts[name].length} panes</span>
+                          </button>
+                          <button onClick={(e) => deleteCustomLayout(name, e)} title="Delete" aria-label={`Delete saved layout ${name}`} className="text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3.5 pt-2.5 pb-1 tracking-[0.16em]">Templates</div>
+                  {templateKeys.map((k) => (
+                    <button
+                      key={k}
+                      onClick={() => loadTemplate(k)}
+                      className="w-full flex items-baseline justify-between gap-3 px-3.5 py-2 text-left hover:bg-[var(--surface-2)] transition-colors group border-t border-[var(--border)] first-of-type:border-t-0 focus-visible:outline-none focus-visible:bg-[var(--surface-2)]"
+                    >
+                      <span className="text-[12px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{TEMPLATES[k].name}</span>
+                      <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{TEMPLATES[k].layout.length} panes</span>
+                    </button>
+                  ))}
+
+                  <button
+                    onClick={() => { setAddOpen(true); setLoadOpen(false); setShowSaveOverlay(false); }}
+                    className="w-full text-left px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] border-t border-[var(--border)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:bg-[var(--surface-2)]"
+                  >
+                    Or start blank — add a single widget
+                  </button>
                 </div>
               </div>
             )}
             {layout.length === 0 && loading && (
-              <div className="absolute inset-0 p-2" aria-busy="true" aria-label="Loading workspace">
-                <div className="grid grid-cols-2 lg:grid-cols-3 auto-rows-[160px] gap-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <div key={i} className="flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-[3px] overflow-hidden animate-pulse">
-                      <div className="h-7 shrink-0 bg-[var(--surface-2)] border-b border-[var(--border)]" />
-                      <div className="flex-1 p-3 flex flex-col gap-2">
-                        <div className="h-3 w-2/3 rounded bg-[var(--surface-3)]" />
-                        <div className="h-3 w-1/2 rounded bg-[var(--surface-3)]" />
-                        <div className="h-3 w-3/4 rounded bg-[var(--surface-3)]" />
-                      </div>
-                    </div>
-                  ))}
+              // Honest skeleton: ghost the exact geometry of the layout being restored
+              // (Standard Terminal), not a generic SaaS card grid.
+              <div className="absolute inset-0" aria-busy="true" aria-label="Restoring workspace">
+                {TEMPLATES.A.layout.map((p) => (
+                  <div
+                    key={p.i}
+                    className="absolute bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] overflow-hidden animate-pulse"
+                    style={{
+                      left: p.x * (colWidth + GAP),
+                      top: p.y * (ROW_HEIGHT + GAP),
+                      width: p.w * colWidth + (p.w - 1) * GAP,
+                      height: p.h * ROW_HEIGHT + (p.h - 1) * GAP,
+                    }}
+                  >
+                    <div className="h-7 border-b border-[var(--border)] bg-[var(--surface-2)]" />
+                  </div>
+                ))}
+                <div className="absolute left-3 bottom-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">
+                  Restoring workspace…
                 </div>
               </div>
             )}
@@ -421,7 +464,8 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
             aria-modal="true"
             aria-labelledby="save-workspace-title"
             onClick={(e) => e.stopPropagation()}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-[4px] p-5 w-full max-w-sm flex flex-col gap-4 shadow-2xl"
+            style={{ boxShadow: OVERLAY_SHADOW }}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] p-5 w-full max-w-sm flex flex-col gap-4"
           >
             <h2 id="save-workspace-title" className="text-[var(--text-primary)] font-semibold text-[11px] tracking-[0.14em] uppercase">Save Workspace</h2>
             <p className="text-[var(--text-tertiary)] text-[10px] leading-relaxed">
@@ -435,7 +479,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               value={saveName}
               onChange={e => setSaveName(e.target.value)}
               placeholder="Workspace name"
-              className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 py-2 text-[11px] font-medium focus:outline-none focus:border-[var(--success)] transition-colors rounded-[3px]"
+              className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] px-3 py-2 text-[11px] font-medium focus:outline-none focus:border-[var(--success)] transition-colors rounded-[var(--radius-control)]"
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveCustomLayout();
               }}
@@ -450,7 +494,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               <button
                 onClick={saveCustomLayout}
                 disabled={!saveName.trim()}
-                className="text-[10px] uppercase font-semibold tracking-[0.12em] bg-[var(--success)] text-[var(--primary-contrast)] hover:opacity-90 rounded-[3px] px-4 py-2 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+                className="text-[10px] uppercase font-semibold tracking-[0.12em] bg-[var(--success)] text-[var(--primary-contrast)] hover:opacity-90 rounded-[var(--radius-control)] px-4 py-2 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Save
               </button>
@@ -462,7 +506,8 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
       {toast && (
         <div
           role="alert"
-          className={`fixed bottom-5 right-5 z-[300] flex items-center gap-2.5 bg-[var(--surface-2)] border rounded-[3px] px-4 py-3 shadow-2xl text-[10px] font-medium text-[var(--text-primary)] max-w-xs ${toast.tone === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'}`}
+          style={{ boxShadow: OVERLAY_SHADOW }}
+          className={`fixed bottom-5 right-5 z-[300] flex items-center gap-2.5 bg-[var(--surface-2)] border rounded-[var(--radius-panel)] px-4 py-3 text-[10px] font-medium text-[var(--text-primary)] max-w-xs ${toast.tone === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'}`}
         >
           <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${toast.tone === 'success' ? 'bg-[var(--success)]' : 'bg-[var(--danger)]'}`} />
           <span>{toast.text}</span>

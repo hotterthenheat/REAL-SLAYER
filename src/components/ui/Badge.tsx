@@ -29,10 +29,10 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 export function Badge({ tone = 'neutral', size = 'md', dot, pulse, className = '', style, children, ...rest }: BadgeProps) {
   const t = TONES[tone];
-  const sz = size === 'sm' ? 'text-[8px] px-1.5 py-[1px] gap-1' : 'text-[9.5px] px-2 py-0.5 gap-1.5';
+  const sz = size === 'sm' ? 'text-[10px] px-1.5 py-[1px] gap-1' : 'text-[10px] px-2 py-0.5 gap-1.5';
   return (
     <span
-      className={`inline-flex items-center rounded font-mono font-black uppercase tracking-widest leading-none whitespace-nowrap ${sz} ${className}`}
+      className={`inline-flex items-center rounded-[7px] font-mono font-semibold uppercase tracking-widest leading-none whitespace-nowrap ${sz} ${className}`}
       style={{ color: t.fg, background: t.bg, border: `1px solid ${t.bd}`, ...style }}
       {...rest}
     >

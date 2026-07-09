@@ -135,9 +135,9 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
         const v = sampleZ(ei, c);
         pos.setY(idx, yi(v));
         const t = Math.min(1, Math.abs(v) / grid.maxAbs);
-        // diverging: green for +γ, red for −γ; brighten with magnitude
-        if (v >= 0) { colors[idx * 3] = 0.10 + t * 0.10; colors[idx * 3 + 1] = 0.35 + t * 0.55; colors[idx * 3 + 2] = 0.30 + t * 0.10; }
-        else { colors[idx * 3] = 0.45 + t * 0.45; colors[idx * 3 + 1] = 0.10 + t * 0.06; colors[idx * 3 + 2] = 0.16 + t * 0.06; }
+        // diverging on brand accents: green #3F9C79 for +γ, red #B23B3B for −γ; brighten with magnitude
+        if (v >= 0) { colors[idx * 3] = 0.16 + t * 0.09; colors[idx * 3 + 1] = 0.30 + t * 0.31; colors[idx * 3 + 2] = 0.28 + t * 0.19; }
+        else { colors[idx * 3] = 0.35 + t * 0.35; colors[idx * 3 + 1] = 0.14 + t * 0.09; colors[idx * 3 + 2] = 0.14 + t * 0.09; }
       }
     }
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -284,7 +284,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
 
   if (!grid) {
     return (
-      <div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
+      <div className="h-[300px] rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
         <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest">No multi-expiry GEX surface available</span>
       </div>
     );
@@ -297,13 +297,13 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
   const sliceMaxAbs = Math.max(1, ...sliceCells.map((c) => Math.abs(c.gex)));
   const sliceNet = sliceCells.reduce((a, c) => a + c.gex, 0);
 
-  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
+  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded-[7px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
 
   return (
-    <div ref={wrapRef} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+    <div ref={wrapRef} className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
       <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
-          <span className="w-[3px] h-3.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
+          <span className="w-[3px] h-3.5 rounded-[1px]" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
           <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-[var(--text-primary)]">
             Gamma Exposure Surface{ticker ? ` · ${ticker}` : ''}
           </span>
@@ -314,14 +314,14 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
           <button className={toolBtn} onClick={() => apiRef.current?.png()} title="Export PNG" aria-label="Export PNG"><Download className="w-3.5 h-3.5" /></button>
           <button className={toolBtn} onClick={dumpCsv} title="Export CSV" aria-label="Export CSV"><span className="text-[9px] font-bold tracking-wider">CSV</span></button>
           <button className={toolBtn} onClick={fullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 className="w-3.5 h-3.5" /></button>
-          <DataStateBadge state={live ? 'live' : 'model'} className="ml-1" title={live ? 'Real per-expiry chains' : 'Per-expiry split modeled from the aggregate term structure'} />
+          <DataStateBadge state={live ? 'live' : 'model'} className="ml-1" />
         </div>
       </div>
 
       <div ref={mountRef} className="relative w-full h-[440px] cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
         {hover && (
           <div
-            className="pointer-events-none absolute z-10 px-2 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg"
+            className="pointer-events-none absolute z-10 px-2 py-1 rounded-[7px] bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg"
             style={{ left: Math.min(hover.x + 12, (mountRef.current?.clientWidth ?? 800) - 140), top: hover.y + 12 }}
           >
             <div className="text-[var(--text-primary)] font-bold">K {fmt(hover.strike)} · {hover.dte}DTE</div>
@@ -331,7 +331,7 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
 
         {/* Section cross-section readout */}
         {slicing && (
-          <div className="absolute z-10 top-2 right-2 w-[210px] px-2.5 py-2 rounded-md bg-[var(--surface-2)]/95 border border-[var(--border)] shadow-xl backdrop-blur-sm">
+          <div className="absolute z-10 top-2 right-2 w-[210px] px-2.5 py-2 rounded-[10px] bg-[var(--surface-2)] border border-[var(--border-strong)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]">
             <div className="flex items-center justify-between mb-1.5">
               <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">Section @ strike</span>
               <span className="text-[11px] font-bold tabular-nums text-[var(--accent-color)]">{fmt(sliceStrike)}</span>
@@ -340,8 +340,8 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
               {sliceCells.map((c) => (
                 <div key={c.dte} className="flex items-center gap-1.5">
                   <span className="text-[9px] tabular-nums text-[var(--text-tertiary)] w-9 shrink-0">{c.dte}d</span>
-                  <div className="flex-1 h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${Math.max(3, (Math.abs(c.gex) / sliceMaxAbs) * 100)}%`, background: c.gex >= 0 ? 'var(--success)' : 'var(--danger)' }} />
+                  <div className="flex-1 h-1.5 rounded-[1px] bg-[var(--surface-3)] overflow-hidden">
+                    <div className="h-full" style={{ width: `${Math.max(3, (Math.abs(c.gex) / sliceMaxAbs) * 100)}%`, background: c.gex >= 0 ? 'var(--success)' : 'var(--danger)' }} />
                   </div>
                   <span className="text-[9px] tabular-nums w-12 text-right" style={{ color: c.gex >= 0 ? 'var(--success)' : 'var(--danger)' }}>{c.gex >= 0 ? '+' : ''}{(c.gex / 1e9).toFixed(2)}B</span>
                 </div>
@@ -369,8 +369,8 @@ export function GexSurface3D({ expiries, spot, decimals = 0, ticker, live, windo
       )}
 
       <div className="flex items-center gap-4 px-3.5 py-2 border-t border-[var(--border)] text-[10px] text-[var(--text-tertiary)]">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm" style={{ background: 'rgb(38,217,128)' }} /> long γ (pin)</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm" style={{ background: 'rgb(217,51,72)' }} /> short γ (amplify)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(63,156,121)' }} /> long γ (pin)</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(178,59,59)' }} /> short γ (amplify)</span>
         <span className="ml-auto uppercase tracking-widest">drag rotate · scroll zoom · right-drag pan</span>
       </div>
     </div>

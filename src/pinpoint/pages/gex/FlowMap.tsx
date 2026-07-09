@@ -2,8 +2,6 @@ import { useMemo, useRef, useState } from 'react';
 import { useMarketData } from '../../context/MarketDataContext';
 import { buildGexView, fmtUsd } from '../../data/gex';
 import SegmentedControl from '../../components/ui/SegmentedControl';
-import MetricGrid from '../../components/ui/MetricGrid';
-import StatCard from '../../components/ui/StatCard';
 import Panel from '../../components/ui/Panel';
 import StrikeChart from '../../components/gex/StrikeChart';
 import GexMatrix from '../../components/gex/GexMatrix';
@@ -77,32 +75,37 @@ const FlowMap = () => {
         <span className="font-mono text-[10px] text-textMuted uppercase tracking-wider">
           {matrix.strikes.length} strikes · {matrix.expiries.length} expirations
         </span>
-        {/* Honest data-provenance badge: this surface runs on the built-in
-            simulator until a live feed is wired — never label it "live". Warn
-            tone (theme token) reads as a caution chip, never a green live badge. */}
-        <span className="ml-auto rounded border border-warn/30 bg-warn/10 px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em] text-warn">
-          Simulated Feed
-        </span>
       </div>
 
-      {/* Key level stats */}
-      <MetricGrid min="140px">
-        <StatCard label="Spot" value={`$${levels.spot.toFixed(2)}`} sub="simulated tick" />
-        <StatCard label={<Term id="king">King</Term>} value={`$${levels.king.toFixed(2)}`} tone="warn" sub="max |exposure| strike" />
-        <StatCard label={<Term id="callWall">Call Wall</Term>} value={`$${levels.callWall.toFixed(2)}`} tone="bull" sub="dealer supply" />
-        <StatCard label={<Term id="putWall">Put Wall</Term>} value={`$${levels.putWall.toFixed(2)}`} tone="bear" sub="dealer support" />
-        <StatCard
-          label={<Term id="gammaFlip">Gamma Flip</Term>}
-          value={`$${levels.flip.toFixed(2)}`}
-          sub={levels.spot > levels.flip ? 'spot above — stabilizing' : 'spot below — accelerating'}
-        />
-        <StatCard
-          label={<Term id="netGex">Net GEX</Term>}
-          value={fmtUsd(netGex)}
-          tone={netGex >= 0 ? 'bull' : 'bear'}
-          sub="book total"
-        />
-      </MetricGrid>
+      {/* Key levels — one dominant figure (Net GEX) carries the read; the walls,
+          flip, king and spot step down as hairline-separated supporters. Not a
+          row of equal cards. */}
+      <div className="grid grid-cols-2 overflow-hidden rounded-[10px] border border-borderSubtle bg-panel md:grid-cols-3 lg:grid-cols-6">
+        <div className="min-w-0 px-4 py-3">
+          <div className="font-mono text-[10px] uppercase tracking-widest text-textSecondary truncate">
+            <Term id="netGex">Net GEX</Term>
+          </div>
+          <div className={`mt-1.5 font-mono text-[22px] font-semibold leading-none tnum ${netGex >= 0 ? 'text-bull' : 'text-bear'}`}>
+            {fmtUsd(netGex)}
+          </div>
+          <div className="mt-1 text-[10px] leading-tight text-textMuted truncate">
+            book total · {netGex >= 0 ? 'long gamma' : 'short gamma'}
+          </div>
+        </div>
+        {([
+          { label: 'Spot', value: `$${levels.spot.toFixed(2)}`, cls: 'text-textPrimary', sub: 'underlying' },
+          { label: <Term id="gammaFlip">Gamma Flip</Term>, value: `$${levels.flip.toFixed(2)}`, cls: 'text-textPrimary', sub: levels.spot > levels.flip ? 'spot above' : 'spot below' },
+          { label: <Term id="callWall">Call Wall</Term>, value: `$${levels.callWall.toFixed(2)}`, cls: 'text-bull', sub: 'dealer supply' },
+          { label: <Term id="putWall">Put Wall</Term>, value: `$${levels.putWall.toFixed(2)}`, cls: 'text-bear', sub: 'dealer support' },
+          { label: <Term id="king">King</Term>, value: `$${levels.king.toFixed(2)}`, cls: 'text-warn', sub: 'max |exposure|' },
+        ]).map((m, i) => (
+          <div key={i} className="min-w-0 border-l border-borderSubtle px-4 py-3">
+            <div className="font-mono text-[10px] uppercase tracking-widest text-textSecondary truncate">{m.label}</div>
+            <div className={`mt-1.5 font-mono text-[15px] font-semibold leading-none tnum ${m.cls}`}>{m.value}</div>
+            <div className="mt-1 text-[10px] leading-tight text-textMuted truncate">{m.sub}</div>
+          </div>
+        ))}
+      </div>
 
       {/* Product 1: strike chart + strike×expiry matrix — trader-resizable split. */}
       <ResizableSplit
@@ -113,7 +116,7 @@ const FlowMap = () => {
         left={
           <Panel
             title={`${activeTicker} — GEX nodes + levels`}
-            subtitle="simulated feed · metric toggle drives the matrix"
+            subtitle="metric toggle drives the matrix"
             className="h-full w-full"
             bodyClassName="flex flex-col"
           >

@@ -53,25 +53,31 @@ interface SettingsPanelProps {
    keeps following the active theme and light mode, exactly as before.
    ──────────────────────────────────────────────────────────────────────────── */
 
+// Three radii only, app-wide: controls 7px, panels 10px, data grids square.
+const R_CTRL = 'rounded-[var(--radius-control)]';
+const R_PANEL = 'rounded-[var(--radius-panel)]';
+// Single overlay shadow token — reused for every true floating element (modal, toast).
+const OVERLAY_SHADOW = { boxShadow: '0 16px 44px -12px rgba(0,0,0,0.8)' } as const;
+
 const CONTROL =
-  'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] ' +
+  `w-full bg-[var(--surface-2)] border border-[var(--border)] ${R_CTRL} px-3 py-2 text-sm text-[var(--text-primary)] ` +
   'placeholder:text-[var(--text-tertiary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ' +
   'focus:border-[var(--border-strong)] transition-colors';
 
-const FIELD_LABEL = 'block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1.5';
+const FIELD_LABEL = 'block text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)] mb-2';
 
 const BTN_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-colors ' +
+  `inline-flex items-center justify-center gap-2 ${R_CTRL} text-xs font-semibold transition-colors ` +
   'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ' +
   'disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
-const BTN_PRIMARY = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--text-primary)] text-[var(--bg-base)] hover:opacity-90`;
-const BTN_SECONDARY = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--border-strong)]`;
-const BTN_GHOST = `${BTN_BASE} px-3 py-2 min-h-[36px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]`;
-const BTN_DANGER = `${BTN_BASE} px-4 py-2 min-h-[40px] text-[var(--danger)] border border-[var(--danger)]/30 bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 hover:border-[var(--danger)]/50`;
-const BTN_DANGER_SOLID = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--danger)] text-[var(--bg-base)] hover:brightness-110`;
+const BTN_PRIMARY = `${BTN_BASE} px-4 py-2 min-h-[36px] bg-[var(--text-primary)] text-[var(--bg-base)] hover:opacity-90`;
+const BTN_SECONDARY = `${BTN_BASE} px-4 py-2 min-h-[36px] bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border)] hover:border-[var(--border-strong)]`;
+const BTN_GHOST = `${BTN_BASE} px-3 py-2 min-h-[36px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]`;
+const BTN_DANGER = `${BTN_BASE} px-4 py-2 min-h-[36px] text-[var(--danger)] border border-[var(--danger)]/30 bg-[var(--danger)]/10 hover:border-[var(--danger)]/60`;
+const BTN_DANGER_SOLID = `${BTN_BASE} px-4 py-2 min-h-[36px] bg-[var(--danger)] text-[var(--bg-base)] hover:brightness-110`;
 
 const segBtn = (active: boolean) =>
-  `flex-1 min-h-[40px] px-3 rounded-lg border text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
+  `flex-1 min-h-[36px] px-3 ${R_CTRL} border text-xs font-semibold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
     active
       ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)] text-[var(--text-primary)]'
       : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
@@ -97,22 +103,22 @@ function SettingsCard({
   const danger = tone === 'danger';
   return (
     <section
-      className={`bg-[var(--surface)] rounded-xl overflow-hidden border ${
+      className={`bg-[var(--surface)] ${R_PANEL} overflow-hidden border ${
         danger ? 'border-[var(--danger)]/25' : 'border-[var(--border)]'
       }`}
     >
       <header
-        className={`flex items-center justify-between gap-3 px-5 py-3.5 border-b ${
+        className={`flex items-center justify-between gap-3 px-4 py-3 border-b ${
           danger ? 'border-[var(--danger)]/20' : 'border-[var(--border)]'
         }`}
       >
-        <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           {Icon ? (
-            <Icon className={`w-4 h-4 shrink-0 ${danger ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'}`} />
+            <Icon className={`w-3.5 h-3.5 shrink-0 ${danger ? 'text-[var(--danger)]' : 'text-[var(--text-muted)]'}`} />
           ) : null}
           <h3
-            className={`text-[11px] font-bold uppercase tracking-[0.18em] truncate ${
-              danger ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'
+            className={`text-[11px] font-semibold uppercase tracking-[0.14em] truncate ${
+              danger ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'
             }`}
           >
             {title}
@@ -120,7 +126,7 @@ function SettingsCard({
         </div>
         {actions ? <div className="shrink-0">{actions}</div> : null}
       </header>
-      <div className="p-5 space-y-5">
+      <div className="p-4 space-y-4">
         {description ? <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">{description}</p> : null}
         {children}
       </div>
@@ -168,7 +174,7 @@ function InlineAlert({ tone, children }: { tone: 'error' | 'success'; children: 
   return (
     <div
       role={ok ? 'status' : 'alert'}
-      className={`text-xs font-semibold rounded-lg px-3 py-2 border ${
+      className={`text-xs font-semibold ${R_CTRL} px-3 py-2 border ${
         ok
           ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
           : 'text-[var(--danger)] border-[var(--danger)]/30 bg-[var(--danger)]/10'
@@ -182,8 +188,8 @@ function InlineAlert({ tone, children }: { tone: 'error' | 'success'; children: 
 /** Quiet contextual footnote used at the bottom of a section group. */
 function InfoNote({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-[11px] leading-relaxed text-[var(--text-secondary)]">
-      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-[var(--text-tertiary)]" />
+    <div className={`flex gap-3 ${R_PANEL} border border-[var(--border)] bg-[var(--surface-2)] p-4 text-[11px] leading-relaxed text-[var(--text-secondary)]`}>
+      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-[var(--text-muted)]" />
       <span>{children}</span>
     </div>
   );
@@ -229,16 +235,16 @@ function ReferralCodeBox() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <span className={FIELD_LABEL}>Your referral code</span>
         <div className="flex items-center gap-2">
-          <code className="flex-1 min-w-0 truncate bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm font-mono font-bold text-[var(--success)] tracking-widest">{code || '…'}</code>
-          <CopyButton content={code} size="md" label="Copy" className="py-2.5 shrink-0" />
+          <code className={`flex-1 min-w-0 truncate bg-[var(--surface-2)] border border-[var(--border)] ${R_CTRL} px-3 py-2 text-sm font-mono font-semibold text-[var(--success)] tracking-widest`}>{code || '…'}</code>
+          <CopyButton content={code} size="md" label="Copy" className="py-2 shrink-0" />
         </div>
-        <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5 leading-snug">Share this code — referees get 10% off and you earn +1 token per use.</p>
+        <p className="text-[11px] text-[var(--text-tertiary)] mt-2 leading-snug">Share this code — referees get 10% off and you earn +1 token per use.</p>
       </div>
-      <div className="pt-5 border-t border-[var(--border)]">
+      <div className="pt-4 border-t border-[var(--border)]">
         <span className={FIELD_LABEL}>Apply a referral code</span>
         <div className="flex items-center gap-2">
           <input
@@ -250,7 +256,7 @@ function ReferralCodeBox() {
           />
           <button onClick={apply} disabled={applying} className={`${BTN_PRIMARY} shrink-0`}>{applying ? '…' : 'Apply'}</button>
         </div>
-        {applyMsg && <p role="alert" className={`text-[11px] mt-2 font-semibold ${applyMsg.ok ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{applyMsg.text}</p>}
+        {applyMsg && <p role="alert" className={`text-[11px] mt-3 font-semibold ${applyMsg.ok ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{applyMsg.text}</p>}
       </div>
     </div>
   );
@@ -291,12 +297,12 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
   const displayKey = (keybinds[bindId] || '').replace('cmd', typeof window !== 'undefined' && navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl');
 
   return (
-    <div className={`flex items-center justify-between gap-3 py-2.5 transition-all ${isDisabled ? 'opacity-50' : ''}`}>
-      <div className="flex items-center gap-2.5 min-w-0">
+    <div className={`flex items-center justify-between gap-3 py-2 transition-colors ${isDisabled ? 'opacity-50' : ''}`}>
+      <div className="flex items-center gap-2 min-w-0">
         {/* 36px minimum tap target wrapping the 16px checkbox visual */}
         <button
           onClick={() => setDisabledKeybinds({ [bindId]: !isDisabled })}
-          className="flex items-center justify-center w-9 h-9 -ml-1.5 rounded-lg cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
+          className={`flex items-center justify-center w-9 h-9 -ml-1.5 ${R_CTRL} cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]`}
           aria-label={isDisabled ? `Enable ${label} keybind` : `Disable ${label} keybind`}
         >
           <span className={`w-4 h-4 rounded flex items-center justify-center border ${isDisabled ? 'bg-transparent border-[var(--border-strong)]' : 'bg-[var(--accent-color)] border-[var(--accent-color)] text-[var(--bg-base)]'}`}>
@@ -311,7 +317,7 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
         }}
         disabled={isDisabled}
         aria-label={`Rebind ${label}, current shortcut ${displayKey.toUpperCase()}`}
-        className={`px-3 min-h-[36px] min-w-[92px] text-xs font-mono font-semibold rounded-lg flex items-center justify-center transition-all border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]
+        className={`px-3 min-h-[36px] min-w-[92px] text-xs font-mono font-semibold ${R_CTRL} flex items-center justify-center transition-colors border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]
           ${isDisabled ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)] cursor-not-allowed' : isRecording ? 'bg-[var(--accent-color)]/20 text-[var(--accent-color)] border-[var(--accent-color)]/50' : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'}`}
       >
         {isRecording ? 'Listening…' : displayKey.toUpperCase()}
@@ -842,7 +848,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 flex items-center gap-2 px-4 rounded-lg text-[11px] font-semibold tracking-wide transition-all cursor-pointer min-h-[40px] whitespace-nowrap border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)] ${
+                className={`shrink-0 flex items-center gap-2 px-3 ${R_CTRL} text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors cursor-pointer min-h-[36px] whitespace-nowrap border focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)] ${
                   isActive
                     ? 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)]'
                     : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)] border-transparent'
@@ -866,7 +872,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'security' && (
-          <div className="space-y-5 animate-fadeIn pb-12">
+          <div className="space-y-4 animate-fadeIn pb-12">
 
             {/* Two-Factor Authentication */}
             <SettingsCard
@@ -895,11 +901,11 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 <form onSubmit={handleEmailUpdateVerify} className="space-y-4 animate-fadeIn pt-1 border-t border-[var(--border)]">
                   <div className="pt-4">
                     <span className={FIELD_LABEL}>Verification code</span>
-                    <div className="font-mono text-sm font-bold text-[var(--success)] bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 rounded-lg w-fit select-all">
+                    <div className="font-mono text-sm font-bold text-[var(--success)] bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 rounded-[var(--radius-control)] w-fit select-all">
                       {simulatedOtp}
                     </div>
-                    <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5 leading-snug">
-                      Shown here because email delivery is simulated in this environment.
+                    <p className="text-[11px] text-[var(--text-tertiary)] mt-1 leading-snug">
+                      Enter this code below to verify your new email address.
                     </p>
                   </div>
 
@@ -1021,16 +1027,16 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   <div className="py-6 text-xs text-center text-[var(--text-tertiary)]">No active sessions located.</div>
                 ) : (
                   sessions.map((sess, idx) => (
-                    <div key={idx} className="py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+                    <div key={idx} className="py-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
                       <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-[var(--text-primary)] font-mono">{sess.ip_address}</span>
                           {sess.is_current ? (
-                            <span className="px-2 py-0.5 bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] font-bold text-[10px] rounded-full uppercase tracking-wider">
+                            <span className="px-1.5 py-0.5 bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] font-semibold text-[10px] rounded-[3px] uppercase tracking-[0.14em]">
                               Current
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-tertiary)] font-bold text-[10px] rounded-full uppercase tracking-wider">
+                            <span className="px-1.5 py-0.5 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-tertiary)] font-semibold text-[10px] rounded-[3px] uppercase tracking-[0.14em]">
                               Other Device
                             </span>
                           )}
@@ -1085,7 +1091,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'privacy' && (
-          <div className="space-y-5 animate-fadeIn pb-12">
+          <div className="space-y-4 animate-fadeIn pb-12">
 
             {/* Notification preferences */}
             <SettingsCard
@@ -1094,7 +1100,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               description="Alerts are only sent through the channels you turn on."
             >
               <div className="divide-y divide-[var(--border)] -my-1">
-                <div className="py-3.5">
+                <div className="py-3">
                   <Toggle
                     label="Email Alerts"
                     description="Send alerts to your email"
@@ -1108,7 +1114,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     }}
                   />
                 </div>
-                <div className="py-3.5">
+                <div className="py-3">
                   <Toggle
                     label="SMS Alerts"
                     description="Send alerts to your phone via SMS"
@@ -1122,7 +1128,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     }}
                   />
                 </div>
-                <div className="py-3.5">
+                <div className="py-3">
                   <Toggle
                     label="Discord Webhook Feeds"
                     description="Post sweeps directly to server webhooks"
@@ -1136,7 +1142,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     }}
                   />
                 </div>
-                <div className="py-3.5">
+                <div className="py-3">
                   <Toggle
                     label="Options Flow Alerts"
                     description="Alert on large GEX deviation events"
@@ -1175,7 +1181,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                           setProfileVisibility(opt.value as any);
                           handleUpdatePrivacySettings({ profile_visibility: opt.value as any }, () => setProfileVisibility(prev));
                         }}
-                        className={`p-3 rounded-lg border text-left cursor-pointer transition-colors ${
+                        className={`p-3 rounded-[var(--radius-control)] border text-left cursor-pointer transition-colors ${
                           active
                             ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] text-[var(--text-primary)]'
                             : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
@@ -1189,7 +1195,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 </div>
               </div>
 
-              <div className="pt-5 border-t border-[var(--border)]">
+              <div className="pt-4 border-t border-[var(--border)]">
                 <Toggle
                   label="Restrict Search Engine Indexing"
                   description="Adds a noindex tag so Google and Bing don't index your public profile."
@@ -1227,7 +1233,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               )}
 
               {exportDownloadUrl && (
-                <div className="pt-5 border-t border-[var(--border)] space-y-3 animate-fadeIn">
+                <div className="pt-4 border-t border-[var(--border)] space-y-3 animate-fadeIn">
                   <div className="flex items-center gap-2 text-xs font-bold text-[var(--success)]">
                     <Check className="w-4 h-4" />
                     <span>Data export ready</span>
@@ -1255,7 +1261,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   </div>
 
                   {exportEmailLog && (
-                    <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-lg text-[11px] space-y-1 font-mono">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-[var(--radius-control)] text-[11px] space-y-1 font-mono">
                       <div className="font-bold text-[var(--text-secondary)] uppercase tracking-wider">Email notification</div>
                       <p className="text-[var(--text-tertiary)] leading-relaxed">{exportEmailLog}</p>
                     </div>
@@ -1268,7 +1274,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'preferences' && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-4 animate-fadeIn">
             {/* Display */}
             <SettingsCard icon={Settings} title="Display">
               {/* Text Size */}
@@ -1305,7 +1311,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               </div>
 
               {/* Clock Format */}
-              <div className="pt-5 border-t border-[var(--border)]">
+              <div className="pt-4 border-t border-[var(--border)]">
                 <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Clock className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
                   <span>Clock Format</span>
@@ -1324,7 +1330,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               </div>
 
               {/* Display Time Zone */}
-              <div className="pt-5 border-t border-[var(--border)]">
+              <div className="pt-4 border-t border-[var(--border)]">
                 <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Monitor className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
                   <span>Display Time Zone</span>
@@ -1348,7 +1354,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               </div>
 
               {/* Compact View */}
-              <div className="pt-5 border-t border-[var(--border)]">
+              <div className="pt-4 border-t border-[var(--border)]">
                 <Toggle
                   label="Compact View"
                   description="Reduces spacing between rows and panels so more data fits on screen at once."
@@ -1367,7 +1373,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               </div>
 
               {/* Ultrawide Layout */}
-              <div className="pt-5 border-t border-[var(--border)]">
+              <div className="pt-4 border-t border-[var(--border)]">
                 <Toggle
                   label="Ultrawide Layout"
                   description="Expands the terminal to more columns on very wide monitors."
@@ -1400,8 +1406,8 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
               <div className="max-h-80 overflow-y-auto pr-1 -mr-1 space-y-4 slayer-scrollbar">
                 {/* Default / brand reset — restores the native Slayer black-and-white design */}
                 <div>
-                  <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest font-semibold mb-1.5">Default</div>
-                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5">
+                  <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.16em] font-semibold mb-2">Default</div>
+                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                     <button
                       title="Default (Slayer)"
                       type="button"
@@ -1414,10 +1420,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                           applyTheme(prev);
                         });
                       }}
-                      className={`group relative aspect-square rounded-lg border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
+                      className={`group relative aspect-square rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
                         isDefaultThemeActive
-                          ? 'border-[var(--accent-color)] scale-110 z-10'
-                          : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
+                          ? 'border-[var(--accent-color)] ring-1 ring-[var(--accent-color)]'
+                          : 'border-[var(--border)] hover:border-[var(--border-strong)]'
                       }`}
                       style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #0A0A0A 50%, #FFFFFF 50%, #FFFFFF 100%)' }}
                     >
@@ -1433,8 +1439,8 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 {/* Curated theme groups */}
                 {THEME_GROUPS.map(group => (
                   <div key={group}>
-                    <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest font-semibold mb-1.5">{group}</div>
-                    <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5">
+                    <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.16em] font-semibold mb-2">{group}</div>
+                    <div className="grid grid-cols-6 sm:grid-cols-8 gap-2">
                       {THEMES.filter(t => t.group === group).map(t => (
                         <button
                           key={t.id}
@@ -1450,10 +1456,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                               applyTheme(prev);
                             });
                           }}
-                          className={`group relative aspect-square rounded-lg border-2 overflow-hidden transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
+                          className={`group relative aspect-square rounded-[var(--radius-control)] border overflow-hidden transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
                             activeTheme === t.id
-                              ? 'border-[var(--accent-color)] scale-110 z-10'
-                              : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
+                              ? 'border-[var(--accent-color)] ring-1 ring-[var(--accent-color)]'
+                              : 'border-[var(--border)] hover:border-[var(--border-strong)]'
                           }`}
                           style={{ background: `color-mix(in srgb, ${t.surface} 74%, #000)` }}
                         >
@@ -1475,8 +1481,8 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   </div>
                 ))}
               </div>
-              <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono pt-3 border-t border-[var(--border)]">
-                Active: <span className="text-[var(--text-primary)] font-bold">{THEMES.find(t => t.id === activeTheme)?.name || 'Default'}</span>
+              <div className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.16em] font-mono pt-3 border-t border-[var(--border)]">
+                Active <span className="text-[var(--text-primary)] font-semibold ml-1">{THEMES.find(t => t.id === activeTheme)?.name || 'Default'}</span>
               </div>
             </SettingsCard>
 
@@ -1487,7 +1493,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'keybinds' && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-4 animate-fadeIn">
             <SettingsCard
               icon={Keyboard}
               title="Keyboard Shortcuts"
@@ -1550,15 +1556,15 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'referrals' && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-4 animate-fadeIn">
             {/* Referral rewards — code, apply, share link */}
             <SettingsCard icon={Coins} title="Referral Rewards">
               <ReferralCodeBox />
 
-              <div className="pt-5 border-t border-[var(--border)]">
+              <div className="pt-4 border-t border-[var(--border)]">
                 <span className={FIELD_LABEL}>Your custom referral link</span>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-lg px-3 py-2.5 text-xs font-mono flex items-center">
+                  <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-[var(--radius-control)] px-3 py-2 text-xs font-mono flex items-center">
                     <span className="break-all">{referralLink}</span>
                   </div>
                   <CopyButton
@@ -1566,7 +1572,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     variant="primary"
                     label="Copy Link"
                     title="Copy full referral link to clipboard"
-                    className="px-6 py-2.5 text-xs sm:shrink-0"
+                    className="px-6 py-2 text-xs sm:shrink-0"
                   />
                 </div>
               </div>
@@ -1587,20 +1593,21 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-5 border-t border-[var(--border)] text-center">
-                <div className="space-y-1">
-                  <span className="text-[11px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wider block">Your Tokens</span>
-                  <span className="text-2xl font-black text-[var(--success)] font-mono slayer-num block">
+              {/* Metric strip: one dominant figure + a hairline-separated supporter — no twin KPI cards. */}
+              <div className="flex items-stretch pt-4 border-t border-[var(--border)]">
+                <div className="pr-6">
+                  <span className="block text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em]">Your Tokens</span>
+                  <span className="block text-[26px] leading-none font-bold text-[var(--success)] slayer-num mt-1">
                     {session?.referral_tokens_pool || 0}
                   </span>
-                  <span className="text-[11px] text-[var(--text-tertiary)] block font-mono">1 Token = 10% Off</span>
+                  <span className="block text-[11px] text-[var(--text-tertiary)] mt-1">1 token = 10% off</span>
                 </div>
-                <div className="space-y-1 border-l border-[var(--border)]">
-                  <span className="text-[11px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wider block">Current Discount</span>
-                  <span className="text-2xl font-black text-[var(--text-primary)] font-mono slayer-num block">
+                <div className="pl-6 border-l border-[var(--border)] self-center">
+                  <span className="block text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em]">Current Discount</span>
+                  <span className="block text-[17px] leading-none font-semibold text-[var(--text-primary)] slayer-num mt-1">
                     {Math.min(100, (session?.referral_tokens_pool || 0) * 10)}%
                   </span>
-                  <span className="text-[11px] text-[var(--text-tertiary)] block font-mono">Applied at renewal</span>
+                  <span className="block text-[11px] text-[var(--text-tertiary)] mt-1">Applied at renewal</span>
                 </div>
               </div>
             </SettingsCard>
@@ -1608,32 +1615,32 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'billing' && (
-          <div className="space-y-5 animate-fadeIn">
+          <div className="space-y-4 animate-fadeIn">
             {/* Subscription & Tier */}
             <SettingsCard
               icon={Receipt}
               title="Subscription & Tier"
               actions={
                 session?.customer_id ? (
-                  <span className="text-[10px] tracking-widest uppercase bg-[var(--accent-color)]/10 px-2 py-0.5 border border-[var(--accent-color)]/30 rounded text-[var(--accent-color)] font-mono">
+                  <span className="text-[10px] tracking-[0.14em] uppercase bg-[var(--accent-color)]/10 px-1.5 py-0.5 border border-[var(--accent-color)]/30 rounded-[3px] text-[var(--accent-color)] font-mono">
                     Secured
                   </span>
                 ) : undefined
               }
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--text-tertiary)]">Current Plan</div>
-                  <div className="text-2xl font-black uppercase text-[var(--text-primary)] tracking-widest flex items-center gap-2 flex-wrap">
-                    <span>{session?.access_tier || 'GUEST'} TIER</span>
+                <div>
+                  <div className="text-[10px] uppercase tracking-[0.16em] font-semibold text-[var(--text-muted)]">Current Plan</div>
+                  <div className="flex items-center gap-2.5 flex-wrap mt-1">
+                    <span className="text-[22px] leading-none font-bold uppercase text-[var(--text-primary)] tracking-[0.06em]">{session?.access_tier || 'GUEST'}<span className="text-[var(--text-tertiary)] font-semibold"> TIER</span></span>
                     {session?.cancels_at_period_end ? (
-                      <span className="text-[10px] tracking-normal font-semibold bg-[var(--danger)]/10 border border-[var(--danger)]/20 text-[var(--danger)] px-2.5 py-0.5 rounded-full">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.12em] bg-[var(--danger)]/10 border border-[var(--danger)]/25 text-[var(--danger)] px-1.5 py-0.5 rounded-[3px]">
                         Cancels at Period End
                       </span>
                     ) : (
                       isPaidTier && (
-                        <span className="text-[10px] tracking-normal font-semibold bg-[var(--success)]/10 border border-[var(--success)]/20 text-[var(--success)] px-2.5 py-0.5 rounded-full">
-                          Active &amp; Auto-renewing
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] bg-[var(--success)]/10 border border-[var(--success)]/25 text-[var(--success)] px-1.5 py-0.5 rounded-[3px]">
+                          Active · Auto-renewing
                         </span>
                       )
                     )}
@@ -1669,7 +1676,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
               {/* Secure Customer_id and Payment_method_id details */}
               {session?.customer_id && (
-                <div className="pt-5 border-t border-[var(--border)] space-y-3 font-mono">
+                <div className="pt-4 border-t border-[var(--border)] space-y-3 font-mono">
                   <div className="text-[11px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex items-center gap-2">
                     <CreditCard className="w-3.5 h-3.5" />
                     <span>Payment Info</span>
@@ -1700,11 +1707,12 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     aria-labelledby="cancel-subscription-title"
                     tabIndex={-1}
                     onClick={(e) => e.stopPropagation()}
-                    className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 text-left space-y-4 shadow-2xl relative focus:outline-none"
+                    style={OVERLAY_SHADOW}
+                    className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] max-w-md w-full p-5 text-left space-y-4 relative focus:outline-none"
                   >
-                    <div className="flex items-center gap-3 text-[var(--danger)] pb-3 border-b border-[var(--border)]">
-                      <ShieldAlert className="w-5 h-5 shrink-0" />
-                      <h3 id="cancel-subscription-title" className="text-base font-black uppercase tracking-wider">Are you sure?</h3>
+                    <div className="flex items-center gap-2.5 text-[var(--danger)] pb-3 border-b border-[var(--border)]">
+                      <ShieldAlert className="w-4 h-4 shrink-0" />
+                      <h3 id="cancel-subscription-title" className="text-[11px] font-semibold uppercase tracking-[0.14em]">Cancel Subscription</h3>
                     </div>
 
                     <p className="text-xs text-[var(--text-secondary)] leading-relaxed text-left">
@@ -1728,21 +1736,18 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
             <SettingsCard
               icon={Calculator}
               title="Billing & Invoices"
-              description="No active cards on file. This environment uses a developer sandbox for simulated billing runs."
-              actions={
-                <span className="text-[10px] uppercase tracking-wider bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--border)] rounded text-[var(--text-tertiary)]">Sandbox</span>
-              }
+              description="No active cards on file."
             >
               <button onClick={handleRunSimulatedBilling} disabled={isSimulatingInvoice} className={`${BTN_SECONDARY} w-full`}>
                 {isSimulatingInvoice ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Running Invoice Simulation…</span>
+                    <span>Generating Invoice…</span>
                   </>
                 ) : (
                   <>
                     <Calculator className="w-4 h-4" />
-                    <span>Run Simulated Billing Invoice</span>
+                    <span>Run Billing Invoice</span>
                   </>
                 )}
               </button>
@@ -1751,9 +1756,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 <motion.div
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-4 text-left font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed space-y-1.5"
+                  className="bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] p-4 text-left font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed space-y-1.5"
                 >
-                  <div className="text-[11px] text-[var(--text-tertiary)] font-semibold tracking-wider uppercase border-b border-[var(--border)] pb-1.5 mb-1.5 flex justify-between">
+                  <div className="text-[11px] text-[var(--text-tertiary)] font-semibold tracking-wider uppercase border-b border-[var(--border)] pb-2 mb-2 flex justify-between">
                     <span>Invoice Receipt</span>
                     <span className="font-normal">Tier: {invoiceLog.access_tier}</span>
                   </div>
@@ -1777,12 +1782,13 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
       {toastText && (
         <motion.div
-          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          className={`fixed bottom-5 right-5 z-[100] p-4 bg-[var(--surface-2)] border ${toastType === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'} shadow-2xl flex items-center gap-2.5 font-mono text-[11px] text-[var(--text-primary)] rounded-lg`}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={OVERLAY_SHADOW}
+          className={`fixed bottom-4 right-4 z-[100] px-4 py-3 bg-[var(--surface-2)] border ${toastType === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'} flex items-center gap-2 font-mono text-[11px] text-[var(--text-primary)] rounded-[var(--radius-panel)]`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${toastType === 'success' ? 'bg-[var(--success)]' : 'bg-[var(--danger)]'} animate-pulse`} />
-          <span className={`uppercase font-semibold tracking-wider ${toastType === 'success' ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{toastType === 'success' ? 'Success' : 'Error'}:</span>
+          <span className={`uppercase font-semibold tracking-[0.14em] ${toastType === 'success' ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{toastType === 'success' ? 'Success' : 'Error'}:</span>
           <span>{toastText}</span>
         </motion.div>
       )}

@@ -85,9 +85,9 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
   const adminRole = overview?.admin_role || session?.admin_role || (session?.is_super_admin ? 'super_admin' : '—');
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-5 p-4 font-mono md:h-[calc(100vh-80px)] md:flex-row">
+    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 font-mono md:h-[calc(100vh-80px)] md:flex-row">
       {/* Sidebar */}
-      <aside className="slayer-scrollbar flex w-full shrink-0 flex-col gap-4 md:w-56 md:overflow-y-auto md:border-r md:border-[var(--border-subtle)] md:pr-5">
+      <aside className="slayer-scrollbar flex w-full shrink-0 flex-col gap-4 md:w-56 md:overflow-y-auto md:border-r md:border-[var(--border-subtle)] md:pr-4">
         <div className="border-b border-[var(--border-subtle)] pb-4">
           <div className="mb-3 flex items-center gap-2">
             <Key className="h-4 w-4 text-[var(--negative-ink)]" />
@@ -121,7 +121,7 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
           <div className="slayer-panel flex items-center gap-2.5 px-3 py-2.5">
             <Radio className="h-3.5 w-3.5 shrink-0 text-[var(--positive-ink)]" />
             <div className="min-w-0">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Live Connections</div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Live Connections</div>
               <div className="slayer-num text-sm font-semibold leading-tight text-[var(--text-primary)]">{live}</div>
             </div>
           </div>
@@ -171,96 +171,102 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
   ];
 
   return (
-    <div className="animate-fadeIn space-y-4">
+    <div className="animate-fadeIn space-y-3">
       <MetricStrip metrics={metrics} columns={6} />
+
+      {/* Visitors vs buyers — the focal instrument of the Overview. */}
+      <ConversionCard overview={overview} />
 
       {/* Feed health — the market-data provider currently backing every terminal read. */}
       <TerminalPanel title="Feed Health" subtitle="Market-data provider backing every terminal read">
         <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-3">
           <div>
-            <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Provider</div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Provider</div>
             <div className="flex items-center gap-2">
               <span className={cx('h-2 w-2 rounded-full', feed.state === 'live' ? 'animate-pulse bg-[var(--positive-ink)]' : 'bg-[var(--info)]')}></span>
               <span className="text-[12px] font-semibold text-[var(--text-primary)]">{feed.label}</span>
             </div>
           </div>
           <div>
-            <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Mode</div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Mode</div>
             <DataStateBadge state={feed.state} />
           </div>
           <div>
-            <div className="mb-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Server Time</div>
+            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Server Time</div>
             <div className="slayer-num text-[13px] font-semibold text-[var(--text-secondary)]">{serverTime ? formatDateTime(new Date(serverTime).toISOString()) : '—'}</div>
           </div>
         </div>
       </TerminalPanel>
 
-      {/* Visitors vs buyers — real conversion snapshot from access-tier counts. */}
-      <ConversionCard overview={overview} />
-
-      {/* Recent activity — the five newest audit-trail entries, previewed on Overview. */}
-      <TerminalPanel title="Recent Activity" subtitle="Five newest audit-trail entries">
-        {!recentLoaded ? (
-          <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Loading…</div>
-        ) : recent.length === 0 ? (
-          <div className="py-1 text-[11px] leading-relaxed text-[var(--text-muted)]">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here as they happen.</div>
-        ) : (
-          <div className="divide-y divide-[var(--border-subtle)]">
-            {recent.map((e) => (
-              <div key={e.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
-                <span className="w-40 shrink-0 truncate text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]" title={e.action_taken}>{e.action_taken}</span>
-                <span className="min-w-0 flex-1 truncate text-[10px] text-[var(--positive-ink)]" title={e.admin_email}>{e.admin_email}</span>
-                {e.target_id && <span className="hidden max-w-[30%] truncate text-[10px] text-[var(--text-muted)] sm:inline" title={e.target_id}>{e.target_id}</span>}
-                <span className="slayer-num shrink-0 whitespace-nowrap text-[9px] text-[var(--text-muted)]">{formatDateTime(e.timestamp)}</span>
-              </div>
-            ))}
+      {/* System controls — maintenance kill-switch and QA impersonation sit together. */}
+      <div className="grid gap-3 md:grid-cols-2">
+        {/* Maintenance */}
+        <TerminalPanel title="Maintenance Mode" subtitle="Returns 503 to all non-admin traffic while active">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Power className={cx('h-4 w-4', overview?.maintenance_mode ? 'text-[var(--negative-ink)]' : 'text-[var(--text-muted)]')} />
+              <span className="text-[12px] font-semibold text-[var(--text-primary)]">{overview?.maintenance_mode ? 'Active' : 'Inactive'}</span>
+              {overview?.maintenance_mode && <StatusBadge tone="negative">503 Active</StatusBadge>}
+            </div>
+            <button onClick={toggleMaintenance} disabled={busy} className="cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] disabled:opacity-50" aria-label="Toggle maintenance mode">
+              {overview?.maintenance_mode ? <ToggleRight className="h-9 w-9 text-[var(--negative-ink)]" /> : <ToggleLeft className="h-9 w-9 text-[var(--text-muted)]" />}
+            </button>
           </div>
-        )}
-      </TerminalPanel>
+        </TerminalPanel>
 
-      {/* Maintenance */}
-      <TerminalPanel title="Maintenance Mode" subtitle="Returns 503 to all non-admin traffic while active">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Power className={cx('h-4 w-4', overview?.maintenance_mode ? 'text-[var(--negative-ink)]' : 'text-[var(--text-muted)]')} />
-            <span className="text-[12px] font-semibold text-[var(--text-primary)]">{overview?.maintenance_mode ? 'Active' : 'Inactive'}</span>
-            {overview?.maintenance_mode && <StatusBadge tone="negative">503 Active</StatusBadge>}
-          </div>
-          <button onClick={toggleMaintenance} disabled={busy} className="cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] disabled:opacity-50" aria-label="Toggle maintenance mode">
-            {overview?.maintenance_mode ? <ToggleRight className="h-9 w-9 text-[var(--negative-ink)]" /> : <ToggleLeft className="h-9 w-9 text-[var(--text-muted)]" />}
-          </button>
-        </div>
-      </TerminalPanel>
-
-      {/* Feature flags */}
-      <TerminalPanel title="Feature Toggles">
-        {Object.keys(flags).length === 0 ? (
-          <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">No feature toggles available</div>
-        ) : (
-          <div className="divide-y divide-[var(--border-subtle)]">
-            {Object.keys(flags).map((k) => (
-              <button key={k} onClick={() => toggleFlag(k, !flags[k])}
-                aria-pressed={!!flags[k]} aria-label={`Toggle ${k.replace(/_/g, ' ')}`}
-                className="group flex w-full items-center justify-between gap-3 rounded-[var(--radius-control)] py-2.5 text-left first:pt-0 last:pb-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">
-                <span className="text-[11px] capitalize text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">{k.replace(/_/g, ' ')}</span>
-                {flags[k] ? <ToggleRight className="h-6 w-6 shrink-0 text-[var(--positive-ink)]" /> : <ToggleLeft className="h-6 w-6 shrink-0 text-[var(--text-muted)]" />}
+        {/* QA viewport simulation */}
+        <TerminalPanel title="QA Viewport Simulation" subtitle="Preview the app as another access tier">
+          <div className="flex flex-wrap gap-2">
+            {([['Guest', 0], ['SkyVision', 2], ['Pinpoint', 3], ['Quant', 4], ['Lifetime', 5]] as const).map(([label, n]) => (
+              <button key={label} onClick={() => onSimulateTier(label, n)}
+                className="slayer-control cursor-pointer text-[10px] font-semibold uppercase tracking-[0.14em] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]">
+                {label}
               </button>
             ))}
           </div>
-        )}
-      </TerminalPanel>
+        </TerminalPanel>
+      </div>
 
-      {/* QA viewport simulation */}
-      <TerminalPanel title="QA Viewport Simulation" subtitle="Preview the app as another access tier">
-        <div className="flex flex-wrap gap-2">
-          {([['Guest', 0], ['SkyVision', 2], ['Pinpoint', 3], ['Quant', 4], ['Lifetime', 5]] as const).map(([label, n]) => (
-            <button key={label} onClick={() => onSimulateTier(label, n)}
-              className="slayer-control cursor-pointer text-[10px] font-semibold uppercase tracking-[0.14em] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]">
-              {label}
-            </button>
-          ))}
-        </div>
-      </TerminalPanel>
+      {/* Recent activity + feature toggles — the two operational logs read side by side. */}
+      <div className="grid gap-3 md:grid-cols-2">
+        {/* Recent activity — the five newest audit-trail entries, previewed on Overview. */}
+        <TerminalPanel title="Recent Activity" subtitle="Five newest audit-trail entries">
+          {!recentLoaded ? (
+            <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Loading…</div>
+          ) : recent.length === 0 ? (
+            <div className="py-1 text-[11px] leading-relaxed text-[var(--text-muted)]">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here as they happen.</div>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {recent.map((e) => (
+                <div key={e.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
+                  <span className="w-40 shrink-0 truncate text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]" title={e.action_taken}>{e.action_taken}</span>
+                  <span className="min-w-0 flex-1 truncate text-[10px] text-[var(--positive-ink)]" title={e.admin_email}>{e.admin_email}</span>
+                  {e.target_id && <span className="hidden max-w-[30%] truncate text-[10px] text-[var(--text-muted)] sm:inline" title={e.target_id}>{e.target_id}</span>}
+                  <span className="slayer-num shrink-0 whitespace-nowrap text-[10px] text-[var(--text-muted)]">{formatDateTime(e.timestamp)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </TerminalPanel>
+
+        {/* Feature flags */}
+        <TerminalPanel title="Feature Toggles">
+          {Object.keys(flags).length === 0 ? (
+            <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">No feature toggles available</div>
+          ) : (
+            <div className="divide-y divide-[var(--border-subtle)]">
+              {Object.keys(flags).map((k) => (
+                <button key={k} onClick={() => toggleFlag(k, !flags[k])}
+                  aria-pressed={!!flags[k]} aria-label={`Toggle ${k.replace(/_/g, ' ')}`}
+                  className="group flex w-full items-center justify-between gap-3 rounded-[var(--radius-control)] py-2.5 text-left first:pt-0 last:pb-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">
+                  <span className="text-[11px] capitalize text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">{k.replace(/_/g, ' ')}</span>
+                  {flags[k] ? <ToggleRight className="h-6 w-6 shrink-0 text-[var(--positive-ink)]" /> : <ToggleLeft className="h-6 w-6 shrink-0 text-[var(--text-muted)]" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </TerminalPanel>
+      </div>
     </div>
   );
 }
@@ -368,10 +374,10 @@ function UsersTab() {
     ) },
     { key: 'actions', header: 'Actions', align: 'right', render: (u) => (
       <div className="flex items-center justify-end gap-1">
-        <button aria-label={`Impersonate ${u.email}`} onClick={() => impersonate(u.email)} className="cursor-pointer rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Eye className="h-3.5 w-3.5" /></button>
-        <button aria-label={`${u.suspended ? 'Unsuspend' : 'Suspend'} ${u.email}`} onClick={() => act(u.email, u.suspended ? 'unsuspend' : 'suspend')} className="cursor-pointer rounded p-1.5 text-[var(--warning)] transition-colors hover:bg-[rgba(196,154,58,0.14)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><UserX className="h-3.5 w-3.5" /></button>
-        <button aria-label={`Force logout ${u.email}`} onClick={() => act(u.email, 'force-logout')} className="cursor-pointer rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><LogOut className="h-3.5 w-3.5" /></button>
-        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded p-1.5 text-[var(--negative-ink)] transition-colors hover:bg-[var(--negative-soft)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Ban className="h-3.5 w-3.5" /></button>
+        <button aria-label={`Impersonate ${u.email}`} onClick={() => impersonate(u.email)} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Eye className="h-3.5 w-3.5" /></button>
+        <button aria-label={`${u.suspended ? 'Unsuspend' : 'Suspend'} ${u.email}`} onClick={() => act(u.email, u.suspended ? 'unsuspend' : 'suspend')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--warning)] transition-colors hover:bg-[rgba(196,154,58,0.14)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><UserX className="h-3.5 w-3.5" /></button>
+        <button aria-label={`Force logout ${u.email}`} onClick={() => act(u.email, 'force-logout')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><LogOut className="h-3.5 w-3.5" /></button>
+        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--negative-ink)] transition-colors hover:bg-[var(--negative-soft)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Ban className="h-3.5 w-3.5" /></button>
       </div>
     ) },
   ];

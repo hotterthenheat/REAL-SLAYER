@@ -25,7 +25,7 @@ export function Table({ className = '', bare, containerClassName = '', children,
     </table>
   );
   if (bare) return table;
-  return <div className={`w-full overflow-x-auto rounded-lg border border-[var(--border)] ${containerClassName}`}>{table}</div>;
+  return <div className={`w-full overflow-x-auto rounded-[10px] border border-[var(--border)] ${containerClassName}`}>{table}</div>;
 }
 
 export function THead({ className = '', sticky = true, children, ...rest }: React.HTMLAttributes<HTMLTableSectionElement> & { sticky?: boolean }) {
@@ -44,7 +44,7 @@ export function TBody({ className = '', children, ...rest }: React.HTMLAttribute
 }
 
 export function TFoot({ className = '', children, ...rest }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <tfoot className={`sticky bottom-0 z-10 bg-[var(--surface-2)] font-black ${className}`} {...rest}>{children}</tfoot>;
+  return <tfoot className={`sticky bottom-0 z-10 bg-[var(--surface-2)] font-semibold ${className}`} {...rest}>{children}</tfoot>;
 }
 
 interface TRProps extends React.HTMLAttributes<HTMLTableRowElement> {
@@ -91,7 +91,7 @@ interface CellProps extends React.ThHTMLAttributes<HTMLTableCellElement> {
 export function TH({ className = '', align = 'left', stick, children, ...rest }: CellProps) {
   return (
     <th
-      className={`${alignCls[align]} whitespace-nowrap px-3 py-2 text-[8.5px] font-black uppercase tracking-[0.12em] text-[var(--text-tertiary)] ${
+      className={`${alignCls[align]} whitespace-nowrap px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)] ${
         stick ? 'sticky left-0 z-20 bg-[var(--surface-2)]' : ''
       } ${className}`}
       {...rest}

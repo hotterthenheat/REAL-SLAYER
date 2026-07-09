@@ -245,13 +245,13 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
         <button
           onClick={resetView}
           title="Reset view (or double-click the chart)"
-          className="inline-flex items-center gap-1.5 border border-borderSubtle hover:border-borderMuted bg-panel rounded px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-textSecondary hover:text-textPrimary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-select/60"
+          className="inline-flex items-center gap-1.5 border border-borderSubtle hover:border-borderMuted bg-panel rounded-[7px] px-2 py-1 font-mono text-[10px] uppercase tracking-wider text-textSecondary hover:text-textPrimary transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-select/60"
         >
           <RotateCcw className="w-3 h-3" /> Reset
         </button>
       </div>
       <div
-        className="relative flex-grow border border-borderSubtle bg-inset rounded-md overflow-hidden"
+        className="relative flex-grow border border-borderSubtle bg-inset rounded-[7px] overflow-hidden"
         style={{ minHeight: height }}
         onDoubleClick={resetView}
       >
