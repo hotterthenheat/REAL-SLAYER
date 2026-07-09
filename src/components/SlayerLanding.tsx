@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -350,9 +351,142 @@ function TopNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: str
   );
 }
 
+/* ── Living hero field ───────────────────────────────────────────────────────
+   A dealer-pressure "spine": columns of mirrored bars driven by layered sine
+   waves and rippling toward the pointer — the signature reactive hero visual.
+   Colour is the GEX palette (data encoding, not decoration), motion is slow and
+   editorial, and it degrades to a single static frame under reduced-motion. */
+function HeroField() {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const parent = canvas.parentElement as HTMLElement;
+    const gexRgb = [
+      [68, 49, 153],
+      [121, 44, 162],
+      [193, 51, 131],
+      [224, 84, 84],
+    ];
+    let dpr = Math.min(2, window.devicePixelRatio || 1);
+    let w = 0, h = 0;
+    // pointer in CSS px, seeded off-canvas so the field rests until hovered
+    let px = -9999, py = -9999, tpx = -9999, tpy = -9999;
+    const resize = () => {
+      const r = parent.getBoundingClientRect();
+      w = Math.max(1, r.width);
+      h = Math.max(1, r.height);
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(parent);
+
+    const onMove = (e: PointerEvent) => {
+      const r = canvas.getBoundingClientRect();
+      tpx = e.clientX - r.left;
+      tpy = e.clientY - r.top;
+    };
+    const onLeave = () => { tpx = -9999; tpy = -9999; };
+    window.addEventListener('pointermove', onMove, { passive: true });
+    parent.addEventListener('pointerleave', onLeave);
+
+    const GAP = 20;
+    const draw = (t: number) => {
+      ctx.clearRect(0, 0, w, h);
+      // ease pointer toward target for a fluid ripple
+      px += (tpx - px) * 0.08;
+      py += (tpy - py) * 0.08;
+      const cy = h * 0.52;
+      const cols = Math.ceil(w / GAP) + 1;
+      const sigma = Math.max(90, w * 0.11);
+      for (let i = 0; i < cols; i++) {
+        const x = i * GAP;
+        const phase = t * 0.00042 + i * 0.26;
+        const base = Math.sin(phase) * 0.5 + Math.sin(phase * 0.5 + 1.7) * 0.3 + Math.sin(phase * 0.23 + 4.1) * 0.2;
+        // pointer lens: gaussian bump around the cursor column, with vertical falloff
+        const dx = x - px;
+        const dvy = Math.abs(cy - py) / (h * 0.5 + 1);
+        const lens = Math.exp(-(dx * dx) / (2 * sigma * sigma)) * Math.max(0, 1 - dvy * 0.85);
+        const amp = (0.16 + Math.abs(base) * 0.4 + lens * 0.9);
+        const barH = amp * h * 0.34;
+        const g = Math.min(3, (i / cols) * 3);
+        const gi = Math.floor(g);
+        const gf = g - gi;
+        const c0 = gexRgb[gi];
+        const c1 = gexRgb[Math.min(3, gi + 1)];
+        const cr = Math.round(c0[0] + (c1[0] - c0[0]) * gf);
+        const cg = Math.round(c0[1] + (c1[1] - c0[1]) * gf);
+        const cb = Math.round(c0[2] + (c1[2] - c0[2]) * gf);
+        const alpha = 0.10 + Math.abs(base) * 0.16 + lens * 0.5;
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},${alpha})`;
+        ctx.fillRect(x, cy - barH, 2, barH * 2);
+        // bright cap dots near the pointer
+        if (lens > 0.22) {
+          ctx.fillStyle = `rgba(248,248,255,${(lens - 0.22) * 0.5})`;
+          ctx.fillRect(x - 0.5, cy - barH - 1.5, 3, 3);
+          ctx.fillRect(x - 0.5, cy + barH - 1.5, 3, 3);
+        }
+      }
+      // centre zero-line (spot spine)
+      ctx.fillStyle = 'rgba(248,248,255,0.06)';
+      ctx.fillRect(0, cy, w, 1);
+    };
+
+    let raf = 0;
+    if (reduce) {
+      draw(6000);
+    } else {
+      const loop = (t: number) => { draw(t); raf = requestAnimationFrame(loop); };
+      raf = requestAnimationFrame(loop);
+    }
+    return () => {
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+      window.removeEventListener('pointermove', onMove);
+      parent.removeEventListener('pointerleave', onLeave);
+    };
+  }, [reduce]);
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden">
+      <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      {/* scanline veil + edge fades keep it a texture, not a chart */}
+      <div className="absolute inset-0" style={{ backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,0,0,0.16) 0px, rgba(0,0,0,0.16) 1px, transparent 1px, transparent 3px)' }} />
+      <div className="absolute inset-0" style={{ background: 'radial-gradient(120% 80% at 50% 40%, transparent 42%, rgba(0,0,0,0.55) 100%)' }} />
+    </div>
+  );
+}
+
+/* Reveal — slides + fades its children in the first time they scroll into view. */
+function Reveal({ children, y = 26, delay = 0 }: { children: React.ReactNode; y?: number; delay?: number }) {
+  const reduce = useReducedMotion();
+  if (reduce) return <>{children}</>;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: '-12% 0px -8% 0px' }}
+      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
   return (
     <section className="relative overflow-hidden">
+      {/* living dealer-pressure field — reacts to the pointer */}
+      <HeroField />
       {/* restrained radial wash — structure, not glow */}
       <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(1100px 520px at 50% -10%, rgba(68,49,153,0.12), transparent 70%)' }} />
       <div className="relative mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
@@ -656,22 +790,36 @@ function Footer() {
 
 /* ─────────────────────────── page ─────────────────────────── */
 export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [], pressure = [], spark = [], onEnter, onLaunch }: SlayerLandingProps) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({ container: rootRef });
+  // hero drifts up + dims as the page scrolls (parallax hand-off to the sections)
+  const heroY = useTransform(scrollYProgress, [0, 0.16], [0, -70]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
   return (
     <div
+      ref={rootRef}
       className="fixed inset-0 z-[40] overflow-y-auto overflow-x-hidden font-mono antialiased slayer-scrollbar"
       style={{ background: PALETTE.bg, color: PALETTE.text }}
     >
+      {/* scroll-progress rail — GEX gradient, fixed to the top of the canvas */}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none fixed left-0 right-0 top-0 z-[60] h-[2px] origin-left"
+        style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.gex[0]}, ${PALETTE.gex[1]}, ${PALETTE.gex[2]}, ${PALETTE.gex[3]})` }}
+      />
       <TopNav onLaunch={onLaunch} onEnter={onEnter} />
-      <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />
-      <ProblemSection />
-      <SolutionSection />
-      <ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} />
-      <FeatureSection metrics={metrics} onEnter={onEnter} />
-      <HowItWorks />
-      <ComparisonSection />
-      <GetStartedSection onLaunch={onLaunch} onEnter={onEnter} />
-      <FaqSection />
-      <FinalCta onLaunch={onLaunch} />
+      <motion.div style={{ y: heroY, opacity: heroOpacity }}>
+        <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />
+      </motion.div>
+      <Reveal><ProblemSection /></Reveal>
+      <Reveal><SolutionSection /></Reveal>
+      <Reveal><ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
+      <Reveal><FeatureSection metrics={metrics} onEnter={onEnter} /></Reveal>
+      <Reveal><HowItWorks /></Reveal>
+      <Reveal><ComparisonSection /></Reveal>
+      <Reveal><GetStartedSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>
+      <Reveal><FaqSection /></Reveal>
+      <Reveal><FinalCta onLaunch={onLaunch} /></Reveal>
       <Footer />
     </div>
   );
