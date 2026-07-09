@@ -1,6 +1,9 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
-import SlayerCodeRain from './SlayerCodeRain';
+import Lenis from 'lenis';
+
+// three.js is heavy — the 3D hero backdrop loads lazily so it never blocks paint.
+const SlayerHero3D = lazy(() => import('./SlayerHero3D'));
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -377,10 +380,13 @@ const HERO_RISE = {
 function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
   const reduce = useReducedMotion();
   return (
-    <section className="relative overflow-hidden">
-      {/* live code-rain — confined to the hero; fades to solid black at its
-          lower edge so every section below sits on clean, legible #08090A */}
-      <SlayerCodeRain />
+    <section className="relative overflow-hidden" style={{ minHeight: '92vh' }}>
+      {/* living 3D dealer-pressure field — the hero backdrop, confined to the
+          hero and faded to solid black at its lower edge so every section below
+          sits on clean, legible #08090A. Lazy (three.js); null fallback. */}
+      <Suspense fallback={null}>
+        <SlayerHero3D />
+      </Suspense>
       <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
         <motion.div
           initial={reduce ? false : 'hidden'}
@@ -692,6 +698,7 @@ function Footer() {
 /* ─────────────────────────── page ─────────────────────────── */
 export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [], pressure = [], spark = [], onEnter, onLaunch }: SlayerLandingProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ container: rootRef });
   // hero drifts up + dims as the page scrolls (parallax hand-off to the sections);
@@ -700,6 +707,31 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
   const heroOpacityRaw = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
   const heroY = reduce ? 0 : heroYRaw;
   const heroOpacity = reduce ? 1 : heroOpacityRaw;
+
+  // Lenis smooth scroll on the landing's own scroll container (wrapper mode, so
+  // it drives real scrollTop — the progress rail + reveals keep working). Off
+  // under reduced-motion.
+  useEffect(() => {
+    if (reduce || !rootRef.current || !contentRef.current) return;
+    const lenis = new Lenis({
+      wrapper: rootRef.current,
+      content: contentRef.current,
+      duration: 1.1,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+    let raf = 0;
+    const loop = (time: number) => {
+      lenis.raf(time);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => {
+      cancelAnimationFrame(raf);
+      lenis.destroy();
+    };
+  }, [reduce]);
+
   return (
     <div
       ref={rootRef}
@@ -712,7 +744,7 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
         className="pointer-events-none fixed left-0 right-0 top-0 z-[60] h-[2px] origin-left"
         style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.gex[0]}, ${PALETTE.gex[1]}, ${PALETTE.gex[2]}, ${PALETTE.gex[3]})` }}
       />
-      <div className="relative z-10">
+      <div ref={contentRef} className="relative z-10">
         <TopNav onLaunch={onLaunch} onEnter={onEnter} />
         <motion.div style={{ y: heroY, opacity: heroOpacity }}>
           <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />

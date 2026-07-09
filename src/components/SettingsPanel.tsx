@@ -86,7 +86,7 @@ function SettingsCard({
   tone = 'default',
   children,
 }: {
-  icon?: React.ElementType;
+  icon?: React.ComponentType<{ className?: string }>;
   title: string;
   description?: React.ReactNode;
   actions?: React.ReactNode;
