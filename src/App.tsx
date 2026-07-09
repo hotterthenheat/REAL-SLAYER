@@ -27,6 +27,7 @@ import { SubscriptionPricing } from './components/SubscriptionPricing';
 const SkyVisionView = lazy(() => import('./components/SkyVisionView').then(m => ({ default: m.SkyVisionView })));
 const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m => ({ default: m.QuantAuditView })));
 const DealerFlowView = lazy(() => import('./components/DealerFlowView').then(m => ({ default: m.DealerFlowView })));
+const PinpointTerminal = lazy(() => import('./components/PinpointTerminal'));
 const PinpointExposureView = lazy(() => import('./components/PinpointExposureView'));
 const ArborCapital = lazy(() => import('./components/ArborCapital'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
@@ -1042,6 +1043,7 @@ export default function App() {
                 activeTab === 'skyvision' ? 'SkyVision Cockpit' :
                 activeTab === 'pinpoint' ? 'Pinpoint GEX' :
                 activeTab === 'dealerflow' ? 'Dealer Flow' :
+                activeTab === 'liveterminal' ? 'Live Terminal' :
                 activeTab === 'quant' ? 'Quant Lab' :
                 activeTab === 'auditor' ? 'Trust Registry' :
                 activeTab === 'community' ? 'Arbor Capital' :
@@ -1085,6 +1087,15 @@ export default function App() {
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
                   <DealerFlowView />
+                </TierGuard>
+              </div>
+            )}
+
+            {/* TAB: LIVE TERMINAL — the GEX-node tick chart + strike×expiry heatmap + flow board. */}
+            {activeTab === 'liveterminal' && (
+              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+                <TierGuard requiredTier={2} tabKey="live terminal" planKey="pinpoint" planName="Pinpoint GEX" planPrice="$99">
+                  <PinpointTerminal ticker={selectedAsset.ticker} />
                 </TierGuard>
               </div>
             )}

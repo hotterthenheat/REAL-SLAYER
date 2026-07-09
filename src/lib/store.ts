@@ -37,8 +37,8 @@ interface MarketState {
 
 export interface ContractStore {
   // Navigation & View Tabs
-  activeTab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace';
-  setActiveTab: (tab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace', keepContract?: boolean) => void;
+  activeTab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'liveterminal' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace';
+  setActiveTab: (tab: 'home' | 'skyvision' | 'pinpoint' | 'quant' | 'auditor' | 'dealerflow' | 'liveterminal' | 'community' | 'settings' | 'admin' | 'subscription' | 'workspace', keepContract?: boolean) => void;
   // Deep-link a sub-tab from the sidebar flyout: the target page reads this once on
   // mount/update, applies it to its local sub-tab, then clears it. `${tab}:${subId}`.
   subTabIntent: string | null;
@@ -302,7 +302,7 @@ export const useContractStore = create<ContractStore>((set, get) => ({
   activeTab: (() => {
     // Validate the restored tab against real render targets so a corrupt/renamed
     // localStorage value can't blank the workspace. 'dealerflow' is a first-class tab.
-    const VALID = ['home', 'skyvision', 'pinpoint', 'dealerflow', 'quant', 'auditor', 'community', 'settings', 'admin', 'subscription', 'workspace'];
+    const VALID = ['home', 'skyvision', 'pinpoint', 'dealerflow', 'liveterminal', 'quant', 'auditor', 'community', 'settings', 'admin', 'subscription', 'workspace'];
     const raw = typeof window !== 'undefined' ? localStorage.getItem('lastActiveTab') : null;
     return (raw && VALID.includes(raw) ? raw : 'home') as ContractStore['activeTab'];
   })(),
