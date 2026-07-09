@@ -11,7 +11,7 @@ export function Skeleton({ className = '', style }: { className?: string; style?
     <div
       aria-hidden="true"
       style={style}
-      className={`sk-shimmer rounded-md bg-[var(--surface-2)] ${className}`}
+      className={`sk-shimmer rounded-[7px] bg-[var(--surface-2)] ${className}`}
     />
   );
 }
@@ -22,7 +22,7 @@ export function ChartSkeleton({ label = 'Loading chart…', bars = 28 }: { label
     <div
       role="status"
       aria-label={label}
-      className="relative flex h-full min-h-[160px] w-full flex-col justify-end gap-2 overflow-hidden rounded-md border border-[var(--border)] bg-[var(--surface)] p-3"
+      className="relative flex h-full min-h-[160px] w-full flex-col justify-end gap-2 overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-3"
     >
       <div className="flex flex-1 items-end gap-[3px]">
         {Array.from({ length: bars }).map((_, i) => {
@@ -31,7 +31,7 @@ export function ChartSkeleton({ label = 'Loading chart…', bars = 28 }: { label
           return (
             <div
               key={i}
-              className="flex-1 animate-pulse rounded-sm bg-[var(--surface-2)]"
+              className="flex-1 animate-pulse bg-[var(--surface-2)]"
               style={{ height: `${h}%`, animationDelay: `${(i % 6) * 90}ms` }}
             />
           );

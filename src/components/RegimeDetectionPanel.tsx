@@ -55,8 +55,8 @@ export function RegimeDetectionPanel({ candles, intervalMinutes = 5, ticker }: R
 
   if (!m) {
     return (
-      <div className="h-[200px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
-        <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest">Regime needs more candle history</span>
+      <div className="h-[200px] rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] flex items-center justify-center">
+        <span className="text-[11px] text-[var(--text-muted)] uppercase tracking-[0.14em]">Regime needs more candle history</span>
       </div>
     );
   }
@@ -70,22 +70,19 @@ export function RegimeDetectionPanel({ candles, intervalMinutes = 5, ticker }: R
   const order: RegimeState[] = ['TREND_EXPANSION', 'MEAN_REVERSION', 'TAIL_RISK'];
 
   const Cell = ({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) => (
-    <div className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-md bg-[var(--surface-2)] border border-[var(--border)]">
-      <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] leading-none">{label}</span>
-      <span className="text-[12px] font-bold tabular-nums leading-tight" style={{ color: tone || 'var(--text-primary)' }}>{value}</span>
-      {sub && <span className="text-[9px] text-[var(--text-tertiary)] leading-tight">{sub}</span>}
+    <div className="flex flex-col gap-0.5 px-2.5 py-1.5 rounded-[var(--radius-control)] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)]">
+      <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)] leading-none">{label}</span>
+      <span className="text-[12px] font-bold tabular-nums leading-tight slayer-num" style={{ color: tone || 'var(--text-primary)' }}>{value}</span>
+      {sub && <span className="text-[9px] text-[var(--text-faint)] leading-tight">{sub}</span>}
     </div>
   );
 
   return (
-    <div ref={wrapRef} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-      <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)]">
-        <div className="flex items-center gap-2">
-          <span className="w-[3px] h-3.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
-          <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-[var(--text-primary)]">
-            Market Regime{ticker ? ` · ${ticker}` : ''}
-          </span>
-        </div>
+    <div ref={wrapRef} className="flex flex-col">
+      <div className="flex items-center justify-between border-b border-[var(--border-subtle)] pb-2 mb-0.5">
+        <span className="text-[10px] font-semibold tracking-[0.16em] uppercase text-[var(--text-muted)]">
+          Candle-Series Classifier{ticker ? ` · ${ticker}` : ''}
+        </span>
         <div className="flex items-center gap-2">
           <ChartTools name={`regime-${ticker || 'spx'}`} fullscreenRef={wrapRef}
             csv={() => ({
@@ -104,39 +101,39 @@ export function RegimeDetectionPanel({ candles, intervalMinutes = 5, ticker }: R
                 ['posterior_tail_risk', regime.posteriors.TAIL_RISK.toFixed(4)],
               ],
             })} />
-          <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={{ color: 'var(--info)', background: 'color-mix(in srgb, var(--info) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--info) 30%, transparent)' }} title="Gaussian-feature classifier over Hurst / realized-vol / kurtosis — measurable, not labeled by hand.">Model</span>
+          <span className="text-[9px] font-semibold tracking-[0.14em] px-1.5 py-0.5 rounded-[var(--radius-control)] uppercase" style={{ color: 'var(--info)', background: 'color-mix(in srgb, var(--info) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--info) 30%, transparent)' }} title="Gaussian-feature classifier over Hurst / realized-vol / kurtosis — measurable, not labeled by hand.">Model</span>
         </div>
       </div>
 
       {/* Classified regime + confidence */}
-      <div className="px-3.5 py-3 flex items-center gap-3 border-b border-[var(--border)]">
-        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: meta.color, boxShadow: `0 0 10px ${meta.color}` }} />
+      <div className="py-3 flex items-center gap-3 border-b border-[var(--border-subtle)]">
+        <span className="w-1 self-stretch rounded-[1px] shrink-0" style={{ background: meta.color }} />
         <div className="flex flex-col">
-          <span className="text-[14px] font-black tracking-wide" style={{ color: meta.color }}>{meta.label}</span>
-          <span className="text-[10px] text-[var(--text-tertiary)]">{meta.note}</span>
+          <span className="text-[15px] font-bold tracking-wide" style={{ color: meta.color }}>{meta.label}</span>
+          <span className="text-[10px] text-[var(--text-muted)]">{meta.note}</span>
         </div>
-        <span className="ml-auto text-[12px] font-bold tabular-nums text-[var(--text-primary)]">{regime.transitionProb}%<span className="text-[9px] text-[var(--text-tertiary)] font-medium"> conf</span></span>
+        <span className="ml-auto text-[12px] font-bold tabular-nums slayer-num text-[var(--text-primary)]">{regime.transitionProb}%<span className="text-[9px] text-[var(--text-faint)] font-medium"> conf</span></span>
       </div>
 
       {/* Posteriors */}
-      <div className="px-3.5 py-2 border-b border-[var(--border)] flex flex-col gap-1.5">
+      <div className="py-2.5 border-b border-[var(--border-subtle)] flex flex-col gap-1.5">
         {order.map((s) => {
           const p = regime.posteriors[s];
           const c = STATE_META[s].color;
           return (
             <div key={s} className="flex items-center gap-2">
-              <span className="text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] w-28 shrink-0">{STATE_META[s].label}</span>
-              <div className="flex-1 h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${Math.max(2, p * 100)}%`, background: c, opacity: s === regime.state ? 1 : 0.5 }} />
+              <span className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)] w-28 shrink-0">{STATE_META[s].label}</span>
+              <div className="flex-1 h-2 rounded-[2px] bg-[var(--bg-panel-soft)] overflow-hidden">
+                <div className="h-full rounded-[1px]" style={{ width: `${Math.max(2, p * 100)}%`, background: c, opacity: s === regime.state ? 1 : 0.5 }} />
               </div>
-              <span className="text-[10px] tabular-nums text-[var(--text-secondary)] w-9 text-right">{(p * 100).toFixed(0)}%</span>
+              <span className="text-[10px] tabular-nums slayer-num text-[var(--text-secondary)] w-9 text-right">{(p * 100).toFixed(0)}%</span>
             </div>
           );
         })}
       </div>
 
       {/* Measurable features */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 px-3.5 py-2.5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 py-2.5">
         <Cell label="Hurst exponent" value={hurst.toFixed(3)} sub={persistence} tone={hurst > 0.55 ? 'var(--success)' : hurst < 0.45 ? 'var(--info)' : 'var(--text-primary)'} />
         <Cell label="OU half-life" value={hl} sub={ou.meanReverting ? 'mean-reverting' : 'non-reverting'} tone={ou.meanReverting ? 'var(--info)' : 'var(--text-secondary)'} />
         <Cell label="Vol compression" value={comp.score.toFixed(2)} sub={comp.detail} tone={comp.active ? 'var(--warning)' : 'var(--text-secondary)'} />
@@ -144,9 +141,9 @@ export function RegimeDetectionPanel({ candles, intervalMinutes = 5, ticker }: R
         <Cell label="RV term ratio" value={rvTerm.detail.match(/[\d.]+×/)?.[0] ?? rvTerm.score.toFixed(2)} sub="near / baseline realized vol" tone={rvTerm.active ? 'var(--warning)' : 'var(--text-secondary)'} />
       </div>
 
-      <div className="px-3.5 py-2 border-t border-[var(--border)] text-[9px] text-[var(--text-tertiary)] leading-relaxed">
-        <span className="font-bold text-[var(--text-secondary)]">Features</span> Hurst R/S persistence · OU pull-to-equilibrium half-life · EMA-pinch percentile · ATR expansion · near/baseline realized-vol ratio · return kurtosis ·{' '}
-        <span className="font-bold text-[var(--text-secondary)]">Method</span> Gaussian-feature softmax over the measurable state energies (keyless HMM-equivalent) — every input above is observable, none hand-labeled
+      <div className="py-2 border-t border-[var(--border-subtle)] text-[9px] text-[var(--text-muted)] leading-relaxed">
+        <span className="font-semibold text-[var(--text-secondary)]">Features</span> Hurst R/S persistence · OU pull-to-equilibrium half-life · EMA-pinch percentile · ATR expansion · near/baseline realized-vol ratio · return kurtosis ·{' '}
+        <span className="font-semibold text-[var(--text-secondary)]">Method</span> Gaussian-feature softmax over the measurable state energies (keyless HMM-equivalent) — every input above is observable, none hand-labeled
       </div>
     </div>
   );

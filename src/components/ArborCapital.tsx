@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   TrendingUp,
   TrendingDown,
-  Bookmark,
   ChevronUp,
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
@@ -20,7 +19,6 @@ import { V8TradeRecord } from '../types';
 import { FieldError, zodError } from './ui/Field';
 import { supportRequestSchema } from '../lib/formSchemas';
 import { SectionHeader } from './ui/SectionHeader';
-import { MetricCard } from './ui/MetricCard';
 import { DataStateBadge } from './ui/DataStateBadge';
 
 type ChannelKey = 'verified' | 'research' | 'education' | 'support';
@@ -140,21 +138,18 @@ export default function ArborCapital() {
       level: 'Foundations',
       desc: 'How GEX, DEX and VEX drive market-maker hedging and where dealers are positioned to push price.',
       Icon: GraduationCap,
-      accent: 'var(--success)',
     },
     {
       title: 'Key Price Levels',
       level: 'Foundations',
       desc: 'Identifying major order blocks and displacement zones, and why structure breaks act as magnets for premium.',
       Icon: BookOpen,
-      accent: 'var(--info)',
     },
     {
       title: 'Risk Management',
       level: 'Advanced',
       desc: 'A practical framework for expected value, probability-based sizing and drawdown limits across volatility regimes.',
       Icon: Compass,
-      accent: 'var(--warning)',
     },
   ];
 
@@ -168,75 +163,58 @@ export default function ArborCapital() {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  return (
-    <div className="w-full flex flex-col font-mono select-none antialiased space-y-5 text-[var(--text-secondary)]">
+  const winTone =
+    ledgerStats.winRate == null
+      ? 'var(--text-primary)'
+      : ledgerStats.winRate >= 50
+      ? 'var(--success)'
+      : 'var(--danger)';
 
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <Users className="w-4 h-4 text-[var(--success)]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.24em] text-[var(--text-tertiary)]">
-              Arbor Capital · Research
+  return (
+    <div className="w-full flex flex-col font-mono select-none antialiased space-y-4 text-[var(--text-secondary)]">
+
+      {/* Masthead — quiet label register, terse positioning folded in; market clock at right */}
+      <div className="flex flex-col gap-4 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-4 md:flex-row md:items-stretch md:justify-between">
+        <div className="min-w-0 flex flex-col justify-center">
+          <div className="flex items-center gap-2">
+            <Users className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+              Arbor Capital — Research &amp; Education
             </span>
           </div>
-          <h2 className="text-lg font-bold tracking-tight text-[var(--text-primary)]">
-            Community &amp; Education
-          </h2>
-          <p className="text-xs text-[var(--text-tertiary)] mt-1 leading-relaxed max-w-2xl">
-            Arbor Capital is the research &amp; education arm behind Slayer Terminal — a logged
-            trade ledger, methodology write-ups and options education for day traders. Built
-            around measurable results, not alerts.
+          <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">
+            The research desk behind Slayer Terminal — a logged trade ledger, methodology notes and
+            options education. A software platform,{' '}
+            <span className="text-[var(--text-primary)]">not a signal room</span>: results stay
+            accountable because they are recorded, not alerted.
           </p>
         </div>
-        <div className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3 shrink-0">
-          <div className="flex flex-col">
-            <span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Market</span>
+        <div className="flex shrink-0 items-stretch divide-x divide-[var(--border)] rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)]">
+          <div className="flex flex-col justify-center px-4 py-2">
+            <span className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Market</span>
             <span
-              className="text-xs font-bold tabular-nums"
+              className="text-sm font-semibold tabular-nums"
               style={{ color: marketState.open ? 'var(--success)' : 'var(--danger)' }}
             >
               {marketState.open ? 'OPEN' : 'CLOSED'}
             </span>
           </div>
-          <div className="h-7 w-px bg-[var(--border)]" />
-          <div className="flex flex-col">
-            <span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+          <div className="flex flex-col justify-center px-4 py-2">
+            <span className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
               {marketState.open ? 'Closes in' : 'Opens in'}
             </span>
-            <span className="text-xs font-bold tabular-nums text-[var(--text-primary)]">
+            <span className="text-sm font-semibold tabular-nums text-[var(--text-primary)]">
               {marketState.open ? marketState.closeIn : marketState.openIn}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Positioning statement */}
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5">
-        <h3 className="text-[10px] font-black uppercase tracking-[0.18em] text-[var(--text-tertiary)] mb-2">
-          What This Is
-        </h3>
-        <p className="text-xs md:text-[13px] text-[var(--text-secondary)] leading-relaxed max-w-4xl">
-          Slayer Terminal is a software platform —{' '}
-          <span className="font-bold text-[var(--text-primary)]">not a signal group or Discord alert room</span>.
-          The tools help traders make better decisions with real, measurable data. The community exists to
-          support the software and keep results accountable.
-        </p>
-        <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4 text-[10px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-          {['Software first', 'Logged results', 'Data-driven methods'].map((t) => (
-            <span key={t} className="flex items-center gap-1.5">
-              <span className="w-1 h-1 rounded-full bg-[var(--success)]" />
-              {t}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Workspace — narrow nav rail + dominant content column */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 items-start">
 
-      {/* Workspace */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-5 items-start">
-
-        {/* Sidebar */}
-        <div className="lg:col-span-1 flex flex-col gap-2">
+        {/* Nav rail */}
+        <div className="lg:col-span-1 flex flex-col gap-1.5">
           {CHANNELS.map(({ key, label, sub, Icon }) => {
             const active = activeChannel === key;
             return (
@@ -244,53 +222,53 @@ export default function ArborCapital() {
                 key={key}
                 onClick={() => setActiveChannel(key)}
                 aria-pressed={active}
-                className={`flex items-center gap-3 rounded-lg border px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${
+                className={`flex items-center gap-3 rounded-[7px] border border-l-2 px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${
                   active
-                    ? 'border-[var(--border-strong)] bg-[var(--surface-2)]'
-                    : 'border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)]'
+                    ? 'border-[var(--border-strong)] border-l-[var(--accent-color)] bg-[var(--surface-2)]'
+                    : 'border-[var(--border)] border-l-transparent bg-[var(--surface)] hover:bg-[var(--surface-2)]'
                 }`}
               >
                 <Icon
                   className="w-4 h-4 shrink-0"
-                  style={{ color: active ? 'var(--success)' : 'var(--text-tertiary)' }}
+                  style={{ color: active ? 'var(--text-primary)' : 'var(--text-tertiary)' }}
                 />
-                <div className="flex flex-col">
+                <div className="flex flex-col min-w-0">
                   <span
-                    className="text-[11px] font-bold uppercase tracking-[0.1em]"
+                    className="text-[11px] font-semibold uppercase tracking-[0.1em]"
                     style={{ color: active ? 'var(--text-primary)' : 'var(--text-secondary)' }}
                   >
                     {label}
                   </span>
-                  <span className="text-[9px] text-[var(--text-tertiary)] normal-case">{sub}</span>
+                  <span className="text-[9px] text-[var(--text-tertiary)] normal-case truncate">{sub}</span>
                 </div>
               </button>
             );
           })}
 
           {/* Live session note */}
-          <div className="mt-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 flex flex-col gap-2.5">
+          <div className="mt-2 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-3 flex flex-col gap-2">
             <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-[var(--success)]" />
-              <span className="text-[9px] font-black uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+              <Calendar className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
                 Live Sessions
               </span>
             </div>
             <p className="text-[11px] text-[var(--text-secondary)] leading-relaxed">
-              Platform walkthroughs and education sessions are announced in-app. Tracked contract:{' '}
-              <span className="font-bold text-[var(--text-primary)]">{selectedAsset?.ticker ?? '—'}</span>.
+              Walkthroughs and education sessions are announced in-app. Tracked contract:{' '}
+              <span className="font-semibold text-[var(--text-primary)] tabular-nums">{selectedAsset?.ticker ?? '—'}</span>.
             </p>
           </div>
         </div>
 
         {/* Content */}
-        <div className="lg:col-span-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 md:p-6 min-h-[360px]">
+        <div className="lg:col-span-3 rounded-[10px] border border-[var(--border)] bg-[var(--surface)] p-4 min-h-[360px]">
 
           {/* Trade Record — real logged trade ledger (empty until the engine logs trades) */}
           {activeChannel === 'verified' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
                 className="border-b border-[var(--border)] pb-3"
-                icon={<ShieldCheck className="w-4 h-4 text-[var(--success)]" />}
+                icon={<ShieldCheck className="w-4 h-4 text-[var(--text-tertiary)]" />}
                 label="Trade Ledger"
                 right={
                   ledgerSource ? (
@@ -299,100 +277,108 @@ export default function ArborCapital() {
                 }
               />
 
-              {/* Stat strip from real archive */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <MetricCard label="Logged Trades" value={String(ledgerStats.total)} />
-                <MetricCard
-                  label="Win Rate"
-                  value={fmtPct(ledgerStats.winRate)}
-                  tone={
-                    ledgerStats.winRate == null
-                      ? 'default'
-                      : ledgerStats.winRate >= 50
-                      ? 'success'
-                      : 'danger'
-                  }
-                />
-                <MetricCard
-                  label="Avg Max Gain"
-                  value={fmtPct(ledgerStats.avgGain, true)}
-                  tone={(ledgerStats.avgGain ?? 0) >= 0 ? 'success' : 'danger'}
-                />
-                <MetricCard label="Active Now" value={String(ledgerStats.active)} tone="warning" />
+              {/* Focal strip — Win Rate is the hero, supporters step down, hairline-separated */}
+              <div className="flex flex-col rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] sm:flex-row sm:items-stretch divide-y divide-[var(--border)] sm:divide-y-0 sm:divide-x">
+                <div className="px-4 py-3 sm:min-w-[148px]">
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                    Win Rate
+                  </div>
+                  <div className="mt-1 text-[26px] leading-none font-bold tabular-nums" style={{ color: winTone }}>
+                    {fmtPct(ledgerStats.winRate)}
+                  </div>
+                  <div className="mt-1.5 text-[11px] tabular-nums text-[var(--text-tertiary)]">
+                    {ledgerStats.wins}/{ledgerStats.closed} closed
+                  </div>
+                </div>
+                <div className="flex-1 grid grid-cols-3 divide-x divide-[var(--border)]">
+                  <div className="px-4 py-3 min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Logged</div>
+                    <div className="mt-1 text-[17px] font-semibold tabular-nums text-[var(--text-primary)]">{ledgerStats.total}</div>
+                  </div>
+                  <div className="px-4 py-3 min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Avg Gain</div>
+                    <div
+                      className="mt-1 text-[17px] font-semibold tabular-nums"
+                      style={{ color: ledgerStats.avgGain == null ? 'var(--text-primary)' : ledgerStats.avgGain >= 0 ? 'var(--success)' : 'var(--danger)' }}
+                    >
+                      {fmtPct(ledgerStats.avgGain, true)}
+                    </div>
+                  </div>
+                  <div className="px-4 py-3 min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Active</div>
+                    <div className="mt-1 text-[17px] font-semibold tabular-nums" style={{ color: ledgerStats.active > 0 ? 'var(--warning)' : 'var(--text-primary)' }}>
+                      {ledgerStats.active}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Recent entries */}
+              {/* Recent entries — hairline-ruled ledger rows, not cards */}
               {recentTrades.length > 0 ? (
-                <div className="flex flex-col gap-2">
-                  <span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
-                    Most recent entries
-                  </span>
-                  {recentTrades.map((t) => {
-                    const bullish = t.direction === 'BULLISH';
-                    const isWin = WIN_OUTCOMES.includes(t.finalOutcome);
-                    const isActive = t.finalOutcome === 'Active';
-                    const dirTone = bullish ? 'var(--success)' : 'var(--danger)';
-                    const outcomeTone = isActive ? 'var(--warning)' : isWin ? 'var(--success)' : 'var(--danger)';
-                    return (
-                      <div
-                        key={t.id}
-                        className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-3.5 flex items-center justify-between gap-3"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className="w-7 h-7 rounded flex items-center justify-center shrink-0"
-                            style={{ background: `color-mix(in srgb, ${dirTone} 10%, transparent)` }}
-                          >
+                <div className="flex flex-col">
+                  <div className="flex items-center justify-between px-1 pb-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                      Recent entries
+                    </span>
+                    <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{recentTrades.length}</span>
+                  </div>
+                  <div className="rounded-[10px] border border-[var(--border)] overflow-hidden divide-y divide-[var(--border)]">
+                    {recentTrades.map((t) => {
+                      const bullish = t.direction === 'BULLISH';
+                      const isWin = WIN_OUTCOMES.includes(t.finalOutcome);
+                      const isActive = t.finalOutcome === 'Active';
+                      const dirTone = bullish ? 'var(--success)' : 'var(--danger)';
+                      const outcomeTone = isActive ? 'var(--warning)' : isWin ? 'var(--success)' : 'var(--danger)';
+                      return (
+                        <div
+                          key={t.id}
+                          className="flex items-center justify-between gap-3 px-3 py-2.5 hover:bg-[var(--surface-2)] transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
                             {bullish ? (
-                              <TrendingUp className="w-4 h-4" style={{ color: dirTone }} />
+                              <TrendingUp className="w-3.5 h-3.5 shrink-0" style={{ color: dirTone }} />
                             ) : (
-                              <TrendingDown className="w-4 h-4" style={{ color: dirTone }} />
+                              <TrendingDown className="w-3.5 h-3.5 shrink-0" style={{ color: dirTone }} />
                             )}
+                            <div className="min-w-0">
+                              <span className="text-xs font-semibold text-[var(--text-primary)] block truncate">
+                                {t.contract}
+                              </span>
+                              <span className="text-[10px] text-[var(--text-tertiary)] tabular-nums">
+                                {fmtTime(t.closeTs || t.timestamp) || '—'}
+                                {t.recommendation && (t.recommendation as string) !== 'undefined' ? ` · ${t.recommendation}` : ''}
+                              </span>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <span className="text-xs font-bold text-[var(--text-primary)] block truncate">
-                              {t.contract}
-                            </span>
-                            <span className="text-[10px] text-[var(--text-tertiary)] tabular-nums">
-                              {fmtTime(t.closeTs || t.timestamp) || '—'}
-                              {t.recommendation && (t.recommendation as string) !== 'undefined' ? ` · ${t.recommendation}` : ''}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2.5 sm:gap-4 shrink-0">
-                          <div className="flex flex-col items-end">
-                            <span className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                              Max gain
-                            </span>
+                          <div className="flex items-center gap-4 shrink-0">
                             <span
-                              className="text-xs font-bold tabular-nums"
+                              className="text-xs font-semibold tabular-nums text-right w-16"
                               style={{ color: (t.maxGain ?? 0) >= 0 ? 'var(--success)' : 'var(--danger)' }}
                             >
                               {fmtPct(t.maxGain, true)}
                             </span>
+                            <span
+                              className="text-[9px] font-semibold uppercase tracking-[0.1em] px-2 py-1 rounded-[7px] whitespace-nowrap"
+                              style={{ color: outcomeTone, background: `color-mix(in srgb, ${outcomeTone} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${outcomeTone} 33%, transparent)` }}
+                            >
+                              {t.finalOutcome}
+                            </span>
                           </div>
-                          <span
-                            className="text-[9px] font-bold uppercase tracking-[0.1em] px-2 py-1 rounded whitespace-nowrap"
-                            style={{ color: outcomeTone, background: `color-mix(in srgb, ${outcomeTone} 8%, transparent)`, border: `1px solid color-mix(in srgb, ${outcomeTone} 33%, transparent)` }}
-                          >
-                            {t.finalOutcome}
-                          </span>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-2)] p-8 text-center">
-                  <ShieldCheck className="w-7 h-7 text-[var(--text-tertiary)] mx-auto mb-2" />
+                <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] px-4 py-3">
                   <p className="text-xs text-[var(--text-secondary)]">
                     {ledgerStats.total === 0
-                      ? 'No trades recorded yet.'
-                      : `No closed trades yet — ${ledgerStats.active} open ${ledgerStats.active === 1 ? 'position' : 'positions'}.`}
+                      ? 'No trades recorded — waiting on feed.'
+                      : `No closed trades — ${ledgerStats.active} open ${ledgerStats.active === 1 ? 'position' : 'positions'} pending.`}
                   </p>
-                  <p className="text-[10px] text-[var(--text-tertiary)] mt-1">
+                  <p className="text-[10px] text-[var(--text-tertiary)] mt-1 leading-relaxed">
                     {ledgerStats.total === 0
-                      ? 'Your live track record starts at launch — logged trades appear here as the engine records them.'
+                      ? 'The live track record starts at launch — logged trades appear here as the engine records them.'
                       : 'Closed results appear here once open positions resolve.'}
                   </p>
                 </div>
@@ -400,72 +386,74 @@ export default function ArborCapital() {
             </div>
           )}
 
-          {/* Research Library */}
+          {/* Research Library — editorial reading index, numbered, hairline-ruled */}
           {activeChannel === 'research' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
                 className="border-b border-[var(--border)] pb-3"
-                icon={<FileText className="w-4 h-4 text-[var(--success)]" />}
+                icon={<FileText className="w-4 h-4 text-[var(--text-tertiary)]" />}
                 label="Research Library"
-                right={<span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Methodology</span>}
+                right={<span className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Methodology</span>}
               />
               <p className="text-xs text-[var(--text-tertiary)] leading-relaxed -mt-1">
-                Reference notes on how the platform reads flow, structure and positioning. These describe
-                method — they are not trade calls.
+                Reference notes on how the platform reads flow, structure and positioning — method, not trade calls.
               </p>
-              <div className="grid grid-cols-1 gap-3">
-                {researchTopics.map((a) => (
-                  <div
-                    key={a.title}
-                    className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4"
-                  >
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--success)] px-2 py-0.5 rounded border border-[var(--success)]/30 bg-[var(--success)]/10">
-                        {a.tag}
+              <ol className="border-t border-[var(--border)]">
+                {researchTopics.map((a, i) => {
+                  const lead = i === 0;
+                  return (
+                    <li
+                      key={a.title}
+                      className="grid grid-cols-[2rem_1fr] gap-4 border-b border-[var(--border)] py-4"
+                    >
+                      <span className="text-[15px] font-semibold tabular-nums text-[var(--text-tertiary)] leading-none pt-0.5">
+                        {String(i + 1).padStart(2, '0')}
                       </span>
-                    </div>
-                    <h4 className="text-sm font-bold text-[var(--text-primary)] tracking-tight leading-snug">
-                      {a.title}
-                    </h4>
-                    <p className="text-xs text-[var(--text-secondary)] mt-2 leading-relaxed">{a.body}</p>
-                  </div>
-                ))}
-              </div>
+                      <div className="min-w-0">
+                        <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                          {a.tag}
+                        </span>
+                        <h4
+                          className={`mt-1 font-semibold text-[var(--text-primary)] tracking-tight leading-snug ${lead ? 'text-[15px]' : 'text-[13px]'}`}
+                        >
+                          {a.title}
+                        </h4>
+                        <p className="text-xs text-[var(--text-secondary)] mt-1.5 leading-relaxed">{a.body}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
             </div>
           )}
 
-          {/* Options Education */}
+          {/* Options Education — compact ruled curriculum list with level column */}
           {activeChannel === 'education' && (
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
                 className="border-b border-[var(--border)] pb-3"
-                icon={<GraduationCap className="w-4 h-4 text-[var(--success)]" />}
+                icon={<GraduationCap className="w-4 h-4 text-[var(--text-tertiary)]" />}
                 label="Options Education"
-                right={<span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Core curriculum</span>}
+                right={<span className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Core curriculum</span>}
               />
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="border-t border-[var(--border)]">
                 {educationModules.map((m) => {
                   const Icon = m.Icon;
                   return (
                     <div
                       key={m.title}
-                      className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 flex flex-col gap-3"
+                      className="grid grid-cols-[1.25rem_1fr_auto] items-start gap-4 border-b border-[var(--border)] py-4"
                     >
-                      <div className="flex items-center justify-between">
-                        <div
-                          className="w-8 h-8 rounded flex items-center justify-center"
-                          style={{ background: `color-mix(in srgb, ${m.accent} 10%, transparent)`, border: `1px solid color-mix(in srgb, ${m.accent} 33%, transparent)` }}
-                        >
-                          <Icon className="w-4 h-4" style={{ color: m.accent }} />
-                        </div>
-                        <span className="text-[9px] uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
-                          {m.level}
-                        </span>
+                      <Icon className="w-4 h-4 text-[var(--text-tertiary)] mt-0.5" />
+                      <div className="min-w-0">
+                        <h4 className="text-[13px] font-semibold text-[var(--text-primary)] tracking-tight leading-snug">
+                          {m.title}
+                        </h4>
+                        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mt-1">{m.desc}</p>
                       </div>
-                      <h4 className="text-[13px] font-bold text-[var(--text-primary)] tracking-tight leading-snug">
-                        {m.title}
-                      </h4>
-                      <p className="text-xs text-[var(--text-secondary)] leading-relaxed flex-1">{m.desc}</p>
+                      <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] whitespace-nowrap pt-0.5">
+                        {m.level}
+                      </span>
                     </div>
                   );
                 })}
@@ -478,31 +466,30 @@ export default function ArborCapital() {
             <div className="flex flex-col gap-4 animate-fadeIn">
               <SectionHeader
                 className="border-b border-[var(--border)] pb-3"
-                icon={<HelpCircle className="w-4 h-4 text-[var(--success)]" />}
+                icon={<HelpCircle className="w-4 h-4 text-[var(--text-tertiary)]" />}
                 label="Support & Feature Requests"
-                right={<span className="text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Product roadmap</span>}
+                right={<span className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Product roadmap</span>}
               />
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-start">
 
-                {/* Submit */}
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4">
+                {/* Submit — narrower rail */}
+                <div className="md:col-span-2 rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] p-4">
                   <div className="flex items-center gap-1.5 mb-2">
-                    <MessageSquarePlus className="w-4 h-4 text-[var(--success)]" />
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]">
+                    <MessageSquarePlus className="w-4 h-4 text-[var(--text-tertiary)]" />
+                    <h4 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-primary)]">
                       Submit a Request
                     </h4>
                   </div>
                   <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed mb-4">
-                    Share feature ideas or bug reports. Upvote existing requests to help prioritize what we
-                    build next.
+                    Feature ideas or bug reports. Upvote open requests to prioritize what ships next.
                   </p>
 
                   {requestSubmitted ? (
-                    <div className="rounded-lg border border-[var(--success)]/40 bg-[var(--success)]/10 p-4 flex items-start gap-2.5">
+                    <div className="rounded-[7px] border border-[var(--success)]/40 bg-[var(--success)]/10 p-3 flex items-start gap-2.5">
                       <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" style={{ color: 'var(--success)' }} />
                       <div>
-                        <span className="text-xs font-bold text-[var(--text-primary)] block">
+                        <span className="text-xs font-semibold text-[var(--text-primary)] block">
                           Request submitted
                         </span>
                         <span className="text-[11px] text-[var(--text-secondary)]">
@@ -513,7 +500,7 @@ export default function ArborCapital() {
                   ) : (
                     <form onSubmit={handleAddRequest} className="space-y-3">
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] block">
+                        <label className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] block">
                           Request title
                         </label>
                         <input
@@ -523,7 +510,7 @@ export default function ArborCapital() {
                           aria-invalid={!!requestError}
                           maxLength={120}
                           placeholder="e.g. Alert when IV drops below 15%"
-                          className={`w-full rounded-lg border bg-[var(--surface)] p-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] ${requestError ? 'border-[var(--danger)]/60' : 'border-[var(--border)] focus:border-[var(--success)]/60'}`}
+                          className={`w-full rounded-[7px] border bg-[var(--surface)] p-2.5 text-xs text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] ${requestError ? 'border-[var(--danger)]/60' : 'border-[var(--border)] focus:border-[var(--border-strong)]'}`}
                         />
                         <div className="flex items-center justify-between gap-2">
                           <FieldError>{requestError}</FieldError>
@@ -533,13 +520,13 @@ export default function ArborCapital() {
                         </div>
                       </div>
                       <div className="space-y-1">
-                        <label className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] block">
+                        <label className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] block">
                           Category
                         </label>
                         <select
                           value={newRequestType}
                           onChange={(e) => setNewRequestType(e.target.value)}
-                          className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2.5 text-xs text-[var(--text-secondary)] focus:outline-none focus:border-[var(--success)]/60"
+                          className="w-full rounded-[7px] border border-[var(--border)] bg-[var(--surface)] p-2.5 text-xs text-[var(--text-secondary)] focus:outline-none focus:border-[var(--border-strong)]"
                         >
                           <option value="Feature Request">Feature Request</option>
                           <option value="Technical Bug">Technical Bug</option>
@@ -548,7 +535,7 @@ export default function ArborCapital() {
                       </div>
                       <button
                         type="submit"
-                        className="w-full rounded-lg py-2.5 bg-[var(--success)] hover:opacity-90 text-black font-bold uppercase text-[10px] tracking-[0.12em] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-2)]"
+                        className="w-full rounded-[7px] py-2.5 bg-[var(--success)] hover:opacity-90 text-black font-semibold uppercase text-[10px] tracking-[0.16em] transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-2)]"
                       >
                         Submit Request
                       </button>
@@ -556,20 +543,17 @@ export default function ArborCapital() {
                   )}
                 </div>
 
-                {/* Open requests */}
-                <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-4 flex flex-col">
-                  <div className="flex items-center justify-between gap-2 mb-3 pb-2.5 border-b border-[var(--border)]">
-                    <div className="flex items-center gap-1.5">
-                      <Bookmark className="w-4 h-4 text-[var(--success)]" />
-                      <h4 className="text-[11px] font-black uppercase tracking-[0.14em] text-[var(--text-primary)]">
-                        Open Requests
-                      </h4>
-                    </div>
-                    <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-[var(--text-tertiary)] border border-[var(--border)] rounded px-1.5 py-0.5">
+                {/* Open requests — dominant column, hairline-ruled rows */}
+                <div className="md:col-span-3 rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] flex flex-col">
+                  <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[var(--border)]">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-primary)]">
+                      Open Requests
+                    </span>
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] border border-[var(--border)] rounded-[7px] px-1.5 py-0.5">
                       Examples
                     </span>
                   </div>
-                  <div className="space-y-2.5 overflow-y-auto max-h-[300px]">
+                  <div className="overflow-y-auto max-h-[320px] divide-y divide-[var(--border)]">
                     {userRequests.map((req) => {
                       const tone =
                         req.status === 'Completed'
@@ -579,62 +563,58 @@ export default function ArborCapital() {
                           : req.status === 'Scheduled'
                           ? 'var(--info)'
                           : 'var(--text-tertiary)';
+                      const voted = votedIds.has(req.id);
                       return (
                         <div
                           key={req.id}
-                          className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 flex items-center justify-between gap-3"
+                          className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-[var(--surface)] transition-colors"
                         >
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                              <span className="text-[9px] font-bold uppercase tracking-[0.1em] text-[var(--text-tertiary)]">
+                              <span className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">
                                 {req.type}
                               </span>
                               <span className="text-[var(--text-tertiary)]">·</span>
                               <span
-                                className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-px rounded"
-                                style={{ color: tone, background: `color-mix(in srgb, ${tone} 10%, transparent)` }}
+                                className="text-[8px] font-semibold uppercase tracking-[0.12em]"
+                                style={{ color: tone }}
                               >
                                 {req.status}
                               </span>
                               {req.example && (
-                                <span className="text-[8px] font-bold uppercase tracking-[0.1em] px-1.5 py-px rounded text-[var(--text-tertiary)] border border-[var(--border)]">
+                                <span className="text-[8px] font-semibold uppercase tracking-[0.12em] px-1.5 py-px rounded-[7px] text-[var(--text-tertiary)] border border-[var(--border)]">
                                   Example
                                 </span>
                               )}
                             </div>
-                            <span className="text-xs font-bold text-[var(--text-primary)] block truncate leading-tight">
+                            <span className="text-xs font-semibold text-[var(--text-primary)] block truncate leading-tight">
                               {req.title}
                             </span>
                           </div>
-                          {(() => {
-                            const voted = votedIds.has(req.id);
-                            return (
-                              <button
-                                onClick={() => handleVote(req.id)}
-                                disabled={voted}
-                                aria-pressed={voted}
-                                aria-label={
-                                  voted
-                                    ? `Voted for "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`
-                                    : `Upvote "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`
-                                }
-                                className={`flex flex-col items-center justify-center rounded-lg border px-2.5 py-1.5 shrink-0 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
-                                  voted
-                                    ? 'border-[var(--success)]/60 bg-[var(--success)]/10 cursor-default'
-                                    : 'border-[var(--border)] bg-[var(--surface-2)] hover:border-[var(--success)]/60'
-                                }`}
-                              >
-                                <ChevronUp
-                                  className="w-3.5 h-3.5 text-[var(--success)]"
-                                  aria-hidden="true"
-                                  style={voted ? { fill: 'var(--success)' } : undefined}
-                                />
-                                <span className="text-[11px] font-bold tabular-nums text-[var(--text-primary)]">
-                                  {req.votes}
-                                </span>
-                              </button>
-                            );
-                          })()}
+                          <button
+                            onClick={() => handleVote(req.id)}
+                            disabled={voted}
+                            aria-pressed={voted}
+                            aria-label={
+                              voted
+                                ? `Voted for "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`
+                                : `Upvote "${req.title}" — ${req.votes} ${req.votes === 1 ? 'vote' : 'votes'}`
+                            }
+                            className={`flex flex-col items-center justify-center rounded-[7px] border px-2.5 py-1.5 shrink-0 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
+                              voted
+                                ? 'border-[var(--success)]/60 bg-[var(--success)]/10 cursor-default'
+                                : 'border-[var(--border)] bg-[var(--surface)] hover:border-[var(--border-strong)]'
+                            }`}
+                          >
+                            <ChevronUp
+                              className="w-3.5 h-3.5"
+                              aria-hidden="true"
+                              style={{ color: voted ? 'var(--success)' : 'var(--text-tertiary)', fill: voted ? 'var(--success)' : 'none' }}
+                            />
+                            <span className="text-[11px] font-semibold tabular-nums text-[var(--text-primary)]">
+                              {req.votes}
+                            </span>
+                          </button>
                         </div>
                       );
                     })}

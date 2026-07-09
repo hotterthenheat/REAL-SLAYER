@@ -59,15 +59,15 @@ export function Dialog({
         />
         <RadixDialog.Content
           data-slayer-dialog-content=""
-          className={`fixed left-1/2 top-1/2 z-[121] w-[calc(100vw-2rem)] ${widthClass} -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_24px_80px_rgba(0,0,0,0.6)] focus:outline-none`}
+          className={`fixed left-1/2 top-1/2 z-[121] w-[calc(100vw-2rem)] ${widthClass} -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] focus:outline-none`}
         >
           <style>{ANIM}</style>
-          <div className="flex items-start justify-between gap-3 px-5 pt-5">
+          <div className="flex items-start justify-between gap-3 px-4 pt-4">
             <div className="min-w-0">
               <RadixDialog.Title
                 className={hideTitle
                   ? 'sr-only'
-                  : 'font-mono text-[13px] font-black uppercase tracking-widest text-[var(--text-primary)]'}
+                  : 'font-mono text-[13px] font-semibold uppercase tracking-widest text-[var(--text-primary)]'}
               >
                 {title}
               </RadixDialog.Title>
@@ -79,14 +79,14 @@ export function Dialog({
             </div>
             <RadixDialog.Close
               aria-label="Close"
-              className="-mr-1 -mt-1 shrink-0 rounded-md p-1.5 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+              className="-mr-1 -mt-1 shrink-0 rounded-[7px] p-1.5 text-[var(--text-tertiary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
             >
               <X className="h-4 w-4" />
             </RadixDialog.Close>
           </div>
-          {children && <div className="px-5 py-4 text-[13px] leading-relaxed text-[var(--text-secondary)]">{children}</div>}
+          {children && <div className="px-4 py-4 text-[13px] leading-relaxed text-[var(--text-secondary)]">{children}</div>}
           {footer && (
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] bg-[var(--surface-2)]/40 px-5 py-3.5">
+            <div className="flex items-center justify-end gap-2 border-t border-[var(--border)] bg-[var(--surface-2)]/40 px-4 py-3">
               {footer}
             </div>
           )}

@@ -157,7 +157,7 @@ const MiniPane = ({ ticker, spot, changePercent, prints, revision }: MiniPanePro
   const up = changePercent >= 0;
 
   return (
-    <div className="border border-borderSubtle bg-panel rounded-md overflow-hidden flex flex-col">
+    <div className="border border-borderSubtle bg-panel rounded-[10px] overflow-hidden flex flex-col">
       <div className="flex items-center gap-2 px-2.5 h-8 border-b border-borderSubtle shrink-0 select-none">
         <span className="font-mono text-[11px] font-bold text-textPrimary">{ticker}</span>
         <span className="font-mono text-[11px] font-semibold text-textPrimary tnum">${spot.toFixed(2)}</span>

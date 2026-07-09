@@ -33,7 +33,7 @@ export function TextField({ label, value, onChange, description, error, srOnlyLa
   const errId = error ? `${id}-err` : undefined;
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className={`text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)] ${srOnlyLabel ? 'sr-only' : ''}`}>
+      <label htmlFor={id} className={`text-[10px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)] ${srOnlyLabel ? 'sr-only' : ''}`}>
         {label}
       </label>
       {description && <p id={descId} className="text-[10px] text-[var(--text-tertiary)] leading-snug">{description}</p>}
@@ -43,7 +43,7 @@ export function TextField({ label, value, onChange, description, error, srOnlyLa
         onChange={(e) => onChange(e.target.value)}
         aria-invalid={!!error}
         aria-describedby={[descId, errId].filter(Boolean).join(' ') || undefined}
-        className={`rounded-md border bg-[var(--surface-2)] px-3 py-2 font-mono text-[12px] text-[var(--text-primary)] transition-colors placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] ${
+        className={`rounded-[7px] border bg-[var(--surface-2)] px-3 py-2 font-mono text-[12px] text-[var(--text-primary)] transition-colors placeholder:text-[var(--text-tertiary)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)] ${
           error ? 'border-[var(--danger)]/60' : 'border-[var(--border)] focus-visible:border-[var(--border-strong)]'
         } ${className}`}
         {...rest}

@@ -37,7 +37,7 @@ export default function LazyMount({
   return (
     <div ref={ref} style={{ minHeight: show ? undefined : minHeight }}>
       {show ? children : (placeholder ?? (
-        <div style={{ minHeight }} className="flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+        <div style={{ minHeight }} className="flex items-center justify-center rounded-[10px] border border-[var(--border)] bg-[var(--surface)]">
           <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">Scroll to load 3D surface…</span>
         </div>
       ))}

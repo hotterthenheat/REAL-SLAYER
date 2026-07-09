@@ -18,7 +18,7 @@ const StrikeLadder = ({ board }: StrikeLadderProps) => {
   const total = ladder.reduce((a, r) => a + r.value, 0);
 
   return (
-    <div className="border border-borderSubtle bg-panel rounded-md overflow-hidden flex flex-col min-w-0">
+    <div className="border border-borderSubtle bg-panel rounded-[10px] overflow-hidden flex flex-col min-w-0">
       <div className="flex items-center gap-2 px-2.5 h-8 border-b border-borderSubtle shrink-0 select-none">
         <span className="font-mono text-[11px] font-bold text-textPrimary">{ticker}</span>
         <span className={`font-mono text-[10px] tnum ${up ? 'text-bull' : 'text-bear'}`}>

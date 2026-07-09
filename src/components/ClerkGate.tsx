@@ -90,15 +90,12 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
   };
 
   // Shared field styling — institutional, hairline borders, tabular where relevant.
-  const labelCls = "text-[10px] text-[var(--text-faint)] uppercase tracking-[0.18em] font-semibold block mb-1.5";
-  const inputCls = "w-full bg-[var(--bg-shell)] border border-[var(--border-subtle)] focus:border-[var(--border-mid)] text-[var(--text-primary)] placeholder:text-[var(--text-faint)] font-sans rounded-[7px] px-3.5 py-3 text-[13px] focus:outline-none transition-colors";
-  const inputWithIconCls = inputCls + " pl-11";
+  const labelCls = "text-[10px] text-[var(--text-faint)] uppercase tracking-[0.16em] font-semibold block mb-1.5";
+  const inputCls = "w-full bg-[var(--bg-shell)] border border-[var(--border-subtle)] focus:border-[var(--border-mid)] text-[var(--text-primary)] placeholder:text-[var(--text-faint)] font-sans rounded-[7px] px-3 py-3 text-[13px] focus:outline-none transition-colors";
+  const inputWithIconCls = inputCls + " pl-10";
 
   return (
-    <div id="clerk-authentication-gate" className="min-h-screen bg-[var(--bg-app)] text-[var(--text-secondary)] flex flex-col justify-center items-center font-mono selection:bg-[var(--positive-ink)] selection:text-[var(--bg-app)] p-4 relative overflow-hidden">
-
-      {/* Restrained structural wash — not a glow */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(900px 460px at 50% -10%, rgba(106,147,181,0.10), transparent 70%)' }} />
+    <div id="clerk-authentication-gate" className="min-h-screen bg-[var(--bg-app)] text-[var(--text-secondary)] flex flex-col justify-center items-center font-sans selection:bg-[var(--positive-ink)] selection:text-[var(--bg-app)] p-4 relative overflow-hidden">
 
       {/* the ONE canonical logo (BrandLogo.tsx) — HTML-exact wordmark + caret */}
       <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10 origin-top-left scale-[0.8]">
@@ -106,52 +103,60 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
       </div>
 
       <motion.div
-        initial={{ opacity: 0, scale: 0.98, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="w-full max-w-[420px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-[0_30px_80px_-40px_rgba(0,0,0,0.9)] rounded-[10px] overflow-hidden p-6 sm:p-8 relative z-10"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-[400px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] rounded-[10px] overflow-hidden relative z-10"
       >
-        {onClose && (
-          <button
-            onClick={onClose}
-            aria-label="Dismiss sign-in"
-            className="absolute top-4 right-4 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-8 w-8 rounded-[7px] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] hover:border-[var(--border-mid)] flex items-center justify-center z-20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
-            title="Dismiss"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
-
-        <div className="text-left mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="w-8 h-8 rounded-[7px] bg-[var(--bg-panel-soft)] border border-[var(--border-subtle)] flex items-center justify-center">
-              <ShieldCheck className="w-4 h-4 text-[var(--text-secondary)]" />
-            </div>
-            <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--text-faint)]">
-              Secure Access
+        {/* Terminal window title bar — left label, right live SSL state */}
+        <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-panel-soft)]">
+          <div className="flex items-center gap-2 min-w-0">
+            <Lock className="w-3 h-3 text-[var(--text-faint)] shrink-0" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-faint)] truncate">
+              Desk Access
             </span>
           </div>
-          <h1 className="text-[22px] font-sans font-semibold tracking-tight text-[var(--text-primary)] select-none leading-tight">
-            Welcome to Slayer Terminal
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--positive-ink)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)] tabular-nums">SSL</span>
+            {onClose && (
+              <button
+                onClick={onClose}
+                aria-label="Dismiss sign-in"
+                className="ml-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-6 w-6 rounded-[7px] hover:bg-[var(--bg-panel-raised)] flex items-center justify-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+                title="Dismiss"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 sm:p-7">
+        <div className="text-left mb-6">
+          <h1 className="text-[15px] font-sans font-semibold tracking-tight text-[var(--text-primary)] select-none leading-tight">
+            {twoFactorStage ? 'Verify identity' : activeMode === 'signin' ? 'Sign in to your desk' : 'Provision a desk'}
           </h1>
-          <p className="text-[var(--text-muted)] text-[12.5px] font-sans mt-2 leading-relaxed">
-            Sign in with your secure credentials to access institutional-grade decision intelligence.
+          <p className="text-[var(--text-muted)] text-[12px] font-sans mt-1.5 leading-relaxed">
+            {twoFactorStage
+              ? 'Two-factor challenge — enter the code from your authenticator.'
+              : 'Restricted terminal. Authorized desks only.'}
           </p>
         </div>
 
-        {/* Tab switcher */}
+        {/* Mode switcher — segmented control */}
         {!twoFactorStage && (
-        <div className="grid grid-cols-2 gap-1 bg-[var(--bg-panel-soft)] rounded-[8px] p-1 border border-[var(--border-subtle)] text-[12px] font-semibold mb-5">
+        <div className="grid grid-cols-2 gap-1 bg-[var(--bg-panel-soft)] rounded-[7px] p-1 border border-[var(--border-subtle)] text-[12px] font-semibold mb-5">
           <button
             onClick={() => { setActiveMode('signin'); setErrorMessage(null); }}
             aria-pressed={activeMode === 'signin'}
-            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            className={`py-2 rounded-[5px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Sign In
           </button>
           <button
             onClick={() => { setActiveMode('signup'); setErrorMessage(null); }}
             aria-pressed={activeMode === 'signup'}
-            className={`py-2.5 rounded-[6px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            className={`py-2 rounded-[5px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Create Account
           </button>
@@ -178,7 +183,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           <form onSubmit={handleVerify2fa} className="space-y-4 text-left">
             <div>
               <label className={labelCls}>
-                Two-Factor Authentication Code
+                2FA Code
               </label>
               <div className="relative">
                 <input
@@ -193,7 +198,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
                 />
                 <ShieldCheck className="w-4 h-4 text-[var(--text-faint)] absolute left-4 top-1/2 -translate-y-1/2" />
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] mt-2 font-sans">Enter the 6-digit code from your authenticator app.</p>
+              <p className="text-[11px] text-[var(--text-muted)] mt-2 font-sans">6-digit code from your authenticator app.</p>
             </div>
             <button
               type="submit"
@@ -208,7 +213,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
               ) : (
                 <>
                   <ShieldCheck className="w-4 h-4" />
-                  <span>Verify and Sign In</span>
+                  <span>Verify and continue</span>
                 </>
               )}
             </button>
@@ -227,7 +232,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           {activeMode === 'signup' && (
             <div>
               <label className={labelCls}>
-                Your Full Name
+                Full Name
               </label>
               <div className="relative">
                 <input
@@ -246,7 +251,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           {activeMode === 'signup' && (
             <div>
               <label className={labelCls}>
-                Profile Photo URL (Optional)
+                Avatar URL — Optional
               </label>
               <div className="relative">
                 <input
@@ -263,7 +268,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
 
           <div>
             <label className={labelCls}>
-              Email Address
+              Email
             </label>
             <div className="relative">
               <input
@@ -280,7 +285,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
 
           <div>
             <label className={labelCls}>
-              Security Key Password
+              Password
             </label>
             <div className="relative">
               <input
@@ -298,7 +303,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           {activeMode === 'signup' && (
             <div>
               <label className={labelCls}>
-                Referral Code (Optional)
+                Referral Code — Optional
               </label>
               <input
                 type="text"
@@ -317,7 +322,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           >
             {isLoading ? (
               <>
-                <div className="w-4 h-4 rounded-full border-t-2 border-r-2 border-[#0A0806] animate-spin" />
+                <Spinner size="sm" tone="onAccent" label="Authenticating" />
                 <span>Authenticating...</span>
               </>
             ) : (
@@ -330,13 +335,14 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         </form>
         )}
 
-        <div className="border-t border-[var(--border-subtle)] pt-5 mt-6 text-center">
+        <div className="border-t border-[var(--border-subtle)] pt-4 mt-6">
           <p className="text-[11px] text-[var(--text-muted)] font-sans leading-relaxed">
-            By continuing, you agree to Slayer Terminal's{' '}
-            <button type="button" onClick={() => useLegal.getState().open('terms')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline underline-offset-2 transition-colors cursor-pointer">Terms of Service</button>
+            By continuing you accept the{' '}
+            <button type="button" onClick={() => useLegal.getState().open('terms')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline underline-offset-2 transition-colors cursor-pointer">Terms</button>
             {' '}and{' '}
-            <button type="button" onClick={() => useLegal.getState().open('privacy')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline underline-offset-2 transition-colors cursor-pointer">Privacy Policy</button>. Secure SSL connection.
+            <button type="button" onClick={() => useLegal.getState().open('privacy')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline underline-offset-2 transition-colors cursor-pointer">Privacy Policy</button>.
           </p>
+        </div>
         </div>
       </motion.div>
     </div>

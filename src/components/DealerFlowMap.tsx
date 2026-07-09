@@ -118,25 +118,8 @@ export function DealerFlowMap({ profile, decimals }: DealerFlowMapProps) {
     // Highlight rects on hover
     const interactionGroup = svg.append('g').attr('class', 'interaction-layer');
 
-    // Create Bars with Gradients
-    const defs = svg.append('defs');
-
-    // Positive Gradient
-    const posGradient = defs.append('linearGradient')
-      .attr('id', 'pos-gex-grad')
-      .attr('x1', '0%').attr('y1', '0%')
-      .attr('x2', '0%').attr('y2', '100%');
-    posGradient.append('stop').attr('offset', '0%').attr('stop-color', theme.success).attr('stop-opacity', 0.95);
-    posGradient.append('stop').attr('offset', '100%').attr('stop-color', theme.success).attr('stop-opacity', 0.45);
-
-    // Negative Gradient
-    const negGradient = defs.append('linearGradient')
-      .attr('id', 'neg-gex-grad')
-      .attr('x1', '0%').attr('y1', '0%')
-      .attr('x2', '0%').attr('y2', '100%');
-    negGradient.append('stop').attr('offset', '0%').attr('stop-color', theme.danger).attr('stop-opacity', 0.45);
-    negGradient.append('stop').attr('offset', '100%').attr('stop-color', theme.danger).attr('stop-opacity', 0.95);
-
+    // Flat, semantic bars — green above zero (dealer long gamma), red below.
+    // Squared magnitude columns, no decorative gradient fills.
     const bars = svg.selectAll('.bar')
       .data(visibleStrikes)
       .join('rect')
@@ -145,8 +128,8 @@ export function DealerFlowMap({ profile, decimals }: DealerFlowMapProps) {
       .attr('width', x.bandwidth())
       .attr('y', d => d.netGex > 0 ? y(d.netGex) : y(0))
       .attr('height', d => Math.abs(y(d.netGex) - y(0)))
-      .attr('fill', d => d.netGex > 0 ? 'url(#pos-gex-grad)' : 'url(#neg-gex-grad)')
-      .attr('rx', 2);
+      .attr('fill', d => d.netGex > 0 ? theme.success : theme.danger)
+      .attr('fill-opacity', 0.85);
 
     // Initialize group map for all active markers to perform collision-free stacking
     interface MarkerDef {
@@ -224,17 +207,15 @@ export function DealerFlowMap({ profile, decimals }: DealerFlowMapProps) {
         const badgeY = startY + index * 18;
         const textWidth = Math.max(58, marker.label.length * 6.4 + 14);
 
-        // capsule
+        // capsule — squared level tag, flat surface + hairline (no rounded pill)
         svg.append('rect')
           .attr('x', xPos - textWidth / 2)
           .attr('y', badgeY - 8)
           .attr('width', textWidth)
           .attr('height', 14)
-          .attr('rx', 4)
           .attr('fill', theme.surface)
           .attr('stroke', marker.border)
-          .attr('stroke-width', 1)
-          .attr('opacity', 0.95);
+          .attr('stroke-width', 1);
 
         // text
         svg.append('text')
@@ -242,7 +223,7 @@ export function DealerFlowMap({ profile, decimals }: DealerFlowMapProps) {
           .attr('y', badgeY + 1)
           .attr('fill', marker.color)
           .attr('text-anchor', 'middle')
-          .attr('class', 'font-mono text-[9px] font-black uppercase tracking-widest')
+          .attr('class', 'text-[9px] font-semibold uppercase tracking-[0.16em]')
           .text(marker.label);
       });
     });
@@ -291,7 +272,7 @@ export function DealerFlowMap({ profile, decimals }: DealerFlowMapProps) {
       .on('mouseleave', function(event, d) {
         hoverLine.style('opacity', 0);
         bars.filter(b => b.strike === d.strike)
-          .attr('opacity', 0.8)
+          .attr('opacity', 1)
           .attr('stroke', 'none');
         setTooltip(null);
       });
@@ -310,18 +291,19 @@ export function DealerFlowMap({ profile, decimals }: DealerFlowMapProps) {
       <div ref={containerRef} className="w-full h-full" />
       {tooltip && (
         <div
-          className="absolute pointer-events-none bg-[var(--surface)] border border-[var(--border-strong)] rounded-md p-3 shadow-2xl backdrop-blur-md z-50 transition-opacity duration-75"
+          className="absolute pointer-events-none bg-[var(--surface)] border border-[var(--border-strong)] rounded-[10px] p-3 z-50 transition-opacity duration-75"
           style={{
             left: tooltip.x + 15,
             top: tooltip.y - 10,
+            boxShadow: '0 16px 44px -12px rgba(0,0,0,0.8)',
             transform: `translate(${tooltip.x > (containerRef.current?.clientWidth || 0) / 2 ? '-110%' : '0'}, 0)`
           }}
         >
           <div className="flex items-center gap-2 mb-2 border-b border-[var(--border)] pb-1">
-            <span className="w-2 h-2 rounded-full bg-[var(--info)]" />
-            <span className="font-mono text-[var(--text-primary)] font-bold text-[11px] tracking-widest uppercase tabular-nums">Strike ${tooltip.data.strike.toLocaleString()}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--info)]" />
+            <span className="text-[var(--text-primary)] font-semibold text-[11px] tracking-[0.12em] uppercase tabular-nums">Strike ${tooltip.data.strike.toLocaleString()}</span>
           </div>
-          <div className="space-y-1 text-left font-mono tabular-nums">
+          <div className="space-y-1 text-left tabular-nums">
              <div className="flex justify-between items-center gap-4 text-[10px]">
                <span className="text-[var(--text-tertiary)]">Net GEX</span>
                <span className={`font-bold ${tooltip.data.netGex > 0 ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>

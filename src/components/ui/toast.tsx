@@ -79,7 +79,7 @@ function ToastCard({ t }: { t: ToastRecord }) {
   return (
     <div
       role="status"
-      className="pointer-events-auto relative flex w-[340px] max-w-[calc(100vw-2rem)] items-start gap-2.5 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-[0_12px_36px_-12px_rgba(0,0,0,0.75)] backdrop-blur-md"
+      className="pointer-events-auto relative flex w-[340px] max-w-[calc(100vw-2rem)] items-start gap-2.5 overflow-hidden rounded-[10px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2.5 shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]"
       style={{ animation: t.leaving ? 'sl-toast-out 160ms ease-in forwards' : 'sl-toast-in 200ms cubic-bezier(0.16,1,0.3,1)' }}
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-[3px]" style={{ background: color }} />
@@ -93,7 +93,7 @@ function ToastCard({ t }: { t: ToastRecord }) {
       <button
         onClick={() => dismiss(t.id)}
         aria-label="Dismiss"
-        className="shrink-0 rounded p-0.5 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
+        className="shrink-0 rounded-[7px] p-0.5 text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)]"
       >
         <X className="h-3.5 w-3.5" />
       </button>

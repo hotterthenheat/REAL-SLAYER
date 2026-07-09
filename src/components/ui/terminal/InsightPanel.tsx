@@ -65,7 +65,7 @@ export function InsightPanel({
       footer={footer}
     >
       {hasSections ? (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {sections!.map((section) => (
             <div key={section.heading}>
               <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
@@ -75,7 +75,7 @@ export function InsightPanel({
                 {section.items.map((item, index) => (
                   <div
                     key={`${section.heading}-${index}`}
-                    className="flex items-start justify-between gap-3 border-b border-[rgba(248,248,255,0.04)] pb-2 last:border-b-0 last:pb-0"
+                    className="flex items-start justify-between gap-3 border-b border-[var(--border-subtle)] pb-2 last:border-b-0 last:pb-0"
                   >
                     <div className="min-w-0 flex-1 text-[12px] text-[var(--text-secondary)]">
                       {item.label ?? '—'}
@@ -97,7 +97,7 @@ export function InsightPanel({
           ))}
         </ul>
       ) : (
-        <p className="text-[12px] text-[var(--text-muted)]">No insight available yet.</p>
+        <p className="text-[12px] text-[var(--text-muted)]">No insight — waiting on feed.</p>
       )}
     </TerminalPanel>
   );

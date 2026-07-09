@@ -7,10 +7,13 @@
  * `bull`/`bear` follow Slayer's convention (up = green, down = red).
  */
 
-const BULL = '#4ADE80';
-const BEAR = '#F87171';
-const BULL_SOFT = 'rgba(74,222,128,0.18)';
-const BEAR_SOFT = 'rgba(248,113,113,0.18)';
+// Slayer data accents — bullish green / bearish red (not the default neon Tailwind ramp).
+const BULL = '#3F9C79';
+const BEAR = '#B23B3B';
+const BULL_SOFT = 'rgba(63,156,121,0.16)';
+const BEAR_SOFT = 'rgba(178,59,59,0.16)';
+const STEEL = '#6A93B5'; // calls / fast MA
+const AMBER = '#C79350'; // dealer flow / slow MA
 
 // ── Intraday candlestick + moving averages + volume ─────────────────────────
 // Adapted from the ECharts "candlestick + MA + volume" example.
@@ -74,8 +77,8 @@ export function candleMaVolumeOption(ticker = 'SPY') {
         name: 'Price', type: 'candlestick', data: vals,
         itemStyle: { color: BULL, color0: BEAR, borderColor: BULL, borderColor0: BEAR },
       },
-      { name: 'MA20', type: 'line', data: ma(20, vals), smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#60A5FA', opacity: 0.9 } },
-      { name: 'MA60', type: 'line', data: ma(60, vals), smooth: true, symbol: 'none', lineStyle: { width: 1, color: '#FBBF24', opacity: 0.9 } },
+      { name: 'MA20', type: 'line', data: ma(20, vals), smooth: true, symbol: 'none', lineStyle: { width: 1, color: STEEL, opacity: 0.9 } },
+      { name: 'MA60', type: 'line', data: ma(60, vals), smooth: true, symbol: 'none', lineStyle: { width: 1, color: AMBER, opacity: 0.9 } },
       {
         name: 'Volume', type: 'bar', xAxisIndex: 1, yAxisIndex: 1,
         data: vols.map(v => ({ value: v[1], itemStyle: { color: v[2] > 0 ? BULL_SOFT : BEAR_SOFT } })),
@@ -112,8 +115,8 @@ export function equityCurveOption(echarts: any) {
       itemStyle: { color: BULL },
       areaStyle: {
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-          { offset: 0, color: 'rgba(74,222,128,0.35)' },
-          { offset: 1, color: 'rgba(74,222,128,0.02)' },
+          { offset: 0, color: 'rgba(63,156,121,0.28)' },
+          { offset: 1, color: 'rgba(63,156,121,0.02)' },
         ]),
       },
       data,
@@ -148,8 +151,8 @@ export function tierConversionOption(
     },
     series: [{
       type: 'bar', barWidth: 16,
-      itemStyle: { borderRadius: [0, 4, 4, 0] },
-      label: { show: true, position: 'right', color: colors.text, fontSize: 10, fontFamily: 'JetBrains Mono, monospace' },
+      itemStyle: { borderRadius: 0 },
+      label: { show: true, position: 'right', color: colors.text, fontSize: 10 },
       data: bars.map(b => ({ value: b.count, itemStyle: { color: b.color } })),
     }],
   };

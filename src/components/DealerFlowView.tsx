@@ -25,7 +25,7 @@ import { PanelSkeleton } from './PanelSkeleton';
 import { PinpointTrackButton } from './PinpointTrackButton';
 import { DataStateBadge } from './ui/DataStateBadge';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
-import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
+import { type Metric } from './ui/terminal/MetricStrip';
 import { DataTable, type DataColumn } from './ui/terminal/DataTable';
 import { StatusBadge } from './ui/terminal/StatusBadge';
 import {
@@ -46,7 +46,7 @@ import type { TimeframeVal } from '../types';
 
 // Row chrome for the expiry-ladder popover — a selected row glows accent, others hover.
 const expiryRowCls = (active: boolean) =>
-  `flex items-center justify-between gap-2 rounded-md border px-2.5 py-2 text-left transition-colors cursor-pointer ${
+  `flex items-center justify-between gap-2 rounded-[7px] border px-2.5 py-2 text-left transition-colors cursor-pointer ${
     active
       ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)]/40'
       : 'border-transparent hover:bg-[var(--surface-3)]'
@@ -92,6 +92,16 @@ const fmtGreek = (v: number) => {
     return `${v >= 0 ? '+' : '−'}$${(abs / 1e9).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}B`;
   }
   return `${v >= 0 ? '+' : '−'}$${(abs / 1e6).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
+};
+
+// Tone → text colour for the supporting-metric cells in the dealer-gamma header.
+const SUPPORT_TONE_TEXT: Record<NonNullable<Metric['tone']>, string> = {
+  neutral: 'text-[var(--text-primary)]',
+  positive: 'text-[var(--positive-ink)]',
+  negative: 'text-[var(--negative-ink)]',
+  warning: 'text-[var(--warning)]',
+  call: 'text-[var(--call)]',
+  pin: 'text-[var(--pin)]',
 };
 
 function FeedChip({ feed }: { feed?: string }) {
@@ -193,7 +203,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
   return (
     <div className="space-y-[3px] relative tabular-data">
       {/* Axis header */}
-      <div className={`flex items-center text-[9px] font-black tracking-widest uppercase pb-1.5 border-b mb-1.5 ${
+      <div className={`flex items-center text-[9px] font-semibold tracking-widest uppercase pb-1.5 border-b mb-1.5 ${
         isLight ? 'text-zinc-500 border-[var(--border)]' : 'text-zinc-600 border-[var(--border)]'
       }`}>
         <div className="w-[58px] sm:w-[72px] shrink-0">Strike</div>
@@ -228,8 +238,8 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
             isSpot ? (isLight ? 'bg-black' : 'bg-white/[0.03]') : ''
           }`}>
             {/* Strike column */}
-            <div className={`w-[58px] sm:w-[72px] shrink-0 text-[10.5px] font-black tracking-[0.06em] font-mono pl-1 ${
-              isSpot ? (isLight ? 'text-zinc-900 font-extrabold' : 'text-[#E5E5E5]') : isLight ? 'text-zinc-550' : 'text-zinc-400'
+            <div className={`w-[58px] sm:w-[72px] shrink-0 text-[10.5px] font-semibold tracking-[0.06em] font-mono pl-1 ${
+              isSpot ? (isLight ? 'text-zinc-900 font-bold' : 'text-[#E5E5E5]') : isLight ? 'text-zinc-550' : 'text-zinc-400'
             }`}>
               {fmtNum(r.strike)}
               {isCallMax && (() => {
@@ -237,14 +247,14 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                 const isTesting = Math.abs(r.strike - profile.spot) / profile.spot < 0.005;
                 const status = isFailing ? 'FAILING' : isTesting ? 'TESTING' : 'HOLDING';
                 const sColor = isFailing ? 'text-[var(--danger)] bg-rose-500/10 border-rose-500/30' : isTesting ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-[var(--success)] bg-[var(--success)]/10 border-black';
-                return <span className={`ml-1.5 px-1 py-[1px] rounded-[2px] text-[9px] align-middle font-black border tracking-widest ${sColor}`}>{status}</span>;
+                return <span className={`ml-1.5 px-1 py-[1px] rounded-[2px] text-[9px] align-middle font-semibold border tracking-widest ${sColor}`}>{status}</span>;
               })()}
               {isPutMax && (() => {
                 const isFailing = r.strike > profile.spot;
                 const isTesting = Math.abs(r.strike - profile.spot) / profile.spot < 0.005;
                 const status = isFailing ? 'FAILING' : isTesting ? 'TESTING' : 'HOLDING';
                 const sColor = isFailing ? 'text-[var(--danger)] bg-rose-500/10 border-rose-500/30' : isTesting ? 'text-amber-400 bg-amber-500/10 border-amber-500/30' : 'text-sky-400 bg-sky-500/10 border-sky-500/30';
-                return <span className={`ml-1.5 px-1 py-[1px] rounded-[2px] text-[9px] align-middle font-black border tracking-widest ${sColor}`}>{status}</span>;
+                return <span className={`ml-1.5 px-1 py-[1px] rounded-[2px] text-[9px] align-middle font-semibold border tracking-widest ${sColor}`}>{status}</span>;
               })()}
             </div>
 
@@ -275,7 +285,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                       type === 'gex' ? 'bg-rose-400' : type === 'dex' ? 'bg-amber-400' : 'bg-fuchsia-400'
                     }`} />
-                    <span className={`font-black tracking-widest uppercase text-[8px] ${
+                    <span className={`font-semibold tracking-widest uppercase text-[8px] ${
                       isLight 
                         ? type === 'gex' ? 'text-rose-600' : type === 'dex' ? 'text-amber-600' : 'text-fuchsia-600'
                         : type === 'gex' ? 'text-[var(--danger)]' : type === 'dex' ? 'text-amber-400' : 'text-fuchsia-400'
@@ -284,7 +294,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                     <span className={`font-bold ${isLight ? 'text-zinc-900' : 'text-[#E5E5E5]'}`}>STRIKE {fmtNum(r.strike)}</span>
                   </div>
                   <div className="space-y-0.5 text-left">
-                    <div>{typeUpper}: <span className={`font-extrabold ${
+                    <div>{typeUpper}: <span className={`font-bold ${
                       isLight 
                         ? type === 'gex' ? 'text-rose-600' : type === 'dex' ? 'text-amber-600' : 'text-fuchsia-600'
                         : type === 'gex' ? 'text-[var(--danger)]' : type === 'dex' ? 'text-amber-300' : 'text-fuchsia-300'
@@ -323,7 +333,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                     <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
                       type === 'gex' ? 'bg-[var(--success)]' : type === 'dex' ? 'bg-sky-400' : 'bg-indigo-400'
                     }`} />
-                    <span className={`font-black tracking-widest uppercase text-[8px] ${
+                    <span className={`font-semibold tracking-widest uppercase text-[8px] ${
                       isLight
                         ? type === 'gex' ? 'text-[var(--success)]' : type === 'dex' ? 'text-sky-600' : 'text-indigo-600'
                         : type === 'gex' ? 'text-[var(--success)]' : type === 'dex' ? 'text-sky-400' : 'text-indigo-400'
@@ -332,7 +342,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
                     <span className={`font-bold ${isLight ? 'text-zinc-900' : 'text-[#E5E5E5]'}`}>STRIKE {fmtNum(r.strike)}</span>
                   </div>
                   <div className="space-y-0.5 text-left">
-                    <div>{typeUpper}: <span className={`font-extrabold ${
+                    <div>{typeUpper}: <span className={`font-bold ${
                       isLight
                         ? type === 'gex' ? 'text-[var(--success)]' : type === 'dex' ? 'text-sky-600' : 'text-indigo-600'
                         : type === 'gex' ? 'text-[var(--success)]' : type === 'dex' ? 'text-sky-300' : 'text-indigo-300'
@@ -392,7 +402,7 @@ function ExposureProfileChart({ profile, decimals, type }: { profile: any; decim
             }`} />
 
             {/* Centered coordinates tag (static) */}
-            <div className={`absolute left-1/2 -translate-x-1/2 -top-3 px-2 py-0.5 rounded-xs font-mono font-black text-[9px] uppercase shadow-sm flex items-center gap-1 border z-30 ${
+            <div className={`absolute left-1/2 -translate-x-1/2 -top-3 px-2 py-0.5 rounded-xs font-mono font-semibold text-[9px] uppercase shadow-sm flex items-center gap-1 border z-30 ${
               isLight
                 ? 'bg-white text-zinc-900 border-black'
                 : 'bg-black/90 text-[#E5E5E5] border-black'
@@ -1009,22 +1019,19 @@ export function DealerFlowView() {
           aria-busy="true"
           aria-label="Loading dealer flow data"
         >
-          <div className="flex flex-col items-center justify-center text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-[var(--bg-panel-raised)] border border-[var(--border-subtle)] flex items-center justify-center">
-              <Waves className="w-6 h-6 text-[var(--pin)]" />
-            </div>
-            <div className="space-y-1.5">
-              <h2 className="text-[11px] font-bold tracking-[0.16em] text-[var(--text-primary)] uppercase">
-                LOADING DEALER FLOW DATA
-              </h2>
-              <p className="text-[10px] text-[var(--text-muted)] uppercase tracking-[0.14em] leading-relaxed max-w-sm mx-auto">
-                Loading hedging profiles, order flow, and price zones. Select any strike or option type to start the feed.
+          <div className="flex items-baseline justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
+            <div className="min-w-0">
+              <div className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">
+                Dealer Flow · {selectedAsset.ticker}
+              </div>
+              <p className="mt-1 text-[12px] leading-snug text-[var(--text-secondary)]">
+                Hedging profile, order flow and displacement zones — waiting on the first data frame.
               </p>
             </div>
-            <div className="flex items-center gap-2 justify-center">
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--warning)] inline-block animate-pulse" />
-              <span className="text-[9px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">
-                AWAITING FIRST DATA FRAME...
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--warning)] animate-pulse" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                No feed
               </span>
             </div>
           </div>
@@ -1045,8 +1052,8 @@ export function DealerFlowView() {
     <>
       <CalendarClock className="w-3.5 h-3.5 text-[var(--accent-color)] shrink-0" />
       <div className="flex flex-col leading-none gap-0.5 min-w-0">
-        <span className="text-[7.5px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Selected Expiry</span>
-        <span className="text-[11px] font-black tabular-nums text-[var(--text-primary)] truncate">
+        <span className="text-[7.5px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">Selected Expiry</span>
+        <span className="text-[11px] font-semibold tabular-nums text-[var(--text-primary)] truncate">
           {isMultiExpiry
             ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'expiry' : 'expiries'}`
             : expiryTab === 'aggregated'
@@ -1062,7 +1069,7 @@ export function DealerFlowView() {
   const expiryLadder = (
     <div className="flex flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-3 py-2.5">
-        <span className="font-mono text-[9px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Expiry Ladder</span>
+        <span className="font-mono text-[9px] font-semibold uppercase tracking-widest text-[var(--text-secondary)]">Expiry Ladder</span>
         <Switch
           size="sm"
           tone="success"
@@ -1084,10 +1091,10 @@ export function DealerFlowView() {
         {!isMultiExpiry && (
           <button onClick={() => setExpiryTab('aggregated')} className={expiryRowCls(expiryTab === 'aggregated')}>
             <span className="flex items-center gap-2.5 min-w-0">
-              <span className={`w-1 h-4 rounded-full shrink-0 ${expiryTab === 'aggregated' ? 'bg-[var(--success)]' : 'bg-[var(--text-tertiary)]'}`} />
+              <span className={`w-1 h-4 rounded-[1px] shrink-0 ${expiryTab === 'aggregated' ? 'bg-[var(--success)]' : 'bg-[var(--text-tertiary)]'}`} />
               <span className="flex flex-col leading-none gap-0.5 text-left">
-                <span className="text-[11px] font-black text-[var(--text-primary)]">All Dates</span>
-                <span className="text-[7.5px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Master profile · total gravity</span>
+                <span className="text-[11px] font-semibold text-[var(--text-primary)]">All Dates</span>
+                <span className="text-[7.5px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">Master profile · total gravity</span>
               </span>
             </span>
             {expiryTab === 'aggregated' && <Check className="w-3.5 h-3.5 text-[var(--success)] shrink-0" />}
@@ -1118,8 +1125,8 @@ export function DealerFlowView() {
                     {isActive && <Check className="w-2.5 h-2.5 text-[var(--accent-color)]" />}
                   </span>
                 )}
-                <span className="text-[12px] font-black tabular-nums text-[var(--text-primary)]">{item.date}</span>
-                <span className="text-[8px] font-black uppercase text-[var(--text-tertiary)] bg-[var(--surface-2)] px-1 rounded">{item.label}</span>
+                <span className="text-[12px] font-semibold tabular-nums text-[var(--text-primary)]">{item.date}</span>
+                <span className="text-[8px] font-semibold uppercase text-[var(--text-tertiary)] bg-[var(--surface-2)] px-1 rounded">{item.label}</span>
               </span>
               <span className="flex items-center gap-2 shrink-0">
                 <span className="text-[10px] font-mono font-bold tabular-nums text-[var(--text-secondary)]">{item.dteDays}DTE</span>
@@ -1154,7 +1161,7 @@ export function DealerFlowView() {
 
   const biasTone: Metric['tone'] = (gauge.pressure ?? 0) > 0 ? 'positive' : (gauge.pressure ?? 0) < 0 ? 'negative' : 'neutral';
 
-  const kpiMetrics: Metric[] = [
+  const supportMetrics: Metric[] = [
     {
       label: 'Spot',
       value: (
@@ -1196,15 +1203,6 @@ export function DealerFlowView() {
           ? `${distSub(view.gammaFlip) ?? ''}${view.gammaFlipConfident === false ? ' · est' : ''}`
           : undefined,
       tone: 'warning',
-    },
-    {
-      label: 'GEX',
-      value: view.netGex != null && isFinite(view.netGex) ? fmtGreek(view.netGex) : '—',
-      sub:
-        view.netGex != null && isFinite(view.netGex)
-          ? view.netGex >= 0 ? 'Net Positive' : 'Net Negative'
-          : 'no chain data',
-      tone: view.netGex != null && isFinite(view.netGex) ? (view.netGex >= 0 ? 'positive' : 'negative') : 'neutral',
     },
     {
       label: 'Net DEX',
@@ -1387,8 +1385,56 @@ export function DealerFlowView() {
 
   return (
     <div className="w-full space-y-[var(--gap)]" id="dealerflow-main-workspace-view">
-      {/* ============== KPI STRIP (9 tiles — render parity, real GEX/dealer fields) ============== */}
-      <MetricStrip metrics={kpiMetrics} columns={9} />
+      {/* ============== DEALER-GAMMA HEADER — one dominant figure (Net GEX) leads,
+           supporting reads run off it, hairline-separated (no uniform tile wall) ============== */}
+      <div className="slayer-panel flex flex-col overflow-hidden xl:flex-row">
+        <div className="shrink-0 border-b border-[var(--border-subtle)] px-4 py-3 xl:w-[256px] xl:border-b-0 xl:border-r">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Net GEX</span>
+            {headerAnalytics && (
+              <span
+                className="rounded-[4px] px-1.5 py-px text-[9px] font-semibold uppercase tracking-[0.12em] tabular-nums"
+                style={{
+                  color: headerAnalytics.positiveGamma ? 'var(--positive-ink)' : 'var(--negative-ink)',
+                  background: `color-mix(in srgb, ${headerAnalytics.positiveGamma ? 'var(--positive-ink)' : 'var(--negative-ink)'} 14%, transparent)`,
+                }}
+              >
+                {headerAnalytics.positiveGamma ? '+γ' : '−γ'}
+              </span>
+            )}
+          </div>
+          <div
+            className={`mt-1.5 slayer-num text-[26px] font-bold leading-none ${
+              view.netGex == null || !isFinite(view.netGex)
+                ? 'text-[var(--text-faint)]'
+                : view.netGex >= 0
+                  ? 'text-[var(--positive-ink)]'
+                  : 'text-[var(--negative-ink)]'
+            }`}
+          >
+            {view.netGex != null && isFinite(view.netGex) ? fmtGreek(view.netGex) : '—'}
+          </div>
+          <div className="mt-1.5 text-[11px] leading-tight text-[var(--text-secondary)]">
+            {headerAnalytics
+              ? `${headerAnalytics.positiveGamma ? 'Dealers stabilize · vol dampened' : 'Dealers amplify · vol expands'} · control ${headerAnalytics.controlScore}/100`
+              : 'awaiting chain'}
+          </div>
+        </div>
+        <div className="grid flex-1 grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+          {supportMetrics.map((m, i) => (
+            <div
+              key={`${m.label}-${i}`}
+              className={`min-w-0 border-[var(--border-subtle)] px-4 py-3 ${i !== 0 ? 'border-l' : ''}`}
+            >
+              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{m.label}</div>
+              <div className={`mt-1.5 slayer-num text-[17px] font-semibold leading-[1.1] [overflow-wrap:normal] [word-break:keep-all] ${SUPPORT_TONE_TEXT[m.tone || 'neutral']}`}>
+                {m.value}
+              </div>
+              {m.sub ? <div className="mt-1 text-[11px] leading-tight text-[var(--text-secondary)]">{m.sub}</div> : null}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* ============== ENGINE-VIEW SUB-TABS — the restored "other pages" ============== */}
       <ToggleGroup<'profile' | 'targets' | 'terminal'>

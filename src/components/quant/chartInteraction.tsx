@@ -111,7 +111,7 @@ export function ChartTools({ name, svgRef, fullscreenRef, csv }: ChartToolsProps
           <Download className="w-3.5 h-3.5" />
         </button>
         {open && (
-          <div className="absolute right-0 top-full mt-1 z-20 flex flex-col rounded-md border border-[var(--border)] bg-[var(--surface-2)] shadow-lg overflow-hidden min-w-[88px]">
+          <div className="absolute right-0 top-full mt-1 z-20 flex flex-col rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface-2)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] overflow-hidden min-w-[88px]">
             {svgRef && <button className={`${btn} text-left`} onClick={() => { exportSvg(svgRef.current, name); setOpen(false); }}>SVG</button>}
             {svgRef && <button className={`${btn} text-left`} onClick={() => { exportPng(svgRef.current, name); setOpen(false); }}>PNG</button>}
             {csv && <button className={`${btn} text-left`} onClick={() => { const { headers, rows } = csv(); exportCsv(headers, rows, name); setOpen(false); }}>CSV</button>}

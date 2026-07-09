@@ -275,19 +275,19 @@ function Panel({ children, className = '', soft = false, style }: { children: Re
 
 function PrimaryButton({ children, onClick, onDark = false }: { children: React.ReactNode; onClick?: () => void; onDark?: boolean }) {
   // Below the hero: themeable accent fill. On the (always-dark) hero: fixed
-  // light-on-dark so the CTA reads on the code-rain in every theme.
+  // light-on-dark so the CTA reads on the code-rain in every theme. No lift, no
+  // glow — the fill just brightens on hover (a control reacts, it doesn't float).
   const bg = onDark ? '#F8F8FF' : accentFill;
   const fg = onDark ? '#0A0806' : accentText;
   const bgHover = onDark ? '#ffffff' : accentBright;
-  const glow = onDark ? '0 6px 20px rgba(248,248,255,0.14)' : '0 6px 20px color-mix(in srgb, var(--accent-color) 22%, transparent)';
   return (
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,box-shadow] duration-200 will-change-transform"
+      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background] duration-150"
       style={{ background: bg, color: fg }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = glow; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = bg; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = bg; }}
     >
       {children}
     </button>
@@ -303,10 +303,10 @@ function GhostButton({ children, onClick, onDark = false }: { children: React.Re
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,border-color] duration-200 will-change-transform"
+      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,border-color] duration-150"
       style={{ background: 'transparent', color: fg, border: `1px solid ${bd}` }}
-      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = bdHover; }}
-      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = bd; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = bgHover; e.currentTarget.style.borderColor = bdHover; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = bd; }}
     >
       {children}
     </button>
@@ -466,14 +466,14 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
   const m = metrics;
   const emPts = isNum(m.expectedMovePct) && isNum(m.spot) ? m.expectedMovePct * m.spot : null;
   return (
-    <Panel className="overflow-hidden" style={{ boxShadow: '0 30px 80px -40px rgba(0,0,0,0.9)' }}>
+    <Panel className="overflow-hidden">
       {/* window bar */}
       <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${line}` }}>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-semibold tracking-[0.18em]" style={{ color: PALETTE.ghost }}>SLAYER_TERMINAL</span>
           <span className="text-[9px] tabular-nums" style={{ color: faint }}>· {ticker} · 0DTE</span>
         </div>
-        <span className="rounded-[4px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.steel, border: `1px solid ${line}` }}>
+        <span className="rounded-[7px] px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.14em]" style={{ color: PALETTE.steel, border: `1px solid ${line}` }}>
           Model preview
         </span>
       </div>
@@ -941,8 +941,10 @@ function SolutionSection() {
         </div>
         <div className="space-y-2.5">
           {bullets.map((b, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-[8px] p-3" style={{ background: PALETTE.panel, border: `1px solid ${line}` }}>
-              <span className="mt-[3px] h-3 w-3 shrink-0 rounded-[3px]" style={{ background: PALETTE.accent[i % 4] }} />
+            <div key={i} className="flex items-start gap-3 rounded-[10px] p-3" style={{ background: PALETTE.panel, border: `1px solid ${line}` }}>
+              {/* uniform quiet marker — a bullet is not data, so it stays grey
+                  rather than cycling the data-accent quartet decoratively */}
+              <span className="mt-[6px] h-px w-2.5 shrink-0" style={{ background: lineStrong }} />
               <span className="text-[13.5px]" style={{ color: PALETTE.text }}>{b}</span>
             </div>
           ))}
@@ -963,7 +965,7 @@ function ProductPreview({ ticker, metrics, ranked, pressure, spark, onEnter }: R
         </div>
         <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
           {modules.map((m) => (
-            <span key={m} className="rounded-[6px] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em]" style={{ color: muted, border: `1px solid ${line}` }}>{m}</span>
+            <span key={m} className="rounded-[7px] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em]" style={{ color: muted, border: `1px solid ${line}` }}>{m}</span>
           ))}
         </div>
         <div className="mt-8 text-center"><GhostButton onClick={() => onEnter('pinpoint')}>Open the Terminal</GhostButton></div>
@@ -996,16 +998,18 @@ function FeatureSection({ metrics, ranked, pressure, spark, onEnter }: { metrics
             key={f.t}
             type="button"
             onClick={() => onEnter(f.tab)}
-            className="group cursor-pointer text-left transition-transform duration-200 will-change-transform hover:-translate-y-[2px]"
+            className="group h-full cursor-pointer rounded-[10px] p-5 text-left transition-colors duration-150"
+            style={{ background: PALETTE.panel, border: `1px solid ${line}` }}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = lineStrong)}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = line)}
           >
-            <Panel className="h-full p-5 transition-shadow duration-200 group-hover:shadow-[0_0_0_1px_var(--border-strong),0_10px_30px_rgba(0,0,0,0.4)]">
-              <div className="flex items-center justify-between">
-                <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
-                <span className="text-[10px]" style={{ color: faint }}>→</span>
-              </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{f.d}</p>
-              <div className="mt-4">{f.visual}</div>
-            </Panel>
+            {/* no lift, no glow — hover only brightens the hairline border */}
+            <div className="flex items-center justify-between">
+              <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
+              <span className="text-[10px]" style={{ color: faint }}>→</span>
+            </div>
+            <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{f.d}</p>
+            <div className="mt-4">{f.visual}</div>
           </button>
         ))}
       </div>
@@ -1033,7 +1037,7 @@ function MicroPositioning({ rows, spot }: { rows: PressureRow[]; spot?: number |
   let spotI = rows.length ? rows.slice(0, 7).findIndex((r) => r.kind === 'spot') : -1;
   if (spotI < 0) { spotI = nets.findIndex((v, i) => i > 0 && nets[i - 1] >= 0 && v < 0); if (spotI < 0) spotI = Math.floor(nets.length / 2); }
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[64px] w-full" role="img" aria-label="Dealer positioning preview">
         <line x1={cx} x2={cx} y1={2} y2={H - 2} stroke={lineStrong} strokeWidth="1" />
         {nets.map((v, i) => {
@@ -1061,7 +1065,7 @@ function MicroRanked({ rows }: { rows: RankedRow[] }) {
     ? real.map((r) => ({ sym: r.symbol, conf: r.confidence, live: true }))
     : fallback.map((w) => ({ sym: '—', conf: w, live: false }));
   return (
-    <div className="space-y-[5px] rounded-[6px] p-2.5" style={MICRO_FRAME}>
+    <div className="space-y-[5px] rounded-[7px] p-2.5" style={MICRO_FRAME}>
       {items.map((it, i) => (
         <div key={i} className="flex items-center gap-2">
           <span className="w-9 shrink-0 text-[9px] font-semibold tabular-nums" style={{ color: it.live ? PALETTE.ghost : faint }}>{it.sym}</span>
@@ -1093,7 +1097,7 @@ function MicroGamma({ rows, spot, callWall, putWall }: { rows: PressureRow[]; sp
   };
   const cwI = idxNear(callWall); const pwI = idxNear(putWall); const spotI = idxNear(spot);
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[64px] w-full" role="img" aria-label="Net gamma by strike preview">
         <line x1={4} x2={W - 4} y1={mid} y2={mid} stroke={lineStrong} strokeWidth="1" />
         {nets.map((v, i) => {
@@ -1120,7 +1124,7 @@ function MicroHeatmap() {
     return `rgb(${c[0]},${c[1]},${c[2]})`;
   };
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }} role="img" aria-label="IV surface preview">
         {Array.from({ length: rowsN * cols }, (_, k) => {
           const r = Math.floor(k / cols); const c = k % cols;
@@ -1143,7 +1147,7 @@ function MicroHeatmap() {
 function MicroBlotter() {
   const ticks = [0.62, -0.28, 0.85, 0.4, -0.5]; // silhouette only — no numbers
   return (
-    <div className="rounded-[6px] px-2.5 py-1.5" style={MICRO_FRAME}>
+    <div className="rounded-[7px] px-2.5 py-1.5" style={MICRO_FRAME}>
       {ticks.map((v, i) => (
         <div key={i} className="flex items-center gap-2 py-[3px]" style={{ borderTop: i === 0 ? 'none' : `1px solid ${line}` }}>
           <span className="h-[5px] w-9 rounded-[2px]" style={{ background: 'color-mix(in srgb, var(--text-tertiary) 28%, transparent)' }} />
@@ -1177,7 +1181,7 @@ function MicroTicks({ data }: { data: number[] }) {
   }, [data]);
   const nodes = pts ? [0.25, 0.55, 0.85].map((f) => pts[Math.min(pts.length - 1, Math.round(f * (pts.length - 1)))]) : null;
   return (
-    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+    <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-[60px] w-full" role="img" aria-label="Live tick chart preview">
         {pts ? (
           <>
@@ -1300,23 +1304,23 @@ const PLANS: { key: string; name: string; tag: string; price: string; note: stri
 function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: number; onSelect: (p: (typeof PLANS)[number]) => void }) {
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-[12px] p-6 transition-[transform,border-color,box-shadow] duration-200 will-change-transform hover:-translate-y-[3px]"
+      className="group relative flex flex-col overflow-hidden rounded-[10px] p-6 transition-colors duration-150"
       style={{
         background: p.featured ? PALETTE.panel : PALETTE.panelSoft,
         border: `1px solid ${p.featured ? lineStrong : line}`,
-        boxShadow: p.featured ? '0 0 0 1px var(--border-strong), 0 30px 80px -50px rgba(0,0,0,0.9)' : 'none',
       }}
     >
-      {/* featured accent hairline — the flagship card carries the data palette */}
+      {/* featured accent hairline — a single semantic bar marks the recommended
+          tier (theme accent), not a decorative three-colour rainbow */}
       {p.featured ? (
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: `linear-gradient(90deg, ${PALETTE.steel}, ${PALETTE.amber}, ${PALETTE.green})` }} />
+        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: accentFill }} />
       ) : null}
       {/* oversized editorial tier index */}
-      <span aria-hidden="true" className="pointer-events-none absolute -top-2 right-4 select-none text-[56px] font-extrabold leading-none tabular-nums" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }}>
+      <span aria-hidden="true" className="pointer-events-none absolute -top-2 right-4 select-none text-[56px] font-semibold leading-none tabular-nums" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }}>
         0{index + 1}
       </span>
       {p.featured ? (
-        <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[5px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
+        <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[7px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
           Most Popular
         </span>
       ) : null}
@@ -1398,7 +1402,7 @@ function FaqSection() {
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
-                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[6px] px-2 py-4 text-left transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[7px] px-2 py-4 text-left transition-colors"
                 onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
@@ -1417,7 +1421,6 @@ function FaqSection() {
 function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
     <section className="relative overflow-hidden px-5 py-24" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(800px 360px at 50% 120%, rgba(106,147,181,0.12), transparent 70%)' }} />
       <div className="relative mx-auto max-w-2xl text-center">
         <h2 className="text-[30px] font-semibold leading-tight sm:text-[38px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
           From Traders. For Traders.
@@ -1583,11 +1586,12 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
 
       {/* main scroll area (its own scroller, so Lenis + progress rail + reveals work) */}
       <div ref={rootRef} className="slayer-scrollbar relative flex-1 overflow-y-auto overflow-x-hidden">
-        {/* scroll-progress rail — neutral steel→amber→green→red, pinned to top */}
+        {/* scroll-progress rail — a single flat accent hairline (theme accent),
+            not a decorative four-colour rainbow sweep */}
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none sticky left-0 top-0 z-[60] h-[2px] w-full origin-left"
-          style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.accent[0]}, ${PALETTE.accent[1]}, ${PALETTE.accent[2]}, ${PALETTE.accent[3]})` }}
+          className="pointer-events-none sticky left-0 top-0 z-[60] h-px w-full origin-left"
+          style={{ scaleX: scrollYProgress, background: accentFill }}
         />
         <LandingMobileNav onLaunch={onLaunch} onEnter={onEnter} scrollTop={scrollTop} />
         <div ref={contentRef} className="relative z-10">

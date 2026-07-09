@@ -62,21 +62,20 @@ export function GreeksMatrix({ profile, decimals = 0 }: { profile: GexProfileDat
   const heat = (v: number, mx: number) => Math.min(1, Math.abs(v) / mx);
   const cellBg = (v: number, mx: number) => { if (!v) return FIELD; const tok = v >= 0 ? 'var(--success)' : 'var(--danger)'; return `color-mix(in srgb, ${tok} ${Math.round(3 + Math.pow(heat(v, mx), 1.7) * 91)}%, ${FIELD})`; };
   const cellInk = (v: number, mx: number) => { const t = heat(v, mx); return t > 0.4 ? 'var(--text-primary)' : t > 0.1 ? 'var(--text-secondary)' : 'var(--text-tertiary)'; };
-  const cellGlow = (v: number, mx: number) => { const t = heat(v, mx); return t > 0.5 ? `, 0 0 ${Math.round((t - 0.5) * 26) + 4}px -3px color-mix(in srgb, ${v >= 0 ? 'var(--success)' : 'var(--danger)'} 62%, transparent)` : ''; };
   const wallOf = (k: number) => k === profile.callWall ? { t: 'CW', c: 'var(--success)' } : k === profile.putWall ? { t: 'PW', c: 'var(--danger)' } : k === profile.gammaFlip ? { t: 'FLIP', c: 'var(--warning)' } : (k === profile.magnet ? { t: 'PIN', c: 'var(--greek)' } : null);
 
   return (
     <div className="w-full overflow-x-auto hide-scrollbar">
       <div className="min-w-max font-mono text-[11px] tabular-nums select-none">
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-[var(--border)] text-[8px] font-black uppercase tracking-wider text-[var(--text-tertiary)] bg-[var(--surface)]">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-3 py-2 border-b border-[var(--border)] text-[8px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)] bg-[var(--surface)]">
           <span className="text-[var(--text-secondary)]">Dealer exposure / strike · per-column heat</span>
           <span><Term id="dex">DEX</Term> · Δ-exp</span><span><Term id="gex">GEX</Term> · Γ-exp</span><span><Term id="vex">VEX</Term> · vanna</span><span><Term id="cex">CEX</Term> · charm</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-[2px]" style={{ boxShadow: 'inset 0 0 0 1.5px var(--accent-color)' }} />Spot</span>
           <span style={{ color: 'var(--success)' }}>+ long</span><span style={{ color: 'var(--danger)' }}>− short</span>
         </div>
         {/* Header */}
-        <div className="grid sticky top-0 z-20 bg-[var(--surface)] border-b border-[var(--border)] text-[8px] font-black uppercase tracking-[0.12em]" style={{ gridTemplateColumns: template }}>
+        <div className="grid sticky top-0 z-20 bg-[var(--surface)] border-b border-[var(--border)] text-[8px] font-semibold uppercase tracking-[0.12em]" style={{ gridTemplateColumns: template }}>
           <div className={`${stick} z-30 bg-[var(--surface)] text-right text-[var(--text-tertiary)] self-stretch flex items-center justify-end pl-2 pr-2 py-2`}>Strike</div>
           {active.map(c => (
             <div key={c.key} className="text-center leading-tight self-center px-0.5 py-2">
@@ -93,11 +92,11 @@ export function GreeksMatrix({ profile, decimals = 0 }: { profile: GexProfileDat
               <div key={k} className="grid items-stretch" style={{ gridTemplateColumns: template, height: rowH }}>
                 <div className={`${stick} z-20 h-full flex flex-col items-end justify-center leading-none gap-px pr-2 pl-2`} style={{ background: isSpot ? 'color-mix(in srgb, var(--accent-color) 16%, var(--surface))' : isEm ? 'color-mix(in srgb, var(--info) 12%, var(--surface))' : 'var(--surface)', boxShadow: isSpot ? 'inset 3px 0 0 var(--accent-color), inset -1px 0 0 var(--border)' : isEm ? 'inset 3px 0 0 var(--info), inset -1px 0 0 var(--border)' : (w ? `inset 3px 0 0 ${w.c}, inset -1px 0 0 var(--border)` : 'inset -1px 0 0 var(--border)') }}>
                   <span className="font-bold" style={{ color: isSpot ? 'var(--accent-color)' : isEm ? 'var(--info)' : 'var(--text-secondary)' }}>{Number.isInteger(k) ? k.toLocaleString('en-US') : nf(k)}</span>
-                  {(w || isEm) && <span className="text-[6.5px] font-black uppercase tracking-wider" style={{ color: w ? w.c : 'var(--info)' }}>{w ? w.t : 'EM'}</span>}
+                  {(w || isEm) && <span className="text-[6.5px] font-semibold uppercase tracking-[0.14em]" style={{ color: w ? w.c : 'var(--info)' }}>{w ? w.t : 'EM'}</span>}
                 </div>
                 {active.map(c => { const v = c.get(s), mx = maxAbs[c.key]; return (
-                  <div key={c.key} className="h-full flex items-center justify-center" style={{ background: cellBg(v, mx), boxShadow: `${hair}${cellGlow(v, mx)}` }}>
-                    <span style={{ color: v ? cellInk(v, mx) : 'var(--text-tertiary)', fontWeight: heat(v, mx) > 0.5 ? 800 : 600 }}>{v ? fmtG(v) : '·'}</span>
+                  <div key={c.key} className="h-full flex items-center justify-center" style={{ background: cellBg(v, mx), boxShadow: hair }}>
+                    <span style={{ color: v ? cellInk(v, mx) : 'var(--text-tertiary)', fontWeight: heat(v, mx) > 0.5 ? 700 : 600 }}>{v ? fmtG(v) : '·'}</span>
                   </div>
                 ); })}
               </div>
@@ -105,11 +104,11 @@ export function GreeksMatrix({ profile, decimals = 0 }: { profile: GexProfileDat
           })}
           {/* Boxed current strike — accent ring around the live-price row */}
           {spotIdx >= 0 && (
-            <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: spotIdx * PITCH - 1, height: rowH + 2, boxShadow: 'inset 0 0 0 1.5px var(--accent-color)', borderRadius: 3 }} />
+            <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: spotIdx * PITCH - 1, height: rowH + 2, boxShadow: 'inset 0 0 0 1.5px var(--accent-color)' }} />
           )}
         </div>
         {/* Totals */}
-        <div className="grid sticky bottom-0 bg-[var(--surface)] border-t border-[var(--border-strong)] text-[9px] font-black z-20" style={{ gridTemplateColumns: template }}>
+        <div className="grid sticky bottom-0 bg-[var(--surface)] border-t border-[var(--border-strong)] text-[9px] font-semibold z-20" style={{ gridTemplateColumns: template }}>
           <div className={`${stick} z-30 bg-[var(--surface)] text-right text-[var(--text-tertiary)] uppercase tracking-[0.1em] text-[8px] flex items-center justify-end pl-2 pr-2 py-2`}>Net</div>
           {active.map(c => (<div key={c.key} className="text-center self-center py-2" style={{ color: tot[c.key] >= 0 ? 'var(--success)' : 'var(--danger)' }}>{fmtG(tot[c.key])}</div>))}
         </div>

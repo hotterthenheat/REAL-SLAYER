@@ -35,7 +35,7 @@ export function DataStateBadge({ state, label, title, className = '' }: Props) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9px] font-black uppercase tracking-widest ${m.cls} ${className}`}
+      className={`inline-flex items-center rounded-[7px] border px-1.5 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-widest ${m.cls} ${className}`}
     >
       {label ?? m.label}
     </span>

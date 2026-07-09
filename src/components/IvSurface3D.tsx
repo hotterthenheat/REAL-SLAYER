@@ -37,12 +37,12 @@ interface SurfaceApi { reset: () => void; png: () => void }
 
 const CAM_DEFAULT = new THREE.Vector3(150, 150, 185);
 
-/** Sequential cool→hot vertex colour for a normalized IV level t∈[0,1]. */
+/** Sequential vertex colour on Slayer accents for a normalized IV level t∈[0,1]. */
 function ivColor(t: number): [number, number, number] {
   const u = Math.min(1, Math.max(0, t));
-  // teal (low) → amber (mid) → red (high)
-  if (u < 0.5) { const k = u / 0.5; return [0.13 + k * 0.77, 0.55 + k * 0.20, 0.55 - k * 0.30]; }
-  const k = (u - 0.5) / 0.5; return [0.90 + k * 0.05, 0.75 - k * 0.55, 0.25 - k * 0.10];
+  // steel #6A93B5 (calm) → amber #C79350 (mid) → red #B23B3B (stressed)
+  if (u < 0.5) { const k = u / 0.5; return [0.42 + k * 0.36, 0.58 + k * 0.00, 0.71 - k * 0.40]; }
+  const k = (u - 0.5) / 0.5; return [0.78 - k * 0.08, 0.58 - k * 0.35, 0.31 - k * 0.08];
 }
 
 export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }: IvSurface3DProps) {
@@ -193,21 +193,21 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
     model.dtes.forEach((d, ei) => model.strikes.forEach((k, ki) => rows.push([d, ei === 0 ? 'real' : 'model', k.toFixed(2), model.iv[ei][ki].toFixed(5)])));
     exportCsv(['dte', 'source', 'strike', 'iv'], rows, `iv-surface-${ticker || 'spx'}`);
   };
-  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
+  const toolBtn = 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors p-1 rounded-[7px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]';
 
   if (!model) {
     return (
-      <div className="h-[300px] rounded-lg border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
+      <div className="h-[300px] rounded-[10px] border border-[var(--border)] bg-[var(--surface-2)] flex items-center justify-center">
         <span className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest">Front smile too sparse for an IV surface</span>
       </div>
     );
   }
 
   return (
-    <div ref={wrapRef} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+    <div ref={wrapRef} className="rounded-[10px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
       <div className="flex items-center justify-between px-3.5 py-2 border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
-          <span className="w-[3px] h-3.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
+          <span className="w-[3px] h-3.5 rounded-[1px]" style={{ background: 'color-mix(in srgb, var(--accent-color) 55%, transparent)' }} />
           <span className="text-[11px] font-bold tracking-[0.14em] uppercase text-[var(--text-primary)]">
             Implied Volatility Surface{ticker ? ` · ${ticker}` : ''}
           </span>
@@ -217,18 +217,18 @@ export function IvSurface3D({ chain, spot, frontDteDays, decimals = 0, ticker }:
           <button className={toolBtn} onClick={() => apiRef.current?.png()} title="Export PNG" aria-label="Export PNG"><Download className="w-3.5 h-3.5" /></button>
           <button className={toolBtn} onClick={dumpCsv} title="Export CSV" aria-label="Export CSV"><span className="text-[9px] font-bold tracking-wider">CSV</span></button>
           <button className={toolBtn} onClick={fullscreen} title="Fullscreen" aria-label="Fullscreen"><Maximize2 className="w-3.5 h-3.5" /></button>
-          <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase ml-1" style={{ color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }} title="Front row real; DTE axis is a Heston forward-variance term model">MODEL MODE</span>
+          <span className="text-[9px] font-semibold tracking-widest px-1.5 py-0.5 rounded-[7px] uppercase ml-1" style={{ color: 'var(--warning)', background: 'color-mix(in srgb, var(--warning) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--warning) 30%, transparent)' }} title="Front row real; DTE axis is a Heston forward-variance term model">MODEL MODE</span>
         </div>
       </div>
 
       <div ref={mountRef} className="relative w-full h-[440px] cursor-grab active:cursor-grabbing" style={{ touchAction: 'none' }}>
-        <div ref={hoverRef} className="pointer-events-none absolute z-10 px-2 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg" style={{ display: 'none' }} />
+        <div ref={hoverRef} className="pointer-events-none absolute z-10 px-2 py-1 rounded-[7px] bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg" style={{ display: 'none' }} />
       </div>
 
       <div className="flex items-center gap-4 px-3.5 py-2 border-t border-[var(--border)] text-[10px] text-[var(--text-tertiary)] flex-wrap">
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm" style={{ background: 'rgb(33,140,140)' }} /> low IV</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm" style={{ background: 'rgb(230,191,64)' }} /> mid</span>
-        <span className="flex items-center gap-1.5"><span className="w-3 h-2 rounded-sm" style={{ background: 'rgb(242,51,38)' }} /> high IV</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(106,147,181)' }} /> low IV</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(199,147,80)' }} /> mid</span>
+        <span className="flex items-center gap-1.5"><span className="w-3 h-2" style={{ background: 'rgb(178,59,59)' }} /> high IV</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-[2px]" style={{ background: '#fff' }} /> real front edge</span>
         <span className="ml-auto uppercase tracking-widest">drag rotate · scroll zoom · right-drag pan</span>
       </div>

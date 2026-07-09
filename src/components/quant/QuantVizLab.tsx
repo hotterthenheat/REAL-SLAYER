@@ -36,11 +36,11 @@ function VizPanel({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col rounded-lg border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
+    <div className="flex flex-col rounded-[10px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-3 py-2">
         <div className="flex items-center gap-2 min-w-0">
           {icon && <span className="text-[var(--text-tertiary)] [&>svg]:h-3.5 [&>svg]:w-3.5">{icon}</span>}
-          <span className="font-mono text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] truncate">
+          <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)] truncate">
             {term ?? title}
           </span>
           {subtitle && <span className="font-mono text-[9px] uppercase tracking-wider text-[var(--text-tertiary)] truncate hidden sm:inline">{subtitle}</span>}
@@ -71,23 +71,23 @@ export default function QuantVizLab() {
   const refresh = () => { setSeed(s => s + 1); toast.info('Regenerated mock feed', { description: 'Swap generators for a live feed once API keys are set.' }); };
 
   return (
-    <section className="space-y-4" id="quant-viz-lab" aria-label="Quant visual analytics">
+    <section className="space-y-3" id="quant-viz-lab" aria-label="Quant visual analytics">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Boxes className="h-4 w-4 text-[var(--accent-color)]" />
-          <h2 className="font-mono text-xs font-black uppercase tracking-widest text-[var(--text-primary)]">Quant Lab · Visual Analytics</h2>
-          <span className="rounded border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-wider text-[var(--text-tertiary)]">mock feed</span>
+          <Boxes className="h-3.5 w-3.5 text-[var(--text-tertiary)]" />
+          <h2 className="font-mono text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)]">Quant Lab · Visual Analytics</h2>
+          <span className="rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-[var(--text-tertiary)]">mock feed</span>
         </div>
         <button
           onClick={refresh}
-          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]"
+          className="inline-flex items-center gap-1.5 rounded-[7px] border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-[var(--text-tertiary)] transition-colors hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]"
         >
           <RefreshCw className="h-3 w-3" /> Regenerate
         </button>
       </div>
 
       {/* Row 1: intraday price (wide) + equity curve */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <VizPanel
           title="Intraday Price"
           subtitle="candles · MA20 · MA60 · volume"
@@ -112,7 +112,7 @@ export default function QuantVizLab() {
       </div>
 
       {/* Row 2: two real 3D surfaces (three.js) — drag to orbit · scroll to zoom */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         <VizPanel
           title="Implied Vol Surface"
           term={<Term id="iv">Implied Vol Surface</Term>}

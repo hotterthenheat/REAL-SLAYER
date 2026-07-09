@@ -22,7 +22,7 @@ export function TradePlanCard() {
 
   if (!plan) {
     return (
-      <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 text-center">
+      <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-4 text-center">
         <p className="text-[10px] uppercase tracking-widest text-[var(--text-tertiary)] animate-pulse">Building trade plan…</p>
       </div>
     );
@@ -50,12 +50,12 @@ export function TradePlanCard() {
   ];
 
   return (
-    <div className="rounded-xl border p-4 flex flex-col gap-4 shadow-2xl" style={{ borderColor: `${dirTone}55`, background: `linear-gradient(180deg, ${dirTone}0D, var(--surface))` }}>
+    <div className="rounded-[var(--radius-panel)] border border-l-2 bg-[var(--surface)] p-4 flex flex-col gap-4" style={{ borderColor: 'var(--border)', borderLeftColor: dirTone }}>
       {/* Header */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-2 flex-wrap border-b border-[var(--border)] pb-3">
         <Crosshair className="w-4 h-4" style={{ color: dirTone }} />
-        <h2 className="text-xs font-black tracking-widest uppercase text-[var(--text-primary)]">Sky's Vision Plan — {plan.ticker} {optionExpiryLabel(selectedAsset)}</h2>
-        <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-sm border ml-auto" style={{ color: dirTone, borderColor: `${dirTone}66`, background: `${dirTone}14` }}>
+        <h2 className="text-[13px] font-semibold tracking-[0.08em] uppercase text-[var(--text-tertiary)]">Sky's Vision Plan — {plan.ticker} {optionExpiryLabel(selectedAsset)}</h2>
+        <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-[var(--radius-control)] border ml-auto" style={{ color: dirTone, borderColor: `${dirTone}66`, background: `${dirTone}14` }}>
           <DirIcon className="w-3 h-3" /> {plan.direction}
         </span>
       </div>
@@ -67,16 +67,16 @@ export function TradePlanCard() {
       </div>
 
       {/* Headline contract */}
-      <div className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
-        <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Target Contract</span>
-        <span className="text-[16px] font-black tabular-nums" style={{ color: dirTone }}>{plan.ticker} {plan.contract}</span>
+      <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+        <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">Target Contract</span>
+        <span className="text-[16px] font-bold tabular-nums" style={{ color: dirTone }}>{plan.ticker} {plan.contract}</span>
       </div>
 
       {/* Reasoned target ladder — vertical price rail */}
-      <div className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+      <div className="flex flex-col gap-2 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] p-3">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)]">Price Ladder</span>
-          <span className="text-[9px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Entry {fmt(plan.entryZone[0])}–{fmt(plan.entryZone[1])}</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-secondary)]">Price Ladder</span>
+          <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">Entry {fmt(plan.entryZone[0])}–{fmt(plan.entryZone[1])}</span>
         </div>
         <PriceLadder
           spot={spot}
@@ -101,23 +101,23 @@ export function TradePlanCard() {
       {/* Context meters — win rate + hold + flow + confirm + regime */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
         <MiniMeter label="Win Rate" value={plan.winRate} tone={plan.winRate >= 65 ? 'var(--success)' : plan.winRate >= 50 ? 'var(--warning)' : 'var(--danger)'} />
-        <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
-          <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] flex items-center gap-1"><Clock className="w-3 h-3" />Hold</span>
-          <span className="text-[11px] font-black tabular-nums text-[var(--text-secondary)]">{plan.expectedHoldMin}m</span>
+        <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)] flex items-center gap-1"><Clock className="w-3 h-3" />Hold</span>
+          <span className="text-[11px] font-bold tabular-nums text-[var(--text-secondary)]">{plan.expectedHoldMin}m</span>
         </div>
-        <div className="flex items-center justify-between rounded-lg border bg-[var(--surface)] px-2.5 py-2" style={{ borderColor: plan.dealerFlow.includes('Positive') ? 'color-mix(in srgb, var(--success) 30%, transparent)' : 'color-mix(in srgb, var(--danger) 30%, transparent)' }}>
-          <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Dealer Flow</span>
-          <span className="text-[10px] font-black uppercase" style={{ color: plan.dealerFlow.includes('Positive') ? 'var(--success)' : 'var(--danger)' }}>{plan.dealerFlow.split(' ')[0]} γ</span>
+        <div className="flex items-center justify-between rounded-[var(--radius-control)] border bg-[var(--surface)] px-2.5 py-2" style={{ borderColor: plan.dealerFlow.includes('Positive') ? 'color-mix(in srgb, var(--success) 30%, transparent)' : 'color-mix(in srgb, var(--danger) 30%, transparent)' }}>
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">Dealer Flow</span>
+          <span className="text-[10px] font-bold uppercase" style={{ color: plan.dealerFlow.includes('Positive') ? 'var(--success)' : 'var(--danger)' }}>{plan.dealerFlow.split(' ')[0]} γ</span>
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
-          <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)]">Flow Confirm</span>
-          <span className="flex items-center gap-1 text-[10px] font-black uppercase" style={{ color: plan.flowConfirmation ? 'var(--success)' : 'var(--text-tertiary)' }}>
+        <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2">
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">Flow Confirm</span>
+          <span className="flex items-center gap-1 text-[10px] font-bold uppercase" style={{ color: plan.flowConfirmation ? 'var(--success)' : 'var(--text-tertiary)' }}>
             {plan.flowConfirmation ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}{plan.flowConfirmation ? 'Yes' : 'No'}
           </span>
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 col-span-2 sm:col-span-2">
-          <span className="text-[8px] font-black uppercase tracking-widest text-[var(--text-tertiary)] flex items-center gap-1"><Activity className="w-3 h-3" />Regime</span>
-          <span className="text-[10px] font-black uppercase text-[var(--text-secondary)] truncate ml-2">{plan.trendRegime}</span>
+        <div className="flex items-center justify-between rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 col-span-2 sm:col-span-2">
+          <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--text-tertiary)] flex items-center gap-1"><Activity className="w-3 h-3" />Regime</span>
+          <span className="text-[10px] font-bold uppercase text-[var(--text-secondary)] truncate ml-2">{plan.trendRegime}</span>
         </div>
       </div>
 
