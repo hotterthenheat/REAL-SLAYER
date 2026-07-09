@@ -8,8 +8,7 @@ import { formatTime } from './lib/timeUtils';
 
 // Import Workspace Modular Views — eager imports are the shell + landing path.
 import { DiscoveryView } from './components/DiscoveryView';
-import SlayerIntro from './components/SlayerIntro';
-import SlayerHomeTerminal from './components/SlayerHomeTerminal';
+import SlayerLanding from './components/SlayerLanding';
 import { SkyseyeAlertHub } from './components/SkyseyeAlertHub';
 import TierGuard from './components/TierGuard';
 import { ClerkGate } from './components/ClerkGate';
@@ -20,8 +19,8 @@ import { Toaster } from './components/ui/toast';
 import { useTrackingResolver } from './lib/useTrackingResolver';
 import { Spinner } from './components/ui/Spinner';
 import { LegalCenter, useLegal } from './components/LegalCenter';
-// Eagerly imported because SlayerIntro (also eager, on the landing path) imports it
-// statically — a lazy() wrapper here can't code-split it and only warns at build.
+// Eagerly imported — used directly by the Subscription tab; a lazy() wrapper here
+// can't code-split it cleanly and only warns at build.
 import { SubscriptionPricing } from './components/SubscriptionPricing';
 
 // Heavy secondary views are code-split (lazy) to keep the initial bundle small;
@@ -922,6 +921,71 @@ export default function App() {
     );
   }
 
+  // ── HOME = full-screen marketing landing for EVERYONE (guest + authenticated).
+  // The previous authenticated Home dashboard (SlayerHomeTerminal) is retired. The
+  // landing's hero/preview mockups read real GEX/chain/candle fields off serverState;
+  // absent fields render an honest "—". Product nav enters the app shell; the waitlist
+  // CTA opens the real sign-up gate (mounted here since the landing bypasses AppShell).
+  if (activeTab === 'home') {
+    const isFiniteNum = (v: any): v is number => typeof v === 'number' && isFinite(v);
+    const gp: any = serverState?.gex_profile ?? null;
+    const landingMetrics = {
+      spot: isFiniteNum(gp?.spot) ? gp.spot : null,
+      netGex: isFiniteNum(gp?.netGex) ? gp.netGex : null,
+      callWall: isFiniteNum(gp?.callWall) ? gp.callWall : null,
+      putWall: isFiniteNum(gp?.putWall) ? gp.putWall : null,
+      pin: isFiniteNum(gp?.magnet) ? gp.magnet : null,
+      expectedMovePct: isFiniteNum(gp?.expectedMovePct) ? gp.expectedMovePct : null,
+    };
+    const landingPressure = (() => {
+      const strikes: any[] = Array.isArray(gp?.strikes) ? gp.strikes : [];
+      if (!strikes.length || !isFiniteNum(gp?.spot)) return [] as any[];
+      return [...strikes]
+        .sort((a, b) => Math.abs(a.strike - gp.spot) - Math.abs(b.strike - gp.spot))
+        .slice(0, 9)
+        .sort((a, b) => b.strike - a.strike)
+        .map((s: any) => ({
+          strike: s.strike,
+          net: isFiniteNum(s.netGex) ? s.netGex : 0,
+          kind: s.strike === gp.callWall ? 'callWall' : s.strike === gp.putWall ? 'putWall' : s.strike === gp.magnet ? 'pin' : undefined,
+        }));
+    })();
+    const landingRanked = [
+      ...(discovery?.mispricedCalls || []).slice(0, 4).map((c: any) => ({ symbol: `${c.asset?.ticker ?? '—'} ${c.strike}C`, setup: c.setup || 'Mispriced', bias: 'BULL' as const, confidence: Math.round(c.health ?? 0), expMovePct: landingMetrics.expectedMovePct })),
+      ...(discovery?.mispricedPuts || []).slice(0, 2).map((p: any) => ({ symbol: `${p.asset?.ticker ?? '—'} ${p.strike}P`, setup: p.setup || 'Mispriced', bias: 'BEAR' as const, confidence: Math.round(p.health ?? 0), expMovePct: landingMetrics.expectedMovePct })),
+    ].sort((a, b) => b.confidence - a.confidence).slice(0, 6);
+    const landingSpark = Array.isArray(serverState?.candles) ? serverState.candles.map((c: any) => c.close).filter(isFiniteNum).slice(-60) : [];
+
+    return (
+      <>
+        <SlayerLanding
+          ticker={selectedAsset?.ticker || 'SPX'}
+          metrics={landingMetrics}
+          ranked={landingRanked}
+          pressure={landingPressure}
+          spark={landingSpark}
+          onEnter={(tab) => handleSelectTab((tab as any) || 'pinpoint')}
+          onJoinWaitlist={() => setShowAuthModal(true)}
+        />
+        {showAuthModal && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
+            <ClerkGate
+              referralCodeFromUrl={window.location.pathname.startsWith('/join/') ? window.location.pathname.replace('/join/', '') : undefined}
+              onSuccess={(user) => { setSession(user); setShowAuthModal(false); fetchSession(); }}
+              onClose={() => setShowAuthModal(false)}
+            />
+          </div>
+        )}
+        <CelebrationOverlay
+          purchasedTier={welcomeCelebrationTier}
+          isOpen={showWelcomeCelebration}
+          onComplete={() => { setShowWelcomeCelebration(false); }}
+        />
+        <LegalCenter />
+      </>
+    );
+  }
+
   const isCall = selectedOptionType === 'C';
 
   // The page frame follows the active theme's design tokens (set by <html data-theme>;
@@ -979,7 +1043,6 @@ export default function App() {
           >
             <ErrorBoundary
               label={
-                activeTab === 'home' ? 'Home' :
                 activeTab === 'subscription' ? 'Subscriptions' :
                 activeTab === 'skyvision' ? 'SkyVision Cockpit' :
                 activeTab === 'pinpoint' ? 'Pinpoint GEX' :
@@ -995,39 +1058,8 @@ export default function App() {
               key={activeTab}
             >
             <Suspense fallback={<div className="w-full min-h-[300px] flex items-center justify-center text-[var(--text-tertiary)] font-mono text-[11px] uppercase tracking-[0.25em] animate-pulse">Loading module…</div>}>
-            {/* TAB 1: HOME — authenticated users get the terminal dashboard in its own
-                TerminalShell chrome (per the refactor report); guests keep the landing. */}
-            {activeTab === 'home' && session?.authenticated && (
-              <SlayerHomeTerminal />
-            )}
-            {activeTab === 'home' && !session?.authenticated && (
-              <div className="animate-fadeIn">
-                <SlayerIntro
-                  onEnterApp={(targetTab) => {
-                    const mappedTab = targetTab === 'quant' ? 'auditor' : (targetTab || 'skyvision');
-                    handleSelectTab(mappedTab as any);
-                  }} 
-                  onUpgradeComplete={(newTier) => {
-                    setWelcomeCelebrationTier(newTier);
-                    setShowWelcomeCelebration(true);
-                  }}
-                  selectedAsset={selectedAsset}
-                  setSelectedAsset={setSelectedAsset}
-                  selectedTimeframe={selectedTimeframe}
-                  setSelectedTimeframe={setSelectedTimeframe}
-                  systemScore={serverState.system_score}
-                  v8Trades={serverState.trade_archive}
-                  bestOpportunity={bestOpportunity}
-                  topSub10Calls={topSub10Calls}
-                  topSub10Puts={topSub10Puts}
-                  onSelectOpportunity={(asset, type, strike) => {
-                    handleSelectOpportunity(asset, type, strike);
-                  }}
-                  session={session}
-                  onRequestAuth={() => setShowAuthModal(true)}
-                />
-              </div>
-            )}
+            {/* TAB 1: HOME is handled by the full-screen SlayerLanding early-return above
+                (shown for everyone); it never reaches the AppShell body. */}
 
             {activeTab === 'subscription' && (
               <div className="view-enter w-full mx-auto min-h-screen">
