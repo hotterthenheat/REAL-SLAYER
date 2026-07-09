@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { 
-  Settings, 
-  HelpCircle, 
-  Type, 
-  Eye, 
-  Palette, 
-  RefreshCw, 
-  Coins, 
-  Share2, 
-  Receipt, 
+import {
+  Settings,
+  HelpCircle,
+  Type,
+  Eye,
+  Palette,
+  RefreshCw,
+  Coins,
+  Share2,
+  Receipt,
   Calculator,
   ShieldAlert,
   FolderSync,
@@ -19,7 +19,14 @@ import {
   RotateCcw,
   Monitor,
   Check,
-  Clock
+  Clock,
+  Bell,
+  Globe,
+  Mail,
+  KeyRound,
+  Trash2,
+  Download,
+  Keyboard,
 } from 'lucide-react';
 import { UserProfile } from './UserProfile';
 import { TwoFactorFlow } from './TwoFactorFlow';
@@ -37,6 +44,149 @@ const THEME_GROUPS = [...new Set(THEMES.map((t) => t.group))];
 interface SettingsPanelProps {
   session: any;
   onUpdateSession: () => void;
+}
+
+/* ────────────────────────────────────────────────────────────────────────────
+   Shared presentational primitives — VISUAL ONLY. These enforce a single panel
+   style, one control style, one toggle, and a consistent button hierarchy across
+   every settings section. They reference the app's themeable semantic tokens
+   (--surface / --accent-color / --text-* / --success / --danger) so the panel
+   keeps following the active theme and light mode, exactly as before.
+   ──────────────────────────────────────────────────────────────────────────── */
+
+const CONTROL =
+  'w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm text-[var(--text-primary)] ' +
+  'placeholder:text-[var(--text-tertiary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ' +
+  'focus:border-[var(--border-strong)] transition-colors';
+
+const FIELD_LABEL = 'block text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)] mb-1.5';
+
+const BTN_BASE =
+  'inline-flex items-center justify-center gap-2 rounded-lg text-xs font-bold transition-colors ' +
+  'disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer';
+const BTN_PRIMARY = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--text-primary)] text-[var(--bg-base)] hover:opacity-90`;
+const BTN_SECONDARY = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border)] hover:bg-[var(--surface-3)] hover:border-[var(--border-strong)]`;
+const BTN_GHOST = `${BTN_BASE} px-3 py-2 min-h-[36px] font-semibold text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]`;
+const BTN_DANGER = `${BTN_BASE} px-4 py-2 min-h-[40px] text-[var(--danger)] border border-[var(--danger)]/30 bg-[var(--danger)]/10 hover:bg-[var(--danger)]/20 hover:border-[var(--danger)]/50`;
+const BTN_DANGER_SOLID = `${BTN_BASE} px-4 py-2 min-h-[40px] bg-[var(--danger)] text-[var(--bg-base)] hover:brightness-110`;
+
+const segBtn = (active: boolean) =>
+  `flex-1 min-h-[40px] px-3 rounded-lg border text-xs font-semibold transition-colors cursor-pointer ${
+    active
+      ? 'bg-[var(--accent-color)]/15 border-[var(--accent-color)] text-[var(--text-primary)]'
+      : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
+  }`;
+
+/** The single settings panel frame: hairline border, titled uppercase header,
+ *  optional actions slot and description. One border per section — no card-in-card. */
+function SettingsCard({
+  icon: Icon,
+  title,
+  description,
+  actions,
+  tone = 'default',
+  children,
+}: {
+  icon?: React.ElementType;
+  title: string;
+  description?: React.ReactNode;
+  actions?: React.ReactNode;
+  tone?: 'default' | 'danger';
+  children?: React.ReactNode;
+}) {
+  const danger = tone === 'danger';
+  return (
+    <section
+      className={`bg-[var(--surface)] rounded-xl overflow-hidden border ${
+        danger ? 'border-[var(--danger)]/25' : 'border-[var(--border)]'
+      }`}
+    >
+      <header
+        className={`flex items-center justify-between gap-3 px-5 py-3.5 border-b ${
+          danger ? 'border-[var(--danger)]/20' : 'border-[var(--border)]'
+        }`}
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          {Icon ? (
+            <Icon className={`w-4 h-4 shrink-0 ${danger ? 'text-[var(--danger)]' : 'text-[var(--text-tertiary)]'}`} />
+          ) : null}
+          <h3
+            className={`text-[11px] font-bold uppercase tracking-[0.18em] truncate ${
+              danger ? 'text-[var(--danger)]' : 'text-[var(--text-secondary)]'
+            }`}
+          >
+            {title}
+          </h3>
+        </div>
+        {actions ? <div className="shrink-0">{actions}</div> : null}
+      </header>
+      <div className="p-5 space-y-5">
+        {description ? <p className="text-xs text-[var(--text-tertiary)] leading-relaxed">{description}</p> : null}
+        {children}
+      </div>
+    </section>
+  );
+}
+
+/** The one and only switch used across settings. */
+function Toggle({
+  checked,
+  onChange,
+  disabled,
+  label,
+  description,
+}: {
+  checked: boolean;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  disabled?: boolean;
+  label: string;
+  description?: string;
+}) {
+  return (
+    <label
+      className={`flex items-center justify-between gap-4 select-none ${
+        disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'
+      }`}
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold text-[var(--text-primary)]">{label}</span>
+        {description ? (
+          <span className="block text-xs text-[var(--text-tertiary)] mt-0.5 leading-snug">{description}</span>
+        ) : null}
+      </span>
+      <span className="relative inline-flex items-center shrink-0">
+        <input type="checkbox" checked={checked} disabled={disabled} onChange={onChange} className="peer sr-only" />
+        <span className="w-9 h-5 rounded-full bg-[var(--surface-3)] transition-colors peer-checked:bg-[var(--accent-color)] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-4 after:w-4 after:rounded-full after:bg-[var(--text-tertiary)] after:transition-all peer-checked:after:translate-x-full peer-checked:after:bg-[var(--bg-base)]" />
+      </span>
+    </label>
+  );
+}
+
+/** Inline validation/status message with a consistent tone. */
+function InlineAlert({ tone, children }: { tone: 'error' | 'success'; children: React.ReactNode }) {
+  const ok = tone === 'success';
+  return (
+    <div
+      role={ok ? 'status' : 'alert'}
+      className={`text-xs font-semibold rounded-lg px-3 py-2 border ${
+        ok
+          ? 'text-[var(--success)] border-[var(--success)]/30 bg-[var(--success)]/10'
+          : 'text-[var(--danger)] border-[var(--danger)]/30 bg-[var(--danger)]/10'
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+/** Quiet contextual footnote used at the bottom of a section group. */
+function InfoNote({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+      <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5 text-[var(--text-tertiary)]" />
+      <span>{children}</span>
+    </div>
+  );
 }
 
 // Referral code display + apply box (spec §B). Shows the user's strict
@@ -79,28 +229,28 @@ function ReferralCodeBox() {
   };
 
   return (
-    <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 space-y-4">
+    <div className="space-y-5">
       <div>
-        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">Your Referral Code</span>
-        <div className="flex items-center gap-2 mt-1.5">
-          <code className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm font-mono font-bold text-[var(--success)] tracking-widest">{code || '…'}</code>
-          <CopyButton content={code} size="md" label="Copy" className="py-2.5" />
+        <span className={FIELD_LABEL}>Your referral code</span>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 min-w-0 truncate bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm font-mono font-bold text-[var(--success)] tracking-widest">{code || '…'}</code>
+          <CopyButton content={code} size="md" label="Copy" className="py-2.5 shrink-0" />
         </div>
-        <p className="text-[10px] text-[var(--text-tertiary)] mt-1.5">Share this code — referees get 10% off and you earn +1 token per use.</p>
+        <p className="text-[11px] text-[var(--text-tertiary)] mt-1.5 leading-snug">Share this code — referees get 10% off and you earn +1 token per use.</p>
       </div>
-      <div className="pt-3 border-t border-[var(--border)]">
-        <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">Apply a Referral Code</span>
-        <div className="flex items-center gap-2 mt-1.5">
+      <div className="pt-5 border-t border-[var(--border)]">
+        <span className={FIELD_LABEL}>Apply a referral code</span>
+        <div className="flex items-center gap-2">
           <input
             aria-label="Apply a referral code"
             value={applyInput}
             onChange={(e) => setApplyInput(e.target.value.toUpperCase())}
             placeholder="FRND10OFF"
-            className="flex-1 bg-[var(--surface)] border border-[var(--border)] rounded-lg px-3 py-2.5 text-sm font-mono text-[var(--text-primary)] uppercase placeholder:text-[var(--text-tertiary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors"
+            className={`${CONTROL} font-mono uppercase`}
           />
-          <button onClick={apply} disabled={applying} className="px-4 py-2.5 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-[10px] font-bold uppercase tracking-widest disabled:opacity-50 transition-colors">{applying ? '…' : 'Apply'}</button>
+          <button onClick={apply} disabled={applying} className={`${BTN_PRIMARY} shrink-0`}>{applying ? '…' : 'Apply'}</button>
         </div>
-        {applyMsg && <p role="alert" className={`text-[10px] mt-1.5 ${applyMsg.ok ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{applyMsg.text}</p>}
+        {applyMsg && <p role="alert" className={`text-[11px] mt-2 font-semibold ${applyMsg.ok ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{applyMsg.text}</p>}
       </div>
     </div>
   );
@@ -123,13 +273,13 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
       let key = e.key.toLowerCase();
       // Ignore bare modifiers
       if (['control', 'meta', 'shift', 'alt'].includes(key)) return;
-      
+
       const parts = [];
       if (e.metaKey || e.ctrlKey) parts.push('cmd');
       if (e.shiftKey) parts.push('shift');
       if (e.altKey) parts.push('alt');
       parts.push(key);
-      
+
       setKeybinds({ [bindId]: parts.join('+') });
       setIsRecording(false);
     };
@@ -141,27 +291,27 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
   const displayKey = (keybinds[bindId] || '').replace('cmd', typeof window !== 'undefined' && navigator.userAgent.includes('Mac') ? '⌘' : 'Ctrl');
 
   return (
-    <div className={`flex items-center justify-between p-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-lg transition-all ${isDisabled ? 'opacity-50' : ''}`}>
-      <div className="flex items-center gap-3">
+    <div className={`flex items-center justify-between gap-3 py-2.5 transition-all ${isDisabled ? 'opacity-50' : ''}`}>
+      <div className="flex items-center gap-2.5 min-w-0">
         {/* 36px minimum tap target wrapping the 16px checkbox visual */}
         <button
           onClick={() => setDisabledKeybinds({ [bindId]: !isDisabled })}
-          className="flex items-center justify-center min-w-[36px] min-h-[36px] rounded-lg cursor-pointer"
+          className="flex items-center justify-center w-9 h-9 -ml-1.5 rounded-lg cursor-pointer shrink-0"
           aria-label={isDisabled ? 'Enable keybind' : 'Disable keybind'}
         >
           <span className={`w-4 h-4 rounded flex items-center justify-center border ${isDisabled ? 'bg-transparent border-[var(--border-strong)]' : 'bg-[var(--accent-color)] border-[var(--accent-color)] text-[var(--bg-base)]'}`}>
             {!isDisabled && <svg viewBox="0 0 24 24" fill="none" className="w-3 h-3 stroke-current stroke-[3]"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
           </span>
         </button>
-        <span className={`text-sm font-mono font-bold ${isDisabled ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'}`}>{label}</span>
+        <span className={`text-sm font-semibold truncate ${isDisabled ? 'text-[var(--text-tertiary)] line-through' : 'text-[var(--text-primary)]'}`}>{label}</span>
       </div>
       <button
         onClick={() => {
           if (!isDisabled) setIsRecording(true);
         }}
         disabled={isDisabled}
-        className={`px-3 min-h-[36px] text-xs font-mono font-bold rounded-lg flex items-center justify-center min-w-[80px] transition-all border
-          ${isDisabled ? 'bg-[var(--surface)] text-[var(--text-tertiary)] border-[var(--border)] cursor-not-allowed' : isRecording ? 'bg-[var(--accent-color)]/20 text-[var(--accent-color)] border-[var(--accent-color)]/50' : 'bg-[var(--surface)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'}`}
+        className={`px-3 min-h-[36px] min-w-[92px] text-xs font-mono font-semibold rounded-lg flex items-center justify-center transition-all border
+          ${isDisabled ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] border-[var(--border)] cursor-not-allowed' : isRecording ? 'bg-[var(--accent-color)]/20 text-[var(--accent-color)] border-[var(--accent-color)]/50' : 'bg-[var(--surface-2)] text-[var(--text-secondary)] border-[var(--border)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'}`}
       >
         {isRecording ? 'Listening…' : displayKey.toUpperCase()}
       </button>
@@ -171,7 +321,7 @@ function KeybindRow({ bindId, label }: { bindId: keyof ContractStore['keybinds']
 
 export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'privacy' | 'preferences' | 'keybinds' | 'referrals' | 'billing'>('profile');
-  
+
   const [selectedFont, setSelectedFont] = useState<'STANDARD' | 'ENHANCED' | 'ENHANCED_XL'>(session?.selected_font_scale || 'STANDARD');
   const [compactMode, setCompactMode] = useState<boolean>(!!session?.compact_view_enabled);
   const [ultrawideMode, setUltrawideMode] = useState<boolean>(!!session?.ultrawide_enabled);
@@ -198,14 +348,14 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
   const [pwError, setPwError] = useState('');
   const [pwSuccess, setPwSuccess] = useState('');
   const [isChangingPassword, setIsChangingPassword] = useState(false);
-  
+
   const [newEmail, setNewEmail] = useState('');
   const [emailOtp, setEmailOtp] = useState('');
   const [emailError, setEmailError] = useState('');
   const [emailSuccess, setEmailSuccess] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [simulatedOtp, setSimulatedOtp] = useState('');
-  
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -506,7 +656,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
       setPwError('Please fill in both credential fields.');
       return;
     }
-    
+
     // Front-end pre-validating password parameters against the shared schema.
     const pwValidationErr = zodError(passwordSchema, newPassword);
     if (pwValidationErr) {
@@ -656,6 +806,8 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
   // The Default swatch is "active" whenever no valid custom theme id is selected.
   const isDefaultThemeActive = !THEMES.some((t) => t.id === activeTheme);
 
+  const isPaidTier = session?.access_tier && !['guest', 'discord'].includes(session?.access_tier);
+
   return (
     <div id="slayer-settings-panel" className="w-full flex flex-col gap-4 text-left font-mono max-w-[860px] mx-auto">
 
@@ -671,10 +823,10 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 role="tab"
                 aria-selected={isActive}
                 onClick={() => setActiveTab(tab.id)}
-                className={`shrink-0 flex items-center gap-2 px-4 rounded-lg text-[11px] font-mono font-bold uppercase tracking-[0.15em] transition-all cursor-pointer min-h-[40px] md:min-h-[40px] whitespace-nowrap ${
+                className={`shrink-0 flex items-center gap-2 px-4 rounded-lg text-[11px] font-semibold tracking-wide transition-all cursor-pointer min-h-[40px] whitespace-nowrap border ${
                   isActive
-                    ? 'bg-[var(--surface-2)] text-[var(--text-primary)] border border-[var(--border-strong)]'
-                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)] border border-transparent'
+                    ? 'bg-[var(--surface-2)] text-[var(--text-primary)] border-[var(--border-strong)]'
+                    : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface)] border-transparent'
                 }`}
               >
                 <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-[var(--accent-color)]' : 'text-[var(--text-tertiary)]'}`} />
@@ -695,118 +847,98 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         )}
 
         {activeTab === 'security' && (
-          <div className="space-y-6 animate-fadeIn pb-12">
-            
-            {/* MFA Container */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <Lock className="w-4 h-4 text-[var(--accent-color)]" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Account Security</span>
-              </div>
-              <p className="text-xs text-[var(--text-secondary)]">Manage two-factor authentication, passwords, and account deletion.</p>
+          <div className="space-y-5 animate-fadeIn pb-12">
 
+            {/* Two-Factor Authentication */}
+            <SettingsCard
+              icon={KeyRound}
+              title="Two-Factor Authentication"
+              description="Add a second step at sign-in with an authenticator app for stronger account protection."
+            >
               <TwoFactorFlow />
-            </div>
+            </SettingsCard>
 
-            {/* Email Transition Container */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[var(--accent-color)] stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M3 19.5h18M3 4.5h18M3 9.5h18M3 14.5h18" /></svg>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Primary Email &amp; Two-Step OTP</span>
+            {/* Email Address */}
+            <SettingsCard
+              icon={Mail}
+              title="Email Address"
+              description="Changing your email requires a verification code. A security notice is also sent to your old address."
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 pb-1">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">Current email</span>
+                <span className="text-sm font-mono font-semibold text-[var(--text-primary)] break-all">{session?.email || 'N/A'}</span>
               </div>
 
-              <div className="space-y-3">
-                <div className="text-xs text-[var(--text-secondary)] leading-normal">
-                  Changing your email requires a verification code. A security notice will also be sent to your old address.
-                </div>
+              {emailError && <InlineAlert tone="error">{emailError}</InlineAlert>}
+              {emailSuccess && <InlineAlert tone="success">{emailSuccess}</InlineAlert>}
 
-                <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-lg text-xs">
-                  <div className="text-[var(--text-tertiary)] font-bold mb-0.5 uppercase tracking-wide">Current Email</div>
-                  <div className="text-[var(--text-primary)] font-mono font-bold">{session?.email || 'N/A'}</div>
-                </div>
-
-                {emailError && <div role="alert" className="text-xs font-bold text-[var(--danger)] p-2 bg-[var(--surface-2)] rounded-md border border-[var(--danger)]/30">{emailError}</div>}
-                {emailSuccess && <div role="status" className="text-xs font-bold text-[var(--success)] p-2 bg-[var(--surface-2)] rounded-md border border-[var(--success)]/30">{emailSuccess}</div>}
-
-                {otpSent ? (
-                  <form onSubmit={handleEmailUpdateVerify} className="space-y-3 animate-fadeIn">
-                    <div className="p-3 bg-[var(--accent-color)]/5 border border-[var(--accent-color)]/30 rounded-lg text-xs space-y-2">
-                      <div className="font-bold text-[var(--accent-color)] uppercase tracking-wider text-[10px]">Verification Code</div>
-                      <div className="font-mono text-sm font-bold text-[var(--success)] bg-[var(--surface-2)] px-2 py-1 rounded w-fit select-all border border-[var(--border)]">
-                        {simulatedOtp}
-                      </div>
+              {otpSent ? (
+                <form onSubmit={handleEmailUpdateVerify} className="space-y-4 animate-fadeIn pt-1 border-t border-[var(--border)]">
+                  <div className="pt-4">
+                    <span className={FIELD_LABEL}>Verification code</span>
+                    <div className="font-mono text-sm font-bold text-[var(--success)] bg-[var(--surface-2)] border border-[var(--border)] px-3 py-2 rounded-lg w-fit select-all">
+                      {simulatedOtp}
                     </div>
+                  </div>
 
-                    <div className="space-y-1">
-                      <label htmlFor="settings-email-otp" className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider">Enter Verification Code</label>
-                      <input
-                        id="settings-email-otp"
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="000000"
-                        maxLength={6}
-                        value={emailOtp}
-                        onChange={e => setEmailOtp(e.target.value.replace(/\D/g, ''))}
-                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-center text-sm font-mono tracking-widest text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors"
-                      />
-                    </div>
-                    <div className="flex justify-end gap-3 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => { setOtpSent(false); setEmailOtp(''); }}
-                        className="px-3 py-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 min-h-[40px] bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                      >
-                        Verify &amp; Save
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <form onSubmit={handleEmailUpdateRequest} className="space-y-3">
-                    <div className="space-y-1">
-                      <label htmlFor="settings-new-email" className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider">New Email Address</label>
-                      <input
-                        id="settings-new-email"
-                        type="email"
-                        autoComplete="email"
-                        placeholder="you@example.com"
-                        value={newEmail}
-                        onChange={e => setNewEmail(e.target.value)}
-                        className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors"
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <button
-                        type="submit"
-                        className="px-4 py-2 min-h-[40px] bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                      >
-                        Send Verification Code
-                      </button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            </div>
+                  <div>
+                    <label htmlFor="settings-email-otp" className={FIELD_LABEL}>Enter verification code</label>
+                    <input
+                      id="settings-email-otp"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="000000"
+                      maxLength={6}
+                      value={emailOtp}
+                      onChange={e => setEmailOtp(e.target.value.replace(/\D/g, ''))}
+                      className={`${CONTROL} text-center font-mono tracking-widest`}
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => { setOtpSent(false); setEmailOtp(''); }}
+                      className={BTN_GHOST}
+                    >
+                      Cancel
+                    </button>
+                    <button type="submit" className={BTN_PRIMARY}>
+                      Verify &amp; Save
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleEmailUpdateRequest} className="space-y-4 pt-4 border-t border-[var(--border)]">
+                  <div>
+                    <label htmlFor="settings-new-email" className={FIELD_LABEL}>New email address</label>
+                    <input
+                      id="settings-new-email"
+                      type="email"
+                      autoComplete="email"
+                      placeholder="you@example.com"
+                      value={newEmail}
+                      onChange={e => setNewEmail(e.target.value)}
+                      className={CONTROL}
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <button type="submit" className={BTN_PRIMARY}>
+                      Send Verification Code
+                    </button>
+                  </div>
+                </form>
+              )}
+            </SettingsCard>
 
-            {/* Password Mutation Container */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[var(--accent-color)] stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Change Password</span>
-              </div>
-
+            {/* Password */}
+            <SettingsCard icon={Lock} title="Password">
               <form onSubmit={handleChangePasswordSubmit} className="space-y-4">
-                {pwError && <div role="alert" className="text-xs font-bold text-[var(--danger)] p-2 bg-[var(--surface-2)] rounded-md border border-[var(--danger)]/30">{pwError}</div>}
-                {pwSuccess && <div role="status" className="text-xs font-bold text-[var(--success)] p-2 bg-[var(--surface-2)] rounded-md border border-[var(--success)]/30">{pwSuccess}</div>}
+                {pwError && <InlineAlert tone="error">{pwError}</InlineAlert>}
+                {pwSuccess && <InlineAlert tone="success">{pwSuccess}</InlineAlert>}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label htmlFor="settings-current-password" className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider">Current Password</label>
+                  <div>
+                    <label htmlFor="settings-current-password" className={FIELD_LABEL}>Current password</label>
                     <input
                       id="settings-current-password"
                       type="password"
@@ -814,11 +946,11 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       placeholder="••••••••••••"
                       value={currentPassword}
                       onChange={e => setCurrentPassword(e.target.value)}
-                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors"
+                      className={CONTROL}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label htmlFor="settings-new-password" className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider">New Password</label>
+                  <div>
+                    <label htmlFor="settings-new-password" className={FIELD_LABEL}>New password</label>
                     <input
                       id="settings-new-password"
                       type="password"
@@ -826,77 +958,65 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       placeholder="••••••••••••"
                       value={newPassword}
                       onChange={e => setNewPassword(e.target.value)}
-                      className="w-full bg-[var(--surface-2)] border border-[var(--border)] rounded-lg px-3 py-2 text-sm text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors"
+                      className={CONTROL}
                     />
                   </div>
                 </div>
 
-                <ul className="text-[10px] text-[var(--text-tertiary)] space-y-1 leading-normal list-disc pl-4">
+                <ul className="text-[11px] text-[var(--text-tertiary)] space-y-1 leading-relaxed list-disc pl-4">
                   <li>At least 8 characters.</li>
                   <li>At least one letter.</li>
                   <li>At least one number (0-9).</li>
                 </ul>
 
                 <div className="flex justify-end">
-                  <button
-                    type="submit"
-                    disabled={isChangingPassword}
-                    className="px-4 py-2 min-h-[40px] bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  >
+                  <button type="submit" disabled={isChangingPassword} className={BTN_PRIMARY}>
                     {isChangingPassword && <RefreshCw className="w-3.5 h-3.5 animate-spin" />}
                     <span>{isChangingPassword ? 'Updating…' : 'Update Password'}</span>
                   </button>
                 </div>
               </form>
-            </div>
+            </SettingsCard>
 
-            {/* Active Sessions & SSO Container */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between border-b border-[var(--border)] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[var(--accent-color)] stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M9 17.25v1.007a3 3 0 01-.879 2.122L7.5 21h9l-.621-.621A3 3 0 0115 18.257V17.25m6-12V15a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 15V5.25m18 0A2.25 2.25 0 0018.75 3H5.25A2.25 2.25 0 003 5.25m18 0V12a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 12V5.25" /></svg>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Active Sessions</span>
-                </div>
-                <button
-                  onClick={handleRevokeAllSessions}
-                  type="button"
-                  className="px-3 py-1 bg-[var(--danger)]/10 hover:bg-[var(--danger)] border border-[var(--danger)]/20 hover:border-[var(--danger)] text-[var(--danger)] hover:text-[var(--text-primary)] text-[11px] font-bold rounded-lg cursor-pointer transition-all"
-                >
+            {/* Active Sessions */}
+            <SettingsCard
+              icon={Monitor}
+              title="Active Sessions"
+              description='Devices and browsers currently signed in to your account. "Log Out All Devices" signs them out immediately.'
+              actions={
+                <button onClick={handleRevokeAllSessions} type="button" className={BTN_DANGER}>
                   Log Out All Devices
                 </button>
-              </div>
-              <p className="text-xs text-[var(--text-secondary)] leading-normal">
-                Devices and browsers currently signed in to your account. "Log Out All Devices" signs them out immediately.
-              </p>
-
-              <div className="divide-y divide-[var(--border)] bg-[var(--surface-2)] border border-[var(--border)] rounded-xl overflow-hidden">
+              }
+            >
+              <div className="divide-y divide-[var(--border)] -mt-1">
                 {sessionsLoading ? (
-                  <div className="p-4 flex items-center justify-center gap-2 text-xs text-[var(--text-tertiary)] font-mono">
+                  <div className="py-6 flex items-center justify-center gap-2 text-xs text-[var(--text-tertiary)]">
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     <span>Loading sessions…</span>
                   </div>
                 ) : sessions.length === 0 ? (
-                  <div className="p-4 text-xs text-center text-[var(--text-tertiary)] font-mono">No active sessions located.</div>
+                  <div className="py-6 text-xs text-center text-[var(--text-tertiary)]">No active sessions located.</div>
                 ) : (
                   sessions.map((sess, idx) => (
-                    <div key={idx} className="p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
-                      <div className="space-y-1">
+                    <div key={idx} className="py-3.5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
+                      <div className="space-y-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-[var(--text-primary)] font-mono">{sess.ip_address}</span>
                           {sess.is_current ? (
-                            <span className="px-2 py-0.5 bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] font-bold text-[9px] rounded-full uppercase tracking-wider">
+                            <span className="px-2 py-0.5 bg-[var(--success)]/10 border border-[var(--success)]/30 text-[var(--success)] font-bold text-[10px] rounded-full uppercase tracking-wider">
                               Current
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 bg-[var(--surface-3)] border border-[var(--border)] text-[var(--text-tertiary)] font-bold text-[9px] rounded-full uppercase tracking-wider">
+                            <span className="px-2 py-0.5 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-tertiary)] font-bold text-[10px] rounded-full uppercase tracking-wider">
                               Other Device
                             </span>
                           )}
                         </div>
-                        <div className="text-[10px] text-[var(--text-tertiary)] truncate max-w-[300px] sm:max-w-md font-mono" title={sess.user_agent}>
+                        <div className="text-[11px] text-[var(--text-tertiary)] truncate max-w-[300px] sm:max-w-md font-mono" title={sess.user_agent}>
                           {sess.user_agent}
                         </div>
-                        <div className="text-[10px] text-[var(--text-secondary)] font-mono">
+                        <div className="text-[11px] text-[var(--text-secondary)] font-mono">
                           Created: {formatDateTime(sess.created_at)} · Activity: {formatTime(sess.last_active)}
                         </div>
                       </div>
@@ -904,176 +1024,127 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   ))
                 )}
               </div>
-            </div>
+            </SettingsCard>
 
-            {/* GDPR Deactivation & Account Purge Container */}
-            <div className="bg-[var(--surface)] border border-[var(--danger)]/20 rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[var(--danger)]/20 pb-3">
-                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[var(--danger)] stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--danger)]">Delete Account</span>
-              </div>
-              <p className="text-xs text-[var(--text-secondary)] leading-normal">
-                Under GDPR you can request account deletion. Your account is deactivated immediately and permanently removed after 30 days.
-              </p>
-
-              {deleteError && <div role="alert" className="text-xs font-bold text-[var(--danger)] p-2 bg-[var(--surface-2)] rounded-md border border-[var(--danger)]/30">{deleteError}</div>}
+            {/* Delete Account */}
+            <SettingsCard
+              icon={Trash2}
+              title="Delete Account"
+              tone="danger"
+              description="Under GDPR you can request account deletion. Your account is deactivated immediately and permanently removed after 30 days."
+            >
+              {deleteError && <InlineAlert tone="error">{deleteError}</InlineAlert>}
 
               {showDeleteConfirm ? (
-                <div className="p-4 bg-[var(--surface-2)] border border-[var(--danger)]/30 rounded-lg space-y-3 animate-fadeIn">
-                  <div className="text-xs text-[var(--text-primary)] font-bold">Are you absolutely sure?</div>
-                  <p className="text-[11px] text-[var(--text-tertiary)] leading-normal">
+                <div className="pt-4 border-t border-[var(--danger)]/20 space-y-3 animate-fadeIn">
+                  <div className="text-sm text-[var(--text-primary)] font-bold">Are you absolutely sure?</div>
+                  <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
                     This immediately disables your username, API keys, and options flow access. After 30 days it cannot be undone.
                   </p>
-                  <div className="flex gap-3 justify-end">
-                    <button
-                      onClick={() => setShowDeleteConfirm(false)}
-                      className="px-3 py-1.5 text-xs text-[var(--text-tertiary)] hover:text-[var(--text-primary)] cursor-pointer transition-colors"
-                    >
+                  <div className="flex gap-2 justify-end">
+                    <button onClick={() => setShowDeleteConfirm(false)} className={BTN_GHOST}>
                       Cancel
                     </button>
-                    <button
-                      onClick={handleSoftDeleteAccount}
-                      className="px-4 py-1.5 bg-[var(--danger)] hover:brightness-110 text-black rounded-lg text-xs font-bold cursor-pointer transition-all"
-                    >
+                    <button onClick={handleSoftDeleteAccount} className={BTN_DANGER_SOLID}>
                       Confirm Delete Account
                     </button>
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="px-4 py-2 bg-[var(--danger)]/10 hover:bg-[var(--danger)] border border-[var(--danger)]/20 hover:border-[var(--danger)] text-[var(--danger)] hover:text-black text-xs font-bold rounded-lg cursor-pointer transition-all"
-                >
-                  Request Account Deletion
-                </button>
+                <div className="flex justify-start">
+                  <button onClick={() => setShowDeleteConfirm(true)} className={BTN_DANGER}>
+                    Request Account Deletion
+                  </button>
+                </div>
               )}
-            </div>
+            </SettingsCard>
 
           </div>
         )}
 
         {activeTab === 'privacy' && (
-          <div className="space-y-6 animate-fadeIn pb-12">
+          <div className="space-y-5 animate-fadeIn pb-12">
 
-            {/* Notification preferences JSONB manager */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-5">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[var(--accent-color)] stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Notification Preferences</span>
+            {/* Notification preferences */}
+            <SettingsCard
+              icon={Bell}
+              title="Notifications"
+              description="Alerts are only sent through the channels you turn on."
+            >
+              <div className="divide-y divide-[var(--border)] -my-1">
+                <div className="py-3.5">
+                  <Toggle
+                    label="Email Alerts"
+                    description="Send alerts to your email"
+                    checked={notifPreferences.email_enabled}
+                    disabled={isPatchingPrivacy}
+                    onChange={(e) => {
+                      const prev = notifPreferences;
+                      const next = { ...notifPreferences, email_enabled: e.target.checked };
+                      setNotifPreferences(next);
+                      handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
+                    }}
+                  />
+                </div>
+                <div className="py-3.5">
+                  <Toggle
+                    label="SMS Alerts"
+                    description="Send alerts to your phone via SMS"
+                    checked={notifPreferences.sms_enabled}
+                    disabled={isPatchingPrivacy}
+                    onChange={(e) => {
+                      const prev = notifPreferences;
+                      const next = { ...notifPreferences, sms_enabled: e.target.checked };
+                      setNotifPreferences(next);
+                      handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
+                    }}
+                  />
+                </div>
+                <div className="py-3.5">
+                  <Toggle
+                    label="Discord Webhook Feeds"
+                    description="Post sweeps directly to server webhooks"
+                    checked={notifPreferences.discord_enabled}
+                    disabled={isPatchingPrivacy}
+                    onChange={(e) => {
+                      const prev = notifPreferences;
+                      const next = { ...notifPreferences, discord_enabled: e.target.checked };
+                      setNotifPreferences(next);
+                      handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
+                    }}
+                  />
+                </div>
+                <div className="py-3.5">
+                  <Toggle
+                    label="Options Flow Alerts"
+                    description="Alert on large GEX deviation events"
+                    checked={notifPreferences.options_flow_alerts}
+                    disabled={isPatchingPrivacy}
+                    onChange={(e) => {
+                      const prev = notifPreferences;
+                      const next = { ...notifPreferences, options_flow_alerts: e.target.checked };
+                      setNotifPreferences(next);
+                      handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
+                    }}
+                  />
+                </div>
               </div>
-              <p className="text-xs text-[var(--text-secondary)] leading-normal">
-                Alerts are only sent through the channels you turn on.
-              </p>
+            </SettingsCard>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 cursor-pointer select-none">
-                  <div>
-                    <div className="text-xs font-bold text-[var(--text-primary)]">Email Alerts</div>
-                    <div className="text-[10px] text-[var(--text-tertiary)]">Send alerts to your email</div>
-                  </div>
-                  <span className="relative inline-flex items-center shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={notifPreferences.email_enabled}
-                      disabled={isPatchingPrivacy}
-                      onChange={(e) => {
-                        const prev = notifPreferences;
-                        const next = { ...notifPreferences, email_enabled: e.target.checked };
-                        setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-3)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-tertiary)] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-color)] peer-checked:after:bg-[var(--bg-base)]"></div>
-                  </span>
-                </label>
+            {/* Profile Visibility & Search */}
+            <SettingsCard icon={Globe} title="Profile Visibility & Search">
+              <div>
+                <span className="text-sm font-semibold text-[var(--text-primary)] block">Profile Visibility</span>
+                <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed mt-0.5">Controls who can find and view your profile.</p>
 
-                <label className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 cursor-pointer select-none">
-                  <div>
-                    <div className="text-xs font-bold text-[var(--text-primary)]">SMS Alerts</div>
-                    <div className="text-[10px] text-[var(--text-tertiary)]">Send alerts to your phone via SMS</div>
-                  </div>
-                  <span className="relative inline-flex items-center shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={notifPreferences.sms_enabled}
-                      disabled={isPatchingPrivacy}
-                      onChange={(e) => {
-                        const prev = notifPreferences;
-                        const next = { ...notifPreferences, sms_enabled: e.target.checked };
-                        setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-3)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-tertiary)] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-color)] peer-checked:after:bg-[var(--bg-base)]"></div>
-                  </span>
-                </label>
-
-                <label className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 cursor-pointer select-none">
-                  <div>
-                    <div className="text-xs font-bold text-[var(--text-primary)]">Discord Webhook Feeds</div>
-                    <div className="text-[10px] text-[var(--text-tertiary)]">Post sweeps directly to server webhooks</div>
-                  </div>
-                  <span className="relative inline-flex items-center shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={notifPreferences.discord_enabled}
-                      disabled={isPatchingPrivacy}
-                      onChange={(e) => {
-                        const prev = notifPreferences;
-                        const next = { ...notifPreferences, discord_enabled: e.target.checked };
-                        setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-3)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-tertiary)] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-color)] peer-checked:after:bg-[var(--bg-base)]"></div>
-                  </span>
-                </label>
-
-                <label className="bg-[var(--surface-2)] p-4 rounded-xl border border-[var(--border)] flex items-center justify-between gap-3 cursor-pointer select-none">
-                  <div>
-                    <div className="text-xs font-bold text-[var(--text-primary)]">Options Flow Alerts</div>
-                    <div className="text-[10px] text-[var(--text-tertiary)]">Alert on large GEX deviation events</div>
-                  </div>
-                  <span className="relative inline-flex items-center shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={notifPreferences.options_flow_alerts}
-                      disabled={isPatchingPrivacy}
-                      onChange={(e) => {
-                        const prev = notifPreferences;
-                        const next = { ...notifPreferences, options_flow_alerts: e.target.checked };
-                        setNotifPreferences(next);
-                        handleUpdatePrivacySettings({ notification_preferences: next }, () => setNotifPreferences(prev));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-3)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-tertiary)] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-color)] peer-checked:after:bg-[var(--bg-base)]"></div>
-                  </span>
-                </label>
-              </div>
-            </div>
-
-            {/* Profile Visibility Enums & Search Indexing */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4 text-[var(--accent-color)] stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Profile Visibility &amp; Search</span>
-              </div>
-
-              <div className="space-y-4">
-                <div className="space-y-1">
-                  <span className="text-xs font-bold text-[var(--text-primary)] block">Profile Visibility</span>
-                  <p className="text-[11px] text-[var(--text-tertiary)] leading-normal">Controls who can find and view your profile.</p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 font-mono">
-                    {[
-                      { value: 'public', label: 'Public (Everyone)', desc: 'Anyone can view your profile' },
-                      { value: 'logged_in', label: 'Subscribers Only', desc: 'Only logged-in users' },
-                      { value: 'private', label: 'Private (Just You)', desc: 'Only you can see your profile' }
-                    ].map((opt) => (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-3">
+                  {[
+                    { value: 'public', label: 'Public (Everyone)', desc: 'Anyone can view your profile' },
+                    { value: 'logged_in', label: 'Subscribers Only', desc: 'Only logged-in users' },
+                    { value: 'private', label: 'Private (Just You)', desc: 'Only you can see your profile' }
+                  ].map((opt) => {
+                    const active = profileVisibility === opt.value;
+                    return (
                       <button
                         key={opt.value}
                         type="button"
@@ -1082,96 +1153,72 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                           setProfileVisibility(opt.value as any);
                           handleUpdatePrivacySettings({ profile_visibility: opt.value as any }, () => setProfileVisibility(prev));
                         }}
-                        className={`p-3 rounded-lg border text-left cursor-pointer transition-all ${
-                          profileVisibility === opt.value
+                        className={`p-3 rounded-lg border text-left cursor-pointer transition-colors ${
+                          active
                             ? 'bg-[var(--accent-color)]/10 border-[var(--accent-color)] text-[var(--text-primary)]'
                             : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
                         }`}
                       >
                         <div className="text-xs font-bold">{opt.label}</div>
-                        <div className="text-[9px] text-[var(--text-tertiary)] mt-0.5 leading-tight">{opt.desc}</div>
+                        <div className="text-[11px] text-[var(--text-tertiary)] mt-0.5 leading-snug">{opt.desc}</div>
                       </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="pt-4 border-t border-[var(--border)] flex items-center justify-between gap-4">
-                  <div className="max-w-[80%]">
-                    <span className="text-xs font-bold text-[var(--text-primary)] block">Restrict Search Engine Indexing</span>
-                    <p className="text-[11px] text-[var(--text-tertiary)] leading-normal">
-                      Adds a <code className="font-mono text-[var(--accent-color)]">noindex</code> tag so Google and Bing don't index your public profile.
-                    </p>
-                  </div>
-
-                  <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={blockSearchIndexing}
-                      disabled={isPatchingPrivacy}
-                      onChange={(e) => {
-                        const prev = blockSearchIndexing;
-                        setBlockSearchIndexing(e.target.checked);
-                        handleUpdatePrivacySettings({ block_search_indexing: e.target.checked }, () => setBlockSearchIndexing(prev));
-                      }}
-                      className="peer sr-only"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-3)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-tertiary)] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-color)] peer-checked:after:bg-[var(--bg-base)]"></div>
-                  </label>
+                    );
+                  })}
                 </div>
               </div>
-            </div>
 
-            {/* GDPR Compliance Data Export */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <FolderSync className="w-4 h-4 text-[var(--accent-color)]" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Download Your Data (GDPR)</span>
+              <div className="pt-5 border-t border-[var(--border)]">
+                <Toggle
+                  label="Restrict Search Engine Indexing"
+                  description="Adds a noindex tag so Google and Bing don't index your public profile."
+                  checked={blockSearchIndexing}
+                  disabled={isPatchingPrivacy}
+                  onChange={(e) => {
+                    const prev = blockSearchIndexing;
+                    setBlockSearchIndexing(e.target.checked);
+                    handleUpdatePrivacySettings({ block_search_indexing: e.target.checked }, () => setBlockSearchIndexing(prev));
+                  }}
+                />
               </div>
-              <p className="text-xs text-[var(--text-secondary)] leading-normal">
-                Export all your account data — logs, preferences, and payment records — as a single download. The file is available for 24 hours, then deleted.
-              </p>
+            </SettingsCard>
 
+            {/* GDPR Data Export */}
+            <SettingsCard
+              icon={Download}
+              title="Download Your Data"
+              description="Export all your account data — logs, preferences, and payment records — as a single download. The file is available for 24 hours, then deleted."
+            >
               {isExporting ? (
-                <div className="space-y-2 animate-fadeIn pt-1">
-                  <div className="flex items-center justify-between text-xs font-mono">
+                <div className="space-y-2 animate-fadeIn">
+                  <div className="flex items-center justify-between text-xs">
                     <span className="text-[var(--text-secondary)]">Building your data export…</span>
-                    <span className="text-[var(--accent-color)] font-bold">{exportProgress}%</span>
+                    <span className="text-[var(--accent-color)] font-bold slayer-num">{exportProgress}%</span>
                   </div>
                   <Progress value={exportProgress} tone="accent" ariaLabel="Data export progress" />
                 </div>
               ) : (
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={triggerGdprExport}
-                    className="px-4 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                  >
+                <div className="flex justify-start">
+                  <button type="button" onClick={triggerGdprExport} className={BTN_PRIMARY}>
                     Export My Data
                   </button>
                 </div>
               )}
 
-              {/* Download Container */}
               {exportDownloadUrl && (
-                <div className="mt-4 p-4 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl space-y-3 animate-fadeIn">
+                <div className="pt-5 border-t border-[var(--border)] space-y-3 animate-fadeIn">
                   <div className="flex items-center gap-2 text-xs font-bold text-[var(--success)]">
-                    <svg viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" /></svg>
+                    <Check className="w-4 h-4" />
                     <span>Data export ready</span>
                   </div>
 
-                  <div className="text-[11px] text-[var(--text-tertiary)] leading-normal">
+                  <div className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
                     Expires: {exportExpiresAt ? formatDateTime(exportExpiresAt) : 'in 24 hours'}
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-3 pt-1">
-                    <a
-                      href={exportDownloadUrl}
-                      download
-                      className="px-4 py-2 bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] rounded-lg text-xs font-bold text-center cursor-pointer transition-colors flex items-center justify-center gap-2"
-                    >
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <a href={exportDownloadUrl} download className={BTN_PRIMARY}>
                       <span>Download Export Package</span>
                     </a>
-
                     <button
                       type="button"
                       onClick={() => {
@@ -1179,331 +1226,318 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                         navigator.clipboard.writeText(link);
                         showToast("Download URL copied.");
                       }}
-                      className="px-4 py-2 bg-[var(--surface)] hover:bg-[var(--surface-3)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-bold border border-[var(--border)] text-xs rounded-lg cursor-pointer transition-colors"
+                      className={BTN_SECONDARY}
                     >
                       Copy Direct File URL
                     </button>
                   </div>
 
                   {exportEmailLog && (
-                    <div className="bg-[var(--surface)] border border-[var(--border)] p-3 rounded-lg text-[10px] space-y-1 font-mono">
+                    <div className="bg-[var(--surface-2)] border border-[var(--border)] p-3 rounded-lg text-[11px] space-y-1 font-mono">
                       <div className="font-bold text-[var(--text-secondary)] uppercase tracking-wider">Email notification</div>
-                      <p className="text-[var(--text-tertiary)]">{exportEmailLog}</p>
+                      <p className="text-[var(--text-tertiary)] leading-relaxed">{exportEmailLog}</p>
                     </div>
                   )}
                 </div>
               )}
-            </div>
+            </SettingsCard>
 
           </div>
         )}
 
         {activeTab === 'preferences' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Module 6: Appearance customization option box */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-5">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <Settings className="w-4 h-4 text-[var(--accent-color)]" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Display Preferences</span>
-              </div>
-
-              {/* Option A: Font Size Scaling (STANDARD vs ENHANCED) */}
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+          <div className="space-y-5 animate-fadeIn">
+            {/* Display */}
+            <SettingsCard icon={Settings} title="Display">
+              {/* Text Size */}
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Type className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
                   <span>Text Size</span>
                 </div>
-                <p className="text-xs text-[var(--text-tertiary)] leading-normal">
+                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed mt-0.5 mb-2">
                   Adjust how large the text appears throughout the app.
                 </p>
-
-                <div className="mt-2">
-                  <select
-                    aria-label="Text size"
-                    value={selectedFont}
-                    onChange={(e) => {
-                      const newVal = e.target.value as 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL';
-                      setSelectedFont(newVal);
-                      applyTextSize(newVal);
-                      handleSaveSettings(newVal, compactMode, activeTheme);
-                    }}
-                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg p-3 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors cursor-pointer appearance-none"
-                  >
-                    <option value="STANDARD">Standard</option>
-                    <option value="ENHANCED">Large</option>
-                    <option value="ENHANCED_XL">Extra Large</option>
-                  </select>
-                </div>
+                <select
+                  aria-label="Text size"
+                  value={selectedFont}
+                  onChange={(e) => {
+                    const newVal = e.target.value as 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL';
+                    setSelectedFont(newVal);
+                    applyTextSize(newVal);
+                    handleSaveSettings(newVal, compactMode, activeTheme);
+                  }}
+                  className={`${CONTROL} cursor-pointer appearance-none`}
+                >
+                  <option value="STANDARD">Standard</option>
+                  <option value="ENHANCED">Large</option>
+                  <option value="ENHANCED_XL">Extra Large</option>
+                </select>
               </div>
 
-              {/* Option Hour Format */}
-              <div className="pt-4 border-t border-[var(--border)] space-y-2">
-                <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+              {/* Clock Format */}
+              <div className="pt-5 border-t border-[var(--border)]">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Clock className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
                   <span>Clock Format</span>
                 </div>
-                <p className="text-xs text-[var(--text-tertiary)] leading-normal">
+                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed mt-0.5 mb-2">
                   Show times as 12-hour (AM/PM) or 24-hour.
                 </p>
-                <div className="mt-2 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setTimeFormat('12H')}
-                    className={`flex-1 p-2.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all ${
-                      timeFormat === '12H'
-                        ? 'bg-[var(--accent-color)]/20 border-[var(--accent-color)] text-[var(--text-primary)]'
-                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
-                    }`}
-                  >
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setTimeFormat('12H')} className={segBtn(timeFormat === '12H')}>
                     12-Hour Clock
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setTimeFormat('24H')}
-                    className={`flex-1 p-2.5 rounded-lg border text-xs font-bold uppercase tracking-wider transition-all ${
-                      timeFormat === '24H'
-                        ? 'bg-[var(--accent-color)]/20 border-[var(--accent-color)] text-[var(--text-primary)]'
-                        : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-strong)]'
-                    }`}
-                  >
+                  <button type="button" onClick={() => setTimeFormat('24H')} className={segBtn(timeFormat === '24H')}>
                     24-Hour Clock
                   </button>
                 </div>
               </div>
 
-              {/* Option Display Time Zone */}
-              <div className="pt-4 border-t border-[var(--border)] space-y-2">
-                <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
+              {/* Display Time Zone */}
+              <div className="pt-5 border-t border-[var(--border)]">
+                <div className="flex items-center gap-2 text-sm font-semibold text-[var(--text-primary)]">
                   <Monitor className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
                   <span>Display Time Zone</span>
                 </div>
-                <p className="text-xs text-[var(--text-tertiary)] leading-normal">
+                <p className="text-xs text-[var(--text-tertiary)] leading-relaxed mt-0.5 mb-2">
                   All times display in this timezone. US market hours are in Eastern Time.
                 </p>
-                <div className="mt-2">
-                  <select
-                    aria-label="Display time zone"
-                    value={timeZone}
-                    onChange={(e) => setTimeZone(e.target.value as 'EST' | 'UTC' | 'LOCAL')}
-                    className="w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg p-3 text-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:border-[var(--border-strong)] transition-colors cursor-pointer appearance-none"
-                  >
-                    <option value="EST">New York Time (EST / EDT)</option>
-                    <option value="UTC">Coordinated Universal Time (UTC)</option>
-                    <option value="LOCAL">Local System Time (User Device Zone)</option>
-                  </select>
-                </div>
+                <select
+                  aria-label="Display time zone"
+                  value={timeZone}
+                  onChange={(e) => setTimeZone(e.target.value as 'EST' | 'UTC' | 'LOCAL')}
+                  className={`${CONTROL} cursor-pointer appearance-none`}
+                >
+                  <option value="EST">New York Time (EST / EDT)</option>
+                  <option value="UTC">Coordinated Universal Time (UTC)</option>
+                  <option value="LOCAL">Local System Time (User Device Zone)</option>
+                </select>
               </div>
 
-              {/* Option B: Compact rows spacing density (denser row rendering overlay) */}
-              <div className="pt-4 border-t border-[var(--border)] space-y-2">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
-                    <Eye className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
-                    <span>Compact View</span>
-                  </div>
+              {/* Compact View */}
+              <div className="pt-5 border-t border-[var(--border)]">
+                <Toggle
+                  label="Compact View"
+                  description="Reduces spacing between rows and panels so more data fits on screen at once."
+                  checked={compactMode}
+                  onChange={(e) => {
+                    const newVal = e.target.checked;
+                    setCompactMode(newVal);
+                    applyCompact(newVal);
+                    handleSaveSettings(selectedFont, newVal, activeTheme);
+                  }}
+                />
+              </div>
 
-                  <label className="relative inline-flex items-center cursor-pointer select-none shrink-0">
-                    <input
-                      type="checkbox"
-                      checked={compactMode}
-                      onChange={(e) => {
-                        const newVal = e.target.checked;
-                        setCompactMode(newVal);
-                        applyCompact(newVal);
-                        handleSaveSettings(selectedFont, newVal, activeTheme);
+              {/* Ultrawide Layout */}
+              <div className="pt-5 border-t border-[var(--border)]">
+                <Toggle
+                  label="Ultrawide Layout"
+                  description="Expands the terminal to more columns on very wide monitors."
+                  checked={ultrawideMode}
+                  onChange={(e) => {
+                    const newVal = e.target.checked;
+                    setUltrawideMode(newVal);
+                    applyUltrawide(newVal);
+                    saveUltrawide(newVal);
+                  }}
+                />
+              </div>
+            </SettingsCard>
+
+            {/* Interface Theme */}
+            <SettingsCard
+              icon={Palette}
+              title="Interface Theme"
+              description="Changes the background and panel colors across the app."
+              actions={
+                <span className="text-[11px] text-[var(--text-tertiary)] font-mono hidden sm:inline">
+                  {THEMES.length} themes
+                </span>
+              }
+            >
+              <div className="max-h-80 overflow-y-auto pr-1 -mr-1 space-y-4 slayer-scrollbar">
+                {/* Default / brand reset — restores the native Slayer black-and-white design */}
+                <div>
+                  <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest font-semibold mb-1.5">Default</div>
+                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5">
+                    <button
+                      title="Default (Slayer)"
+                      type="button"
+                      onClick={() => {
+                        setActiveTheme('');
+                        applyTheme('');
+                        handleSaveSettings(selectedFont, compactMode, '');
                       }}
-                      className="sr-only peer"
-                    />
-                    <div className="w-9 h-5 bg-[var(--surface-3)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[var(--text-tertiary)] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[var(--accent-color)] peer-checked:after:bg-[var(--bg-base)]" />
-                  </label>
+                      className={`group relative aspect-square rounded-lg border-2 transition-all ${
+                        isDefaultThemeActive
+                          ? 'border-[var(--accent-color)] scale-110 z-10'
+                          : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
+                      }`}
+                      style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #0A0A0A 50%, #FFFFFF 50%, #FFFFFF 100%)' }}
+                    >
+                      {isDefaultThemeActive && (
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <Check className="w-4 h-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                        </span>
+                      )}
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-[var(--text-tertiary)] leading-normal">
-                  Reduces spacing between rows and panels so more data fits on screen at once.
-                </p>
-              </div>
 
-              {/* Option D: Background Theme custom swatch grid */}
-              <div className="pt-4 border-t border-[var(--border)] space-y-2">
-                <div className="flex items-center gap-2 text-sm font-bold text-[var(--text-primary)]">
-                  <Palette className="w-4 h-4 text-[var(--text-tertiary)] shrink-0" />
-                  <span>Interface Theme</span>
-                </div>
-                <p className="text-xs text-[var(--text-tertiary)] leading-normal mb-3">
-                  Changes the background and panel colors across the app.
-                </p>
-
-                <div className="max-h-80 overflow-y-auto pr-1 -mr-1 mt-3 space-y-4">
-                  {/* Default / brand reset — restores the native Slayer black-and-white design */}
-                  <div>
-                    <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono mb-1.5">Default</div>
+                {/* Curated theme groups */}
+                {THEME_GROUPS.map(group => (
+                  <div key={group}>
+                    <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest font-semibold mb-1.5">{group}</div>
                     <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5">
-                      <button
-                        title="Default (Slayer)"
-                        type="button"
-                        onClick={() => {
-                          setActiveTheme('');
-                          applyTheme('');
-                          handleSaveSettings(selectedFont, compactMode, '');
-                        }}
-                        className={`group relative aspect-square rounded-lg border-2 transition-all ${
-                          isDefaultThemeActive
-                            ? 'border-[var(--accent-color)] scale-110 z-10'
-                            : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
-                        }`}
-                        style={{ background: 'linear-gradient(135deg, #0A0A0A 0%, #0A0A0A 50%, #FFFFFF 50%, #FFFFFF 100%)' }}
-                      >
-                        {isDefaultThemeActive && (
-                          <span className="absolute inset-0 flex items-center justify-center">
-                            <Check className="w-4 h-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                      {THEMES.filter(t => t.group === group).map(t => (
+                        <button
+                          key={t.id}
+                          title={t.name}
+                          type="button"
+                          onClick={() => {
+                            setActiveTheme(t.id);
+                            applyTheme(t.id);
+                            handleSaveSettings(selectedFont, compactMode, t.id);
+                          }}
+                          className={`group relative aspect-square rounded-lg border-2 overflow-hidden transition-all ${
+                            activeTheme === t.id
+                              ? 'border-[var(--accent-color)] scale-110 z-10'
+                              : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
+                          }`}
+                          style={{ background: `color-mix(in srgb, ${t.surface} 74%, #000)` }}
+                        >
+                          {/* Mini terminal-card preview: panel + accent header bar + text
+                              lines, so the swatch shows what the theme actually looks like. */}
+                          <span className="absolute inset-[3px] rounded-[3px]" style={{ background: t.surface }}>
+                            <span className="absolute left-1 right-1 top-1 h-[3px] rounded-full" style={{ background: t.accent }} />
+                            <span className="absolute left-1 top-[8px] w-1/2 h-[2px] rounded-full" style={{ background: `color-mix(in srgb, ${t.accent} 45%, transparent)` }} />
+                            <span className="absolute left-1 bottom-[3px] w-2/3 h-[2px] rounded-full bg-white/15" />
                           </span>
-                        )}
-                      </button>
+                          {activeTheme === t.id && (
+                            <span className="absolute inset-0 flex items-center justify-center">
+                              <Check className="w-4 h-4 text-[var(--text-primary)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
+                            </span>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </div>
-
-                  {/* Curated theme groups */}
-                  {THEME_GROUPS.map(group => (
-                    <div key={group}>
-                      <div className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono mb-1.5">{group}</div>
-                      <div className="grid grid-cols-6 sm:grid-cols-8 gap-2.5">
-                        {THEMES.filter(t => t.group === group).map(t => (
-                          <button
-                            key={t.id}
-                            title={t.name}
-                            type="button"
-                            onClick={() => {
-                              setActiveTheme(t.id);
-                              applyTheme(t.id);
-                              handleSaveSettings(selectedFont, compactMode, t.id);
-                            }}
-                            className={`group relative aspect-square rounded-lg border-2 overflow-hidden transition-all ${
-                              activeTheme === t.id
-                                ? 'border-[var(--accent-color)] scale-110 z-10'
-                                : 'border-[var(--border)] hover:border-[var(--border-strong)] hover:scale-105'
-                            }`}
-                            style={{ background: `color-mix(in srgb, ${t.surface} 74%, #000)` }}
-                          >
-                            {/* Mini terminal-card preview: panel + accent header bar + text
-                                lines, so the swatch shows what the theme actually looks like. */}
-                            <span className="absolute inset-[3px] rounded-[3px]" style={{ background: t.surface }}>
-                              <span className="absolute left-1 right-1 top-1 h-[3px] rounded-full" style={{ background: t.accent }} />
-                              <span className="absolute left-1 top-[8px] w-1/2 h-[2px] rounded-full" style={{ background: `color-mix(in srgb, ${t.accent} 45%, transparent)` }} />
-                              <span className="absolute left-1 bottom-[3px] w-2/3 h-[2px] rounded-full bg-white/15" />
-                            </span>
-                            {activeTheme === t.id && (
-                              <span className="absolute inset-0 flex items-center justify-center">
-                                <Check className="w-4 h-4 text-[var(--text-primary)] drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
-                              </span>
-                            )}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-2 text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono">
-                  Active: <span className="text-[var(--text-primary)] font-bold">{THEMES.find(t => t.id === activeTheme)?.name || 'Default'}</span> · {THEMES.length} themes
-                </div>
+                ))}
               </div>
-            </div>
+              <div className="text-[11px] text-[var(--text-tertiary)] uppercase tracking-widest font-mono pt-3 border-t border-[var(--border)]">
+                Active: <span className="text-[var(--text-primary)] font-bold">{THEMES.find(t => t.id === activeTheme)?.name || 'Default'}</span>
+              </div>
+            </SettingsCard>
 
-            {/* Informational notification */}
-            <div className="p-4 bg-[var(--surface-2)] border border-[var(--border)] text-[11px] rounded-xl text-[var(--text-secondary)] leading-normal flex gap-3">
-              <ShieldAlert className="w-4 h-4 text-[var(--success)] shrink-0 mt-0.5" />
-              <span>
-                Themes change background and panel colors only. Signal indicators, heat maps, and status colors stay the same so data is always readable.
-              </span>
-            </div>
+            <InfoNote>
+              Themes change background and panel colors only. Signal indicators, heat maps, and status colors stay the same so data is always readable.
+            </InfoNote>
           </div>
         )}
 
         {activeTab === 'keybinds' && (
-          <div className="space-y-6 animate-fadeIn">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-5">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <Type className="w-4 h-4 text-[var(--accent-color)]" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Keyboard Shortcuts</span>
+          <div className="space-y-5 animate-fadeIn">
+            <SettingsCard
+              icon={Keyboard}
+              title="Keyboard Shortcuts"
+              description="Quick-access keybinds for menu toggles and workspace switching. Bindings work across macOS (Command) and Windows (Ctrl)."
+              actions={
+                <button
+                  onClick={() => {
+                    const defaults = {
+                      home: 'shift+h',
+                      skyvision: 'shift+s',
+                      pinpoint: 'shift+p',
+                      auditor: 'shift+a',
+                      dealerflow: 'shift+d',
+                      community: 'shift+r',
+                      settings: 'shift+o',
+                      prismMenu: 'cmd+k',
+                    };
+                    useContractStore.getState().setKeybinds(defaults);
+                    useContractStore.getState().setDisabledKeybinds({});
+                    setGlobalKeybindsEnabled(true);
+                  }}
+                  className={BTN_GHOST}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reset
+                </button>
+              }
+            >
+              <div className="pb-1 border-b border-[var(--border)]">
+                <Toggle
+                  label="Enable All Shortcuts"
+                  description="Master switch for every keyboard shortcut below."
+                  checked={globalKeybindsEnabled}
+                  onChange={() => setGlobalKeybindsEnabled(!globalKeybindsEnabled)}
+                />
               </div>
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-4 border-b border-[var(--border)] pb-4">
-                <p className="text-xs text-[var(--text-secondary)] max-w-md leading-normal">
-                  Quick-access keybinds for menu toggles and workspace switching. Bindings work across macOS (Command) and Windows (Ctrl).
-                </p>
 
-                <div className="flex flex-col items-stretch sm:items-end gap-2 w-full sm:w-auto shrink-0">
-                  <div className="flex items-center justify-between gap-3 bg-[var(--surface-2)] px-3 py-1.5 rounded-lg border border-[var(--border)]">
-                    <span className="text-xs font-bold text-[var(--text-primary)]">Enable All Shortcuts</span>
-                    <button
-                      onClick={() => setGlobalKeybindsEnabled(!globalKeybindsEnabled)}
-                      className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${globalKeybindsEnabled ? 'bg-[var(--accent-color)]' : 'bg-[var(--surface-3)]'}`}
-                    >
-                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${globalKeybindsEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => {
-                      const defaults = {
-                        home: 'shift+h',
-                        skyvision: 'shift+s',
-                        pinpoint: 'shift+p',
-                        auditor: 'shift+a',
-                        dealerflow: 'shift+d',
-                        community: 'shift+r',
-                        settings: 'shift+o',
-                        prismMenu: 'cmd+k',
-                      };
-                      useContractStore.getState().setKeybinds(defaults);
-                      useContractStore.getState().setDisabledKeybinds({});
-                      setGlobalKeybindsEnabled(true);
-                    }}
-                    className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold text-[var(--text-secondary)] bg-[var(--surface-2)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] border border-[var(--border)] rounded-lg transition-all"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Reset to Defaults
-                  </button>
+              <div className={`transition-opacity duration-300 ${!globalKeybindsEnabled ? 'opacity-30 pointer-events-none' : ''}`}>
+                <div className="divide-y divide-[var(--border)] -my-1">
+                  {[
+                    { id: 'prismMenu', label: 'Toggle Command Palette', default: 'cmd+k' },
+                    { id: 'home', label: 'Workspace: Home', default: 'shift+h' },
+                    { id: 'skyvision', label: 'Workspace: SkyVision', default: 'shift+s' },
+                    { id: 'pinpoint', label: 'Workspace: Pinpoint GEX', default: 'shift+p' },
+                    { id: 'auditor', label: 'Workspace: Trade History', default: 'shift+a' },
+                    { id: 'dealerflow', label: 'Workspace: Dealer Flow', default: 'shift+d' },
+                    { id: 'community', label: 'Workspace: Research & Community', default: 'shift+r' },
+                    { id: 'settings', label: 'Settings & Preferences', default: 'shift+o' },
+                  ].map(bind => (
+                    <KeybindRow key={bind.id} bindId={bind.id as any} label={bind.label} />
+                  ))}
                 </div>
               </div>
+            </SettingsCard>
 
-              <div className={`space-y-2 transition-opacity duration-300 ${!globalKeybindsEnabled ? 'opacity-30 pointer-events-none' : ''}`}>
-                {[
-                  { id: 'prismMenu', label: 'Toggle Command Palette', default: 'cmd+k' },
-                  { id: 'home', label: 'Workspace: Home', default: 'shift+h' },
-                  { id: 'skyvision', label: 'Workspace: SkyVision', default: 'shift+s' },
-                  { id: 'pinpoint', label: 'Workspace: Pinpoint GEX', default: 'shift+p' },
-                  { id: 'auditor', label: 'Workspace: Trade History', default: 'shift+a' },
-                  { id: 'dealerflow', label: 'Workspace: Dealer Flow', default: 'shift+d' },
-                  { id: 'community', label: 'Workspace: Research & Community', default: 'shift+r' },
-                  { id: 'settings', label: 'Settings & Preferences', default: 'shift+o' },
-                ].map(bind => (
-                  <KeybindRow key={bind.id} bindId={bind.id as any} label={bind.label} />
-                ))}
-              </div>
-            </div>
-
-            <div className="p-4 bg-[var(--surface-2)] border border-[var(--border)] text-[11px] rounded-xl text-[var(--text-secondary)] leading-normal flex gap-3">
-              <ShieldAlert className="w-4 h-4 text-[var(--success)] shrink-0 mt-0.5" />
-              <span>
-                To rebind, click a shortcut button and press your new key combination. Use a modifier (Shift, Ctrl, Alt, Meta) plus a character.
-              </span>
-            </div>
+            <InfoNote>
+              To rebind, click a shortcut button and press your new key combination. Use a modifier (Shift, Ctrl, Alt, Meta) plus a character.
+            </InfoNote>
           </div>
         )}
 
         {activeTab === 'referrals' && (
-          <div className="space-y-6 animate-fadeIn">
-            {/* Module 5: Referrals token stats */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-5">
-              <div className="flex items-center gap-2.5 border-b border-[var(--border)] pb-3">
-                <Coins className="w-4 h-4 text-[var(--success)]" />
-                <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Referral Rewards</span>
-              </div>
-
+          <div className="space-y-5 animate-fadeIn">
+            {/* Referral rewards — code, apply, share link */}
+            <SettingsCard icon={Coins} title="Referral Rewards">
               <ReferralCodeBox />
 
-              {/* Referral Progress Bar (Gamification) */}
-              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 overflow-hidden">
+              <div className="pt-5 border-t border-[var(--border)] space-y-4">
+                <div>
+                  <span className={FIELD_LABEL}>Your referral code</span>
+                  <div className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg px-3 py-2.5 text-sm font-bold font-mono tracking-widest text-center">
+                    {session?.custom_referral_code || 'SLAYERX'}
+                  </div>
+                </div>
+
+                <div>
+                  <span className={FIELD_LABEL}>Your custom referral link</span>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-lg px-3 py-2.5 text-xs font-mono flex items-center">
+                      <span className="break-all">{referralLink}</span>
+                    </div>
+                    <CopyButton
+                      content={referralLink}
+                      variant="primary"
+                      label="Copy Link"
+                      title="Copy full referral link to clipboard"
+                      className="px-6 py-2.5 text-xs sm:shrink-0"
+                    />
+                  </div>
+                </div>
+              </div>
+            </SettingsCard>
+
+            {/* Your rewards — progress + token stats */}
+            <SettingsCard icon={Share2} title="Your Rewards">
+              <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-xs font-bold text-[var(--text-primary)]">Tokens to Next Free Month</span>
-                  <span className="text-xs font-mono text-[var(--success)]">{session?.referral_tokens_pool || 0} / 10</span>
+                  <span className="text-sm font-semibold text-[var(--text-primary)]">Tokens to Next Free Month</span>
+                  <span className="text-xs font-mono text-[var(--success)] slayer-num">{session?.referral_tokens_pool || 0} / 10</span>
                 </div>
                 <Progress
                   value={((session?.referral_tokens_pool || 0) / 10) * 100}
@@ -1513,81 +1547,52 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 />
               </div>
 
-              {/* Referral Token Pool Dashboard metrics */}
-              <div className="grid grid-cols-2 gap-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 text-center">
+              <div className="grid grid-cols-2 gap-4 pt-5 border-t border-[var(--border)] text-center">
                 <div className="space-y-1">
-                  <span className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider block">Your Tokens</span>
-                  <span className="text-2xl font-black text-[var(--success)] font-mono block">
+                  <span className="text-[11px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wider block">Your Tokens</span>
+                  <span className="text-2xl font-black text-[var(--success)] font-mono slayer-num block">
                     {session?.referral_tokens_pool || 0}
                   </span>
-                  <span className="text-[10px] text-[var(--text-tertiary)] block font-mono mt-1">1 Token = 10% Off</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] block font-mono">1 Token = 10% Off</span>
                 </div>
-
-                <div className="space-y-1 border-l border-[var(--border)] pl-3">
-                  <span className="text-[10px] text-[var(--text-tertiary)] font-bold uppercase tracking-wider block">Current Discount</span>
-                  <span className="text-2xl font-black text-[var(--text-primary)] font-mono block">
+                <div className="space-y-1 border-l border-[var(--border)]">
+                  <span className="text-[11px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wider block">Current Discount</span>
+                  <span className="text-2xl font-black text-[var(--text-primary)] font-mono slayer-num block">
                     {Math.min(100, (session?.referral_tokens_pool || 0) * 10)}%
                   </span>
-                  <span className="text-[10px] text-[var(--text-tertiary)] block font-mono mt-1">Applied at renewal</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] block font-mono">Applied at renewal</span>
                 </div>
               </div>
-
-              {/* Your custom referral code */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <span className="text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-wider block">Your Referral Code</span>
-                  <div className="bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] rounded-lg px-3 py-2 text-sm font-bold font-mono tracking-widest text-center">
-                    {session?.custom_referral_code || 'SLAYERX'}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-xs text-[var(--text-tertiary)] font-bold uppercase tracking-wider block">Your Custom Referral Link</span>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex-1 min-w-0 bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-secondary)] rounded-lg px-3 py-2 text-xs font-mono md:tracking-wider flex items-center">
-                      <span className="break-all">{referralLink}</span>
-                    </div>
-                    <CopyButton
-                      content={referralLink}
-                      variant="primary"
-                      label="Copy Link"
-                      title="Copy full referral link to clipboard"
-                      className="px-6 py-2 text-xs sm:shrink-0"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
+            </SettingsCard>
           </div>
         )}
 
         {activeTab === 'billing' && (
-          <div className="space-y-6 animate-fadeIn">
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-4">
-              <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <Receipt className="w-4 h-4 text-[var(--accent-color)]" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Subscription &amp; Tier</span>
-                </div>
-                {session?.customer_id && (
-                  <span className="text-[9px] tracking-widest uppercase bg-[var(--accent-color)]/10 px-2 py-0.5 border border-[var(--accent-color)]/30 rounded text-[var(--accent-color)] font-mono">
+          <div className="space-y-5 animate-fadeIn">
+            {/* Subscription & Tier */}
+            <SettingsCard
+              icon={Receipt}
+              title="Subscription & Tier"
+              actions={
+                session?.customer_id ? (
+                  <span className="text-[10px] tracking-widest uppercase bg-[var(--accent-color)]/10 px-2 py-0.5 border border-[var(--accent-color)]/30 rounded text-[var(--accent-color)] font-mono">
                     Secured
                   </span>
-                )}
-              </div>
-
+                ) : undefined
+              }
+            >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="space-y-1 text-left">
-                  <div className="text-[10px] uppercase tracking-wider font-bold text-[var(--text-tertiary)]">Current Plan</div>
+                <div className="space-y-1.5">
+                  <div className="text-[11px] uppercase tracking-wider font-semibold text-[var(--text-tertiary)]">Current Plan</div>
                   <div className="text-2xl font-black uppercase text-[var(--text-primary)] tracking-widest flex items-center gap-2 flex-wrap">
                     <span>{session?.access_tier || 'GUEST'} TIER</span>
                     {session?.cancels_at_period_end ? (
-                      <span className="text-[9px] tracking-normal font-sans font-semibold bg-[var(--danger)]/10 border border-[var(--danger)]/20 text-[var(--danger)] px-2.5 py-0.5 rounded-full">
+                      <span className="text-[10px] tracking-normal font-semibold bg-[var(--danger)]/10 border border-[var(--danger)]/20 text-[var(--danger)] px-2.5 py-0.5 rounded-full">
                         Cancels at Period End
                       </span>
                     ) : (
-                      session?.access_tier && !['guest', 'discord'].includes(session?.access_tier) && (
-                        <span className="text-[9px] tracking-normal font-sans font-semibold bg-[var(--success)]/10 border border-[var(--success)]/20 text-[var(--success)] px-2.5 py-0.5 rounded-full">
+                      isPaidTier && (
+                        <span className="text-[10px] tracking-normal font-semibold bg-[var(--success)]/10 border border-[var(--success)]/20 text-[var(--success)] px-2.5 py-0.5 rounded-full">
                           Active &amp; Auto-renewing
                         </span>
                       )
@@ -1600,21 +1605,21 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       useContractStore.getState().setActiveTab('subscription');
                       window.scrollTo({ top: 0, behavior: 'auto' });
                     }}
-                    className="px-4 py-2 min-h-[40px] bg-[var(--text-primary)] hover:opacity-90 text-[var(--bg-base)] font-bold text-xs uppercase tracking-widest rounded-lg transition-colors cursor-pointer"
+                    className={BTN_PRIMARY}
                   >
                     View Upgrades
                   </button>
 
-                  {session?.access_tier && !['guest', 'discord'].includes(session?.access_tier) && (
+                  {isPaidTier && (
                     <button
                       ref={cancelTriggerRef}
                       onClick={() => setShowCancelConfirm(true)}
                       disabled={!!session?.cancels_at_period_end}
-                      className={`px-4 py-2 min-h-[40px] font-bold text-xs uppercase tracking-widest rounded-lg transition-all cursor-pointer border ${
+                      className={
                         session?.cancels_at_period_end
-                          ? 'bg-[var(--surface-2)] text-[var(--text-tertiary)] cursor-not-allowed border-[var(--border)]'
-                          : 'bg-[var(--surface-2)] hover:bg-[var(--danger)]/10 text-[var(--danger)] border-[var(--border)] hover:border-[var(--danger)]/30'
-                      }`}
+                          ? `${BTN_SECONDARY} !text-[var(--text-tertiary)]`
+                          : BTN_DANGER
+                      }
                     >
                       {session?.cancels_at_period_end ? 'Cancellation Logged' : 'Cancel Subscription'}
                     </button>
@@ -1624,19 +1629,22 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
               {/* Secure Customer_id and Payment_method_id details */}
               {session?.customer_id && (
-                <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 space-y-2 text-left font-mono text-[10px] text-[var(--text-tertiary)]">
-                  <div className="text-[var(--text-secondary)] font-bold text-[9px] uppercase tracking-widest pb-1 border-b border-[var(--border)]">Payment Info</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono">
-                    <div>
-                      <span className="text-[var(--text-tertiary)] font-bold block text-[9px] uppercase">Stripe Customer ID</span>
-                      <code className="text-[var(--accent-color)] font-mono text-[10px]">{session.customer_id}</code>
+                <div className="pt-5 border-t border-[var(--border)] space-y-3 font-mono">
+                  <div className="text-[11px] text-[var(--text-tertiary)] font-semibold uppercase tracking-wider flex items-center gap-2">
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Payment Info</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] text-[var(--text-tertiary)] font-semibold block uppercase tracking-wider">Stripe Customer ID</span>
+                      <code className="text-[var(--accent-color)] font-mono text-xs break-all">{session.customer_id}</code>
                     </div>
-                    <div>
-                      <span className="text-[var(--text-tertiary)] font-bold block text-[9px] uppercase">Tokenized Payment Method ID</span>
-                      <code className="text-[var(--success)] font-mono text-[10px]">{session.payment_method_id || 'Not Saved (Iframe Protected)'}</code>
+                    <div className="space-y-0.5">
+                      <span className="text-[11px] text-[var(--text-tertiary)] font-semibold block uppercase tracking-wider">Tokenized Payment Method ID</span>
+                      <code className="text-[var(--success)] font-mono text-xs break-all">{session.payment_method_id || 'Not Saved (Iframe Protected)'}</code>
                     </div>
                   </div>
-                  <p className="text-[9px] text-[var(--text-tertiary)] italic leading-tight pt-1">
+                  <p className="text-[11px] text-[var(--text-tertiary)] leading-relaxed">
                     No card numbers or CVVs are stored here. Payment details are kept securely by Stripe.
                   </p>
                 </div>
@@ -1654,56 +1662,38 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     onClick={(e) => e.stopPropagation()}
                     className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl max-w-md w-full p-6 text-left space-y-4 shadow-2xl relative focus:outline-none"
                   >
-                    <div className="flex items-center gap-3 text-[var(--danger)] pb-2 border-b border-[var(--border)]">
-                      <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6 stroke-current stroke-2"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    <div className="flex items-center gap-3 text-[var(--danger)] pb-3 border-b border-[var(--border)]">
+                      <ShieldAlert className="w-5 h-5 shrink-0" />
                       <h3 id="cancel-subscription-title" className="text-base font-black uppercase tracking-wider">Are you sure?</h3>
                     </div>
 
-                    <p className="text-xs text-[var(--text-secondary)] leading-normal font-sans text-left">
+                    <p className="text-xs text-[var(--text-secondary)] leading-relaxed text-left">
                       Cancellation takes effect at the end of your current paid billing period. You <strong className="text-[var(--text-primary)]">retain full access</strong> to your tier and real-time options flow triggers until then.
                     </p>
 
-                    <div className="flex justify-end gap-3 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setShowCancelConfirm(false)}
-                        className="px-4 py-2 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--text-primary)] font-bold text-xs uppercase tracking-widest rounded-lg cursor-pointer transition-all border border-[var(--border)]"
-                      >
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button type="button" onClick={() => setShowCancelConfirm(false)} className={BTN_SECONDARY}>
                         Keep Subscription
                       </button>
-                      <button
-                        type="button"
-                        onClick={handleCancelSubscription}
-                        disabled={isCanceling}
-                        className="px-4 py-2 bg-[var(--danger)] hover:brightness-110 text-black font-bold text-xs uppercase tracking-widest rounded-lg cursor-pointer transition-all flex items-center gap-2 disabled:opacity-50"
-                      >
+                      <button type="button" onClick={handleCancelSubscription} disabled={isCanceling} className={BTN_DANGER_SOLID}>
                         {isCanceling ? 'Processing…' : 'Confirm Cancel'}
                       </button>
                     </div>
                   </div>
                 </div>
               )}
-            </div>
+            </SettingsCard>
 
-            {/* Invoice simulation box */}
-            <div className="bg-[var(--surface)] border border-[var(--border)] rounded-xl p-5 space-y-5">
-              <div className="flex justify-between items-center border-b border-[var(--border)] pb-3">
-                <div className="flex items-center gap-2.5">
-                  <Receipt className="w-4 h-4 text-[var(--accent-color)]" />
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Billing &amp; Invoices</span>
-                </div>
-                <span className="text-[9px] uppercase tracking-wider bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--border)] rounded text-[var(--text-tertiary)]">Sandbox</span>
-              </div>
-
-              <p className="text-xs text-[var(--text-secondary)] leading-normal">
-                No active cards on file. This environment uses a developer sandbox for simulated billing runs.
-              </p>
-
-              <button
-                onClick={handleRunSimulatedBilling}
-                disabled={isSimulatingInvoice}
-                className="w-full py-3 bg-[var(--accent-color)]/10 border border-[var(--accent-color)]/30 hover:bg-[var(--accent-color)]/20 text-[var(--accent-color)] font-bold text-xs uppercase tracking-widest rounded-lg flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-              >
+            {/* Billing & Invoices */}
+            <SettingsCard
+              icon={Calculator}
+              title="Billing & Invoices"
+              description="No active cards on file. This environment uses a developer sandbox for simulated billing runs."
+              actions={
+                <span className="text-[10px] uppercase tracking-wider bg-[var(--surface-2)] px-2 py-0.5 border border-[var(--border)] rounded text-[var(--text-tertiary)]">Sandbox</span>
+              }
+            >
+              <button onClick={handleRunSimulatedBilling} disabled={isSimulatingInvoice} className={`${BTN_SECONDARY} w-full`}>
                 {isSimulatingInvoice ? (
                   <>
                     <RefreshCw className="w-4 h-4 animate-spin" />
@@ -1721,26 +1711,26 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 <motion.div
                   initial={{ opacity: 0, y: 5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-4 text-left font-mono text-[10px] text-[var(--text-secondary)] leading-relaxed space-y-1.5"
+                  className="bg-[var(--surface-2)] border border-[var(--border)] rounded-lg p-4 text-left font-mono text-[11px] text-[var(--text-secondary)] leading-relaxed space-y-1.5"
                 >
-                  <div className="text-[9px] text-[var(--text-tertiary)] font-bold tracking-widest uppercase border-b border-[var(--border)] pb-1.5 mb-1.5 flex justify-between">
+                  <div className="text-[11px] text-[var(--text-tertiary)] font-semibold tracking-wider uppercase border-b border-[var(--border)] pb-1.5 mb-1.5 flex justify-between">
                     <span>Invoice Receipt</span>
                     <span className="font-normal">Tier: {invoiceLog.access_tier}</span>
                   </div>
-                  <div className="flex justify-between">Monthly Plan Price <span className="text-[var(--text-primary)] font-bold">${invoiceLog.base_rate}.00</span></div>
-                  <div className="flex justify-between">Tokens Used <span className="text-[var(--danger)]">-{invoiceLog.tokens_deducted} ({invoiceLog.discount_rate_pct}% Off)</span></div>
-                  <div className="flex justify-between">Discount Applied <span className="text-[var(--success)]">-${(invoiceLog.discount_amount_usd ?? 0).toFixed(2)}</span></div>
-                  <div className="border-t border-[var(--border)] pt-2 mt-2 font-bold flex justify-between text-[11px]">
+                  <div className="flex justify-between">Monthly Plan Price <span className="text-[var(--text-primary)] font-bold slayer-num">${invoiceLog.base_rate}.00</span></div>
+                  <div className="flex justify-between">Tokens Used <span className="text-[var(--danger)] slayer-num">-{invoiceLog.tokens_deducted} ({invoiceLog.discount_rate_pct}% Off)</span></div>
+                  <div className="flex justify-between">Discount Applied <span className="text-[var(--success)] slayer-num">-${(invoiceLog.discount_amount_usd ?? 0).toFixed(2)}</span></div>
+                  <div className="border-t border-[var(--border)] pt-2 mt-2 font-bold flex justify-between text-xs">
                     <span className="text-[var(--text-primary)]">Net Charged</span>
-                    <span className="text-[var(--success)]">${(invoiceLog.total_charged_usd ?? 0).toFixed(2)} USD</span>
+                    <span className="text-[var(--success)] slayer-num">${(invoiceLog.total_charged_usd ?? 0).toFixed(2)} USD</span>
                   </div>
-                  <div className="border-t border-[var(--border)] pt-2 mt-2 text-[9px] text-[var(--text-tertiary)] uppercase flex gap-1.5 items-center">
+                  <div className="border-t border-[var(--border)] pt-2 mt-2 text-[11px] text-[var(--text-tertiary)] uppercase flex gap-1.5 items-center">
                     <FolderSync className="w-3.5 h-3.5 text-[var(--accent-color)]/80 shrink-0" />
                     <span>{invoiceLog.tokens_remaining_rolled_over} unused tokens rolled over to next month.</span>
                   </div>
                 </motion.div>
               )}
-            </div>
+            </SettingsCard>
           </div>
         )}
       </div>
@@ -1749,7 +1739,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
         <motion.div
           initial={{ opacity: 0, y: 10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          className={`fixed bottom-5 right-5 z-[100] p-4 bg-[var(--surface-2)] border ${toastType === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'} shadow-2xl flex items-center gap-2.5 font-mono text-[10.5px] text-[var(--text-primary)] rounded-lg`}
+          className={`fixed bottom-5 right-5 z-[100] p-4 bg-[var(--surface-2)] border ${toastType === 'success' ? 'border-[var(--success)]/30' : 'border-[var(--danger)]/30'} shadow-2xl flex items-center gap-2.5 font-mono text-[11px] text-[var(--text-primary)] rounded-lg`}
         >
           <span className={`w-1.5 h-1.5 rounded-full ${toastType === 'success' ? 'bg-[var(--success)]' : 'bg-[var(--danger)]'} animate-pulse`} />
           <span className={`uppercase font-semibold tracking-wider ${toastType === 'success' ? 'text-[var(--success)]' : 'text-[var(--danger)]'}`}>{toastType === 'success' ? 'Success' : 'Error'}:</span>
