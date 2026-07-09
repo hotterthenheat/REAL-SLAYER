@@ -117,10 +117,10 @@ function PrimaryButton({ children, onClick }: { children: React.ReactNode; onCli
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-colors"
+      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,box-shadow] duration-200 will-change-transform"
       style={{ background: PALETTE.ghost, color: '#0A0806' }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = '#ffffff')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = PALETTE.ghost)}
+      onMouseEnter={(e) => { e.currentTarget.style.background = '#ffffff'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(248,248,255,0.14)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = PALETTE.ghost; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = 'none'; }}
     >
       {children}
     </button>
@@ -132,10 +132,10 @@ function GhostButton({ children, onClick }: { children: React.ReactNode; onClick
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-colors"
+      className="inline-flex cursor-pointer items-center justify-center rounded-[7px] px-5 py-2.5 text-[12.5px] font-semibold uppercase tracking-[0.1em] transition-[background,transform,border-color] duration-200 will-change-transform"
       style={{ background: 'transparent', color: PALETTE.text, border: `1px solid ${lineStrong}` }}
-      onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(248,248,255,0.05)')}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+      onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248,248,255,0.05)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(248,248,255,0.4)'; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = lineStrong; }}
     >
       {children}
     </button>
@@ -296,7 +296,7 @@ const NAV: { label: string; href?: string; tab?: string }[] = [
   { label: 'Product', href: '#product' },
   { label: 'Pinpoint', tab: 'pinpoint' },
   { label: 'SkyVision', tab: 'skyvision' },
-  { label: 'Pricing', href: '#pricing' },
+  { label: 'Pricing', tab: 'subscription' },
   { label: 'FAQ', href: '#faq' },
 ];
 
@@ -307,8 +307,9 @@ function TopNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: str
     <header className="sticky top-0 z-50 w-full backdrop-blur" style={{ background: 'rgba(0,0,0,0.72)', borderBottom: `1px solid ${line}` }}>
       <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-3.5">
         <div className="flex items-center gap-2">
-          <span className="text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
+          <span className="inline-flex items-center text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
             <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
+            <span aria-hidden="true" className="slayer-caret ml-[3px] inline-block h-[13px] w-[7px] rounded-[1px]" style={{ background: PALETTE.ghost, boxShadow: '0 0 10px rgba(244,245,246,0.45)' }} />
           </span>
         </div>
         <nav className="hidden items-center gap-7 md:flex">
@@ -368,30 +369,40 @@ function Reveal({ children, y = 26, delay = 0 }: { children: React.ReactNode; y?
   );
 }
 
+const HERO_RISE = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const } },
+};
+
 function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
+  const reduce = useReducedMotion();
   return (
     <section className="relative overflow-hidden">
       {/* live code-rain — confined to the hero; fades to solid black at its
           lower edge so every section below sits on clean, legible #08090A */}
       <SlayerCodeRain />
       <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
-        <div>
-          <Eyebrow>From Traders. For Traders.</Eyebrow>
-          <h1 className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
+        <motion.div
+          initial={reduce ? false : 'hidden'}
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.04 } } }}
+        >
+          <motion.div variants={HERO_RISE}><Eyebrow>From Traders. For Traders.</Eyebrow></motion.div>
+          <motion.h1 variants={HERO_RISE} className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
             Read the flow.<br />Rank the contract.
-          </h1>
-          <p className="mt-5 max-w-xl text-[15px] leading-relaxed" style={{ color: muted }}>
+          </motion.h1>
+          <motion.p variants={HERO_RISE} className="mt-5 max-w-xl text-[15px] leading-relaxed" style={{ color: muted }}>
             SkyVision finds the setup, Pinpoint AI reads the flow. GEX, DEX, VEX, dealer positioning,
             and volatility structure — one clean trading command center.
-          </p>
-          <div className="mt-7 flex flex-wrap items-center gap-3">
+          </motion.p>
+          <motion.div variants={HERO_RISE} className="mt-7 flex flex-wrap items-center gap-3">
             <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
             <GhostButton onClick={() => onEnter('pinpoint')}>View Terminal Preview</GhostButton>
-          </div>
-          <p className="mt-5 text-[11.5px]" style={{ color: faint }}>
+          </motion.div>
+          <motion.p variants={HERO_RISE} className="mt-5 text-[11.5px]" style={{ color: faint }}>
             Built for traders who need levels, context, and execution clarity.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
         <TerminalMock ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} />
       </div>
     </section>
@@ -493,8 +504,13 @@ function FeatureSection({ metrics, onEnter }: { metrics: HeroMetrics; onEnter: (
       <SectionHead eyebrow="Capabilities" title="Six Modules. One Read." />
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {feats.map((f) => (
-          <button key={f.t} type="button" onClick={() => onEnter(f.tab)} className="cursor-pointer text-left transition-colors" >
-            <Panel className="h-full p-5" style={{ transition: 'border-color .15s' }}>
+          <button
+            key={f.t}
+            type="button"
+            onClick={() => onEnter(f.tab)}
+            className="group cursor-pointer text-left transition-transform duration-200 will-change-transform hover:-translate-y-[2px]"
+          >
+            <Panel className="h-full p-5 transition-shadow duration-200 group-hover:shadow-[0_0_0_1px_rgba(248,248,255,0.22),0_10px_30px_rgba(0,0,0,0.4)]">
               <div className="flex items-center justify-between">
                 <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
                 <span className="text-[10px]" style={{ color: faint }}>→</span>
@@ -676,10 +692,14 @@ function Footer() {
 /* ─────────────────────────── page ─────────────────────────── */
 export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [], pressure = [], spark = [], onEnter, onLaunch }: SlayerLandingProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ container: rootRef });
-  // hero drifts up + dims as the page scrolls (parallax hand-off to the sections)
-  const heroY = useTransform(scrollYProgress, [0, 0.16], [0, -70]);
-  const heroOpacity = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
+  // hero drifts up + dims as the page scrolls (parallax hand-off to the sections);
+  // frozen entirely under prefers-reduced-motion, like every other landing motion.
+  const heroYRaw = useTransform(scrollYProgress, [0, 0.16], [0, -70]);
+  const heroOpacityRaw = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
+  const heroY = reduce ? 0 : heroYRaw;
+  const heroOpacity = reduce ? 1 : heroOpacityRaw;
   return (
     <div
       ref={rootRef}

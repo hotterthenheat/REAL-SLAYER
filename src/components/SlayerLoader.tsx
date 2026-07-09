@@ -163,13 +163,8 @@ export default function SlayerLoader({
           style={{ letterSpacing: '0.18em', color: 'rgba(245,245,245,0.6)' }}
         >
           <span className="tabular-nums">{label}</span>
-          <motion.span
-            aria-hidden="true"
-            className="inline-block h-[9px] w-[6px]"
-            style={{ background: '#C13383' }}
-            animate={{ opacity: [1, 0.15, 1] }}
-            transition={{ duration: 1.1, repeat: Infinity, ease: 'steps(1)' as any }}
-          />
+          {/* CSS caret blink — hard steps(1), matching the brand caret timing */}
+          <span aria-hidden="true" className="slayer-caret inline-block h-[9px] w-[6px]" style={{ background: '#C13383' }} />
         </motion.div>
 
         {sub ? (

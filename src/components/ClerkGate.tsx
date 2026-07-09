@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { ShieldCheck, Lock, Mail, User, Info, Check, X } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, User, Check, X } from 'lucide-react';
 import { useLegal } from './LegalCenter';
 import { Spinner } from './ui/Spinner';
 
@@ -19,7 +19,6 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
   const [referralCode, setReferralCode] = useState(referralCodeFromUrl || '');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [showRefApplied, setShowRefApplied] = useState(!!referralCodeFromUrl);
   const [twoFactorStage, setTwoFactorStage] = useState(false);
   const [preAuthToken, setPreAuthToken] = useState('');
   const [totpCode, setTotpCode] = useState('');
@@ -166,7 +165,9 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         {referralCode && activeMode === 'signup' && (
           <div className="mb-4 px-3.5 py-2.5 bg-[var(--positive-soft)] border border-[var(--positive-ink)]/35 rounded-[7px] text-[11px] text-[var(--positive-ink)] leading-tight font-sans flex items-center gap-2">
             <Check className="w-3.5 h-3.5 shrink-0" />
-            <span>Referral applied — 5% discount taken at checkout.</span>
+            {/* Honest phrasing: the code is validated at checkout, not here; the
+                referral discount is 10% everywhere else in the product. */}
+            <span>Referral code entered — 10% discount applied at checkout if valid.</span>
           </div>
         )}
 

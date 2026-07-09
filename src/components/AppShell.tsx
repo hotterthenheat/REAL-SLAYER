@@ -20,6 +20,7 @@ import {
   Lock,
   X,
   SlidersHorizontal,
+  CreditCard,
   Home
 } from 'lucide-react';
 import { BrandHeader } from './BrandLogo';
@@ -287,7 +288,8 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
 
           <NavItem id="workspace" label="Workspace" icon={LayoutGrid} />
           <NavItem id="community" label="Community" icon={GraduationCap} activeColor="text-[var(--accent-color)]" />
-          
+          <NavItem id="subscription" label="Pricing" icon={CreditCard} />
+
           <div className="mt-auto pt-4 flex flex-col gap-1.5 border-t border-[var(--border)] mt-2">
             <NavItem id="settings" label="Settings" icon={SlidersHorizontal} />
             <NavItem id="admin" label="Admin Panel" icon={Lock} adminOnly />
@@ -377,6 +379,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
 
             <NavItem id="workspace" label="Workspace" icon={LayoutGrid} isMobile />
             <NavItem id="community" label="Community" icon={GraduationCap} activeColor="text-[var(--accent-color)]" isMobile />
+            <NavItem id="subscription" label="Pricing" icon={CreditCard} isMobile />
             <NavItem id="settings" label="Settings" icon={SlidersHorizontal} isMobile />
             <NavItem id="admin" label="Admin Panel" icon={Lock} adminOnly isMobile />
             

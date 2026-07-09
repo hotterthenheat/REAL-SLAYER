@@ -6,6 +6,7 @@ import { ASSET_LIST } from '../data';
 import {
   Home, LineChart, Crosshair, BarChart3, History, LayoutGrid,
   Users, Settings, CreditCard, Search, TrendingUp, TrendingDown,
+  Waves, RadioTower,
 } from 'lucide-react';
 
 /**
@@ -93,13 +94,15 @@ export function CommandPalette() {
 
           <Command.Group heading="Navigation">
             <PaletteItem icon={<Home />} label="Home" keywords="dashboard ecosystem intro" onRun={run(() => setActiveTab('home'))} />
-            <PaletteItem icon={<LineChart />} label="SkyVision — Trade Dashboard" hint="S" keywords="scanner setups opportunity structure score" onRun={run(() => setActiveTab('skyvision'))} />
-            <PaletteItem icon={<Crosshair />} label="Pinpoint GEX — Dealer Flow" hint="G" keywords="gamma gex dealer walls heatmap terminal flow" onRun={run(() => setActiveTab('pinpoint'))} />
-            <PaletteItem icon={<BarChart3 />} label="Quant Lab" hint="Q" keywords="volatility surface monte carlo risk neutral density model" onRun={run(() => setActiveTab('quant'))} />
+            <PaletteItem icon={<LineChart />} label="SkyVision — Trade Dashboard" hint="⇧S" keywords="scanner setups opportunity structure score" onRun={run(() => setActiveTab('skyvision'))} />
+            <PaletteItem icon={<Crosshair />} label="Pinpoint GEX" hint="⇧P" keywords="gamma gex dealer walls heatmap exposure matrix" onRun={run(() => setActiveTab('pinpoint'))} />
+            <PaletteItem icon={<Waves />} label="Dealer Flow" keywords="pressure hedging profile targets flow" onRun={run(() => setActiveTab('dealerflow'))} />
+            <PaletteItem icon={<RadioTower />} label="Live Terminal" keywords="chart nodes heatmap tape terminal" onRun={run(() => setActiveTab('liveterminal'))} />
+            <PaletteItem icon={<BarChart3 />} label="Quant Lab" keywords="volatility surface monte carlo risk neutral density model" onRun={run(() => setActiveTab('quant'))} />
             <PaletteItem icon={<History />} label="Trade History" keywords="audit record registry track" onRun={run(() => setActiveTab('auditor'))} />
             <PaletteItem icon={<LayoutGrid />} label="Workspace" keywords="widgets layout panels grid" onRun={run(() => setActiveTab('workspace'))} />
             <PaletteItem icon={<Users />} label="Community" keywords="arbor capital discord research" onRun={run(() => setActiveTab('community'))} />
-            <PaletteItem icon={<Settings />} label="Settings" hint="," keywords="preferences theme account alerts display" onRun={run(() => setActiveTab('settings'))} />
+            <PaletteItem icon={<Settings />} label="Settings" hint="⇧O" keywords="preferences theme account alerts display" onRun={run(() => setActiveTab('settings'))} />
             <PaletteItem icon={<CreditCard />} label="Plans & Pricing" keywords="upgrade subscribe tier billing" onRun={run(() => setActiveTab('subscription'))} />
           </Command.Group>
 

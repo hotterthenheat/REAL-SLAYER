@@ -925,15 +925,42 @@ export function DiscoveryView({
   const [searchQuery, setSearchQuery] = useState('');
 
   // Redesign filter state — each maps to a real field on the ranked setups.
-  const [universe, setUniverse] = useState<string>('All');
-  const [expiryFilter, setExpiryFilter] = useState<string>('All');
-  const [minConfidence, setMinConfidence] = useState<string>('0');
-  const [minExpMove, setMinExpMove] = useState<string>('0');
-  const [optionTypeFilter, setOptionTypeFilter] = useState<'all' | 'calls' | 'puts'>('all');
+  // Hydrated from the saved view (Save View writes this key) so saving actually
+  // round-trips; falls back to defaults on first visit / bad data.
+  const savedView = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('slayer.skyvision.view.v1');
+      return raw ? (JSON.parse(raw) as Record<string, unknown>) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+  const str = (v: unknown, fb: string) => (typeof v === 'string' ? v : fb);
+  const [universe, setUniverse] = useState<string>(() => str(savedView?.universe, 'All'));
+  const [expiryFilter, setExpiryFilter] = useState<string>(() => str(savedView?.expiryFilter, 'All'));
+  const [minConfidence, setMinConfidence] = useState<string>(() => str(savedView?.minConfidence, '0'));
+  const [minExpMove, setMinExpMove] = useState<string>(() => str(savedView?.minExpMove, '0'));
+  const [optionTypeFilter, setOptionTypeFilter] = useState<'all' | 'calls' | 'puts'>(() => {
+    const v = savedView?.optionTypeFilter;
+    return v === 'calls' || v === 'puts' ? v : 'all';
+  });
+  // activeShelf/searchQuery are declared above the saved-view memo, so restore
+  // them once on mount to complete the round-trip.
+  useEffect(() => {
+    if (!savedView) return;
+    if (typeof savedView.activeShelf === 'string') setActiveShelf(savedView.activeShelf);
+    if (typeof savedView.searchQuery === 'string') setSearchQuery(savedView.searchQuery);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Opportunities pagination — 15/page like the render, so the bottom row stays in view.
   const [oppPage, setOppPage] = useState(1);
   const OPP_PER_PAGE = 15;
+  // Snap back to page 1 whenever any filter narrows/widens the ranked list, so a
+  // deep page never goes stale against a different result set.
+  useEffect(() => {
+    setOppPage(1);
+  }, [universe, activeShelf, expiryFilter, minConfidence, minExpMove, optionTypeFilter, searchQuery]);
 
   // Watchlist / Queue rail
   const [watchQueueTab, setWatchQueueTab] = useState<'watchlist' | 'queue'>('queue');
@@ -1339,7 +1366,10 @@ export function DiscoveryView({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." />
-          <StatusBadge tone={isMockScanning ? 'warning' : 'live'} dot>{isMockScanning ? 'Scanning' : 'Live'}</StatusBadge>
+          {/* Scan-activity state (never claims "Live" — the data-state badge owns data provenance). */}
+          <StatusBadge tone={feedError ? 'warning' : 'neutral'} dot>
+            {isMockScanning ? 'Scanning' : feedError ? 'Reconnecting' : 'Idle'}
+          </StatusBadge>
           <button
             onClick={() => setIsStrategyExpanded(true)}
             aria-label="How this scan works"
@@ -1584,8 +1614,8 @@ export function DiscoveryView({
                   <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><Droplet className="h-3 w-3 text-[var(--pin)]" />Trade Plan</span>
                   <div className="mt-1.5 space-y-1 text-[11px]">
                     <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Entry</span><span className="slayer-num text-[var(--text-primary)]">${s.premium.toFixed(2)} <span className="text-[9px] text-[var(--text-faint)]">(${(s.c.bid ?? s.premium).toFixed(2)}–${(s.c.ask ?? s.premium).toFixed(2)})</span></span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className="slayer-num text-[#2f9d45]">{target1 == null ? '—' : `$${target1.toFixed(2)} (+${(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className="slayer-num text-[#2f9d45]">${s.fairValue.toFixed(2)} (+{(s.fairGapPct * 100).toFixed(0)}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className={`slayer-num ${target1 != null && target1 < s.premium ? 'text-[#d94646]' : 'text-[#2f9d45]'}`}>{target1 == null ? '—' : `$${target1.toFixed(2)} (${target1 >= s.premium ? '+' : '−'}${Math.abs(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className={`slayer-num ${s.fairGapPct < 0 ? 'text-[#d94646]' : 'text-[#2f9d45]'}`}>${s.fairValue.toFixed(2)} ({s.fairGapPct >= 0 ? '+' : '−'}{Math.abs(s.fairGapPct * 100).toFixed(0)}%)</span></div>
                     <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop</span><span className="slayer-num text-[#d94646]">${stopPremium.toFixed(2)} (−{WORKING_STOP_PCT}%)</span></div>
                     <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Time Stop</span><span className="text-[var(--text-secondary)]">{horizon}</span></div>
                     <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">R / R</span><span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)} : 1`}</span></div>

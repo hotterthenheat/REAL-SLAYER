@@ -210,20 +210,20 @@ export default function TierGuard({
           }
           // No URL returned — fall back to the in-app pricing flow.
           setCheckoutPlan(planKey);
-          setActiveTab('home');
+          setActiveTab('subscription');
         } else {
           setCheckoutPlan(planKey);
-          setActiveTab('home');
+          setActiveTab('subscription');
         }
       } catch (e) {
         setCheckoutPlan(planKey);
-        setActiveTab('home');
+        setActiveTab('subscription');
       } finally {
         setIsProcessing(false);
       }
     } else {
       setCheckoutPlan(planKey);
-      setActiveTab('home');
+      setActiveTab('subscription');
     }
   };
 
