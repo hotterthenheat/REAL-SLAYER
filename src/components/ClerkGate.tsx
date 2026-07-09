@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ShieldCheck, Lock, Mail, User, Check, X } from 'lucide-react';
 import { useLegal } from './LegalCenter';
 import { Spinner } from './ui/Spinner';
+import { TerminalLogo } from './BrandLogo';
 
 interface ClerkGateProps {
   onSuccess: (userData: any) => void;
@@ -97,12 +98,11 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
     <div id="clerk-authentication-gate" className="min-h-screen bg-[var(--bg-app)] text-[var(--text-secondary)] flex flex-col justify-center items-center font-mono selection:bg-[var(--positive-ink)] selection:text-[var(--bg-app)] p-4 relative overflow-hidden">
 
       {/* Restrained structural wash — not a glow */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(900px 460px at 50% -10%, rgba(68,49,153,0.10), transparent 70%)' }} />
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(900px 460px at 50% -10%, rgba(106,147,181,0.10), transparent 70%)' }} />
 
-      <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10">
-        <span className="text-[13px] font-bold tracking-[0.02em] text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-brand)' }}>
-          <span className="text-[var(--text-muted)]">&gt;</span>slayer<span className="text-[var(--text-muted)]">_terminal</span>
-        </span>
+      {/* the ONE canonical logo (BrandLogo.tsx) — HTML-exact wordmark + caret */}
+      <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10 origin-top-left scale-[0.8]">
+        <TerminalLogo expanded />
       </div>
 
       <motion.div

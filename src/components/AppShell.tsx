@@ -1,30 +1,19 @@
 import React, { ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { 
-  Building2, 
-  TerminalSquare, 
-  Settings, 
-  Cpu, 
-  BrainCircuit, 
-  RadioTower,
-  LineChart,
+import {
   LogOut,
   ChevronRight,
-  Database,
-  Waves,
-  Sparkles,
-  Dna,
-  GraduationCap,
-  LayoutGrid,
   Menu,
   Lock,
-  X,
-  SlidersHorizontal,
-  CreditCard,
-  Home
+  X
 } from 'lucide-react';
 import { BrandHeader } from './BrandLogo';
 import { useContractStore } from '../lib/store';
+// Single source of truth for the sidebar nav (labels + descriptions + icons +
+// flyout sub-tabs) — shared with SlayerLanding.tsx so the landing sidebar and
+// this shell sidebar can never drift apart.
+import { NAV_MAIN_VIEWS, NAV_TOOLS, NAV_SETTINGS, NAV_ADMIN, NAV_SUBTABS, SIDEBAR_COLLAPSED_KEY } from '../lib/navItems';
+import type { NavItemDef } from '../lib/navItems';
 
 interface AppShellProps {
   children: ReactNode;
@@ -40,32 +29,18 @@ interface AppShellProps {
 // identity) and reads live values from here, so AppShell re-renders re-render the
 // nav buttons instead of unmounting + remounting them (which restarted their
 // transitions/focus every time the active tab changed).
-interface NavCtxValue {
+export interface NavCtxValue {
   activeTab: string;
   setActiveTab: (id: any) => void;
   isSidebarExpanded: boolean;
   closeMobile: () => void;
   session: any;
 }
-const NavCtx = React.createContext<NavCtxValue>({
+// Exported (with NavItem/FeedPill below) so SlayerLanding renders the EXACT same
+// sidebar rows/flyouts/pill — one implementation, zero landing-vs-app drift.
+export const NavCtx = React.createContext<NavCtxValue>({
   activeTab: 'home', setActiveTab: () => {}, isSidebarExpanded: false, closeMobile: () => {}, session: null,
 });
-
-// Sub-tabs surfaced in the sidebar flyout. Ids MUST match each page's internal sub-tab
-// state; clicking sends the target page a `${tab}:${subId}` intent via the store.
-const SUBTABS: Record<string, { id: string; label: string }[]> = {
-  pinpoint: [
-    { id: 'profile', label: 'Hedging Profile' },
-    { id: 'targets', label: 'Ranked Targets' },
-    { id: 'terminal', label: 'Live Terminal Flow' },
-  ],
-  quant: [
-    { id: 'volgeo', label: 'Volatility Geometry' },
-    { id: 'mechanics', label: 'Dealer Mechanics' },
-    { id: 'distrib', label: 'Distribution & Risk' },
-    { id: 'factor', label: 'Factor Lab' },
-  ],
-};
 
 // Portal-rendered flyout, fixed-positioned off the hovered nav item (so the sidebar's
 // own overflow never clips it). Clamped to stay on-screen for long lists.
@@ -121,7 +96,7 @@ function IdentityAvatar({ name, avatar }: { name?: string; avatar?: string }) {
   );
 }
 
-function NavItem({ id, label, icon: Icon, adminOnly = false, activeColor = 'text-[var(--text-primary)]', isMobile = false }: any) {
+export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, activeColor = 'text-[var(--text-primary)]', isMobile = false }: any) {
   const { activeTab, setActiveTab, isSidebarExpanded, closeMobile, session } = React.useContext(NavCtx);
   const setSubTabIntent = useContractStore((s) => s.setSubTabIntent);
   const subTabIntent = useContractStore((s) => s.subTabIntent);
@@ -134,7 +109,7 @@ function NavItem({ id, label, icon: Icon, adminOnly = false, activeColor = 'text
   }
 
   const isActive = activeTab === id;
-  const subTabs = SUBTABS[id];
+  const subTabs = NAV_SUBTABS[id];
   const hasFlyout = !isMobile && !!subTabs;
   // Reflect the current page's live sub-tab selection in the flyout highlight.
   const activeSub = isActive && subTabIntent && subTabIntent.startsWith(`${id}:`) ? subTabIntent.split(':')[1] : null;
@@ -174,7 +149,12 @@ function NavItem({ id, label, icon: Icon, adminOnly = false, activeColor = 'text
         } focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none`}
       >
         <Icon className={`w-4 h-4 shrink-0 ${isActive ? (adminOnly ? 'text-rose-500' : activeColor) : ''}`} />
-        <span className={`flex-1 text-left whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded || isMobile ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}`}>{label}</span>
+        <span className={`flex-1 min-w-0 text-left overflow-hidden transition-all duration-300 ${isSidebarExpanded || isMobile ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0'}`}>
+          <span className="block whitespace-nowrap truncate leading-tight">{label}</span>
+          {/* One-line description — same second line the landing sidebar shows, so the
+              two sidebars are pixel-identical. Hidden (with the label) when collapsed. */}
+          {desc ? <span className="block whitespace-nowrap truncate text-[10.5px] leading-tight font-normal text-[var(--text-tertiary)]">{desc}</span> : null}
+        </span>
         {hasFlyout && (isSidebarExpanded || isMobile)
           ? <ChevronRight className="w-3 h-3 opacity-40 shrink-0" />
           : isActive && (isSidebarExpanded || isMobile) && <ChevronRight className="w-3 h-3 opacity-50 shrink-0" />}
@@ -187,7 +167,8 @@ function NavItem({ id, label, icon: Icon, adminOnly = false, activeColor = 'text
 }
 
 // Live data-feed status indicator (driven by the SSE connection state).
-function FeedPill({ status, compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
+// Exported: the landing sidebar footer renders the same pill (status="live").
+export function FeedPill({ status, compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
   const s = status || 'connecting';
   // Resolve theme tokens once so the status dot matches the token-driven UI
   // (instead of hardcoded hexes) across light/dark/custom themes.
@@ -213,6 +194,20 @@ function FeedPill({ status, compact = false }: { status?: 'connecting' | 'live' 
   );
 }
 
+// Render one shared nav definition as a NavItem row (desktop or mobile).
+export const renderNavItem = (it: NavItemDef, isMobile = false) => (
+  <NavItem
+    key={it.id}
+    id={it.id}
+    label={it.label}
+    desc={it.desc}
+    icon={it.icon}
+    adminOnly={it.adminOnly}
+    activeColor={it.accent ? 'text-[var(--accent-color)]' : undefined}
+    isMobile={isMobile}
+  />
+);
+
 export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick, setShowAuthModal, feedStatus }: AppShellProps) {
   const activeTab = useContractStore(s => s.activeTab);
   const setActiveTab = useContractStore(s => s.setActiveTab);
@@ -220,12 +215,12 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
 
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
     if (typeof window === 'undefined') return true;
-    return localStorage.getItem('slayer_sidebar_collapsed') !== 'true';
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'true';
   });
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem('slayer_sidebar_collapsed', String(!isSidebarExpanded));
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!isSidebarExpanded));
     }
   }, [isSidebarExpanded]);
 
@@ -274,25 +269,17 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
             Main Views
           </div>
           
-          <NavItem id="home" label="Home" icon={Home} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="skyvision" label="SkyVision" icon={Sparkles} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="pinpoint" label="Pinpoint GEX" icon={Dna} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="dealerflow" label="Dealer Flow" icon={Waves} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="liveterminal" label="Live Terminal" icon={RadioTower} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="quant" label="Quant Lab" icon={LineChart} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="auditor" label="Trade History" icon={Database} />
-          
+          {NAV_MAIN_VIEWS.map((it) => renderNavItem(it))}
+
           <div className={`text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mt-4 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
             Tools
           </div>
 
-          <NavItem id="workspace" label="Workspace" icon={LayoutGrid} />
-          <NavItem id="community" label="Community" icon={GraduationCap} activeColor="text-[var(--accent-color)]" />
-          <NavItem id="subscription" label="Pricing" icon={CreditCard} />
+          {NAV_TOOLS.map((it) => renderNavItem(it))}
 
           <div className="mt-auto pt-4 flex flex-col gap-1.5 border-t border-[var(--border)]">
-            <NavItem id="settings" label="Settings" icon={SlidersHorizontal} />
-            <NavItem id="admin" label="Admin Panel" icon={Lock} adminOnly />
+            {renderNavItem(NAV_SETTINGS)}
+            {renderNavItem(NAV_ADMIN)}
           </div>
         </div>
 
@@ -369,23 +356,15 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
             <div className="text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mb-2">
               Main Views
             </div>
-            <NavItem id="home" label="Home" icon={Home} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="skyvision" label="SkyVision" icon={Sparkles} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="pinpoint" label="Pinpoint GEX" icon={Dna} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="dealerflow" label="Dealer Flow" icon={Waves} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="liveterminal" label="Live Terminal" icon={RadioTower} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="quant" label="Quant Lab" icon={LineChart} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="auditor" label="Trade History" icon={Database} isMobile />
+            {NAV_MAIN_VIEWS.map((it) => renderNavItem(it, true))}
 
             <div className="text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mt-6 mb-2">
               Tools
             </div>
 
-            <NavItem id="workspace" label="Workspace" icon={LayoutGrid} isMobile />
-            <NavItem id="community" label="Community" icon={GraduationCap} activeColor="text-[var(--accent-color)]" isMobile />
-            <NavItem id="subscription" label="Pricing" icon={CreditCard} isMobile />
-            <NavItem id="settings" label="Settings" icon={SlidersHorizontal} isMobile />
-            <NavItem id="admin" label="Admin Panel" icon={Lock} adminOnly isMobile />
+            {NAV_TOOLS.map((it) => renderNavItem(it, true))}
+            {renderNavItem(NAV_SETTINGS, true)}
+            {renderNavItem(NAV_ADMIN, true)}
             
             {session?.authenticated ? (
               <button 

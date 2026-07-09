@@ -1,30 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'motion/react';
+import { motion, useScroll, useTransform, useReducedMotion, useInView } from 'motion/react';
+import type { MotionValue } from 'motion/react';
 import Lenis from 'lenis';
-import { Sparkles, Dna, Waves, RadioTower, LineChart, Database, CreditCard, LogIn, Menu, X, Check, ArrowUpRight, LayoutGrid, GraduationCap } from 'lucide-react';
+import { LogIn, Menu, X, Check, ArrowUpRight } from 'lucide-react';
 // The hero backdrop is the real slayerterminal.com motif: a live code/finance
 // "rain" (neutral steel/amber tints), NOT a coloured 3D field. Light, no WebGL.
 import SlayerCodeRain from './SlayerCodeRain';
-
-// Product nav — mirrors the app shell's sidebar EXACTLY (same tabs, order, and
-// Main Views / Tools grouping — see AppShell.tsx) so the landing and terminal
-// share one left-sidebar navigation (no top-vs-side, no two-different-navs).
-// Each row carries a one-line description so visitors see what every tab is.
-type NavProduct = { tab: string; label: string; desc: string; icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }> };
-const MAIN_VIEWS: NavProduct[] = [
-  { tab: 'skyvision', label: 'SkyVision', desc: 'Ranked trade setups', icon: Sparkles },
-  { tab: 'pinpoint', label: 'Pinpoint GEX', desc: 'Dealer positioning & walls', icon: Dna },
-  { tab: 'dealerflow', label: 'Dealer Flow', desc: 'Live pressure by strike', icon: Waves },
-  { tab: 'liveterminal', label: 'Live Terminal', desc: 'Chart + GEX nodes', icon: RadioTower },
-  { tab: 'quant', label: 'Quant Lab', desc: 'Vol surface & models', icon: LineChart },
-  { tab: 'auditor', label: 'Trade History', desc: 'Tracked outcomes', icon: Database },
-];
-const TOOLS: NavProduct[] = [
-  { tab: 'workspace', label: 'Workspace', desc: 'Saved layouts', icon: LayoutGrid },
-  { tab: 'community', label: 'Community', desc: 'Learn & discuss', icon: GraduationCap },
-  { tab: 'subscription', label: 'Pricing', desc: 'Plans & access', icon: CreditCard },
-];
-const PRODUCTS: NavProduct[] = [...MAIN_VIEWS, ...TOOLS];
+// The landing sidebar IS the app shell sidebar: it renders AppShell's own
+// NavItem rows (same classes, flyouts, chevrons), FeedPill and brand header,
+// fed by the ONE shared nav definition in src/lib/navItems.ts. Zero drift —
+// clicking "Launch Terminal" produces no visual jump in either direction.
+import { NavCtx, FeedPill, renderNavItem } from './AppShell';
+import type { NavCtxValue } from './AppShell';
+import { BrandHeader, TerminalLogo } from './BrandLogo';
+import { NAV_MAIN_VIEWS, NAV_TOOLS, NAV_SETTINGS, SIDEBAR_COLLAPSED_KEY } from '../lib/navItems';
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -133,16 +122,136 @@ function Eyebrow({ children, onDark = false }: { children: React.ReactNode; onDa
   );
 }
 
+// Signature ease — the landonorris.com "expo out" curve, used by every reveal.
+const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
+
+/* Line-mask heading reveal — the text slides up out of an overflow-hidden clip
+   the first time it scrolls into view (editorial split-line intro). Static
+   under reduced motion. */
+function MaskedHeading({
+  as: Tag = 'h2',
+  children,
+  className = '',
+  style,
+  delay = 0,
+}: {
+  as?: 'h1' | 'h2' | 'h3' | 'div';
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+  delay?: number;
+}) {
+  const reduce = useReducedMotion();
+  if (reduce) return <Tag className={className} style={style}>{children}</Tag>;
+  const MotionTag = motion[Tag];
+  return (
+    <span className="block overflow-hidden">
+      <MotionTag
+        className={`${className} will-change-transform`}
+        style={style}
+        initial={{ y: '110%' }}
+        whileInView={{ y: '0%' }}
+        viewport={{ once: true, margin: '-10% 0px -6% 0px' }}
+        transition={{ duration: 0.9, delay, ease: EASE_EXPO }}
+      >
+        {children}
+      </MotionTag>
+    </span>
+  );
+}
+
+/* MaskedLine — span-flavoured line-mask reveal for multi-line headings (valid
+   inside <h2>): each line clips in its own overflow-hidden span and slides up
+   on first view. Static under reduced motion. */
+function MaskedLine({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
+  const reduce = useReducedMotion();
+  if (reduce) return <span className="block">{children}</span>;
+  return (
+    <span className="block overflow-hidden">
+      <motion.span
+        className="block will-change-transform"
+        initial={{ y: '110%' }}
+        whileInView={{ y: '0%' }}
+        viewport={{ once: true, margin: '-10% 0px -6% 0px' }}
+        transition={{ duration: 0.9, delay, ease: EASE_EXPO }}
+      >
+        {children}
+      </motion.span>
+    </span>
+  );
+}
+
+/* Oversized editorial index numeral (the "giant number" motif) — huge,
+   low-contrast, tabular, revealing with a soft rise on first view. */
+function GiantIndex({ n, color }: { n: string; color?: string }) {
+  const reduce = useReducedMotion();
+  const numeral = (
+    <span
+      aria-hidden="true"
+      className="block text-[64px] font-semibold leading-[0.85] tabular-nums select-none"
+      style={{
+        letterSpacing: '-0.05em',
+        color: color
+          ? `color-mix(in srgb, ${color} 26%, transparent)`
+          : 'color-mix(in srgb, var(--text-primary) 10%, transparent)',
+      }}
+    >
+      {n}
+    </span>
+  );
+  if (reduce) return numeral;
+  return (
+    <span className="block overflow-hidden">
+      <motion.span
+        className="block will-change-transform"
+        initial={{ y: '55%', opacity: 0 }}
+        whileInView={{ y: '0%', opacity: 1 }}
+        viewport={{ once: true, margin: '-12% 0px -8% 0px' }}
+        transition={{ duration: 0.9, ease: EASE_EXPO }}
+      >
+        {numeral}
+      </motion.span>
+    </span>
+  );
+}
+
+/* Count-up — a "$39"-style price counts 0→value once, on first reveal.
+   Non-numeric prices ("Custom") render untouched; reduced motion = static. */
+function CountUpPrice({ price }: { price: string }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLSpanElement | null>(null);
+  const inView = useInView(ref, { once: true, margin: '-10% 0px' });
+  const match = /^\$(\d+)$/.exec(price);
+  const target = match ? parseInt(match[1], 10) : null;
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (target == null || reduce || !inView) return;
+    let raf = 0;
+    let start = 0;
+    const dur = 900;
+    const tick = (t: number) => {
+      if (!start) start = t;
+      const p = Math.min(1, (t - start) / dur);
+      setVal(Math.round((1 - Math.pow(1 - p, 3)) * target)); // easeOutCubic
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, reduce, inView]);
+  if (target == null) return <>{price}</>;
+  return <span ref={ref}>${reduce ? target : val}</span>;
+}
+
 function SectionHead({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
       {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
-      <h2
+      <MaskedHeading
         className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]"
         style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}
       >
         {title}
-      </h2>
+      </MaskedHeading>
       {sub ? (
         <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>
           {sub}
@@ -218,27 +327,112 @@ function Kpi({ label, value, tone = PALETTE.text, sub }: { label: string; value:
   );
 }
 
-/* Diverging dealer-pressure bars (real strikes; steel = call-side / positive, red = put-side / negative) */
-function PressureMap({ rows }: { rows: PressureRow[] }) {
-  const max = Math.max(1, ...rows.map((r) => Math.abs(r.net)));
+/* MiniPositioningMap — a faithful miniature of the REAL Dealer Positioning Map
+   (src/components/pinpoint/DealerPositioningMap.tsx): strikes descending, a
+   centre zero axis, steel CALL pressure extending right / red PUT pressure
+   extending left, faint dashed rules for pin & walls, a solid SPOT rule with
+   its tabular price, right-edge CALL WALL / PUT WALL zone annotations, and a
+   "FRICTION ZONE lo–hi" footer. Real rows only — nothing fabricated. */
+function MiniPositioningMap({ rows, metrics }: { rows: PressureRow[]; metrics: HeroMetrics }) {
+  const sorted = useMemo(() => [...rows].sort((a, b) => b.strike - a.strike), [rows]);
+  const W = 250;
+  const labelW = 40;   // strike labels
+  const zoneW = 56;    // right-edge annotation rail
+  const plotL = labelW + 4;
+  const plotR = W - zoneW - 4;
+  const centerX = (plotL + plotR) / 2;
+  const barMax = (plotR - plotL) / 2;
+  const rowH = 14;
+  const top = 4;
+  const H = top + sorted.length * rowH + 4;
+  const maxAbs = Math.max(1e-9, ...sorted.map((r) => Math.abs(r.net)));
+  const yOf = (i: number) => top + i * rowH + rowH / 2;
+
+  // Rule / annotation rows: prefer the explicit row kind tags, fall back to the
+  // row nearest the real metric level.
+  const idxOf = (kind: PressureRow['kind'], level?: number | null): number | null => {
+    const tagged = sorted.findIndex((r) => r.kind === kind);
+    if (tagged >= 0) return tagged;
+    if (!isNum(level) || sorted.length === 0) return null;
+    let best = 0;
+    for (let i = 1; i < sorted.length; i++) {
+      if (Math.abs(sorted[i].strike - level) < Math.abs(sorted[best].strike - level)) best = i;
+    }
+    return best;
+  };
+  const spotIdx = idxOf('spot', metrics.spot);
+  const pinIdx = idxOf('pin', metrics.pin);
+  const cwIdx = idxOf('callWall', metrics.callWall);
+  const pwIdx = idxOf('putWall', metrics.putWall);
+
+  const frictionLo = isNum(metrics.spot) && isNum(metrics.pin) ? Math.min(metrics.spot, metrics.pin) : null;
+  const frictionHi = isNum(metrics.spot) && isNum(metrics.pin) ? Math.max(metrics.spot, metrics.pin) : null;
+  const hasFriction = frictionLo != null && frictionHi != null && Math.round(frictionLo) !== Math.round(frictionHi);
+
+  const zone = (idx: number | null, label: string, color: string) =>
+    idx == null ? null : (
+      <g>
+        <path
+          d={`M ${plotR + 4} ${yOf(idx) - 5} L ${plotR + 8} ${yOf(idx) - 5} L ${plotR + 8} ${yOf(idx) + 5} L ${plotR + 4} ${yOf(idx) + 5}`}
+          fill="none" stroke={color} strokeOpacity="0.55" strokeWidth="0.8"
+        />
+        <text x={plotR + 11} y={yOf(idx) + 2.5} fontSize="6.5" fontWeight={600} fill={color} style={{ letterSpacing: '0.06em' }}>
+          {label}
+        </text>
+      </g>
+    );
+
   return (
-    <div className="space-y-[3px]">
-      {rows.map((r) => {
-        const w = (Math.abs(r.net) / max) * 100;
-        const pos = r.net >= 0;
-        const color = pos ? PALETTE.steel : PALETTE.red;
-        return (
-          <div key={r.strike} className="flex items-center gap-2">
-            <div className="w-12 shrink-0 text-right text-[9px] tabular-nums" style={{ color: r.kind === 'spot' ? PALETTE.ghost : muted }}>
-              {fmtLvl(r.strike)}
-            </div>
-            <div className="relative h-[9px] flex-1 overflow-hidden rounded-[2px]" style={{ background: 'var(--surface-2)' }}>
-              <div className="absolute inset-y-0" style={{ left: pos ? '50%' : `${50 - w / 2}%`, width: `${w / 2}%`, background: color, opacity: 0.85 }} />
-              <div className="absolute inset-y-0 left-1/2 w-px" style={{ background: lineStrong }} />
-            </div>
-          </div>
-        );
-      })}
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ fontVariantNumeric: 'tabular-nums' }} role="img" aria-label="Dealer positioning by strike">
+        {/* centre zero axis */}
+        <line x1={centerX} x2={centerX} y1={top} y2={H - 4} stroke={lineStrong} strokeWidth="1" />
+        {/* dashed level rules — pin (amber), call wall (steel), put wall (red) */}
+        {pinIdx != null && <line x1={plotL} x2={plotR} y1={yOf(pinIdx)} y2={yOf(pinIdx)} stroke={PALETTE.amber} strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="3 3" />}
+        {cwIdx != null && <line x1={plotL} x2={plotR} y1={yOf(cwIdx)} y2={yOf(cwIdx)} stroke={PALETTE.steel} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="3 3" />}
+        {pwIdx != null && <line x1={plotL} x2={plotR} y1={yOf(pwIdx)} y2={yOf(pwIdx)} stroke={PALETTE.red} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="3 3" />}
+        {/* strike labels + diverging bars (steel calls right / red puts left) */}
+        {sorted.map((r, i) => {
+          const pos = r.net >= 0;
+          const mag = (Math.abs(r.net) / maxAbs) * barMax;
+          const isSpotRow = i === spotIdx;
+          return (
+            <g key={`${r.strike}-${i}`}>
+              <text
+                x={labelW} y={yOf(i) + 2.5} textAnchor="end"
+                fontSize={isSpotRow ? 8 : 7.5} fontWeight={isSpotRow ? 700 : 400}
+                fill={isSpotRow ? PALETTE.ghost : muted}
+              >
+                {isSpotRow && isNum(metrics.spot) ? fmtPx(metrics.spot) : fmtLvl(r.strike)}
+              </text>
+              <rect
+                x={pos ? centerX : centerX - mag}
+                y={yOf(i) - 3}
+                width={Math.max(0.6, mag)}
+                height={6}
+                rx={1}
+                fill={pos ? PALETTE.steel : PALETTE.red}
+                fillOpacity={0.9}
+              />
+            </g>
+          );
+        })}
+        {/* spot — solid rule + centre marker (matches the real map) */}
+        {spotIdx != null && (
+          <g>
+            <line x1={plotL} x2={plotR} y1={yOf(spotIdx)} y2={yOf(spotIdx)} stroke={PALETTE.ghost} strokeOpacity="0.55" strokeWidth="0.8" />
+            <rect x={centerX - 1} y={yOf(spotIdx) - 5} width={2} height={10} fill={PALETTE.ghost} />
+          </g>
+        )}
+        {/* right-edge pressure-zone annotations */}
+        {zone(cwIdx, 'CALL WALL', PALETTE.steel)}
+        {zone(pwIdx, 'PUT WALL', PALETTE.red)}
+      </svg>
+      {hasFriction ? (
+        <div className="mt-1.5 text-[8.5px] font-semibold uppercase tracking-[0.14em] tabular-nums" style={{ color: faint }}>
+          Friction zone {fmtLvl(frictionLo)}–{fmtLvl(frictionHi)}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -283,13 +477,13 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
         </span>
       </div>
 
-      {/* KPI strip */}
+      {/* KPI strip — same labels/order as the real Pinpoint page's top strip */}
       <div className="grid grid-cols-3 sm:grid-cols-6" style={{ borderBottom: `1px solid ${line}` }}>
-        <Kpi label="Spot" value={fmtPx(m.spot)} tone={PALETTE.ghost} />
         <Kpi label="Net GEX" value={fmtGex(m.netGex)} tone={isNum(m.netGex) && m.netGex < 0 ? '#d9736f' : '#6fae7d'} />
+        <Kpi label="Spot" value={fmtPx(m.spot)} tone={PALETTE.ghost} />
         <Kpi label="Call Wall" value={fmtLvl(m.callWall)} tone={PALETTE.steel} />
         <Kpi label="Put Wall" value={fmtLvl(m.putWall)} tone={PALETTE.red} />
-        <Kpi label="Pin" value={fmtLvl(m.pin)} tone={PALETTE.amber} />
+        <Kpi label="Pin Level" value={fmtLvl(m.pin)} tone={PALETTE.amber} />
         <Kpi label="Exp Move" value={fmtPct(m.expectedMovePct)} sub={isNum(emPts) ? `±${emPts.toFixed(1)} pts` : undefined} tone={PALETTE.text} />
       </div>
 
@@ -310,9 +504,14 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
           </div>
         </div>
         <div className="p-3" style={{ background: PALETTE.panel }}>
-          <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Dealer Positioning</span>
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Dealer Positioning Map</span>
+            <span className="text-[8px] uppercase tracking-[0.12em]" style={{ color: faint }}>
+              <span style={{ color: PALETTE.red }}>▪ put</span> <span style={{ color: PALETTE.steel }}>▪ call</span>
+            </span>
+          </div>
           <div className="mt-2">
-            {pressure.length ? <PressureMap rows={pressure} /> : <div className="py-6 text-center text-[10px]" style={{ color: faint }}>awaiting chain</div>}
+            {pressure.length ? <MiniPositioningMap rows={pressure} metrics={metrics} /> : <div className="py-6 text-center text-[10px]" style={{ color: faint }}>awaiting chain</div>}
           </div>
         </div>
       </div>
@@ -352,110 +551,188 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
   );
 }
 
-/* ─────────────────────────── sidebar (matches the app shell) ─────────────── */
-function BrandMark() {
-  return (
-    <span className="inline-flex items-center text-[14px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
-      <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
-      <span aria-hidden="true" className="slayer-caret ml-[3px] inline-block h-[13px] w-[7px] rounded-[1px]" style={{ background: 'var(--accent-color)', boxShadow: '0 0 10px color-mix(in srgb, var(--accent-color) 45%, transparent)' }} />
-    </span>
-  );
-}
+/* ─────────────── sidebar — the SAME sidebar as the app shell ─────────────── */
+/* Renders AppShell's own NavItem rows (identical classes, flyouts, chevrons,
+   collapse behavior, widths w-64 ⇄ w-16) via NavCtx, fed by the shared
+   src/lib/navItems.ts definitions. The landing IS the "home" tab, so Home shows
+   active and scrolls to top; every other row crosses into the terminal. */
 
-function NavRow({ p, onEnter, onClick }: { p: (typeof PRODUCTS)[number]; onEnter: (t?: string) => void; onClick?: () => void }) {
-  const Icon = p.icon;
+/** Footer for visitors — same container styling as AppShell's footer
+ *  (p-4, border-t var(--border), var(--surface) bg), with the logged-out
+ *  affordances: FeedPill LIVE, the primary Launch CTA, and log in / sign up. */
+function LandingSidebarFooter({ onLaunch, expanded }: { onLaunch: () => void; expanded: boolean }) {
   return (
-    <button
-      type="button"
-      onClick={() => { onEnter(p.tab); onClick?.(); }}
-      className="group flex w-full items-center gap-3 rounded-[8px] px-2.5 py-2 text-left transition-colors"
-      onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
-      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-    >
-      <Icon className="h-[18px] w-[18px] shrink-0" style={{ color: muted }} />
-      <span className="min-w-0">
-        <span className="block text-[13px] font-medium leading-tight" style={{ color: PALETTE.text }}>{p.label}</span>
-        <span className="block truncate text-[10.5px] leading-tight" style={{ color: faint }}>{p.desc}</span>
-      </span>
-    </button>
-  );
-}
-
-function SidebarFooter({ onLaunch }: { onLaunch: () => void }) {
-  return (
-    <div className="space-y-2 border-t px-3 py-4" style={{ borderColor: line }}>
-      <div className="flex items-center gap-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: muted }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ background: '#2f9d45', boxShadow: '0 0 8px rgba(47,157,69,0.7)' }} /> Live now
+    <div className={`p-4 border-t border-[var(--border)] bg-[var(--surface)] overflow-hidden whitespace-nowrap transition-[padding] duration-300 ${expanded ? 'px-4' : 'px-2'}`}>
+      <div className={`flex mb-3 ${expanded ? 'justify-start px-1' : 'justify-center'}`}>
+        <FeedPill status="live" compact={!expanded} />
       </div>
       <button
         type="button"
         onClick={onLaunch}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-[7px] px-3 py-2.5 text-[12px] font-semibold uppercase tracking-[0.08em] transition-colors"
+        className={`w-full px-3 py-2 font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg cursor-pointer active:scale-95 focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${expanded ? '' : 'px-0'}`}
         style={{ background: accentFill, color: accentText }}
         onMouseEnter={(e) => (e.currentTarget.style.background = accentBright)}
         onMouseLeave={(e) => (e.currentTarget.style.background = accentFill)}
+        title="Launch Terminal"
       >
-        <LogIn className="h-3.5 w-3.5" /> Launch Terminal
+        {expanded ? <><LogIn className="w-4 h-4 shrink-0" /> Launch Terminal</> : <LogIn className="w-4 h-4" />}
       </button>
-      <button type="button" onClick={onLaunch} className="w-full cursor-pointer text-center text-[11px]" style={{ color: muted }}>
-        Log in / Create account
-      </button>
+      {expanded && (
+        <button
+          type="button"
+          onClick={onLaunch}
+          className="w-full mt-2 cursor-pointer rounded text-center text-[11px] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+        >
+          Log in / Create account
+        </button>
+      )}
     </div>
   );
 }
 
-/** One labelled nav group (mirrors the app shell's "Main Views" / "Tools"). */
-function NavGroup({ heading, items, onEnter, onClick }: { heading: string; items: NavProduct[]; onEnter: (t?: string) => void; onClick?: () => void }) {
-  return (
-    <div>
-      <div className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>{heading}</div>
-      <div className="space-y-0.5">
-        {items.map((p) => <NavRow key={p.tab} p={p} onEnter={onEnter} onClick={onClick} />)}
-      </div>
-    </div>
-  );
-}
+/** Desktop left sidebar — structurally 1:1 with AppShell's <aside> (same brand
+ *  header + hamburger, same collapse widths/transitions, same group labels and
+ *  NavItem rows, same bottom Settings section — no Admin for visitors). The
+ *  collapse state persists under AppShell's OWN localStorage key, so crossing
+ *  landing ⇄ terminal keeps the sidebar at the same width: no jump. */
+function LandingSidebar({ onLaunch, onEnter, scrollTop }: { onLaunch: () => void; onEnter: (t?: string) => void; scrollTop: () => void }) {
+  const [expanded, setExpanded] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'true';
+  });
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!expanded));
+  }, [expanded]);
 
-/** Desktop left sidebar — the same shape, grouping and nav as the app shell. */
-function LandingSidebar({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
-  return (
-    <aside className="hidden w-[248px] shrink-0 flex-col md:flex" style={{ borderRight: `1px solid ${line}`, background: 'var(--surface)' }}>
-      <div className="px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}><BrandMark /></div>
-      <nav className="slayer-scrollbar flex-1 space-y-4 overflow-y-auto px-3 py-4">
-        <NavGroup heading="Main Views" items={MAIN_VIEWS} onEnter={onEnter} />
-        <NavGroup heading="Tools" items={TOOLS} onEnter={onEnter} />
-      </nav>
-      <SidebarFooter onLaunch={onLaunch} />
-    </aside>
-  );
-}
+  // Home is this page: it re-scrolls to top. Everything else (incl. flyout
+  // sub-tab picks, which call setActiveTab with the parent id) enters the app.
+  const ctx = useMemo<NavCtxValue>(() => ({
+    activeTab: 'home',
+    setActiveTab: (id: any) => { if (id === 'home') scrollTop(); else onEnter(id); },
+    isSidebarExpanded: expanded,
+    closeMobile: () => {},
+    session: null, // visitors never see the admin-gated rows
+  }), [expanded, onEnter, scrollTop]);
 
-/** Mobile top bar + slide-in drawer (mirrors the app's mobile nav). */
-function LandingMobileNav({ onLaunch, onEnter }: { onLaunch: () => void; onEnter: (t?: string) => void }) {
-  const [open, setOpen] = useState(false);
   return (
-    <div className="md:hidden">
-      <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-3 backdrop-blur" style={{ background: 'color-mix(in srgb, var(--surface) 85%, transparent)', borderBottom: `1px solid ${line}` }}>
-        <BrandMark />
-        <button type="button" aria-label="Menu" onClick={() => setOpen(true)} className="cursor-pointer p-1.5" style={{ color: PALETTE.text }}><Menu className="h-5 w-5" /></button>
-      </div>
-      {open ? (
-        <div className="fixed inset-0 z-[70]">
-          <div className="absolute inset-0" style={{ background: 'rgba(0,0,0,0.6)' }} onClick={() => setOpen(false)} />
-          <aside className="absolute left-0 top-0 flex h-full w-[280px] max-w-[82vw] flex-col" style={{ background: 'var(--surface)', borderRight: `1px solid ${line}` }}>
-            <div className="flex items-center justify-between px-5 py-[18px]" style={{ borderBottom: `1px solid ${line}` }}>
-              <BrandMark />
-              <button type="button" aria-label="Close" onClick={() => setOpen(false)} className="cursor-pointer p-1" style={{ color: muted }}><X className="h-5 w-5" /></button>
-            </div>
-            <nav className="slayer-scrollbar flex-1 space-y-4 overflow-y-auto px-3 py-4">
-              <NavGroup heading="Main Views" items={MAIN_VIEWS} onEnter={onEnter} onClick={() => setOpen(false)} />
-              <NavGroup heading="Tools" items={TOOLS} onEnter={onEnter} onClick={() => setOpen(false)} />
-            </nav>
-            <SidebarFooter onLaunch={() => { setOpen(false); onLaunch(); }} />
-          </aside>
+    <NavCtx.Provider value={ctx}>
+      <aside className={`bg-[var(--surface)] border-r border-[var(--border)] flex-col hidden md:flex shrink-0 z-[100] h-full relative transition-[width] duration-200 ease-out ${expanded ? 'w-64' : 'w-16'}`}>
+        <div className="p-3 border-b border-[var(--border)] h-[73px] flex items-center gap-2 overflow-hidden">
+          <button
+            type="button"
+            className="origin-left cursor-pointer rounded-md focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+            style={{ transform: expanded ? 'scale(0.9)' : 'scale(0.9) translateX(-4px)' }}
+            onClick={scrollTop}
+            aria-label="Go to home"
+          >
+            <BrandHeader expanded={expanded} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="ml-auto p-2 rounded-md border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+            aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+            aria-expanded={expanded}
+            title={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
+          >
+            <Menu className="w-4 h-4" />
+          </button>
         </div>
-      ) : null}
-    </div>
+
+        <div
+          className="flex-1 overflow-y-auto px-2 py-4 flex flex-col gap-1.5 scrollbar-none scroll-smooth touch-pan-y overflow-x-hidden"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
+          <div className={`text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${expanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 pointer-events-none'}`}>
+            Main Views
+          </div>
+          {NAV_MAIN_VIEWS.map((it) => renderNavItem(it))}
+
+          <div className={`text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mt-4 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${expanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
+            Tools
+          </div>
+          {NAV_TOOLS.map((it) => renderNavItem(it))}
+
+          <div className="mt-auto pt-4 flex flex-col gap-1.5 border-t border-[var(--border)]">
+            {renderNavItem(NAV_SETTINGS)}
+          </div>
+        </div>
+
+        <LandingSidebarFooter onLaunch={onLaunch} expanded={expanded} />
+      </aside>
+    </NavCtx.Provider>
+  );
+}
+
+/** Mobile top bar + dropdown — mirrors AppShell's mobile nav (same bar classes,
+ *  same dropdown panel, same NavItem rows with descriptions) plus the visitor
+ *  footer CTAs. */
+function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: () => void; onEnter: (t?: string) => void; scrollTop: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ctx = useMemo<NavCtxValue>(() => ({
+    activeTab: 'home',
+    setActiveTab: (id: any) => { if (id === 'home') scrollTop(); else onEnter(id); },
+    isSidebarExpanded: true,
+    closeMobile: () => setOpen(false),
+    session: null,
+  }), [onEnter, scrollTop]);
+
+  return (
+    <NavCtx.Provider value={ctx}>
+      <div className="md:hidden">
+        <div className="sticky top-0 z-50 bg-[var(--surface)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
+          <div className="cursor-pointer scale-[0.85] origin-left" onClick={() => { setOpen(false); scrollTop(); }}>
+            <BrandHeader />
+          </div>
+          <div className="flex items-center gap-3">
+            <FeedPill status="live" />
+            <button
+              type="button"
+              onClick={() => setOpen(!open)}
+              className="text-[var(--text-tertiary)] p-2 rounded focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+              aria-label={open ? 'Close menu' : 'Open menu'}
+            >
+              {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+        {open && (
+          <div
+            className="fixed inset-0 top-[57px] z-[90] bg-[var(--surface)]/95 border-t border-[var(--border)] overflow-y-auto pb-20 touch-pan-y scroll-smooth"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
+            <div className="p-4 flex flex-col gap-2">
+              <div className="text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mb-2">
+                Main Views
+              </div>
+              {NAV_MAIN_VIEWS.map((it) => renderNavItem(it, true))}
+
+              <div className="text-[12px] text-[var(--text-tertiary)] font-semibold tracking-wide px-2 py-1 mt-6 mb-2">
+                Tools
+              </div>
+              {NAV_TOOLS.map((it) => renderNavItem(it, true))}
+              {renderNavItem(NAV_SETTINGS, true)}
+
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onLaunch(); }}
+                className="w-full px-3 py-3 mt-6 font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg tracking-wide cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                style={{ background: accentFill, color: accentText }}
+              >
+                <LogIn className="w-4 h-4" /> Launch Terminal
+              </button>
+              <button
+                type="button"
+                onClick={() => { setOpen(false); onLaunch(); }}
+                className="w-full px-3 py-3 border border-[var(--border)] bg-[var(--surface-2)] text-[var(--success)] font-semibold transition-all flex items-center justify-center gap-1.5 text-[13px] rounded-lg tracking-wide focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+              >
+                Log in / create account
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </NavCtx.Provider>
   );
 }
 
@@ -480,7 +757,11 @@ const HERO_RISE = {
   show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] as const } },
 };
 
-function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'>) {
+// The two headline lines — each gets its own overflow-hidden mask and slides
+// up 110%→0 on the expo ease with a stagger (the split-line intro).
+const HERO_LINES = ['Read the flow.', 'Rank the contract.'];
+
+function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch, mockY }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'> & { mockY: MotionValue<number> | number }) {
   const reduce = useReducedMotion();
   return (
     <section className="relative overflow-hidden" style={{ minHeight: '92vh', background: '#08090A' }}>
@@ -496,9 +777,22 @@ function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: R
           variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.04 } } }}
         >
           <motion.div variants={HERO_RISE}><Eyebrow onDark>From Traders. For Traders.</Eyebrow></motion.div>
-          <motion.h1 variants={HERO_RISE} className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: HERO_GHOST, letterSpacing: '-0.02em' }}>
-            Read the flow.<br />Rank the contract.
-          </motion.h1>
+          {/* Line-mask headline — each line clipped by its own overflow-hidden
+              wrapper, translating up from below the clip. Static when reduced. */}
+          <h1 className="mt-4 text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: HERO_GHOST, letterSpacing: '-0.02em' }}>
+            {HERO_LINES.map((ln, i) => (
+              <span key={ln} className="block overflow-hidden pb-[0.08em] -mb-[0.08em]">
+                <motion.span
+                  className="block will-change-transform"
+                  initial={reduce ? false : { y: '110%' }}
+                  animate={{ y: '0%' }}
+                  transition={{ duration: 0.95, delay: 0.12 + i * 0.13, ease: EASE_EXPO }}
+                >
+                  {ln}
+                </motion.span>
+              </span>
+            ))}
+          </h1>
           <motion.p variants={HERO_RISE} className="mt-5 max-w-xl text-[15px] leading-relaxed" style={{ color: HERO_MUTED }}>
             SkyVision finds the setup, Pinpoint AI reads the flow. GEX, DEX, VEX, dealer positioning,
             and volatility structure — one clean trading command center.
@@ -511,9 +805,60 @@ function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch }: R
             Built for traders who need levels, context, and execution clarity.
           </motion.p>
         </motion.div>
-        <TerminalMock ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} />
+        {/* the mock drifts slightly SLOWER than the copy on scroll (parallax on
+            the outer layer), and settles in with its own soft rise on load
+            (inner layer — separate so the scroll-linked y never fights it). */}
+        <motion.div style={{ y: mockY }} className="will-change-transform">
+          <motion.div
+            initial={reduce ? false : { opacity: 0, y: 26 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.0, delay: 0.28, ease: EASE_EXPO }}
+          >
+            <TerminalMock ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} />
+          </motion.div>
+        </motion.div>
       </div>
     </section>
+  );
+}
+
+/* MarqueeTicker — full-width, slow, seamless terminal-phrase strip between the
+   hero and the first section. The track renders its items twice and loops via
+   the -50% translateX CSS keyframe (.slayer-marquee in index.css); reduced
+   motion leaves the row static (the keyframe is also disabled in CSS). */
+const MARQUEE_ITEMS = [
+  'GEX', 'DEX', 'VEX', 'DEALER POSITIONING', 'CALL WALLS', 'PUT WALLS',
+  '0DTE LEVELS', 'RANKED SETUPS', 'VOL SURFACE', 'GAMMA FLIP', 'PIN ZONES', 'EXPECTED MOVE',
+];
+
+function MarqueeTicker() {
+  const reduce = useReducedMotion();
+  const row = (ariaHidden: boolean) => (
+    <div aria-hidden={ariaHidden || undefined} className="flex shrink-0 items-center">
+      {MARQUEE_ITEMS.map((it, i) => (
+        <React.Fragment key={i}>
+          <span
+            className="px-5 text-[10.5px] font-semibold uppercase"
+            style={{ letterSpacing: '0.26em', color: faint }}
+          >
+            {it}
+          </span>
+          <span className="text-[10px]" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 45%, transparent)' }}>·</span>
+        </React.Fragment>
+      ))}
+    </div>
+  );
+  return (
+    <div
+      className="overflow-hidden whitespace-nowrap py-3.5"
+      style={{ borderBottom: `1px solid ${line}`, background: PALETTE.bg }}
+      role="presentation"
+    >
+      <div className={`flex w-max ${reduce ? '' : 'slayer-marquee'}`}>
+        {row(false)}
+        {row(true)}
+      </div>
+    </div>
   );
 }
 
@@ -528,10 +873,14 @@ function ProblemSection() {
       <SectionHead eyebrow="The Problem" title="Most Traders Are Reacting Too Late" />
       <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         {cards.map((c, i) => (
-          <Panel key={i} className="p-5">
-            <div className="text-[10px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] ?? PALETTE.accent[0] }}>0{i + 1}</div>
-            <div className="mt-3 text-[14px] font-semibold leading-snug" style={{ color: PALETTE.ghost }}>{c.t}</div>
-            <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{c.d}</p>
+          <Panel key={i} className="relative overflow-hidden p-5">
+            {/* oversized editorial index — giant, low-contrast, scroll-revealed */}
+            <div className="pointer-events-none absolute -top-1 right-3">
+              <GiantIndex n={`0${i + 1}`} color={PALETTE.accent[i] ?? PALETTE.accent[0]} />
+            </div>
+            <div className="relative text-[10px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] ?? PALETTE.accent[0] }}>0{i + 1}</div>
+            <div className="relative mt-3 max-w-[85%] text-[14px] font-semibold leading-snug" style={{ color: PALETTE.ghost }}>{c.t}</div>
+            <p className="relative mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{c.d}</p>
           </Panel>
         ))}
       </div>
@@ -552,7 +901,8 @@ function SolutionSection() {
         <div>
           <Eyebrow>The Solution</Eyebrow>
           <h2 className="mt-3 text-[28px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
-            One Terminal.<br />The Levels That Matter.
+            <MaskedLine>One Terminal.</MaskedLine>
+            <MaskedLine delay={0.1}>The Levels That Matter.</MaskedLine>
           </h2>
           <p className="mt-4 max-w-md text-[13.5px] leading-relaxed" style={{ color: muted }}>
             Slayer Terminal turns dealer positioning and options structure into clear levels and
@@ -592,20 +942,20 @@ function ProductPreview({ ticker, metrics, ranked, pressure, spark, onEnter }: R
   );
 }
 
-function FeatureSection({ metrics, onEnter }: { metrics: HeroMetrics; onEnter: (t?: string) => void }) {
+function FeatureSection({ metrics, ranked, pressure, spark, onEnter }: { metrics: HeroMetrics; ranked: RankedRow[]; pressure: PressureRow[]; spark: number[]; onEnter: (t?: string) => void }) {
   const feats: { t: string; d: string; tab?: string; visual: React.ReactNode }[] = [
     { t: 'Pinpoint GEX', tab: 'pinpoint', d: 'Dealer positioning, gamma walls, put walls, call walls, pin levels.',
-      visual: <MiniKV rows={[['Call Wall', fmtLvl(metrics.callWall)], ['Put Wall', fmtLvl(metrics.putWall)], ['Pin', fmtLvl(metrics.pin)]]} /> },
+      visual: <MicroPositioning rows={pressure} spot={metrics.spot} /> },
     { t: 'SkyVision', tab: 'skyvision', d: 'Ranks trade setups and contracts by structure, momentum, and risk.',
-      visual: <MiniBars values={[92, 84, 71, 58]} /> },
+      visual: <MicroRanked rows={ranked} /> },
     { t: 'Dealer Flow', tab: 'dealerflow', d: 'Tracks pressure changes across strikes as the tape develops.',
-      visual: <MiniKV rows={[['Net GEX', fmtGex(metrics.netGex)], ['Bias', 'Short γ'], ['Regime', 'Accel.']]} /> },
+      visual: <MicroGamma rows={pressure} spot={metrics.spot} callWall={metrics.callWall} putWall={metrics.putWall} /> },
     { t: 'Quant Lab', tab: 'quant', d: 'Volatility surface, Greeks, regime, and expected move.',
-      visual: <MiniKV rows={[['Exp Move', fmtPct(metrics.expectedMovePct)], ['ATM IV', '—'], ['Skew', '—']]} /> },
+      visual: <MicroHeatmap /> },
     { t: 'Trade History', tab: 'auditor', d: 'Tracks setups and outcomes with honest, realized results.',
-      visual: <MiniBars values={[40, 62, 55, 78]} /> },
+      visual: <MicroBlotter /> },
     { t: 'Live Terminal', tab: 'liveterminal', d: 'One clean workspace for market structure, start to execution.',
-      visual: <MiniKV rows={[['Spot', fmtPx(metrics.spot)], ['Levels', '5'], ['Setups', 'live']]} /> },
+      visual: <MicroTicks data={spark} /> },
   ];
   return (
     <section id="features" className="mx-auto max-w-6xl px-5 py-16">
@@ -633,26 +983,181 @@ function FeatureSection({ metrics, onEnter }: { metrics: HeroMetrics; onEnter: (
   );
 }
 
-function MiniKV({ rows }: { rows: [string, string][] }) {
+/* ── product-true micro visuals (~60–80px, SVG/divs only) ──────────────────
+   Each mini is a faithful thumbnail of its real page. Real props are used
+   whenever present; when a feed isn't connected they fall back to a fixed,
+   clearly-decorative silhouette (no fabricated numbers are ever printed). */
+
+const MICRO_FRAME: React.CSSProperties = { background: PALETTE.panelSoft, border: `1px solid ${line}` };
+// deterministic diverging silhouette used when no live pressure rows exist
+const MICRO_DIVERGE = [0.85, 0.55, 0.3, 0.12, -0.2, -0.5, -0.9];
+
+/* Pinpoint — micro Dealer Positioning Map: diverging horizontal bars from a
+   centre axis (steel calls right / red puts left) + a solid spot rule. */
+function MicroPositioning({ rows, spot }: { rows: PressureRow[]; spot?: number | null }) {
+  const nets = rows.length ? rows.slice(0, 7).map((r) => r.net) : MICRO_DIVERGE;
+  const maxAbs = Math.max(1e-9, ...nets.map(Math.abs));
+  const W = 220; const rowH = 9; const H = nets.length * rowH + 8;
+  const cx = W / 2;
+  // spot rule row: the tagged spot row, else the sign-flip crossover
+  let spotI = rows.length ? rows.slice(0, 7).findIndex((r) => r.kind === 'spot') : -1;
+  if (spotI < 0) { spotI = nets.findIndex((v, i) => i > 0 && nets[i - 1] >= 0 && v < 0); if (spotI < 0) spotI = Math.floor(nets.length / 2); }
   return (
-    <div className="rounded-[6px] p-2.5" style={{ background: PALETTE.panelSoft, border: `1px solid ${line}` }}>
-      {rows.map(([k, v], i) => (
-        <div key={i} className="flex items-center justify-between py-[3px] text-[10px]">
-          <span className="uppercase tracking-[0.1em]" style={{ color: faint }}>{k}</span>
-          <span className="tabular-nums" style={{ color: PALETTE.text }}>{v}</span>
+    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[64px] w-full" role="img" aria-label="Dealer positioning preview">
+        <line x1={cx} x2={cx} y1={2} y2={H - 2} stroke={lineStrong} strokeWidth="1" />
+        {nets.map((v, i) => {
+          const y = 4 + i * rowH + rowH / 2;
+          const mag = (Math.abs(v) / maxAbs) * (W / 2 - 8);
+          const pos = v >= 0;
+          return <rect key={i} x={pos ? cx : cx - mag} y={y - 2.5} width={Math.max(0.6, mag)} height={5} rx={1} fill={pos ? PALETTE.steel : PALETTE.red} fillOpacity={0.9} />;
+        })}
+        {spotI >= 0 && (
+          <g>
+            <line x1={4} x2={W - 4} y1={4 + spotI * rowH + rowH / 2} y2={4 + spotI * rowH + rowH / 2} stroke={PALETTE.ghost} strokeOpacity="0.5" strokeWidth="0.8" />
+            {isNum(spot) ? <text x={W - 6} y={4 + spotI * rowH + rowH / 2 - 2} textAnchor="end" fontSize="6.5" fill={PALETTE.ghost} style={{ fontVariantNumeric: 'tabular-nums' }}>{fmtLvl(spot)}</text> : null}
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+/* SkyVision — micro ranked rows: symbol + confidence bar (+ conf % when real). */
+function MicroRanked({ rows }: { rows: RankedRow[] }) {
+  const real = rows.slice(0, 4);
+  const fallback = [88, 74, 61, 49]; // silhouette widths only — no numbers shown
+  const items = real.length
+    ? real.map((r) => ({ sym: r.symbol, conf: r.confidence, live: true }))
+    : fallback.map((w) => ({ sym: '—', conf: w, live: false }));
+  return (
+    <div className="space-y-[5px] rounded-[6px] p-2.5" style={MICRO_FRAME}>
+      {items.map((it, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <span className="w-9 shrink-0 text-[9px] font-semibold tabular-nums" style={{ color: it.live ? PALETTE.ghost : faint }}>{it.sym}</span>
+          <div className="relative h-[5px] flex-1 overflow-hidden rounded-[2px]" style={{ background: 'var(--surface-3, var(--surface-2))' }}>
+            <div className="absolute inset-y-0 left-0 rounded-[2px]" style={{ width: `${Math.max(0, Math.min(100, it.conf))}%`, background: PALETTE.steel, opacity: 0.9 }} />
+          </div>
+          <span className="w-7 shrink-0 text-right text-[9px] tabular-nums" style={{ color: muted }}>{it.live ? `${Math.round(it.conf)}%` : '—'}</span>
         </div>
       ))}
     </div>
   );
 }
 
-function MiniBars({ values }: { values: number[] }) {
-  const max = Math.max(...values, 1);
+/* Dealer Flow — micro net-gamma histogram: vertical bars around a zero axis,
+   green (calls) above right of spot, red (puts) below left, wall markers. */
+function MicroGamma({ rows, spot, callWall, putWall }: { rows: PressureRow[]; spot?: number | null; callWall?: number | null; putWall?: number | null }) {
+  const src = rows.length ? [...rows].sort((a, b) => a.strike - b.strike) : null;
+  const nets = src ? src.map((r) => r.net) : [...MICRO_DIVERGE].reverse();
+  const maxAbs = Math.max(1e-9, ...nets.map(Math.abs));
+  const W = 220; const H = 64; const mid = H / 2;
+  const n = nets.length;
+  const bw = Math.max(4, (W - 16) / n - 3);
+  const xOf = (i: number) => 8 + (i + 0.5) * ((W - 16) / n);
+  const idxNear = (level?: number | null) => {
+    if (!src || !isNum(level)) return null;
+    let best = 0;
+    for (let i = 1; i < src.length; i++) if (Math.abs(src[i].strike - level) < Math.abs(src[best].strike - level)) best = i;
+    return best;
+  };
+  const cwI = idxNear(callWall); const pwI = idxNear(putWall); const spotI = idxNear(spot);
   return (
-    <div className="flex items-end gap-1.5 rounded-[6px] p-2.5" style={{ background: PALETTE.panelSoft, border: `1px solid ${line}`, height: 62 }}>
-      {values.map((v, i) => (
-        <div key={i} className="flex-1 rounded-[2px]" style={{ height: `${(v / max) * 100}%`, background: PALETTE.accent[i % 4], opacity: 0.85 }} />
+    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[64px] w-full" role="img" aria-label="Net gamma by strike preview">
+        <line x1={4} x2={W - 4} y1={mid} y2={mid} stroke={lineStrong} strokeWidth="1" />
+        {nets.map((v, i) => {
+          const h = (Math.abs(v) / maxAbs) * (mid - 6);
+          const pos = v >= 0;
+          return <rect key={i} x={xOf(i) - bw / 2} y={pos ? mid - h : mid} width={bw} height={Math.max(0.8, h)} rx={1} fill={pos ? PALETTE.green : PALETTE.red} fillOpacity={0.85} />;
+        })}
+        {cwI != null && <line x1={xOf(cwI)} x2={xOf(cwI)} y1={4} y2={H - 4} stroke={PALETTE.steel} strokeOpacity="0.5" strokeWidth="0.8" strokeDasharray="3 3" />}
+        {pwI != null && <line x1={xOf(pwI)} x2={xOf(pwI)} y1={4} y2={H - 4} stroke={PALETTE.red} strokeOpacity="0.5" strokeWidth="0.8" strokeDasharray="3 3" />}
+        {spotI != null && <line x1={xOf(spotI)} x2={xOf(spotI)} y1={2} y2={H - 2} stroke={PALETTE.ghost} strokeOpacity="0.55" strokeWidth="0.9" />}
+      </svg>
+    </div>
+  );
+}
+
+/* Quant Lab — micro IV-surface heatmap: moneyness × DTE grid shading steel
+   (low IV) → amber (high IV) in a smile/short-dated silhouette. */
+function MicroHeatmap() {
+  const cols = 10; const rowsN = 5;
+  // steel #6A93B5 → amber #C79350 interpolation
+  const mix = (t: number) => {
+    const a = [106, 147, 181]; const b = [199, 147, 80];
+    const c = a.map((av, i) => Math.round(av + (b[i] - av) * t));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  };
+  return (
+    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+      <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }} role="img" aria-label="IV surface preview">
+        {Array.from({ length: rowsN * cols }, (_, k) => {
+          const r = Math.floor(k / cols); const c = k % cols;
+          const m = (c / (cols - 1)) * 2 - 1;            // moneyness −1…+1
+          const smile = 0.28 + 0.62 * m * m + 0.18 * Math.max(0, -m); // put-skewed smile
+          const term = 1 - r / (rowsN - 1) * 0.45;        // short DTE runs hotter
+          const t = Math.max(0, Math.min(1, smile * term));
+          return <div key={k} className="h-[10px] rounded-[1px]" style={{ background: mix(t), opacity: 0.85 }} />;
+        })}
+      </div>
+      <div className="mt-1.5 flex justify-between text-[8px] uppercase tracking-[0.12em]" style={{ color: faint }}>
+        <span>K/F −</span><span>ATM</span><span>K/F +</span>
+      </div>
+    </div>
+  );
+}
+
+/* Trade History — micro blotter: hairline rows, entry meta silhouette on the
+   left, signed PnL ticks diverging green/red from a zero axis on the right. */
+function MicroBlotter() {
+  const ticks = [0.62, -0.28, 0.85, 0.4, -0.5]; // silhouette only — no numbers
+  return (
+    <div className="rounded-[6px] px-2.5 py-1.5" style={MICRO_FRAME}>
+      {ticks.map((v, i) => (
+        <div key={i} className="flex items-center gap-2 py-[3px]" style={{ borderTop: i === 0 ? 'none' : `1px solid ${line}` }}>
+          <span className="h-[5px] w-9 rounded-[2px]" style={{ background: 'color-mix(in srgb, var(--text-tertiary) 28%, transparent)' }} />
+          <span className="h-[5px] w-5 rounded-[2px]" style={{ background: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }} />
+          <div className="relative h-[6px] flex-1">
+            <div className="absolute inset-y-0 left-1/2 w-px" style={{ background: lineStrong }} />
+            <div
+              className="absolute inset-y-0 rounded-[1px]"
+              style={{
+                left: v >= 0 ? '50%' : `${50 - Math.abs(v) * 50}%`,
+                width: `${Math.abs(v) * 50}%`,
+                background: v >= 0 ? PALETTE.green : PALETTE.red,
+                opacity: 0.85,
+              }}
+            />
+          </div>
+        </div>
       ))}
+    </div>
+  );
+}
+
+/* Live Terminal — micro tick chart: the real close series with GEX node dots. */
+function MicroTicks({ data }: { data: number[] }) {
+  const H = 56; const W = 220;
+  const pts = useMemo(() => {
+    if (!data || data.length < 2) return null;
+    const min = Math.min(...data); const max = Math.max(...data);
+    const span = max - min || 1;
+    return data.map((v, i) => [ (i / (data.length - 1)) * (W - 8) + 4, H - 8 - ((v - min) / span) * (H - 16) ] as const);
+  }, [data]);
+  const nodes = pts ? [0.25, 0.55, 0.85].map((f) => pts[Math.min(pts.length - 1, Math.round(f * (pts.length - 1)))]) : null;
+  return (
+    <div className="rounded-[6px] p-2" style={MICRO_FRAME}>
+      <svg viewBox={`0 0 ${W} ${H}`} className="h-[60px] w-full" role="img" aria-label="Live tick chart preview">
+        {pts ? (
+          <>
+            <polyline points={pts.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={PALETTE.steel} strokeWidth={1} vectorEffect="non-scaling-stroke" />
+            {nodes!.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={2} fill={PALETTE.amber} />)}
+          </>
+        ) : (
+          <line x1={4} y1={H / 2} x2={W - 4} y2={H / 2} stroke={line} strokeWidth={0.8} strokeDasharray="3 3" />
+        )}
+      </svg>
     </div>
   );
 }
@@ -665,9 +1170,13 @@ function HowItWorks() {
         <SectionHead eyebrow="Workflow" title="From Market Noise to Trade Structure" />
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
-            <Panel key={i} className="p-5">
-              <div className="text-[11px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>STEP {i + 1}</div>
-              <div className="mt-3 text-[14px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
+            <Panel key={i} className="relative overflow-hidden p-5">
+              {/* oversized editorial step numeral — reveals on scroll */}
+              <div className="pointer-events-none absolute -top-1 right-3">
+                <GiantIndex n={String(i + 1)} color={PALETTE.accent[i]} />
+              </div>
+              <div className="relative text-[11px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>STEP {i + 1}</div>
+              <div className="relative mt-3 max-w-[85%] text-[14px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
             </Panel>
           ))}
         </div>
@@ -747,7 +1256,9 @@ function PlanCard({ p, onEnter }: { p: (typeof PLANS)[number]; onEnter: (t?: str
       <div className="border-b pb-4" style={{ borderColor: line }}>
         <div className="text-[13px] font-semibold" style={{ color: PALETTE.ghost }}>{p.name}</div>
         <div className="mt-3 flex items-baseline gap-1.5">
-          <span className="text-[30px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text }}>{p.price}</span>
+          <span className="text-[30px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text }}>
+            <CountUpPrice price={p.price} />
+          </span>
           <span className="text-[11px]" style={{ color: faint }}>{p.note}</span>
         </div>
       </div>
@@ -862,10 +1373,11 @@ function Footer({ onLaunch, onEnter, scrollTo }: { onLaunch: () => void; onEnter
     <footer className="px-5 pb-10 pt-14" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
       <div className="mx-auto max-w-6xl">
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
-          {/* brand + tagline + social */}
+          {/* brand + tagline + social — the ONE canonical logo (BrandLogo.tsx),
+              HTML-exact: dim ">" prompt, all-one-ink wordmark, glowing caret. */}
           <div className="col-span-2 sm:col-span-4 lg:col-span-1">
-            <span className="text-[15px] font-bold tracking-[0.02em]" style={{ color: PALETTE.ghost, fontFamily: 'var(--font-brand)' }}>
-              <span style={{ color: muted }}>&gt;</span>slayer<span style={{ color: muted }}>_terminal</span>
+            <span className="inline-block origin-left scale-[0.85]">
+              <TerminalLogo expanded />
             </span>
             <p className="mt-3 max-w-xs text-[12px] leading-relaxed" style={{ color: faint }}>
               The options terminal. SkyVision finds the setup, Pinpoint AI reads the flow.
@@ -887,8 +1399,8 @@ function Footer({ onLaunch, onEnter, scrollTo }: { onLaunch: () => void; onEnter
           <div>
             <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Products</div>
             <div className="flex flex-col gap-2">
-              {MAIN_VIEWS.map((p) => (
-                <FootLink key={p.tab} label={p.label} onClick={() => onEnter(p.tab)} />
+              {NAV_MAIN_VIEWS.filter((p) => p.id !== 'home').map((p) => (
+                <FootLink key={p.id} label={p.label} onClick={() => onEnter(p.id)} />
               ))}
             </div>
           </div>
@@ -936,6 +1448,10 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
   const heroOpacityRaw = useTransform(scrollYProgress, [0, 0.13], [1, 0.35]);
   const heroY = reduce ? 0 : heroYRaw;
   const heroOpacity = reduce ? 1 : heroOpacityRaw;
+  // The TerminalMock drifts DOWN slightly against the hero's upward drift, so
+  // it scrolls perceptibly slower than the copy (subtle parallax split).
+  const mockYRaw = useTransform(scrollYProgress, [0, 0.16], [0, 34]);
+  const mockY = reduce ? 0 : mockYRaw;
 
   // Smooth-scroll to a section within the landing's own scroll container
   // (footer links → pricing / product / faq). No hash nav — this scroller is
@@ -948,6 +1464,12 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
     if (!root || !el) return;
     if (lenisRef.current) lenisRef.current.scrollTo(el, { offset: -8 });
     else root.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' });
+  };
+
+  // Sidebar "Home" / brand click — the landing IS home, so it scrolls to top.
+  const scrollTop = () => {
+    if (lenisRef.current) lenisRef.current.scrollTo(0);
+    else rootRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Lenis smooth scroll on the landing's own scroll container (wrapper mode, so
@@ -982,7 +1504,7 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
       style={{ background: 'var(--background)', color: PALETTE.text }}
     >
       {/* SAME left sidebar as the app shell — one navigation everywhere */}
-      <LandingSidebar onLaunch={onLaunch} onEnter={onEnter} />
+      <LandingSidebar onLaunch={onLaunch} onEnter={onEnter} scrollTop={scrollTop} />
 
       {/* main scroll area (its own scroller, so Lenis + progress rail + reveals work) */}
       <div ref={rootRef} className="slayer-scrollbar relative flex-1 overflow-y-auto overflow-x-hidden">
@@ -992,15 +1514,17 @@ export default function SlayerLanding({ ticker = 'SPX', metrics = {}, ranked = [
           className="pointer-events-none sticky left-0 top-0 z-[60] h-[2px] w-full origin-left"
           style={{ scaleX: scrollYProgress, background: `linear-gradient(90deg, ${PALETTE.accent[0]}, ${PALETTE.accent[1]}, ${PALETTE.accent[2]}, ${PALETTE.accent[3]})` }}
         />
-        <LandingMobileNav onLaunch={onLaunch} onEnter={onEnter} />
+        <LandingMobileNav onLaunch={onLaunch} onEnter={onEnter} scrollTop={scrollTop} />
         <div ref={contentRef} className="relative z-10">
           <motion.div style={{ y: heroY, opacity: heroOpacity }}>
-            <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} />
+            <Hero ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} onLaunch={onLaunch} mockY={mockY} />
           </motion.div>
+          {/* slow, seamless terminal-phrase marquee between hero and sections */}
+          <MarqueeTicker />
           <Reveal><ProblemSection /></Reveal>
           <Reveal><SolutionSection /></Reveal>
           <Reveal><ProductPreview ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
-          <Reveal><FeatureSection metrics={metrics} onEnter={onEnter} /></Reveal>
+          <Reveal><FeatureSection metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} /></Reveal>
           <Reveal><HowItWorks /></Reveal>
           <Reveal><ComparisonSection /></Reveal>
           <Reveal><PricingSection onLaunch={onLaunch} onEnter={onEnter} /></Reveal>

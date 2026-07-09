@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 
+// Brand ink — same vars/defaults as BrandLogo.tsx (HTML-exact in dark themes:
+// prompt #6B7177, wordmark/caret #F4F5F6; .light-theme swaps ink to near-black
+// in index.css so the lockup stays legible on light surfaces).
+const BRAND_PROMPT = 'var(--brand-prompt, #6B7177)';
+const BRAND_INK = 'var(--brand-ink, #F4F5F6)';
+
 /**
  * SlayerLoader — the full-screen boot / loading sequence. Editorial and
  * cinematic in the spirit of a high-end race-driver / studio splash: a big
@@ -108,15 +114,17 @@ export default function SlayerLoader({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.06, ease: [0.16, 1, 0.3, 1] }}
           className="mt-4 flex items-center justify-center text-center text-[34px] font-extrabold leading-none sm:text-[56px]"
-          style={{ color: 'var(--text-primary)', letterSpacing: '-0.02em', fontFamily: 'var(--font-brand)' }}
+          style={{ color: BRAND_INK, letterSpacing: '-0.02em', fontFamily: 'var(--font-brand)' }}
           aria-label="slayer_terminal"
         >
-          <span aria-hidden="true" style={{ color: 'var(--text-tertiary)', fontWeight: 700, fontSize: '0.84em', marginRight: '0.04em' }}>&gt;</span>
-          <span>slayer_terminal</span>
+          {/* HTML-exact lockup (landing/index.html h1.lockup): dim ">" prompt,
+              single-color wordmark, glowing steps(1) blink caret. */}
+          <span aria-hidden="true" style={{ color: BRAND_PROMPT, fontWeight: 700, fontSize: '0.84em', marginRight: '0.04em' }}>&gt;</span>
+          <span style={{ color: BRAND_INK }}>slayer_terminal</span>
           <span
             aria-hidden="true"
             className="slayer-caret"
-            style={{ display: 'inline-block', width: '0.5em', height: '0.92em', marginLeft: '0.14em', borderRadius: 2, background: 'var(--text-primary)', boxShadow: '0 0 18px color-mix(in srgb, var(--text-primary) 50%, transparent)' }}
+            style={{ display: 'inline-block', width: '0.5em', height: '0.92em', marginLeft: '0.14em', borderRadius: 2, background: BRAND_INK, boxShadow: `0 0 18px color-mix(in srgb, ${BRAND_INK} 50%, transparent)` }}
           />
         </motion.h1>
 
@@ -174,10 +182,21 @@ export default function SlayerLoader({
         ) : null}
       </div>
 
-      {/* bottom brand rule */}
+      {/* bottom brand rule — same structure as the HTML brand: dim ">" prompt,
+          all-one-ink wordmark, blinking caret block (scaled down, glow kept subtle). */}
       <div className="absolute bottom-6 left-0 right-0 flex justify-center">
-        <span className="text-[10px] font-bold tracking-[0.02em]" style={{ color: 'var(--text-tertiary)', fontFamily: 'var(--font-brand)' }}>
-          &gt;slayer<span style={{ color: 'color-mix(in srgb, var(--text-tertiary) 45%, transparent)' }}>_terminal</span>
+        <span
+          className="inline-flex items-center text-[10px] font-extrabold leading-none tracking-[0.02em]"
+          style={{ fontFamily: 'var(--font-brand)' }}
+          aria-label="slayer_terminal"
+        >
+          <span aria-hidden="true" style={{ color: BRAND_PROMPT, fontWeight: 700, fontSize: '0.84em', marginRight: '0.04em' }}>&gt;</span>
+          <span style={{ color: BRAND_INK, opacity: 0.8 }}>slayer_terminal</span>
+          <span
+            aria-hidden="true"
+            className="slayer-caret"
+            style={{ display: 'inline-block', width: '0.5em', height: '0.92em', marginLeft: '0.14em', borderRadius: 1, background: BRAND_INK, opacity: 0.8, boxShadow: `0 0 12px color-mix(in srgb, ${BRAND_INK} 50%, transparent)` }}
+          />
         </span>
       </div>
     </div>

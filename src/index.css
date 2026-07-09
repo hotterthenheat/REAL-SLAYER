@@ -1468,3 +1468,32 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
   font-size: 10.5px !important;
   line-height: 1.35 !important;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+   BRAND LOGO INK (additive) — BrandLogo.tsx reads these via
+   var(--brand-prompt, #6B7177) / var(--brand-ink, #F4F5F6), so dark themes
+   stay HTML-exact (landing/index.html) with no :root override needed, and
+   light themes swap the white wordmark/caret for near-black ink so the mark
+   stays legible on light surfaces. Prompt ">" keeps the HTML dim grey.
+   ────────────────────────────────────────────────────────────────────────── */
+.light-theme {
+  --brand-prompt: #6B7177;
+  --brand-ink: #18181B;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LANDING MARQUEE (additive) — seamless -50% translateX loop; the track
+   renders its content twice so the wrap is invisible. Transform-only.
+   Paused entirely under reduced motion (the row simply sits static).
+   ────────────────────────────────────────────────────────────────────────── */
+@keyframes slayer-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.slayer-marquee {
+  animation: slayer-marquee 46s linear infinite;
+  will-change: transform;
+}
+@media (prefers-reduced-motion: reduce) {
+  .slayer-marquee { animation: none; }
+}
