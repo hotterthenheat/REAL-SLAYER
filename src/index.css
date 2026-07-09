@@ -117,11 +117,11 @@ html, body, #root {
      1080p → 1440p → 4K without stretching or blur. Metrics use tabular-nums
      for fast, aligned scanning of trading numbers.
      ==================================================================== */
-  /* Mono-first terminal identity: sans and mono are the same JetBrains Mono stack so
-     the .sv-h-* heading classes render exactly what ships (the @theme value already
-     wins the cascade; this just makes the token honest). */
-  --font-sans: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
-  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  /* Apple system typography (SF Pro) across the whole app — sans and mono resolve to
+     the same San-Francisco stack so headings and data read as one clean system font.
+     Numeric alignment is preserved globally via font-variant-numeric: tabular-nums. */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro', 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --fs-h-xl: clamp(1.5rem, 1.05rem + 1.3vw, 2.4rem);
   --fs-h-l:  clamp(1.25rem, 1.0rem + 0.8vw, 1.8rem);
   --fs-h-m:  clamp(1.05rem, 0.95rem + 0.35vw, 1.4rem);
@@ -171,6 +171,12 @@ html, body, #root {
 
 body {
   background-color: var(--bg-base);
+  font-family: var(--font-sans);
+  /* Apple system font is proportional — keep every trading number column-aligned. */
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 
@@ -249,9 +255,9 @@ body {
 @theme {
   --animate-rise: rise 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   --animate-caret: caret 1s step-end infinite;
-  --font-sans: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  --font-display: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
 
   /* High Density Theme Custom Color Mappings — dark greys collapse to the deep-ink base
      (#0A0A0A), never pure #000000, so bg-black / bg-zinc-* utilities honor the theme rule. */
