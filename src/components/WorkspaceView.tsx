@@ -15,6 +15,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import {
   PaneLayout, WidgetType, WIDGETS, widgetMeta, paneId, TEMPLATES, cloneTemplate, GRID_COLS,
 } from '../lib/workspace';
+import { useContractStore } from '../lib/store';
 
 const ROW_HEIGHT = 40;
 const GAP = 8;
@@ -81,7 +82,12 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
           notifyError('Saved locally. Cloud sync will retry on your next change.');
         });
     };
-    saveTimer.current = setTimeout(() => syncCloud(0), 1000);
+    // Guests have no server profile — persisting to localStorage above is the whole
+    // save. Skip the cloud PATCH so we don't fire a guaranteed 401 into the console.
+    saveTimer.current = setTimeout(() => {
+      if (!useContractStore.getState().isAuthenticated) return;
+      syncCloud(0);
+    }, 1000);
   }, [notifyError]);
 
   const commit = useCallback((next: PaneLayout[]) => { setLayout(next); persist(next); }, [persist]);
@@ -90,7 +96,10 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   // component that no longer exists.
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
 
-  // Hydrate: API -> localStorage -> Template A (never render an empty terminal).
+  // Hydrate: (cloud, if signed-in) -> localStorage -> Template A (never render an
+  // empty terminal). Guests skip the cloud read entirely so no 401 hits the console;
+  // the effect re-runs when auth resolves, upgrading a guest layout to the profile one.
+  const isAuthenticated = useContractStore((s) => s.isAuthenticated);
   useEffect(() => {
     let cancelled = false;
     const fallback = (): PaneLayout[] => {
@@ -100,6 +109,12 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
       } catch {}
       return cloneTemplate('A');
     };
+    if (!isAuthenticated) {
+      // Local-only hydrate for guests — never touch the authenticated endpoint.
+      setLayout((cur) => (cur.length ? cur : fallback()));
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
     fetch('/api/users/workspace', { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((d) => {
@@ -115,7 +130,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
       .catch(() => { if (!cancelled) setLayout(fallback()); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [persist]);
+  }, [persist, isAuthenticated]);
 
   const onPointerMove = useCallback((e: PointerEvent) => {
     const it = interaction.current;
