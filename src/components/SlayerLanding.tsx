@@ -442,28 +442,82 @@ function MiniPositioningMap({ rows, metrics }: { rows: PressureRow[]; metrics: H
 /* Live intraday tape — a scrolling random-walk sparkline (mean-reverts toward
    the current print so it chops around the level instead of running off the
    right edge). The dot at the head marks the live print. */
-function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
-  const geom = useMemo(() => {
-    if (!data || data.length < 2) return null;
-    const min = Math.min(...data), max = Math.max(...data);
-    const span = max - min || 1;
-    const n = data.length;
-    const y = (v: number) => height - ((v - min) / span) * (height - 6) - 3;
-    const line = data.map((v, i) => `${(i / (n - 1)) * 100},${y(v).toFixed(2)}`).join(' ');
-    const lastY = y(data[n - 1]);
-    return { line, lastY };
-  }, [data, height]);
+/* LiveChart — the hero price·key-levels tape. Rendered from a smooth, continuous
+   value-noise function of a rAF-driven phase, over a FIXED y-domain anchored on
+   spot (with the dealer walls as reference rules). Because the domain never
+   re-derives from the sliding window, the axis can't rescale and the line glides
+   instead of jittering. Frozen to a single smooth sample under reduced-motion. */
+function LiveChart({
+  center, band, callWall, putWall, pin, seed, reduce, height = 96,
+}: {
+  center: number; band: number; callWall: number; putWall: number; pin: number;
+  seed: number; reduce: boolean; height?: number;
+}) {
+  const N = 80;         // samples across the window
+  const step = 0.085;   // seconds of phase between samples (window ≈ N*step s)
+  // Snapshot the domain at mount so later KPI drift never yanks the axis.
+  const [dom] = useState(() => ({ c: center, b: Math.max(band, center * 0.0009) }));
+  const [phase, setPhase] = useState(0);
+  useEffect(() => {
+    if (reduce) return;
+    let raf = 0, t0 = 0, lastEmit = 0;
+    const loop = (ts: number) => {
+      if (!t0) t0 = ts;
+      const elapsed = (ts - t0) / 1000;
+      if (elapsed - lastEmit >= 0.032) { lastEmit = elapsed; setPhase(elapsed); } // ~30fps
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [reduce]);
+
+  const yMin = dom.c - dom.b, yMax = dom.c + dom.b;
+  const yOf = (v: number) => height - ((v - yMin) / (yMax - yMin)) * (height - 8) - 4;
+  const amp = dom.b * 0.4;
+  // Three incommensurate sines → smooth, bounded, quasi-random drift (no jumps).
+  const noise = (u: number) =>
+    0.62 * Math.sin(u * 0.9 + seed) +
+    0.26 * Math.sin(u * 1.93 + seed * 1.7) +
+    0.12 * Math.sin(u * 4.10 + seed * 2.3);
+  const vals: number[] = [];
+  for (let i = 0; i < N; i++) vals.push(dom.c + amp * noise(phase - (N - 1 - i) * step));
+  const pts = vals.map((v, i) => `${((i / (N - 1)) * 100).toFixed(2)},${yOf(v).toFixed(2)}`).join(' ');
+  const lastYpct = (yOf(vals[N - 1]) / height) * 100;
+  const gid = `sparkfill-${Math.abs(Math.round(seed * 97))}`;
+  const refs = [
+    { v: callWall, c: PALETTE.steel },
+    { v: pin, c: PALETTE.amber },
+    { v: putWall, c: PALETTE.red },
+  ].filter((r) => isNum(r.v) && r.v > yMin && r.v < yMax);
+
   return (
-    <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="h-full w-full">
-      {geom ? (
-        <>
-          <polyline points={geom.line} fill="none" stroke={PALETTE.steel} strokeWidth={0.9} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          <line x1="99.6" y1={geom.lastY} x2="99.6" y2={geom.lastY} stroke={PALETTE.steel} strokeWidth={3} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        </>
-      ) : (
-        <line x1="0" y1={height / 2} x2="100" y2={height / 2} stroke={line} strokeWidth={0.6} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
-      )}
-    </svg>
+    <div className="relative h-full w-full">
+      <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="h-full w-full">
+        <defs>
+          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={PALETTE.steel} stopOpacity="0.16" />
+            <stop offset="100%" stopColor={PALETTE.steel} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {refs.map((r, i) => (
+          <line key={i} x1="0" y1={yOf(r.v)} x2="100" y2={yOf(r.v)} stroke={r.c}
+            strokeOpacity="0.32" strokeWidth={0.5} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
+        ))}
+        <polygon points={`0,${height} ${pts} 100,${height}`} fill={`url(#${gid})`} stroke="none" />
+        <polyline points={pts} fill="none" stroke={PALETTE.steel} strokeWidth={1.15}
+          strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      {/* head marker — HTML dot so it stays circular under the stretched viewBox */}
+      <span
+        className="pointer-events-none absolute"
+        style={{ right: 0, top: `${lastYpct}%`, transform: 'translate(50%,-50%)' }}
+      >
+        <span className="relative flex h-1.5 w-1.5">
+          {!reduce && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: PALETTE.steel }} />}
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.steel }} />
+        </span>
+      </span>
+    </div>
   );
 }
 
@@ -472,7 +526,7 @@ function Spark({ data, height = 96 }: { data: number[]; height?: number }) {
    store fields when present, else from a plausible SPX 0DTE snapshot so a first
    visitor always sees a populated, moving terminal. Frozen under reduced-motion. */
 type MockState = {
-  spot: number; netGex: number; emPct: number; callWall: number; putWall: number; pin: number;
+  spot: number; spot0: number; netGex: number; emPct: number; callWall: number; putWall: number; pin: number;
   series: number[]; pressure: PressureRow[]; ranked: RankedRow[];
 };
 
@@ -507,14 +561,14 @@ function seedMock(m: HeroMetrics, pressure: PressureRow[], ranked: RankedRow[]):
     { symbol: 'SPY 545C', setup: 'Mispriced', bias: 'BULL', confidence: 89, expMovePct: emPct },
     { symbol: 'QQQ 485C', setup: 'Mispriced', bias: 'BULL', confidence: 86, expMovePct: emPct },
   ];
-  return { spot, netGex, emPct, callWall, putWall, pin, series, pressure: pr, ranked: rk };
+  return { spot, spot0: spot, netGex, emPct, callWall, putWall, pin, series, pressure: pr, ranked: rk };
 }
 
 function stepMock(s: MockState): MockState {
-  const last = s.series[s.series.length - 1];
-  const next = last + (Math.random() - 0.5) * s.spot * 0.0009 + (s.spot - last) * 0.05;
-  const series = s.series.slice(1).concat(next);
-  const spot = next;
+  // Spot drifts live but mean-reverts to its seed (spot0) so it stays within the
+  // chart's fixed band and never wanders off the dealer walls.
+  const spot = s.spot + (Math.random() - 0.5) * s.spot0 * 0.0007 + (s.spot0 - s.spot) * 0.12;
+  const series = s.series.slice(1).concat(spot);
   const netGex = s.netGex + (Math.random() - 0.5) * 1.6e6;
   const emPct = Math.max(0.003, s.emPct + (Math.random() - 0.5) * 0.00018);
   const pressure = s.pressure.map((r) => ({ ...r, net: r.net * (1 + (Math.random() - 0.5) * 0.06) }));
@@ -548,7 +602,15 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
   }, [reduce]);
   const clock = useEtClock(!reduce);
   const emPts = s.emPct * s.spot;
-  const series = reduce ? (spark.length ? spark : s.series) : s.series;
+  // Fixed chart band: wide enough to hold the walls + ~1.7× expected move, anchored
+  // on the seed spot so the axis never rescales as the mock ticks.
+  const chartBand = Math.max(
+    emPts * 1.7,
+    Math.abs(s.callWall - s.spot0),
+    Math.abs(s.spot0 - s.putWall),
+    s.spot0 * 0.0012,
+  ) * 1.15;
+  const chartSeed = (Math.abs(Math.round(s.spot0)) % 17) * 0.37 + 0.6;
 
   return (
     <Panel className="overflow-hidden">
@@ -589,7 +651,15 @@ function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pic
             <span className="text-[9px] tabular-nums" style={{ color: muted }}>{fmtPx(s.spot)}</span>
           </div>
           <div className="mt-2 h-[96px] w-full">
-            <Spark data={series} />
+            <LiveChart
+              center={s.spot0}
+              band={chartBand}
+              callWall={s.callWall}
+              putWall={s.putWall}
+              pin={s.pin}
+              seed={chartSeed}
+              reduce={!!reduce}
+            />
           </div>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[8.5px] uppercase tracking-[0.12em]" style={{ color: muted }}>
             <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(s.callWall)}</span>
@@ -884,13 +954,34 @@ const HERO_LINES = ['Read the flow.', 'Rank the contract.'];
 
 function Hero({ ticker, metrics, ranked, pressure, spark, onEnter, onLaunch, mockY }: Required<Omit<SlayerLandingProps, 'onEnter' | 'onLaunch'>> & Pick<SlayerLandingProps, 'onEnter' | 'onLaunch'> & { mockY: MotionValue<number> | number }) {
   const reduce = useReducedMotion();
+  // The code-rain backdrop is hidden by default and reveals — fading and settling
+  // in from a slight scale — only while the pointer is over the hero (or on first
+  // touch). A cinematic, interaction-gated reveal rather than an always-on wash.
+  const [revealed, setRevealed] = useState(false);
   return (
-    <section className="relative overflow-hidden" style={{ minHeight: '92vh', background: '#08090A' }}>
+    <section
+      className="relative overflow-hidden"
+      style={{ minHeight: '92vh', background: '#08090A' }}
+      onMouseEnter={() => setRevealed(true)}
+      onMouseLeave={() => setRevealed(false)}
+      onTouchStart={() => setRevealed(true)}
+    >
       {/* the real slayerterminal.com hero backdrop — a live code/finance rain
           (steel = SkyVision scanning, amber = Pinpoint dealer flow) under a
-          scrim + vignette, confined to the hero and faded to solid #08090A at
-          its lower edge so every section below sits on clean, legible black. */}
-      <SlayerCodeRain />
+          scrim + vignette. Hidden by default; revealed on hover so it reads as a
+          deliberate reveal, not a permanent background. Confined to the hero and
+          faded to solid #08090A at its lower edge. */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 z-0 motion-safe:transition-[opacity,transform] motion-safe:duration-[900ms]"
+        style={{
+          opacity: revealed ? 1 : 0,
+          transform: revealed ? 'scale(1)' : 'scale(1.045)',
+          transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1)',
+        }}
+      >
+        <SlayerCodeRain />
+      </div>
       <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.05fr_1.15fr] lg:py-24">
         <motion.div
           initial={reduce ? false : 'hidden'}

@@ -90,12 +90,22 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
   };
 
   // Shared field styling — institutional, hairline borders, tabular where relevant.
-  const labelCls = "text-[10px] text-[var(--text-faint)] uppercase tracking-[0.16em] font-semibold block mb-1.5";
-  const inputCls = "w-full bg-[var(--bg-shell)] border border-[var(--border-subtle)] focus:border-[var(--border-mid)] text-[var(--text-primary)] placeholder:text-[var(--text-faint)] font-sans rounded-[7px] px-3 py-3 text-[13px] focus:outline-none transition-colors";
+  const labelCls = "text-[10px] text-[var(--text-tertiary)] uppercase tracking-[0.16em] font-semibold block mb-1.5";
+  const inputCls = "w-full bg-[var(--surface-2)] border border-[var(--border)] focus:border-[var(--accent-color)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] font-sans rounded-[7px] px-3 py-3 text-[13px] focus:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent-color)_35%,transparent)] transition-colors";
   const inputWithIconCls = inputCls + " pl-10";
 
   return (
-    <div id="clerk-authentication-gate" className="min-h-screen bg-[var(--bg-app)] text-[var(--text-secondary)] flex flex-col justify-center items-center font-sans selection:bg-[var(--positive-ink)] selection:text-[var(--bg-app)] p-4 relative overflow-hidden">
+    <div id="clerk-authentication-gate" className="min-h-screen bg-[var(--bg-base)] text-[var(--text-secondary)] flex flex-col justify-center items-center font-sans selection:bg-[var(--accent-color)] selection:text-[var(--bg-base)] p-4 relative overflow-hidden">
+
+      {/* Themed backdrop — soft accent glow + hairline grid, low-opacity, theme-aware */}
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none bg-[radial-gradient(60%_46%_at_50%_28%,color-mix(in_srgb,var(--accent-color)_15%,transparent),transparent_70%)]"
+      />
+      <div
+        aria-hidden
+        className="absolute inset-0 pointer-events-none opacity-60 bg-[linear-gradient(to_right,var(--grid-dot)_1px,transparent_1px),linear-gradient(to_bottom,var(--grid-dot)_1px,transparent_1px)] bg-[size:34px_34px] [mask-image:radial-gradient(circle_at_50%_38%,black,transparent_78%)]"
+      />
 
       {/* the ONE canonical logo (BrandLogo.tsx) — HTML-exact wordmark + caret */}
       <div className="absolute top-6 left-6 sm:top-8 sm:left-8 select-none z-10 origin-top-left scale-[0.8]">
@@ -105,24 +115,24 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
       <motion.div
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-[400px] bg-[var(--bg-panel)] border border-[var(--border-subtle)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)] rounded-[10px] overflow-hidden relative z-10"
+        className="w-full max-w-[400px] bg-[var(--surface)] border border-[var(--border)] shadow-[0_16px_44px_-12px_rgba(0,0,0,0.55)] rounded-[10px] overflow-hidden relative z-10"
       >
         {/* Terminal window title bar — left label, right live SSL state */}
-        <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border-subtle)] bg-[var(--bg-panel-soft)]">
+        <div className="flex items-center justify-between h-9 px-3 border-b border-[var(--border)] bg-[var(--surface-2)]">
           <div className="flex items-center gap-2 min-w-0">
-            <Lock className="w-3 h-3 text-[var(--text-faint)] shrink-0" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-faint)] truncate">
+            <Lock className="w-3 h-3 text-[var(--text-tertiary)] shrink-0" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] truncate">
               Desk Access
             </span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="w-1.5 h-1.5 rounded-full bg-[var(--positive-ink)]" />
-            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)] tabular-nums">SSL</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[var(--positive-ink)] shadow-[0_0_6px_var(--positive-ink)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)] tabular-nums">SSL</span>
             {onClose && (
               <button
                 onClick={onClose}
                 aria-label="Dismiss sign-in"
-                className="ml-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-6 w-6 rounded-[7px] hover:bg-[var(--bg-panel-raised)] flex items-center justify-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+                className="ml-1 text-[var(--text-tertiary)] hover:text-[var(--text-primary)] transition-colors cursor-pointer h-6 w-6 rounded-[7px] hover:bg-[var(--surface-3)] flex items-center justify-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]"
                 title="Dismiss"
               >
                 <X className="w-3.5 h-3.5" />
@@ -136,7 +146,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           <h1 className="text-[15px] font-sans font-semibold tracking-tight text-[var(--text-primary)] select-none leading-tight">
             {twoFactorStage ? 'Verify identity' : activeMode === 'signin' ? 'Sign in to your desk' : 'Provision a desk'}
           </h1>
-          <p className="text-[var(--text-muted)] text-[12px] font-sans mt-1.5 leading-relaxed">
+          <p className="text-[var(--text-tertiary)] text-[12px] font-sans mt-1.5 leading-relaxed">
             {twoFactorStage
               ? 'Two-factor challenge — enter the code from your authenticator.'
               : 'Restricted terminal. Authorized desks only.'}
@@ -145,18 +155,18 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
 
         {/* Mode switcher — segmented control */}
         {!twoFactorStage && (
-        <div className="grid grid-cols-2 gap-1 bg-[var(--bg-panel-soft)] rounded-[7px] p-1 border border-[var(--border-subtle)] text-[12px] font-semibold mb-5">
+        <div className="grid grid-cols-2 gap-1 bg-[var(--surface-2)] rounded-[7px] p-1 border border-[var(--border)] text-[12px] font-semibold mb-5">
           <button
             onClick={() => { setActiveMode('signin'); setErrorMessage(null); }}
             aria-pressed={activeMode === 'signin'}
-            className={`py-2 rounded-[5px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signin' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            className={`py-2 rounded-[5px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${activeMode === 'signin' ? 'bg-[var(--surface-3)] text-[var(--text-primary)] border border-[color-mix(in_srgb,var(--accent-color)_45%,var(--border-strong))]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Sign In
           </button>
           <button
             onClick={() => { setActiveMode('signup'); setErrorMessage(null); }}
             aria-pressed={activeMode === 'signup'}
-            className={`py-2 rounded-[5px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${activeMode === 'signup' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border border-transparent'}`}
+            className={`py-2 rounded-[5px] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] ${activeMode === 'signup' ? 'bg-[var(--surface-3)] text-[var(--text-primary)] border border-[color-mix(in_srgb,var(--accent-color)_45%,var(--border-strong))]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border border-transparent'}`}
           >
             Create Account
           </button>
@@ -196,14 +206,14 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
                   placeholder="123456"
                   className={inputWithIconCls + " tracking-[0.3em] tabular-nums"}
                 />
-                <ShieldCheck className="w-4 h-4 text-[var(--text-faint)] absolute left-4 top-1/2 -translate-y-1/2" />
+                <ShieldCheck className="w-4 h-4 text-[var(--text-tertiary)] absolute left-4 top-1/2 -translate-y-1/2" />
               </div>
-              <p className="text-[11px] text-[var(--text-muted)] mt-2 font-sans">6-digit code from your authenticator app.</p>
+              <p className="text-[11px] text-[var(--text-tertiary)] mt-2 font-sans">6-digit code from your authenticator app.</p>
             </div>
             <button
               type="submit"
               disabled={isLoading || totpCode.length < 6}
-              className="w-full py-3.5 mt-1 bg-[var(--text-primary)] hover:opacity-90 text-[#0A0806] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+              className="w-full py-3.5 mt-1 bg-[var(--accent-color)] hover:opacity-90 text-[var(--bg-base)] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] focus-visible:ring-[var(--accent-color)]"
             >
               {isLoading ? (
                 <>
@@ -220,7 +230,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
             <button
               type="button"
               onClick={() => { setTwoFactorStage(false); setTotpCode(''); setPreAuthToken(''); setErrorMessage(null); }}
-              className="w-full text-[11px] text-[var(--text-muted)] hover:text-[var(--text-primary)] font-sans transition-colors cursor-pointer"
+              className="w-full text-[11px] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] font-sans transition-colors cursor-pointer"
             >
               ← Back to sign in
             </button>
@@ -243,7 +253,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
                   placeholder="Alex Morgan"
                   className={inputWithIconCls}
                 />
-                <User className="w-4 h-4 text-[var(--text-faint)] absolute left-4 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-[var(--text-tertiary)] absolute left-4 top-1/2 -translate-y-1/2" />
               </div>
             </div>
           )}
@@ -261,7 +271,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
                   placeholder="https://example.com/avatar.png"
                   className={inputWithIconCls}
                 />
-                <User className="w-4 h-4 text-[var(--text-faint)] absolute left-4 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-[var(--text-tertiary)] absolute left-4 top-1/2 -translate-y-1/2" />
               </div>
             </div>
           )}
@@ -279,7 +289,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
                 placeholder="you@firm.com"
                 className={inputWithIconCls}
               />
-              <Mail className="w-4 h-4 text-[var(--text-faint)] absolute left-4 top-1/2 -translate-y-1/2" />
+              <Mail className="w-4 h-4 text-[var(--text-tertiary)] absolute left-4 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -296,7 +306,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
                 placeholder="••••••••••••"
                 className={inputWithIconCls}
               />
-              <Lock className="w-4 h-4 text-[var(--text-faint)] absolute left-4 top-1/2 -translate-y-1/2" />
+              <Lock className="w-4 h-4 text-[var(--text-tertiary)] absolute left-4 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
@@ -318,7 +328,7 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3.5 mt-2 bg-[var(--text-primary)] hover:opacity-90 text-[#0A0806] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"
+            className="w-full py-3.5 mt-2 bg-[var(--accent-color)] hover:opacity-90 text-[var(--bg-base)] border-none font-semibold text-[12.5px] uppercase tracking-[0.1em] rounded-[7px] flex items-center justify-center gap-2 transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] focus-visible:ring-[var(--accent-color)]"
           >
             {isLoading ? (
               <>
@@ -335,8 +345,8 @@ export function ClerkGate({ onSuccess, referralCodeFromUrl, onClose }: ClerkGate
         </form>
         )}
 
-        <div className="border-t border-[var(--border-subtle)] pt-4 mt-6">
-          <p className="text-[11px] text-[var(--text-muted)] font-sans leading-relaxed">
+        <div className="border-t border-[var(--border)] pt-4 mt-6">
+          <p className="text-[11px] text-[var(--text-tertiary)] font-sans leading-relaxed">
             By continuing you accept the{' '}
             <button type="button" onClick={() => useLegal.getState().open('terms')} className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] underline underline-offset-2 transition-colors cursor-pointer">Terms</button>
             {' '}and{' '}
