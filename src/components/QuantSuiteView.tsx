@@ -746,11 +746,11 @@ export default function QuantSuiteView() {
               onChange={(v) => setDteD(parseInt(v, 10) || 14)}
               options={['7D', '14D', '21D', '30D']}
             />
-            <span className="slayer-control inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em]">
+            <span className="slayer-readout inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em]">
               <span className="text-[var(--text-muted)]">Model</span>
               <span className="font-semibold text-[var(--text-primary)]">BSM · B-L RND</span>
             </span>
-            <span className="slayer-control slayer-num inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em]">
+            <span className="slayer-readout slayer-num inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em]">
               <span className="text-[var(--text-muted)]">Calibrated</span>
               <span className="font-semibold text-[var(--text-primary)]">{calibratedAt.toLocaleTimeString('en-US', { hour12: false })}</span>
             </span>
