@@ -25,6 +25,12 @@
 import { db } from './state';
 import { ASSET_LIST, optionDteDays } from '../data';
 import type { AssetInfo } from '../types';
+import { computeSkyVisionMaster, type SkyVisionMasterResult } from '../lib/skyVisionMaster';
+import type { AssetEdge } from '../lib/quantEdge';
+import type { DealerDynamics } from '../lib/dealerDynamics';
+import { dbInsertPrediction, dbLabelMaturedPredictions, dbGetCalibrationHistory } from './predictionLog';
+import { makePredictionId, HORIZON_MS, toCalibratorHistory, wilsonInterval, CALIBRATION_MIN_SAMPLES, type PredictionRecord } from '../lib/forwardLog';
+import { calibrateIsotonicLoss } from '../lib/v11Math';
 import {
   snapshotFromMarket,
   scoreContract,
@@ -80,6 +86,15 @@ export interface SkyVisionTicker {
   leadContract: string;
   swing: SwingRead;
   master: ReturnType<typeof computeMasterScore>;
+  /** SkyVision v2 master score (spec §20) — mode-aware, regime-gated, edge-driven,
+   *  with the full per-component transparency breakdown in masterV2.regimeContext.
+   *  Present only when the ticker's AssetEdge is available this tick. */
+  masterV2?: SkyVisionMasterResult;
+  /** Calibrated skyscore probability + its honesty envelope (spec §25/§27.8). Until the
+   *  forward log holds ≥200 labeled outcomes the calibrator passes the raw score through
+   *  (active=false ⇒ show "calibration not yet active"); the Wilson interval + n are the
+   *  bound the UI must display beside the probability. */
+  skyscoreCalibration?: { rawProb: number; calibratedProb: number; n: number; active: boolean; ciLow: number; ciHigh: number };
   /** 'LIVE' = built from db.liveOptionChains; 'MODEL' = deterministic fallback. */
   source: 'LIVE' | 'MODEL';
   /** Convenience boolean mirror of `source === 'LIVE'`. */
@@ -181,11 +196,15 @@ function trendScore(hist: ContractSnapshot[], pick: (s: ContractSnapshot) => num
  * round-robin avoids a second full 100-asset loop every second; tickers not in scope
  * keep their last cached SkyVision block, which the SSE broadcast still ships.
  */
-export function tickSkyVision(scope: AssetInfo[] = ASSET_LIST): void {
+export function tickSkyVision(
+  scope: AssetInfo[] = ASSET_LIST,
+  edgeCache: Record<string, AssetEdge> = {},
+  dealerDynCache: Record<string, DealerDynamics> = {},
+): void {
   tickIndex++;
   for (const asset of scope) {
     try {
-      computeForAsset(asset);
+      computeForAsset(asset, edgeCache[asset.ticker] ?? null, dealerDynCache[asset.ticker] ?? null);
     } catch (e) {
       // Never let one ticker break the tick.
       // eslint-disable-next-line no-console
@@ -195,7 +214,73 @@ export function tickSkyVision(scope: AssetInfo[] = ASSET_LIST): void {
   pruneStale();
 }
 
-function computeForAsset(asset: (typeof ASSET_LIST)[number]): void {
+// ── Forward log (spec §25/§27.9) — throttle state. One skyscore prediction per
+//    ticker per cadence; matured outcomes are resolved on a slower scan. Both
+//    cadences are FREE (§26). DB calls are fire-and-forget + internally resilient,
+//    so an absent DB is a silent no-op that never blocks the tick.
+const lastPredAt = new Map<string, number>();
+const lastLabelAt = new Map<string, number>();
+const PREDICTION_CADENCE_MS = 15 * 60_000; // ≤ one prediction / ticker / 15 min
+const LABEL_SCAN_MS = 60_000;              // resolve matured outcomes ~once / min / ticker
+
+/** Append a resolvable forward-log prediction for the leading directional play, and
+ *  periodically resolve matured ones against the current spot. Never fabricates: a
+ *  NEUTRAL read logs nothing, and resolution only fills already-null outcome columns. */
+function logForwardPrediction(ticker: string, m: SkyVisionMasterResult, spot: number, leadIsCall: boolean, isNeutral: boolean): void {
+  const now = Date.now();
+  if (now - (lastLabelAt.get(ticker) ?? 0) >= LABEL_SCAN_MS) {
+    lastLabelAt.set(ticker, now);
+    void dbLabelMaturedPredictions(ticker, spot, now);
+  }
+  if (isNeutral || !(spot > 0)) return;
+  if (now - (lastPredAt.get(ticker) ?? 0) < PREDICTION_CADENCE_MS) return;
+  lastPredAt.set(ticker, now);
+  const direction = leadIsCall ? 'call' : 'put';
+  const rec: PredictionRecord = {
+    predictionId: makePredictionId(ticker, 'skyscore', direction, now),
+    ticker,
+    kind: 'skyscore',
+    direction,
+    entrySpot: spot,
+    targetPrice: null, // resolve by direction vs entry (a touch target can be added later)
+    predictedProb: m.score,
+    features: { mode: m.mode, ...m.subScores },
+    horizonMs: HORIZON_MS[m.mode] ?? HORIZON_MS.INTRADAY,
+    createdAt: now,
+  };
+  void dbInsertPrediction(rec);
+}
+
+// ── Calibration (§25) — a process-cached, periodically-refreshed snapshot of the
+//    labeled skyscore outcome history, so the per-tick scorer can apply the isotonic
+//    calibrator synchronously. Refresh is fire-and-forget + resilient (no DB ⇒ empty).
+let calHistory: { pred: number; win: number }[] = [];
+let lastCalRefreshAt = 0;
+const CAL_REFRESH_MS = 5 * 60_000;
+
+function refreshCalibrationHistory(): void {
+  const now = Date.now();
+  if (now - lastCalRefreshAt < CAL_REFRESH_MS) return;
+  lastCalRefreshAt = now;
+  void dbGetCalibrationHistory('skyscore').then((pts) => { calHistory = toCalibratorHistory(pts); }).catch(() => { /* no DB ⇒ stay empty */ });
+}
+
+/** Calibrated skyscore probability + its Wilson envelope (§25/§27.8). Below the
+ *  200-sample cold-start floor the calibrator passes the raw probability through
+ *  and active=false, so the UI shows the score is not yet calibration-backed. */
+function computeSkyscoreCalibration(scoreProb01: number): SkyVisionTicker['skyscoreCalibration'] {
+  const n = calHistory.length;
+  const calibratedProb = calibrateIsotonicLoss(scoreProb01, calHistory); // <200 ⇒ passthrough (Rule 27)
+  const wins = calHistory.reduce((a, h) => a + h.win, 0);
+  const w = wilsonInterval(wins, n);
+  return { rawProb: scoreProb01, calibratedProb, n, active: n >= CALIBRATION_MIN_SAMPLES, ciLow: w.low, ciHigh: w.high };
+}
+
+function computeForAsset(
+  asset: (typeof ASSET_LIST)[number],
+  edge: AssetEdge | null = null,
+  dyn: DealerDynamics | null = null,
+): void {
   const ticker = asset.ticker;
   const spot = db.liveSpotPrices[ticker] || asset.defaultPrice;
   const ps = prevSpot.get(ticker) ?? spot;
@@ -383,6 +468,32 @@ function computeForAsset(asset: (typeof ASSET_LIST)[number]): void {
     target: targetStack[0] ? `${targetStack[0].label} ${targetStack[0].underlying}` : '—',
   });
 
+  // SkyVision v2 master score (spec §20) — mode-aware, regime-gated, edge-driven.
+  // Feeds on the REAL AssetEdge + DealerDynamics computed this tick by the market
+  // engine (no fabrication); abstains component-by-component when the edge is absent.
+  const masterV2 = computeSkyVisionMaster({
+    ticker,
+    dteDays: dte,
+    direction,
+    leadIsCall,
+    spot,
+    callWall,
+    putWall,
+    contractStrength: lead?.strength ?? 50,
+    emaStructure: emaStruct,
+    edge,
+    gammaVelocity: dyn?.gamma?.velocity ?? 0,
+    isLive: effectiveSource === 'LIVE',
+  });
+
+  // Forward log: record the directional call and resolve matured outcomes (spec §25).
+  logForwardPrediction(ticker, masterV2, spot, leadIsCall, direction === 'NEUTRAL');
+
+  // Calibration: apply the isotonic map (fed by the forward log) to the score, with
+  // the Wilson envelope + n the UI shows beside it (§25/§27.8). Cold-start ⇒ passthrough.
+  refreshCalibrationHistory();
+  const skyscoreCalibration = computeSkyscoreCalibration(masterV2.score / 100);
+
   cache[ticker] = {
     ticker,
     spot: round2(spot),
@@ -396,6 +507,8 @@ function computeForAsset(asset: (typeof ASSET_LIST)[number]): void {
     leadContract: leadKey,
     swing,
     master,
+    masterV2,
+    skyscoreCalibration,
     source: effectiveSource,
     isLive: effectiveSource === 'LIVE',
     updatedAt: Date.now(),

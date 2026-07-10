@@ -11,13 +11,19 @@
  * numbers reconcile rather than diverge:
  *
  *   GEX   (gamma) : Γ     · OI · 100 · S² · 0.01 · sgn   →  $ / 1% spot move
- *   DEX   (delta) : Δ     · OI · 100 · S        · sgn    →  $ delta inventory
+ *   DEX   (delta) : Δ     · OI · 100 · S                 →  $ delta inventory
  *   VEX   (vanna) : ∂Δ/∂σ · OI · 100 · S  · 0.01 · sgn   →  $ Δ / 1% vol move
- *   Charm (decay) : ∂Δ/∂t · OI · 100 · (S/365)  · sgn    →  $ Δ drift / day
+ *   Charm (decay) : ∂Δ/∂t · OI · 100 · S         · sgn   →  $ Δ drift / day
  *   VegX  (vega)  : ∂V/∂σ · OI · 100        · 0.01 · sgn →  $ / 1% vol move
  *
  * Sign convention sgn = +1 call / −1 put (the platform's net-call−put dealer
- * convention). Nothing is synthesized: every value traces to a real contract
+ * convention) — applied to gamma/vanna/charm/vega, whose per-contract Greek has
+ * the SAME sign for a call and a put so the ±1 is what nets dealer inventory.
+ * DELTA is exempt: call delta is already >0 and put delta <0, so it nets on its
+ * own sign; multiplying it by sgn would flip every put positive and collapse the
+ * profile to all-one-sign. Charm is per-DAY here (ChainContract.charm is already
+ * ∂Δ/∂τ ÷ 365), so it dollarizes with ·S, NOT ·S/365 (a second /365 understated
+ * it 365×). Nothing is synthesized: every value traces to a real contract
  * Greek and its open interest. The cumulative-zero "flip" is the strike where
  * the running cumulative exposure changes sign (e.g. the zero-gamma level).
  */
@@ -37,9 +43,9 @@ export interface GreekMeta {
 
 export const GREEK_META: Record<GreekKey, GreekMeta> = {
   gamma: { key: 'gamma', label: 'Gamma Exposure (GEX)', short: 'Γ', symbol: 'Γ', unit: '$ / 1% spot', formula: 'Γ·OI·100·S²·0.01·sgn', note: '+ dealers long γ ⇒ fade/pin · − short γ ⇒ chase/amplify' },
-  delta: { key: 'delta', label: 'Delta Exposure (DEX)', short: 'Δ', symbol: 'Δ', unit: '$ delta', formula: 'Δ·OI·100·S·sgn', note: 'directional inventory dealers carry and must hedge' },
+  delta: { key: 'delta', label: 'Delta Exposure (DEX)', short: 'Δ', symbol: 'Δ', unit: '$ delta', formula: 'Δ·OI·100·S', note: 'directional inventory dealers carry and must hedge (Δ already signed: calls +, puts −)' },
   vanna: { key: 'vanna', label: 'Vanna Exposure (VEX)', short: 'Vanna', symbol: '∂Δ/∂σ', unit: '$ Δ / 1% vol', formula: 'Vanna·OI·100·S·0.01·sgn', note: 'how dealer delta shifts as IV moves — the vol↔spot link' },
-  charm: { key: 'charm', label: 'Charm Exposure (decay)', short: 'Charm', symbol: '∂Δ/∂t', unit: '$ Δ / day', formula: 'Charm·OI·100·(S/365)·sgn', note: 'delta drift from time decay → into-expiry hedging / pinning' },
+  charm: { key: 'charm', label: 'Charm Exposure (decay)', short: 'Charm', symbol: '∂Δ/∂t', unit: '$ Δ / day', formula: 'Charm·OI·100·S·sgn', note: 'delta drift from time decay → into-expiry hedging / pinning' },
   vega: { key: 'vega', label: 'Vega Exposure (VegX)', short: 'Vega', symbol: '∂V/∂σ', unit: '$ / 1% vol', formula: 'Vega·OI·100·0.01·sgn', note: 'dealer vol exposure — where a vol shock hits hardest' },
 };
 
@@ -51,7 +57,7 @@ function scaleFor(key: GreekKey, spot: number): number {
     case 'gamma': return spot * spot * 0.01;
     case 'delta': return spot;
     case 'vanna': return spot * 0.01;
-    case 'charm': return spot / 365;
+    case 'charm': return spot; // ChainContract.charm is already per-DAY (∂Δ/∂τ ÷ 365); dollarize with ·S only
     case 'vega': return 0.01;
   }
 }
@@ -93,7 +99,9 @@ export function computeGreekExposureProfile(
     const g = c[field] as number;
     const oi = c.openInterest || 0;
     if (!isFinite(g) || !isFinite(oi)) continue;
-    const sign = c.type === 'call' ? 1 : -1;
+    // delta already carries its own sign (calls +, puts −) so it nets on its own;
+    // the other Greeks share sign across calls/puts and need ±1 to net dealer inventory.
+    const sign = greek === 'delta' ? 1 : (c.type === 'call' ? 1 : -1);
     const e = g * oi * 100 * scale * sign;
     if (!isFinite(e)) continue;
     const node = byStrike.get(c.strike) || { strike: c.strike, exposure: 0, call: 0, put: 0 };

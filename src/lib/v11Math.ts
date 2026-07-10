@@ -574,8 +574,11 @@ export function computeDealerInventory(
     const sign = isCallType ? 1 : -1;
     
     const GEX_strike = c.gamma * c.openInterest * 100 * (spot * spot) * 0.01 * sign;
-    // Delta exposure matches the long call (+1) / short put (-1) inventory position sign.
-    const DEX_strike = c.delta * c.openInterest * 100 * spot * sign;
+    // Delta exposure: delta ALREADY encodes call/put direction (call Δ>0, put Δ<0),
+    // so it nets on its own sign — do NOT apply the ±1 here. (The old ·sign flipped
+    // every put's delta positive, making netDex ≡ grossDex and e_DEX a constant
+    // tanh(3)≈0.995 on every chain, so the DEX term of the DSI carried no signal.)
+    const DEX_strike = c.delta * c.openInterest * 100 * spot;
     // Vanna exposure: $-scaled per 1% IV move, matching the canonical skyQuantCore.netVannaStrike
     // (× S × 0.01) so VEX is in the same $-units as GEX/DEX instead of ~spot/100× too small.
     const VEX_strike = c.vanna * c.openInterest * 100 * spot * 0.01 * sign;
@@ -1395,15 +1398,24 @@ export function calculateV11Metrics(
   // 5. Tail Risk Parameters
   const tailRisk = computeTailRisk(matchedReturns, 1.00);
 
-  // 6. Liquidity parameters
-  const lastMid = optionPremiumFloat;
-  const stabilityMids = Array.from({ length: 15 }).map((_, i) => lastMid + Math.sin(i) * 0.01);
+  // 6. Liquidity — prefer the REAL contract's quote + size from the provided chain
+  // (live OR model). The hardcoded volume/OI and the synthetic sine mid-series were
+  // a fixed liquidity read regardless of the actual contract, so a genuinely illiquid
+  // name could still clear the liquidity gate. Only fall back to placeholders when NO
+  // chain is available at all (spec §27.2/§27.5). No real recent-mid history is carried
+  // on the chain, so quoteStability uses the current mid (flat) — never a fabricated wave.
+  const wantType = isCall ? 'call' : 'put';
+  const liqC = liveChain?.find((c) => c.strike === determinedStrike && c.type === wantType);
+  const liqBid = liqC && liqC.bid > 0 ? liqC.bid : optionPremiumFloat * 0.98;
+  const liqAsk = liqC && liqC.ask > 0 ? liqC.ask : optionPremiumFloat * 1.02;
+  const liqVol = liqC && Number.isFinite(liqC.volume as number) ? (liqC.volume as number) : 14500;
+  const liqOi = liqC && Number.isFinite(liqC.openInterest) ? liqC.openInterest : 18800;
   const liquidity = computeLiquidityScore(
-    optionPremiumFloat * 0.98,
-    optionPremiumFloat * 1.02,
-    14500,
-    18800,
-    stabilityMids,
+    liqBid,
+    liqAsk,
+    liqVol,
+    liqOi,
+    [(liqBid + liqAsk) / 2],
     asset.stabilityMax || 0.05
   );
 

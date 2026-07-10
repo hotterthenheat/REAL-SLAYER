@@ -137,18 +137,43 @@ export function computeRiskNeutralDensity(
   const std = Math.sqrt(Math.max(0, variance));
   const expectedMovePct = spot > 0 ? std / spot : 0;
 
-  // Fat-tail: RND mass beyond ±2σ vs. a lognormal with the same ATM IV.
-  const twoSigUp = spot * (1 + 2 * expectedMovePct);
-  const twoSigDn = spot * (1 - 2 * expectedMovePct);
+  // Fat-tail: RND mass beyond MEAN ± 2σ vs. a Gaussian. Centre the band on the
+  // RND mean (its own centre of mass), NOT spot — a spot-centred band bakes in the
+  // forward drift (spot·e^{rT} ≠ spot) and lognormal asymmetry, so even a pure
+  // lognormal would score ≠ 1. Gaussian reference P(|Z|>2) ≈ 0.0455 ⇒ ratio > 1
+  // means genuinely fatter-than-normal tails.
+  const twoSigUp = mean + 2 * std;
+  const twoSigDn = mean - 2 * std;
   const rndTail = pAbove(twoSigUp) + cdf(twoSigDn);
-  // Lognormal benchmark: P(|Z| > 2) ≈ 0.0455 (symmetric, before drift) — use as the reference.
   const lnTail = 0.0455;
   const fatTailRatio = lnTail > 0 ? rndTail / lnTail : 1;
 
   const p50 = quantile(0.5);
+  // Skew from the RND's third standardized moment in LOG-price space. A pure
+  // lognormal (flat smile) maps to a NORMAL in log-space ⇒ zero log-skew, so this
+  // isolates genuine smile asymmetry from the baseline lognormal drift/convexity.
+  // (A mean-vs-median test — or even a price-space third moment — is biased: a
+  // lognormal price density is itself right-skewed, so both would read UPSIDE SKEW
+  // on a symmetric-vol chain, masking real equity put-skew.)
+  let lMass = 0, lMean = 0;
+  for (let i = 0; i < strikes.length; i++) {
+    if (strikes[i] > 0) { const w = density[i] * dK; lMass += w; lMean += Math.log(strikes[i]) * w; }
+  }
+  lMean = lMass > 0 ? lMean / lMass : 0;
+  let lM2 = 0, lM3 = 0;
+  for (let i = 0; i < strikes.length; i++) {
+    if (strikes[i] > 0) {
+      const w = (density[i] * dK) / (lMass || 1);
+      const dl = Math.log(strikes[i]) - lMean;
+      lM2 += dl * dl * w;
+      lM3 += dl * dl * dl * w;
+    }
+  }
+  const lStd = Math.sqrt(Math.max(0, lM2));
+  const logSkew = lStd > 0 ? lM3 / (lStd * lStd * lStd) : 0;
   let skewBias: RiskNeutralResult['skewBias'] = 'SYMMETRIC';
-  if (mean < p50 * 0.997) skewBias = 'DOWNSIDE SKEW';
-  else if (mean > p50 * 1.003) skewBias = 'UPSIDE SKEW';
+  if (logSkew < -0.12) skewBias = 'DOWNSIDE SKEW';
+  else if (logSkew > 0.12) skewBias = 'UPSIDE SKEW';
 
   const levels = [0.01, 0.02, 0.03].flatMap((m) => [
     { label: `+${(m * 100).toFixed(0)}%`, price: spot * (1 + m), pAbove: pAbove(spot * (1 + m)) },

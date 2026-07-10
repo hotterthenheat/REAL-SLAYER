@@ -22,7 +22,7 @@ interface Props {
   className?: string;
 }
 
-export function CursorSpotlight({ children, radius = 300, strength = 0.9, staticFallback = false, className = '' }: Props) {
+export function CursorSpotlight({ children, radius = 340, strength = 1, staticFallback = false, className = '' }: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -31,25 +31,42 @@ export function CursorSpotlight({ children, radius = 300, strength = 0.9, static
     const parent = el.parentElement ?? el;
 
     const target = { x: -9999, y: -9999, o: 0 };
-    const cur = { x: -9999, y: -9999, o: 0 };
+    // `r` is the live pool radius — it swells with pointer speed so the light
+    // feels like it flows/stretches as you move, then eases back when you stop.
+    const cur = { x: -9999, y: -9999, o: 0, r: radius };
+    let last = { x: -9999, y: -9999 };
+    let speed = 0; // rAF-smoothed pointer speed, px/frame
     let raf = 0;
 
     const move = (e: PointerEvent) => {
-      const r = parent.getBoundingClientRect();
-      target.x = e.clientX - r.left;
-      target.y = e.clientY - r.top;
+      const rect = parent.getBoundingClientRect();
+      const nx = e.clientX - rect.left;
+      const ny = e.clientY - rect.top;
+      if (last.x > -9998) {
+        // ease the measured step into `speed` so a single fast flick doesn't spike
+        const step = Math.hypot(nx - last.x, ny - last.y);
+        speed += (Math.min(48, step) - speed) * 0.35;
+      }
+      last = { x: nx, y: ny };
+      target.x = nx;
+      target.y = ny;
       target.o = 1;
       // first entry: jump straight to the cursor so the pool doesn't streak in
       // from the previous corner
-      if (cur.o < 0.02) { cur.x = target.x; cur.y = target.y; }
+      if (cur.o < 0.02) { cur.x = nx; cur.y = ny; }
     };
     const leave = () => { target.o = 0; };
 
     const loop = () => {
-      cur.x += (target.x - cur.x) * 0.16;
-      cur.y += (target.y - cur.y) * 0.16;
-      cur.o += (target.o - cur.o) * 0.1;
-      const mask = `radial-gradient(circle ${radius}px at ${cur.x.toFixed(1)}px ${cur.y.toFixed(1)}px, rgba(0,0,0,0.98) 0%, rgba(0,0,0,0.55) 46%, transparent 74%)`;
+      // tighter position tracking + quicker fade-in = a more fluid, connected feel
+      cur.x += (target.x - cur.x) * 0.2;
+      cur.y += (target.y - cur.y) * 0.2;
+      cur.o += (target.o - cur.o) * 0.14;
+      // pool grows up to +24% at speed, eases back toward base when the cursor rests
+      const targetR = radius * (1 + Math.min(0.24, (speed / 48) * 0.24));
+      cur.r += (targetR - cur.r) * 0.14;
+      speed *= 0.86; // decay so the swell settles once movement stops
+      const mask = `radial-gradient(circle ${cur.r.toFixed(1)}px at ${cur.x.toFixed(1)}px ${cur.y.toFixed(1)}px, rgba(0,0,0,1) 0%, rgba(0,0,0,0.72) 50%, transparent 80%)`;
       el.style.opacity = String(strength * cur.o);
       el.style.maskImage = mask;
       (el.style as any).webkitMaskImage = mask;
@@ -71,7 +88,7 @@ export function CursorSpotlight({ children, radius = 300, strength = 0.9, static
       ref={ref}
       aria-hidden="true"
       className={`pointer-events-none absolute inset-0 ${className}`}
-      style={staticFallback ? { opacity: 0.12 } : { opacity: 0 }}
+      style={staticFallback ? { opacity: 0.15 } : { opacity: 0 }}
     >
       {children}
     </div>

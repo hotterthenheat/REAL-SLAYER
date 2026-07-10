@@ -36,7 +36,7 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
     >
       {/* backdrop — a pool of light that follows the pointer, revealing the
           code-rain only where the cursor is */}
-      <CursorSpotlight radius={300} strength={0.85} staticFallback={coarsePointer || reduced} className="z-0">
+      <CursorSpotlight radius={340} strength={1} staticFallback={coarsePointer || reduced} className="z-0">
         <SlayerCodeRain />
       </CursorSpotlight>
 

@@ -34,9 +34,19 @@ export function intervalMinutes(candles: Candle[]): number {
   return median;
 }
 
-/** Trading periods per year for a given bar interval. */
+/** Trading periods per year for a given bar interval.
+ *
+ * Intraday bars pack inside the 390-min session, so their count is
+ * (252·390)/interval (e.g. 5-min → 19 656/yr, √ ⇒ correct intraday annualizer).
+ * Daily-or-slower bars are ONE bar per session regardless of their calendar
+ * length, so a daily bar (≈1440 calendar-min) is 252 bars/yr → √252≈15.87, NOT
+ * (252·390)/1440≈68 → √68≈8.26, which understated daily/weekly RV by ~1.9×+ and
+ * corrupted the VRP (a fair market misread as "IV RICH"). Split on the 390-min
+ * session boundary so both regimes annualize correctly. */
 export function periodsPerYear(intervalMin: number): number {
-  return (252 * 390) / Math.max(intervalMin, 1e-6);
+  const iv = Math.max(intervalMin, 1e-6);
+  if (iv <= 390) return (252 * 390) / iv;      // intra-session bars
+  return 252 * (1440 / iv);                     // daily-or-slower: 1 bar per (1440-min) session
 }
 
 function annFactor(candles: Candle[]): number {

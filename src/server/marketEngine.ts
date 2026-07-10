@@ -642,8 +642,9 @@ async function runTickerCycleInner() {
     refreshEdgeCache(scopedAssets);
 
     // Sky Vision v2.0 contract-intelligence engine (per-contract strength, rotation
-    // scanner, EMA target ladder, swing, master score) — cached per ticker.
-    tickSkyVision(scopedAssets);
+    // scanner, EMA target ladder, swing, master score) — cached per ticker. The
+    // edge/dealer-dynamics caches (computed above this tick) feed the §20 masterV2.
+    tickSkyVision(scopedAssets, edgeCache, dealerDynCache);
 
     // 2. Tick active trade logs outcomes
     db.v8Trades = db.v8Trades.map((t) => {
