@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import SlayerCodeRain from '../../../components/SlayerCodeRain';
 import { LayeredTerminalAssembly } from '../components/LayeredTerminalAssembly';
@@ -18,23 +19,33 @@ interface Props {
 
 /**
  * Scene 1 — the hero. Left: the Slayer statement + CTAs. Right: the layered
- * terminal assembly loop inside a pointer-parallax stage. A restrained code-rain
- * backdrop is ALWAYS alive (not hover-gated) so the hero never depends on the
- * visitor discovering a hidden trigger; pointer hover simply adds depth. Under
- * reduced motion the assembly holds fully-formed and the copy fades in.
+ * terminal assembly loop inside a pointer-parallax stage. The code-rain backdrop
+ * is HIDDEN by default and fades in only while the pointer is over the hero — the
+ * terminal assembly itself carries the life, the backdrop is an on-hover reveal.
+ * On touch (no hover) a faint static wash keeps the hero from reading as pure
+ * black. Under reduced motion the assembly holds fully-formed and copy fades in.
  */
 export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
   const { reduced, coarsePointer } = useLandingMotion();
   const stageRef = usePointerParallax<HTMLDivElement>({ disabled: reduced || coarsePointer });
+  const [hovered, setHovered] = useState(false);
+  // hover reveal on fine pointers; a faint static wash on touch / reduced motion
+  const backdropOpacity = coarsePointer || reduced ? 0.12 : hovered ? 0.5 : 0;
 
   return (
     <section
       className="relative overflow-hidden"
       style={{ minHeight: '92vh', background: '#08090A' }}
       data-scene="hero"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
-      {/* always-on, restrained backdrop — texture, never the main event */}
-      <div aria-hidden="true" className="absolute inset-0 z-0" style={{ opacity: reduced ? 0.25 : 0.55 }}>
+      {/* backdrop — hidden until the pointer is over the hero (a deliberate reveal) */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 z-0 motion-safe:transition-opacity motion-safe:duration-[600ms]"
+        style={{ opacity: backdropOpacity, transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1)' }}
+      >
         <SlayerCodeRain />
       </div>
 
