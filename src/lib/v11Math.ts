@@ -1398,15 +1398,24 @@ export function calculateV11Metrics(
   // 5. Tail Risk Parameters
   const tailRisk = computeTailRisk(matchedReturns, 1.00);
 
-  // 6. Liquidity parameters
-  const lastMid = optionPremiumFloat;
-  const stabilityMids = Array.from({ length: 15 }).map((_, i) => lastMid + Math.sin(i) * 0.01);
+  // 6. Liquidity — prefer the REAL contract's quote + size from the provided chain
+  // (live OR model). The hardcoded volume/OI and the synthetic sine mid-series were
+  // a fixed liquidity read regardless of the actual contract, so a genuinely illiquid
+  // name could still clear the liquidity gate. Only fall back to placeholders when NO
+  // chain is available at all (spec §27.2/§27.5). No real recent-mid history is carried
+  // on the chain, so quoteStability uses the current mid (flat) — never a fabricated wave.
+  const wantType = isCall ? 'call' : 'put';
+  const liqC = liveChain?.find((c) => c.strike === determinedStrike && c.type === wantType);
+  const liqBid = liqC && liqC.bid > 0 ? liqC.bid : optionPremiumFloat * 0.98;
+  const liqAsk = liqC && liqC.ask > 0 ? liqC.ask : optionPremiumFloat * 1.02;
+  const liqVol = liqC && Number.isFinite(liqC.volume as number) ? (liqC.volume as number) : 14500;
+  const liqOi = liqC && Number.isFinite(liqC.openInterest) ? liqC.openInterest : 18800;
   const liquidity = computeLiquidityScore(
-    optionPremiumFloat * 0.98,
-    optionPremiumFloat * 1.02,
-    14500,
-    18800,
-    stabilityMids,
+    liqBid,
+    liqAsk,
+    liqVol,
+    liqOi,
+    [(liqBid + liqAsk) / 2],
     asset.stabilityMax || 0.05
   );
 

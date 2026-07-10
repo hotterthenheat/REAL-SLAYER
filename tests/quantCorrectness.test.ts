@@ -11,7 +11,7 @@
  */
 import assert from 'node:assert';
 import { periodsPerYear } from '../src/lib/realizedVol';
-import { computeSkewAnalytics } from '../src/lib/quantSuite';
+import { computeSkewAnalytics, solveImpliedRND, buildStrategySuite, type OptionLeg } from '../src/lib/quantSuite';
 import { computeRiskNeutralDensity } from '../src/lib/riskNeutral';
 import type { ChainContract } from '../src/lib/v11Math';
 
@@ -75,6 +75,18 @@ console.log('Testing RND skewBias measures smile asymmetry, not lognormal convex
   // fatTailRatio is finite and positive (band centred on the RND mean, not spot).
   assert.ok(isFinite(flat!.fatTailRatio) && flat!.fatTailRatio > 0, 'fatTailRatio finite/positive');
   console.log(`✔ skewBias — flat=${flat!.skewBias}, putSkew=${putSkew!.skewBias}, flat fatTail=${flat!.fatTailRatio.toFixed(2)}`);
+}
+
+console.log('Testing mock-leak provenance — a fabricated RND is flagged and cannot size Kelly...');
+{
+  // Sparse chain (<5) ⇒ solveImpliedRND returns a FALLBACK PRIOR, which must be flagged.
+  const dummy = solveImpliedRND([], 100, 0.25);
+  assert.strictEqual(dummy.isEstimate, true, 'sparse/degenerate chain ⇒ RND flagged isEstimate');
+  const legs: OptionLeg[] = [{ id: 'x', strike: 100, type: 'call', action: 'buy', qty: 1, iv: 0.25, entryPrice: 2 }];
+  const suite = buildStrategySuite(legs, 100, 30, 0.05, dummy);
+  assert.strictEqual(suite.isEstimate, true, 'strategy suite carries the estimate flag');
+  assert.strictEqual(suite.kellySizing, 0, 'no Kelly sizing off a fabricated distribution (§24/§27.6)');
+  console.log(`✔ provenance — dummy.isEstimate=${dummy.isEstimate}, suite.kelly=${suite.kellySizing}`);
 }
 
 console.log('🎉 ALL QUANT-CORRECTNESS TESTS PASSED! 🎉');

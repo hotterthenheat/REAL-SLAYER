@@ -135,6 +135,10 @@ export interface BreedenLitzenbergerResult {
   isFatTailed: boolean; // flag if kurtosis is significantly high (> 1.2)
   probLessThanSpot: number;
   probGreaterThanSpot: number;
+  /** true ⇒ this density is a fallback prior (sparse/degenerate chain), NOT derived
+   *  from the live option chain. Downstream POP/Kelly must NOT be presented as live
+   *  and must not size a position off it (spec §27.6). */
+  isEstimate?: boolean;
 }
 
 /**
@@ -365,7 +369,8 @@ export function solveImpliedRND(
     kurtosis,
     isFatTailed,
     probLessThanSpot,
-    probGreaterThanSpot
+    probGreaterThanSpot,
+    isEstimate: false, // derived from the live chain's fitted density
   };
 }
 
@@ -407,7 +412,8 @@ function generateDummyRND(spot: number, ivBase: number, t: number): BreedenLitze
     kurtosis: 1.45,
     isFatTailed: true,
     probLessThanSpot: 0.58,
-    probGreaterThanSpot: 0.42
+    probGreaterThanSpot: 0.42,
+    isEstimate: true, // FALLBACK PRIOR — sparse/degenerate chain, not live-derived. Never present as live.
   };
 }
 
@@ -433,6 +439,10 @@ export interface RealizedVolSuite {
   // (computed from real candles). NOT a VRP percentile — we hold no IV history,
   // so a true VRP distribution does not exist. 50 ⇒ abstain (insufficient history).
   rvPercentile: number;
+  /** true ⇒ too few candles (<5) to measure RV; the values are placeholder
+   *  fallbacks, not realized from the tape. Consumers must not present the VRP
+   *  derived from them as measured (spec §27.7). */
+  isEstimate?: boolean;
 }
 
 /**
@@ -474,6 +484,7 @@ export function calculateRealizedVolSuite(
       yangZhang: 0.142,
       varianceRiskPremium: impliedVol - 0.142,
       rvPercentile: 50,
+      isEstimate: true, // <5 candles — placeholder RV, not realized from the tape
     };
   }
 
@@ -502,6 +513,7 @@ export function calculateRealizedVolSuite(
     yangZhang,
     varianceRiskPremium,
     rvPercentile,
+    isEstimate: false,
   };
 }
 
@@ -626,6 +638,10 @@ export interface StrategyMetrics {
   breakevens: number[];
   pop: number; // probability of profit
   kellySizing: number; // recommended sizing fraction
+  /** true ⇒ pop was computed from a fallback-prior RND (sparse/degenerate chain),
+   *  not the live chain. When set, kellySizing is forced to 0 — we do not size a
+   *  position off a fabricated distribution (spec §24/§27.6). Present pop as MODEL. */
+  isEstimate?: boolean;
 }
 
 export interface PayoffChartPoint {
@@ -831,7 +847,10 @@ export function buildStrategySuite(
   const rRatio = meanLoss > 0 ? (meanWin / meanLoss) : 1.0;
 
   const kellyUnbounded = pop - (1 - pop) / rRatio;
-  const kellySizing = Math.min(0.20, Math.max(0, 0.5 * kellyUnbounded)); // Limit allocation to 20% max (Half-Kelly)
+  // A fabricated-prior RND must NOT size a position — Kelly on a guessed p is
+  // leverage on a guess (§24/§27.6). Force 0 and flag the suite as an estimate.
+  const isEstimate = rnd.isEstimate === true;
+  const kellySizing = isEstimate ? 0 : Math.min(0.20, Math.max(0, 0.5 * kellyUnbounded)); // Half-Kelly, 20% cap
 
   return {
     legs,
@@ -842,6 +861,7 @@ export function buildStrategySuite(
     breakevens,
     pop,
     kellySizing,
+    isEstimate,
   };
 }
 
