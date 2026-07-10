@@ -48,6 +48,8 @@ class NodesPaneRenderer {
         for (const lvl of snap.levels) {
           const a = Math.abs(lvl.value);
           if (a < threshold) continue;
+          // Per-sign visibility (driven by the chart's +GEX / −GEX legend toggles).
+          if (lvl.value >= 0 ? !src.showPos : !src.showNeg) continue;
           const y = series.priceToCoordinate(lvl.strike);
           if (y === null) continue;
 
@@ -85,6 +87,8 @@ export class GexNodesPrimitive implements ISeriesPrimitive<Time> {
   snapshots: GexSnapshot[] = [];
   maxAbs = 1;
   enabled = true;
+  showPos = true;
+  showNeg = true;
   private _paneViews: NodesPaneView[];
 
   constructor() {
@@ -113,6 +117,13 @@ export class GexNodesPrimitive implements ISeriesPrimitive<Time> {
     this.snapshots = snapshots;
     this.maxAbs = maxAbs;
     this.enabled = enabled;
+    this.requestUpdate?.();
+  }
+
+  /** Toggle positive / negative node visibility without re-supplying snapshot data. */
+  setSignVisibility(showPos: boolean, showNeg: boolean): void {
+    this.showPos = showPos;
+    this.showNeg = showNeg;
     this.requestUpdate?.();
   }
 }

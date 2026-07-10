@@ -213,18 +213,22 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
   );
 }
 
-// Quiet connection indicator: a small dot. Callers still pass a status prop
-// (kept for signature compatibility), but the indicator renders neutrally.
-export function FeedPill({ compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
-  // Resolve the theme token once so the dot matches the token-driven UI
-  // (instead of a hardcoded hex) across light/dark/custom themes.
-  const css = getComputedStyle(document.documentElement);
-  const c = css.getPropertyValue('--success').trim() || '#4ADE80';
+// Connection indicator: a small dot whose colour reflects the actual feed state,
+// with a matching label when not compact. Live gets a subtle ping.
+export function FeedPill({ status = 'connecting', compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
+  const token = status === 'live' ? '--success' : status === 'offline' ? '--text-muted' : '--warning';
+  const label = status === 'live' ? 'Live' : status === 'offline' ? 'Offline' : status === 'stale' ? 'Stale' : 'Connecting';
   return (
     <div className={`flex items-center ${compact ? '' : 'gap-1.5'}`}>
       <span className="relative flex h-1.5 w-1.5 shrink-0">
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: c }} />
+        {status === 'live' && (
+          <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style={{ background: `var(${token})` }} />
+        )}
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: `var(${token})` }} />
       </span>
+      {!compact && (
+        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{label}</span>
+      )}
     </div>
   );
 }
