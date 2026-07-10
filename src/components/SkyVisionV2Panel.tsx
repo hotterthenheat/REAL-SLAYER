@@ -189,6 +189,49 @@ export function SkyVisionV2Panel({ compact = false }: { compact?: boolean }) {
           );
         })}
       </div>
+
+      {/* Model v2 (§20): mode-aware, regime-gated master score + its calibrated
+          probability. Calibration stays in cold-start passthrough (shown as "not yet
+          active") until the forward log holds ≥200 labeled outcomes (§25/§27.8). */}
+      {sv.masterV2 && (
+        <div className="px-4 py-3 border-t border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 mb-2.5">
+            <div className="flex items-center gap-2 text-[9px] uppercase tracking-widest text-[var(--text-secondary)]">
+              <Gauge className="w-3 h-3 text-[var(--info)]" /> Model v2 · §20
+              <span className="px-1.5 py-0.5 rounded bg-white/5 font-bold text-[var(--text-tertiary)]">{sv.masterV2.mode}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Stat label="Score v2" value={<LiveValue value={sv.masterV2.score} />} tone={strengthTone(sv.masterV2.score)} big />
+              {sv.skyscoreCalibration && (
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[10px] uppercase tracking-widest font-extrabold text-[var(--text-tertiary)] whitespace-nowrap">Calibrated P(win)</span>
+                  {sv.skyscoreCalibration.active ? (
+                    <span className="text-[13px] font-black font-mono leading-none text-[var(--text-primary)]">
+                      {Math.round(sv.skyscoreCalibration.calibratedProb * 100)}%
+                      <span className="text-[10px] font-normal text-[var(--text-tertiary)] ml-1">[{Math.round(sv.skyscoreCalibration.ciLow * 100)}–{Math.round(sv.skyscoreCalibration.ciHigh * 100)}] n={sv.skyscoreCalibration.n}</span>
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-medium text-[var(--text-tertiary)] leading-none">calibration not yet active · n={sv.skyscoreCalibration.n}/200</span>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className={`grid ${compact ? 'grid-cols-2' : 'grid-cols-4 sm:grid-cols-7'} gap-x-4 gap-y-2`}>
+            {([['vrp', 'VRP'], ['skew', 'Skew'], ['regime', 'Regime'], ['clock', 'Clock'], ['gexVel', 'GEXvel'], ['contract', 'Contract'], ['emaStructure', 'EMA']] as const).map(([k, label]) => {
+              const v = sv.masterV2.subScores?.[k] ?? 50;
+              return (
+                <div key={k}>
+                  <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+                    <span>{label}</span><span className="text-[var(--text-primary)] font-bold">{Math.round(v)}</span>
+                  </div>
+                  <ScoreBar value={v} tone={strengthTone(v)} />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </section>
   );
 }
