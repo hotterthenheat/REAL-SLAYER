@@ -86,9 +86,9 @@ export function HeroExitScene() {
         },
         (ctx) => {
           const { isMobile, isTablet } = ctx.conditions as Record<string, boolean>;
-          const travel = isMobile ? 6 : isTablet ? 12 : 22; // % opposite-direction slide
+          const travel = isMobile ? 3 : isTablet ? 5 : 7; // % opposite-direction slide — small enough that no line ever clips
           const endScale = isMobile ? 0.74 : 0.62;
-          const scrollLen = isMobile ? '+=120%' : '+=180%';
+          const scrollLen = isMobile ? '+=100%' : '+=140%';
 
           const tl = gsap.timeline({
             scrollTrigger: {
@@ -128,8 +128,8 @@ export function HeroExitScene() {
         {/* manifesto statement — centred, legible, the editorial backdrop */}
         <KineticHeadline
           lines={STATEMENT}
-          className="pointer-events-none absolute inset-0 z-0 flex flex-col justify-center px-6 text-center text-[7.5vw] leading-[0.92] sm:text-[9vw] lg:text-[6.6vw]"
-          color="rgba(244,244,245,0.17)"
+          className="pointer-events-none absolute inset-0 z-0 flex flex-col justify-center px-6 text-center text-[6.8vw] leading-[0.94] lg:text-[5.2vw]"
+          color="rgba(244,244,245,0.30)"
         />
         {/* soft vignette so the focal terminal reads above the statement */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[1]" style={{ background: 'radial-gradient(ellipse 46% 40% at 50% 50%, rgba(8,9,10,0.82) 0%, rgba(8,9,10,0.35) 55%, transparent 78%)' }} />

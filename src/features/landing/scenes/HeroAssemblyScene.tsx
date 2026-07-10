@@ -1,6 +1,6 @@
-import { useState } from 'react';
 import { motion } from 'motion/react';
 import SlayerCodeRain from '../../../components/SlayerCodeRain';
+import { CursorSpotlight } from '../components/CursorSpotlight';
 import { LayeredTerminalAssembly } from '../components/LayeredTerminalAssembly';
 import { usePointerParallax } from '../hooks/usePointerParallax';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
@@ -19,35 +19,26 @@ interface Props {
 
 /**
  * Scene 1 — the hero. Left: the Slayer statement + CTAs. Right: the layered
- * terminal assembly loop inside a pointer-parallax stage. The code-rain backdrop
- * is HIDDEN by default and fades in only while the pointer is over the hero — the
- * terminal assembly itself carries the life, the backdrop is an on-hover reveal.
- * On touch (no hover) a faint static wash keeps the hero from reading as pure
- * black. Under reduced motion the assembly holds fully-formed and copy fades in.
+ * terminal assembly (assembles once, stays alive) inside a pointer-parallax
+ * stage. The code-rain backdrop is revealed ONLY around the cursor — a torch
+ * moving over the dark surface — never across the whole screen. On touch it is
+ * a faint static wash; under reduced motion the assembly holds fully-formed.
  */
 export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
   const { reduced, coarsePointer } = useLandingMotion();
   const stageRef = usePointerParallax<HTMLDivElement>({ disabled: reduced || coarsePointer });
-  const [hovered, setHovered] = useState(false);
-  // hover reveal on fine pointers; a faint static wash on touch / reduced motion
-  const backdropOpacity = coarsePointer || reduced ? 0.12 : hovered ? 0.5 : 0;
 
   return (
     <section
       className="relative overflow-hidden"
       style={{ minHeight: '92vh', background: '#08090A' }}
       data-scene="hero"
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
-      {/* backdrop — hidden until the pointer is over the hero (a deliberate reveal) */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 z-0 motion-safe:transition-opacity motion-safe:duration-[600ms]"
-        style={{ opacity: backdropOpacity, transitionTimingFunction: 'cubic-bezier(0.16,1,0.3,1)' }}
-      >
+      {/* backdrop — a pool of light that follows the pointer, revealing the
+          code-rain only where the cursor is */}
+      <CursorSpotlight radius={300} strength={0.85} staticFallback={coarsePointer || reduced} className="z-0">
         <SlayerCodeRain />
-      </div>
+      </CursorSpotlight>
 
       <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.02fr_1.18fr] lg:py-24">
         {/* copy */}
