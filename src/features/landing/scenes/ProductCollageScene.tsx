@@ -86,6 +86,9 @@ interface PanelCfg {
   /** appears on the mobile (reduced-count) collage? */
   mobile: boolean;
   home: { left: string; top: string; width: string };
+  /** mobile-safe home override — pulled toward centre + narrower so the static
+   *  collage never clips off the 320–520px screen edges. */
+  homeM?: { left: string; top: string; width: string };
   from: { x: number; y: number; rot: number; scale: number };
   out: { x: number; y: number };
   body: React.ReactNode;
@@ -100,6 +103,7 @@ const PANELS: PanelCfg[] = [
     op: 0.7,
     mobile: true,
     home: { left: '25%', top: '27%', width: 'min(250px, 66vw)' },
+    homeM: { left: '30%', top: '24%', width: 'min(220px, 54vw)' },
     from: { x: -140, y: -44, rot: -3, scale: 0.86 },
     out: { x: -42, y: -20 },
     body: <MicroRanked rows={RANKED_ROWS} />,
@@ -112,6 +116,7 @@ const PANELS: PanelCfg[] = [
     op: 0.7,
     mobile: true,
     home: { left: '76%', top: '24%', width: 'min(250px, 66vw)' },
+    homeM: { left: '70%', top: '22%', width: 'min(220px, 54vw)' },
     from: { x: 130, y: -92, rot: 3, scale: 0.88 },
     out: { x: 46, y: -16 },
     body: <MicroGamma rows={GAMMA_ROWS} spot={5975} callWall={6050} putWall={5900} />,
@@ -125,6 +130,7 @@ const PANELS: PanelCfg[] = [
     dominant: true,
     mobile: true,
     home: { left: '50%', top: '52%', width: 'min(360px, 86vw)' },
+    homeM: { left: '50%', top: '52%', width: 'min(340px, 88vw)' },
     from: { x: 0, y: 82, rot: 0, scale: 0.9 },
     out: { x: 0, y: 0 },
     body: <MicroPositioning rows={POSITIONING_ROWS} spot={5975} />,
@@ -137,6 +143,7 @@ const PANELS: PanelCfg[] = [
     op: 0.62,
     mobile: true,
     home: { left: '26%', top: '75%', width: 'min(240px, 64vw)' },
+    homeM: { left: '34%', top: '78%', width: 'min(210px, 52vw)' },
     from: { x: -120, y: 108, rot: 2, scale: 0.88 },
     out: { x: -46, y: 34 },
     body: <MicroHeatmap />,
@@ -144,7 +151,7 @@ const PANELS: PanelCfg[] = [
   {
     id: 'history',
     title: 'Trade History',
-    tab: 'liveterminal',
+    tab: 'auditor',
     z: 20,
     op: 0.62,
     mobile: false,
@@ -283,22 +290,24 @@ export function ProductCollageScene({ onEnter }: Props) {
 
       mm.add('(min-width: 1024px)', () => build(MODE_CFG.desktop.k));
       mm.add('(min-width: 640px) and (max-width: 1023.98px)', () => build(MODE_CFG.tablet.k));
-      mm.add('(max-width: 639.98px)', () => build(MODE_CFG.mobile.k));
+      // no mobile branch: the hook bails out above when mode === 'mobile' and the
+      // static layout (panelStyle) is the mobile treatment.
 
       return () => mm.revert();
     },
-    { scope, dependencies: [reduced, mode] },
+    { scope, dependencies: [reduced, mode], revertOnUpdate: true },
   );
 
   /** Base style per panel. Under reduced motion this IS the final layout (settled
    *  outward drift + dominance scale, full opacity). Otherwise GSAP owns transform
    *  + opacity, so we render centred + hidden and let the timeline take over. */
   const panelStyle = (p: PanelCfg): React.CSSProperties => {
+    const home = mode === 'mobile' && p.homeM ? p.homeM : p.home;
     const base: React.CSSProperties = {
       position: 'absolute',
-      left: p.home.left,
-      top: p.home.top,
-      width: p.home.width,
+      left: home.left,
+      top: home.top,
+      width: home.width,
       zIndex: p.z,
       willChange: 'transform',
     };

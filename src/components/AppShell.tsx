@@ -44,18 +44,34 @@ export const NavCtx = React.createContext<NavCtxValue>({
 
 // Portal-rendered flyout, fixed-positioned off the hovered nav item (so the sidebar's
 // own overflow never clips it). Clamped to stay on-screen for long lists.
-function NavFlyout({ anchor, subTabs, pageId, activeSub, onPick, onEnter, onLeave }: {
+function NavFlyout({ anchor, subTabs, pageId, activeSub, onPick, onEnter, onLeave, onEscape }: {
   anchor: DOMRect; subTabs: { id: string; label: string }[]; pageId: string; activeSub: string | null;
-  onPick: (subId: string) => void; onEnter: () => void; onLeave: () => void;
+  onPick: (subId: string) => void; onEnter: () => void; onLeave: () => void; onEscape: () => void;
 }) {
   const estH = subTabs.length * 30 + 16;
   const top = Math.max(8, Math.min(anchor.top, window.innerHeight - estH - 8));
+  // Keyboard support inside the portaled menu: focus keeps it open (capture
+  // handlers mirror the mouse enter/leave), arrows move between items, Escape
+  // hands focus back to the trigger.
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') { e.stopPropagation(); onEscape(); return; }
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    const i = items.indexOf(document.activeElement as HTMLElement);
+    const next = e.key === 'ArrowDown' ? (i + 1) % items.length : (i - 1 + items.length) % items.length;
+    items[next]?.focus();
+  };
   return createPortal(
     <div
       role="menu"
       aria-label={`${pageId} sections`}
+      data-flyout-for={pageId}
       onMouseEnter={onEnter}
       onMouseLeave={onLeave}
+      onFocusCapture={onEnter}
+      onBlurCapture={onLeave}
+      onKeyDown={handleKeyDown}
       style={{ position: 'fixed', top, left: anchor.right + 8, zIndex: 10050, borderRadius: 'var(--radius-panel)' }}
       className="min-w-[176px] border border-[var(--border-strong)] bg-[var(--surface)] p-1 shadow-[0_16px_44px_-12px_rgba(0,0,0,0.8)]"
     >
@@ -130,6 +146,34 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
     setAnchor(null);
     closeMobile();
   };
+  // Keyboard path into the portaled flyout (it lives at the end of <body>, so
+  // natural Tab order can never reach it): ArrowRight opens the menu and moves
+  // focus to its first item. Escape inside the menu returns focus here without
+  // re-opening (one-shot suppression, since focus would otherwise re-trigger).
+  const suppressOpen = useRef(false);
+  const onButtonFocus = () => {
+    if (suppressOpen.current) { suppressOpen.current = false; return; }
+    open();
+  };
+  const enterFlyout = (e: React.KeyboardEvent) => {
+    if (!hasFlyout || e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    open();
+    // The portal mounts on React's schedule, not ours — retry a few frames until
+    // the first menuitem exists, then focus it.
+    let tries = 0;
+    const tryFocus = () => {
+      const item = document.querySelector<HTMLElement>(`[data-flyout-for="${id}"] [role="menuitem"]`);
+      if (item) { item.focus(); return; }
+      if (++tries < 12) requestAnimationFrame(tryFocus);
+    };
+    requestAnimationFrame(tryFocus);
+  };
+  const escapeFlyout = () => {
+    suppressOpen.current = true;
+    btnRef.current?.focus();
+    setAnchor(null);
+  };
 
   return (
     <>
@@ -138,8 +182,9 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
         onClick={() => { setActiveTab(id); closeMobile(); }}
         onMouseEnter={open}
         onMouseLeave={scheduleClose}
-        onFocus={open}
+        onFocus={onButtonFocus}
         onBlur={scheduleClose}
+        onKeyDown={enterFlyout}
         aria-haspopup={hasFlyout ? 'menu' : undefined}
         style={{ borderRadius: 'var(--radius-control)' }}
         className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
@@ -162,7 +207,7 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
           : isActive && (isSidebarExpanded || isMobile) && <ChevronRight className="w-3 h-3 opacity-50 shrink-0" />}
       </button>
       {hasFlyout && anchor && (
-        <NavFlyout anchor={anchor} subTabs={subTabs} pageId={id} activeSub={activeSub} onPick={pick} onEnter={open} onLeave={scheduleClose} />
+        <NavFlyout anchor={anchor} subTabs={subTabs} pageId={id} activeSub={activeSub} onPick={pick} onEnter={open} onLeave={scheduleClose} onEscape={escapeFlyout} />
       )}
     </>
   );

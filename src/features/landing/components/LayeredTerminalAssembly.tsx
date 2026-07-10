@@ -238,7 +238,7 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
       });
       tl.to({}, { duration: 0.5 }); // brief rest before the loop repeats
     },
-    { scope, dependencies: [reduced] },
+    { scope, dependencies: [reduced], revertOnUpdate: true },
   );
 
   return (

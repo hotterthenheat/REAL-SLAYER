@@ -119,7 +119,7 @@ export function HeroExitScene() {
         },
       );
     },
-    { scope, dependencies: [reduced] },
+    { scope, dependencies: [reduced, mode], revertOnUpdate: true },
   );
 
   return (
@@ -128,7 +128,7 @@ export function HeroExitScene() {
         {/* manifesto statement — centred, legible, the editorial backdrop */}
         <KineticHeadline
           lines={STATEMENT}
-          className="pointer-events-none absolute inset-0 z-0 flex flex-col justify-center px-6 text-center text-[12vw] leading-[0.92] sm:text-[9vw] lg:text-[6.6vw]"
+          className="pointer-events-none absolute inset-0 z-0 flex flex-col justify-center px-6 text-center text-[7.5vw] leading-[0.92] sm:text-[9vw] lg:text-[6.6vw]"
           color="rgba(244,244,245,0.17)"
         />
         {/* soft vignette so the focal terminal reads above the statement */}

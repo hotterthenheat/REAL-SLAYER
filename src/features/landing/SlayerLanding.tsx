@@ -69,7 +69,7 @@ function LandingLayout({ ticker, metrics, ranked, pressure, spark, onEnter, onLa
               {/* Scene 4 — pinned terminal-window sequence (real Slayer modules) */}
               <PinnedTerminalScene onEnter={onEnter} />
               {/* Scene 5 — interactive module grid */}
-              <ProductGridScene ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} />
+              <ProductGridScene metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} />
             </>
           )}
           {/* supporting informational sections */}
