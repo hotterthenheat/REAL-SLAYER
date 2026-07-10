@@ -28,6 +28,8 @@ import type { AssetInfo } from '../types';
 import { computeSkyVisionMaster, type SkyVisionMasterResult } from '../lib/skyVisionMaster';
 import type { AssetEdge } from '../lib/quantEdge';
 import type { DealerDynamics } from '../lib/dealerDynamics';
+import { dbInsertPrediction, dbLabelMaturedPredictions } from './predictionLog';
+import { makePredictionId, HORIZON_MS, type PredictionRecord } from '../lib/forwardLog';
 import {
   snapshotFromMarket,
   scoreContract,
@@ -204,6 +206,43 @@ export function tickSkyVision(
     }
   }
   pruneStale();
+}
+
+// ── Forward log (spec §25/§27.9) — throttle state. One skyscore prediction per
+//    ticker per cadence; matured outcomes are resolved on a slower scan. Both
+//    cadences are FREE (§26). DB calls are fire-and-forget + internally resilient,
+//    so an absent DB is a silent no-op that never blocks the tick.
+const lastPredAt = new Map<string, number>();
+const lastLabelAt = new Map<string, number>();
+const PREDICTION_CADENCE_MS = 15 * 60_000; // ≤ one prediction / ticker / 15 min
+const LABEL_SCAN_MS = 60_000;              // resolve matured outcomes ~once / min / ticker
+
+/** Append a resolvable forward-log prediction for the leading directional play, and
+ *  periodically resolve matured ones against the current spot. Never fabricates: a
+ *  NEUTRAL read logs nothing, and resolution only fills already-null outcome columns. */
+function logForwardPrediction(ticker: string, m: SkyVisionMasterResult, spot: number, leadIsCall: boolean, isNeutral: boolean): void {
+  const now = Date.now();
+  if (now - (lastLabelAt.get(ticker) ?? 0) >= LABEL_SCAN_MS) {
+    lastLabelAt.set(ticker, now);
+    void dbLabelMaturedPredictions(ticker, spot, now);
+  }
+  if (isNeutral || !(spot > 0)) return;
+  if (now - (lastPredAt.get(ticker) ?? 0) < PREDICTION_CADENCE_MS) return;
+  lastPredAt.set(ticker, now);
+  const direction = leadIsCall ? 'call' : 'put';
+  const rec: PredictionRecord = {
+    predictionId: makePredictionId(ticker, 'skyscore', direction, now),
+    ticker,
+    kind: 'skyscore',
+    direction,
+    entrySpot: spot,
+    targetPrice: null, // resolve by direction vs entry (a touch target can be added later)
+    predictedProb: m.score,
+    features: { mode: m.mode, ...m.subScores },
+    horizonMs: HORIZON_MS[m.mode] ?? HORIZON_MS.INTRADAY,
+    createdAt: now,
+  };
+  void dbInsertPrediction(rec);
 }
 
 function computeForAsset(
@@ -415,6 +454,9 @@ function computeForAsset(
     gammaVelocity: dyn?.gamma?.velocity ?? 0,
     isLive: effectiveSource === 'LIVE',
   });
+
+  // Forward log: record the directional call and resolve matured outcomes (spec §25).
+  logForwardPrediction(ticker, masterV2, spot, leadIsCall, direction === 'NEUTRAL');
 
   cache[ticker] = {
     ticker,
