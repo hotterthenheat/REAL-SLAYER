@@ -164,8 +164,8 @@ const PANELS: PanelCfg[] = [
 
 /** per-mode tuning: displacement scale, static-layout scale, pin height, stage box. */
 const MODE_CFG = {
-  desktop: { k: 1, minH: '170vh', stageH: 560, stageMax: 1000 },
-  tablet: { k: 0.62, minH: '150vh', stageH: 520, stageMax: 760 },
+  desktop: { k: 1, minH: '150vh', stageH: 560, stageMax: 1000 },
+  tablet: { k: 0.62, minH: '135vh', stageH: 520, stageMax: 760 },
   mobile: { k: 0.4, minH: '140vh', stageH: 468, stageMax: 460 },
 } as const;
 
@@ -210,7 +210,7 @@ export function ProductCollageScene({ onEnter }: Props) {
             y: p.from.y * k,
             rotation: p.from.rot,
             scale: p.from.scale,
-            autoAlpha: 0,
+            autoAlpha: 0.22,
             transformOrigin: '50% 50%',
           });
           gsap.set(label, { clipPath: 'inset(0 100% 0 0)' });

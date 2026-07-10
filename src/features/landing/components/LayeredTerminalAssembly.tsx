@@ -219,24 +219,33 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
         return;
       }
 
-      const tl = gsap.timeline({ repeat: -1, defaults: { force3D: true } });
-      // ── Phase A/B: assemble — pieces fly in from their scatter vectors, lock in.
+      // ── Assemble ONCE, then hold — the terminal never disassembles or vanishes.
+      // A first-time visitor sees the pieces fly in, lock together, and the desk
+      // simply stays alive: a slow breath plus per-layer micro-drift at different
+      // periods (never opacity — the card is always fully present).
       LAYERS.forEach((l, i) => gsap.set(nodes[i], { x: l.from.x, y: l.from.y, rotation: l.from.rot, scale: l.from.scale, autoAlpha: l.id === 'grid' ? 0.5 : 0 }));
+      const tl = gsap.timeline({ defaults: { force3D: true } });
       tl.to(nodes, {
         x: 0, y: 0, rotation: 0, scale: 1, autoAlpha: 1,
-        duration: 0.72, ease: GSAP_EASE_PRIMARY, stagger: STAGGER.layer,
-      }, 0);
-      // ── Phase C: completed hold — the assembly breathes ~1.2%.
-      tl.to(breatheRef.current, { scale: 1.012, duration: 1.5, ease: 'sine.inOut', yoyo: true, repeat: 1 }, '>-0.1');
-      // ── Phase D: disassemble — components peel to different depth planes.
-      LAYERS.forEach((l, i) => {
-        tl.to(nodes[i], {
-          x: l.exit.x, y: l.exit.y, rotation: l.exit.rot, scale: l.exit.scale,
-          autoAlpha: l.id === 'grid' ? 0.5 : 0,
-          duration: 0.66, ease: GSAP_EASE_SMOOTH,
-        }, `>-${0.66 - STAGGER.tight}`);
+        duration: 0.8, ease: GSAP_EASE_PRIMARY, stagger: STAGGER.layer,
+      }, 0.1);
+      // idle life, started after lock-in: a barely-there breath on the whole desk…
+      tl.add(() => {
+        gsap.to(breatheRef.current, { scale: 1.008, duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1 });
+        // …and 2–3px drift on the floating accent layers (different periods so the
+        // motion never reads as a synchronized loop). Transform-only, no opacity.
+        nodes.forEach((n, i) => {
+          const depth = LAYERS[i].depth;
+          if (depth < 4) return; // only the top depth plane floats
+          gsap.to(n, {
+            y: `+=${i % 2 ? 3 : -3}`,
+            duration: 2.6 + i * 0.7,
+            ease: 'sine.inOut',
+            yoyo: true,
+            repeat: -1,
+          });
+        });
       });
-      tl.to({}, { duration: 0.5 }); // brief rest before the loop repeats
     },
     { scope, dependencies: [reduced], revertOnUpdate: true },
   );

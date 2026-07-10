@@ -205,7 +205,7 @@ const TerminalWindowFrame = forwardRef<HTMLDivElement, { rail: ReactNode; childr
     return (
       <div
         ref={ref}
-        className="w-full max-w-[560px] overflow-hidden will-change-transform"
+        className="w-full max-w-[720px] overflow-hidden will-change-transform"
         style={{
           background: PALETTE.panel,
           border: `1px solid ${line}`,
@@ -381,15 +381,22 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
     <section
       ref={scope}
       data-scene="pinned-terminal"
-      className={`relative w-full overflow-x-clip min-h-0 ${reduced ? '' : 'sm:min-h-[240vh] lg:min-h-[320vh]'}`}
+      className={`relative w-full overflow-x-clip min-h-0 ${reduced ? '' : 'sm:min-h-[200vh] lg:min-h-[260vh]'}`}
       style={{ background: 'var(--background)' }}
     >
       <div
         ref={stageRef}
-        className={`flex w-full items-center justify-center overflow-x-clip px-5 py-12 ${reduced ? '' : 'sm:h-screen sm:py-0'}`}
+        className={`relative flex w-full items-center justify-center overflow-x-clip px-5 py-12 ${reduced ? '' : 'sm:h-screen sm:py-0'}`}
       >
+        {/* stage atmosphere — the window sits on a desk surface, not in a void */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '26px 26px', maskImage: 'radial-gradient(ellipse 62% 55% at 50% 50%, black 30%, transparent 78%)', WebkitMaskImage: 'radial-gradient(ellipse 62% 55% at 50% 50%, black 30%, transparent 78%)' }} />
+          <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 48% 42% at 50% 52%, rgba(106,147,181,0.05) 0%, transparent 70%)' }} />
+          <div className="absolute inset-x-[12%] top-[24%] h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(106,147,181,0.14), transparent)' }} />
+          <div className="absolute inset-x-[18%] bottom-[22%] h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(199,147,80,0.12), transparent)' }} />
+        </div>
         <TerminalWindowFrame ref={frameRef} rail={rail}>
-          <div className={`relative flex flex-col gap-3 p-1 ${reduced ? '' : 'sm:block sm:min-h-[380px] sm:p-0'}`}>
+          <div className={`relative flex flex-col gap-3 p-1 ${reduced ? '' : 'sm:block sm:min-h-[330px] sm:p-0'}`}>
             {/* shared data rails — stationary continuity behind the states (sm+ only) */}
             <div aria-hidden="true" className={`pointer-events-none absolute inset-0 ${reduced ? 'hidden' : 'hidden sm:block'}`} style={{ zIndex: 0 }}>
               <div className="absolute inset-y-6 left-1/2 w-px" style={{ background: lineStrong, opacity: 0.5 }} />
