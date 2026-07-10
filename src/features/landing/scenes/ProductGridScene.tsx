@@ -57,7 +57,6 @@ interface ModuleDef {
 }
 
 interface Props {
-  ticker: string;
   metrics: any;
   ranked: any[];
   pressure: any[];
@@ -77,7 +76,6 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
   // replicas (they fall back to number-free silhouettes when a feed is absent).
   const rk = Array.isArray(ranked) ? ranked : [];
   const pr = Array.isArray(pressure) ? pressure : [];
-  const sp = Array.isArray(spark) ? spark : [];
   const MODULES: ModuleDef[] = [
     {
       id: 'skyvision', tab: 'skyvision', name: 'SkyVision', accent: PALETTE.steel,
@@ -156,7 +154,7 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
       mm.add('(max-width: 639.98px)', build(16));
       return () => mm.revert();
     },
-    { scope: gridScope, dependencies: [reduced] },
+    { scope: gridScope, dependencies: [reduced], revertOnUpdate: true },
   );
 
   /* ─────────────── keyboard + focus wiring ─────────────── */
@@ -168,8 +166,9 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
   };
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape' && active) {
+      // Close the expansion but KEEP focus on the focused card, so the keyboard
+      // user isn't dumped to <body> (re-Tab from scratch).
       setActive(null);
-      (document.activeElement as HTMLElement | null)?.blur?.();
     }
   };
 
@@ -248,7 +247,7 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
 
                   {/* preview slot — fixed height keeps the card stable when the
                       preview clone flies out to the floating frame. */}
-                  <div className="relative mt-4 h-[92px]">
+                  <div className="relative mt-4 h-[92px] overflow-hidden rounded-[7px]">
                     <motion.div
                       layoutId={reduced ? undefined : `pg-frame-${m.id}`}
                       className="absolute inset-0"
@@ -285,6 +284,8 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
               <motion.div
                 key={activeMod.id}
                 layoutId={`pg-frame-${activeMod.id}`}
+                role="button"
+                onMouseDown={(e) => e.preventDefault()} // keep focus on the card — no focusout race before click
                 onClick={() => onEnter(activeMod.tab)}
                 className="pointer-events-auto w-full max-w-[min(560px,90vw)] max-h-[80vh] cursor-pointer overflow-hidden rounded-[12px] p-5"
                 style={{

@@ -17,54 +17,34 @@ interface Options {
  * The ONE smooth-scroll owner for the landing. Because the landing scrolls inside
  * its own `fixed inset-0` wrapper (not the window), this:
  *
- *  1. Makes that wrapper the default ScrollTrigger scroller.
- *  2. Creates a single Lenis instance in wrapper mode.
+ *  1. Makes that wrapper the default ScrollTrigger scroller (mount-scoped).
+ *  2. Creates a single Lenis instance in wrapper mode (reduced-motion-scoped).
  *  3. Drives Lenis from GSAP's ticker (one rAF loop for the whole page) and pushes
- *     every Lenis scroll frame into `ScrollTrigger.update` so pins/scrubs stay
- *     glued to the smoothed scroll position.
- *  4. Refreshes ScrollTrigger after fonts + images settle and on resize.
- *  5. Tears everything down on unmount — kills every ScrollTrigger, removes the
- *     ticker callback, restores lagSmoothing, and destroys Lenis — so returning to
- *     the terminal never leaves a scroll lock or orphaned trigger behind.
+ *     every Lenis scroll frame into `ScrollTrigger.update`.
+ *  4. Refreshes ScrollTrigger after fonts/images settle and on content resize.
+ *  5. Tears down on unmount — kills every ScrollTrigger, removes the ticker
+ *     callback, restores lagSmoothing, destroys Lenis — so leaving the landing
+ *     never strands a scroll lock or orphaned trigger.
  *
- * Under reduced-motion Lenis is skipped (native scroll), but the wrapper is still
- * registered as the scroller so any (non-scrubbed) triggers measure correctly.
+ * The lifecycle is deliberately SPLIT into two effects: the mount-scoped effect
+ * owns the scroller default + the kill-all teardown, while the `reduced`-scoped
+ * effect owns only Lenis. A live prefers-reduced-motion toggle therefore swaps
+ * the smooth-scroll layer WITHOUT killing the scene ScrollTriggers that scenes
+ * have just rebuilt for the new mode (they manage their own triggers via
+ * useGSAP revertOnUpdate).
  */
 export function useLenisScrollTrigger({ wrapperRef, contentRef, reduced }: Options) {
   const lenisRef = useRef<Lenis | null>(null);
   const [ready, setReady] = useState(false);
 
+  // ── mount-scoped: scroller default, refresh plumbing, final teardown ──
   useEffect(() => {
     const wrapper = wrapperRef.current;
     const content = contentRef.current;
     if (!wrapper || !content) return;
 
-    // The wrapper is the scroller for every trigger on the page.
     ScrollTrigger.defaults({ scroller: wrapper });
 
-    let lenis: Lenis | null = null;
-    let tickerCb: ((time: number) => void) | null = null;
-
-    if (!reduced) {
-      lenis = new Lenis({
-        wrapper,
-        content,
-        duration: 1.05,
-        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        smoothWheel: true,
-      });
-      lenisRef.current = lenis;
-
-      // Smoothed scroll frame → keep ScrollTrigger in lockstep.
-      lenis.on('scroll', ScrollTrigger.update);
-
-      // Single rAF: GSAP's ticker drives Lenis (gsap.ticker is seconds → *1000).
-      tickerCb = (time: number) => lenis!.raf(time * 1000);
-      gsap.ticker.add(tickerCb);
-      gsap.ticker.lagSmoothing(0);
-    }
-
-    // Refresh once layout is stable, and again after fonts/images resolve.
     const refresh = () => ScrollTrigger.refresh();
     const raf = requestAnimationFrame(() => {
       refresh();
@@ -79,13 +59,39 @@ export function useLenisScrollTrigger({ wrapperRef, contentRef, reduced }: Optio
     return () => {
       cancelAnimationFrame(raf);
       ro.disconnect();
-      if (tickerCb) gsap.ticker.remove(tickerCb);
-      gsap.ticker.lagSmoothing(500, 33);
       ScrollTrigger.getAll().forEach((t) => t.kill());
-      lenis?.destroy();
-      lenisRef.current = null;
-      // Drop the wrapper default so it can't dangle after unmount.
       ScrollTrigger.defaults({ scroller: undefined as unknown as Element });
+    };
+  }, [wrapperRef, contentRef]);
+
+  // ── reduced-scoped: the Lenis smooth-scroll layer only ──
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    const content = contentRef.current;
+    if (!wrapper || !content || reduced) return;
+
+    const lenis = new Lenis({
+      wrapper,
+      content,
+      duration: 1.05,
+      easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+    lenisRef.current = lenis;
+    lenis.on('scroll', ScrollTrigger.update);
+
+    const tickerCb = (time: number) => lenis.raf(time * 1000);
+    gsap.ticker.add(tickerCb);
+    gsap.ticker.lagSmoothing(0);
+
+    // pin/scrub measurements depend on the active scroll layer — re-measure.
+    ScrollTrigger.refresh();
+
+    return () => {
+      gsap.ticker.remove(tickerCb);
+      gsap.ticker.lagSmoothing(500, 33);
+      lenis.destroy();
+      lenisRef.current = null;
     };
   }, [wrapperRef, contentRef, reduced]);
 

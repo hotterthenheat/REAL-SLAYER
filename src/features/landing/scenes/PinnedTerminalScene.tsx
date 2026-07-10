@@ -259,15 +259,14 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
       const states = statesRef.current;
       const dots = dotsRef.current;
 
-      // REDUCED MOTION — no pin, no scrub. One representative state, fully formed.
+      // REDUCED MOTION — no pin, no scrub, no tall section. The states render as
+      // a static stacked list (the section drops its multi-viewport min-height and
+      // the states drop their absolute overlay — see the render), so EVERY module
+      // stays readable and no blank scroll is left behind.
       if (reduced) {
         gsap.set(frame, { yPercent: 0, scale: 1, borderRadius: 10, autoAlpha: 1 });
-        states.forEach((n, i) => {
-          if (!n) return;
-          if (i === 0) gsap.set(n, { autoAlpha: 1, yPercent: 0, scale: 1, clipPath: SHOWN, display: 'block' });
-          else gsap.set(n, { autoAlpha: 0, display: 'none' });
-        });
-        dots.forEach((d, i) => { if (d) gsap.set(d, { opacity: i === 0 ? 1 : 0.4 }); });
+        states.forEach((n) => { if (n) gsap.set(n, { autoAlpha: 1, yPercent: 0, scale: 1, clipPath: SHOWN, display: 'block' }); });
+        dots.forEach((d) => { if (d) gsap.set(d, { opacity: 1 }); });
         return;
       }
 
@@ -353,7 +352,7 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
 
       return () => { mm.revert(); };
     },
-    { scope, dependencies: [reduced, mode] },
+    { scope, dependencies: [reduced, mode], revertOnUpdate: true },
   );
 
   // The stationary module rail (progress indicator + cross-into-terminal shortcuts).
@@ -382,17 +381,17 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
     <section
       ref={scope}
       data-scene="pinned-terminal"
-      className="relative w-full overflow-x-clip min-h-0 sm:min-h-[240vh] lg:min-h-[320vh]"
+      className={`relative w-full overflow-x-clip min-h-0 ${reduced ? '' : 'sm:min-h-[240vh] lg:min-h-[320vh]'}`}
       style={{ background: 'var(--background)' }}
     >
       <div
         ref={stageRef}
-        className="flex w-full items-center justify-center overflow-x-clip px-5 py-12 sm:h-screen sm:py-0"
+        className={`flex w-full items-center justify-center overflow-x-clip px-5 py-12 ${reduced ? '' : 'sm:h-screen sm:py-0'}`}
       >
         <TerminalWindowFrame ref={frameRef} rail={rail}>
-          <div className="relative flex flex-col gap-3 p-1 sm:block sm:min-h-[380px] sm:p-0">
+          <div className={`relative flex flex-col gap-3 p-1 ${reduced ? '' : 'sm:block sm:min-h-[380px] sm:p-0'}`}>
             {/* shared data rails — stationary continuity behind the states (sm+ only) */}
-            <div aria-hidden="true" className="pointer-events-none absolute inset-0 hidden sm:block" style={{ zIndex: 0 }}>
+            <div aria-hidden="true" className={`pointer-events-none absolute inset-0 ${reduced ? 'hidden' : 'hidden sm:block'}`} style={{ zIndex: 0 }}>
               <div className="absolute inset-y-6 left-1/2 w-px" style={{ background: lineStrong, opacity: 0.5 }} />
               <div className="absolute inset-x-6 top-1/2 h-px" style={{ background: line }} />
             </div>
@@ -400,7 +399,7 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
               <div
                 key={s.id}
                 ref={(el) => { statesRef.current[i] = el; }}
-                className="relative z-[1] will-change-transform sm:absolute sm:inset-0"
+                className={`relative z-[1] will-change-transform ${reduced ? '' : 'sm:absolute sm:inset-0'}`}
                 style={{ transformOrigin: '50% 50%' }}
               >
                 <div className="flex flex-col gap-3 p-4 sm:h-full sm:justify-center">

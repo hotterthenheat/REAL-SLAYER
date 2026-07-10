@@ -40,16 +40,8 @@ export const STAGGER = {
  * these so the debug panel and teardown can enumerate them deterministically.
  */
 export const TRIGGER = {
-  loaderExit: 'landing-loader-exit',
-  heroAssembly: 'landing-hero-assembly',
   heroExit: 'landing-hero-exit',
-  manifesto: 'landing-manifesto',
   collage: 'landing-collage',
   productGrid: 'landing-product-grid',
   terminalPin: 'landing-terminal-pin',
-  platform: 'landing-platform',
-  pricing: 'landing-pricing',
-  closing: 'landing-closing',
 } as const;
-
-export type TriggerId = (typeof TRIGGER)[keyof typeof TRIGGER];

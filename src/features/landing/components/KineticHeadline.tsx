@@ -21,22 +21,25 @@ interface Props {
 
 export function KineticHeadline({ lines, className = '', style, color = '#F4F4F5' }: Props) {
   return (
-    <div className={className} style={style} aria-hidden="true">
-      {lines.map((ln, i) => (
-        <span key={ln} className="block overflow-hidden leading-[0.98]">
-          <span
-            data-kinetic-line
-            data-dir={i % 2 === 0 ? 1 : -1}
-            className="block whitespace-nowrap font-semibold will-change-transform"
-            style={{ color, letterSpacing: '-0.02em' }}
-          >
-            {ln}
+    <>
+      <div className={className} style={style} aria-hidden="true">
+        {lines.map((ln, i) => (
+          <span key={ln} className="block overflow-hidden leading-[0.98]">
+            <span
+              data-kinetic-line
+              data-dir={i % 2 === 0 ? 1 : -1}
+              className="block whitespace-nowrap font-semibold will-change-transform"
+              style={{ color, letterSpacing: '-0.02em' }}
+            >
+              {ln}
+            </span>
           </span>
-        </span>
-      ))}
-      {/* accessible text for AT / reduced motion (the visual is aria-hidden) */}
+        ))}
+      </div>
+      {/* accessible transcript — a SIBLING of the aria-hidden visual, so screen
+          readers actually receive the statement */}
       <span className="sr-only">{lines.join('. ')}</span>
-    </div>
+    </>
   );
 }
 

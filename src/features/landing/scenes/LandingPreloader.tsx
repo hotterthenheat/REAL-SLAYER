@@ -46,7 +46,9 @@ export function LandingPreloader() {
 
   const wiping = phase === 'exit';
   return (
-    <div className="pointer-events-none fixed inset-0 z-[120]" aria-hidden={wiping}>
+    // While the cover is opaque it must CATCH input (otherwise clicks fall through
+    // to invisible UI underneath); once the wipe starts it releases the page.
+    <div className={`fixed inset-0 z-[120] ${wiping ? 'pointer-events-none' : 'pointer-events-auto'}`} aria-hidden={wiping}>
       {/* two masks that separate to reveal the hero underneath */}
       <motion.div
         className="absolute inset-x-0 top-0 h-1/2 origin-top"

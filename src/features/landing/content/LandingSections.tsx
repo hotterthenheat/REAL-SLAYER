@@ -1,11 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion, useInView } from 'motion/react';
-import type { MotionValue } from 'motion/react';
-import Lenis from 'lenis';
+import { motion, useReducedMotion } from 'motion/react';
 import { LogIn, Menu, X, Check, ArrowUpRight, CreditCard } from 'lucide-react';
-// The hero backdrop is the real slayerterminal.com motif: a live code/finance
-// "rain" (neutral steel/amber tints), NOT a coloured 3D field. Light, no WebGL.
-import SlayerCodeRain from '../../../components/SlayerCodeRain';
 // The landing sidebar IS the app shell sidebar: it renders AppShell's own
 // NavItem rows (same classes, flyouts, chevrons), FeedPill and brand header,
 // fed by the ONE shared nav definition in src/lib/navItems.ts. Zero drift —
@@ -129,130 +124,21 @@ const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 /* Line-mask heading reveal — the text slides up out of an overflow-hidden clip
    the first time it scrolls into view (editorial split-line intro). Static
    under reduced motion. */
-function MaskedHeading({
-  as: Tag = 'h2',
-  children,
-  className = '',
-  style,
-  delay = 0,
-}: {
-  as?: 'h1' | 'h2' | 'h3' | 'div';
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-  delay?: number;
-}) {
-  const reduce = useReducedMotion();
-  if (reduce) return <Tag className={className} style={style}>{children}</Tag>;
-  const MotionTag = motion[Tag];
-  return (
-    <span className="block overflow-hidden">
-      <MotionTag
-        className={`${className} will-change-transform`}
-        style={style}
-        initial={{ y: '110%' }}
-        whileInView={{ y: '0%' }}
-        viewport={{ once: true, margin: '-10% 0px -6% 0px' }}
-        transition={{ duration: 0.9, delay, ease: EASE_EXPO }}
-      >
-        {children}
-      </MotionTag>
-    </span>
-  );
-}
 
 /* MaskedLine — span-flavoured line-mask reveal for multi-line headings (valid
    inside <h2>): each line clips in its own overflow-hidden span and slides up
    on first view. Static under reduced motion. */
-function MaskedLine({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <span className="block">{children}</span>;
-  return (
-    <span className="block overflow-hidden">
-      <motion.span
-        className="block will-change-transform"
-        initial={{ y: '110%' }}
-        whileInView={{ y: '0%' }}
-        viewport={{ once: true, margin: '-10% 0px -6% 0px' }}
-        transition={{ duration: 0.9, delay, ease: EASE_EXPO }}
-      >
-        {children}
-      </motion.span>
-    </span>
-  );
-}
 
 /* Oversized editorial index numeral (the "giant number" motif) — huge,
-   low-contrast, tabular, revealing with a soft rise on first view. */
-function GiantIndex({ n, color }: { n: string; color?: string }) {
-  const reduce = useReducedMotion();
-  const numeral = (
-    <span
-      aria-hidden="true"
-      className="block text-[64px] font-semibold leading-[0.85] tabular-nums select-none"
-      style={{
-        letterSpacing: '-0.05em',
-        color: color
-          ? `color-mix(in srgb, ${color} 26%, transparent)`
-          : 'color-mix(in srgb, var(--text-primary) 10%, transparent)',
-      }}
-    >
-      {n}
-    </span>
-  );
-  if (reduce) return numeral;
-  return (
-    <span className="block overflow-hidden">
-      <motion.span
-        className="block will-change-transform"
-        initial={{ y: '55%', opacity: 0 }}
-        whileInView={{ y: '0%', opacity: 1 }}
-        viewport={{ once: true, margin: '-12% 0px -8% 0px' }}
-        transition={{ duration: 0.9, ease: EASE_EXPO }}
-      >
-        {numeral}
-      </motion.span>
-    </span>
-  );
-}
-
-/* Count-up — a "$39"-style price counts 0→value once, on first reveal.
-   Non-numeric prices ("Custom") render untouched; reduced motion = static. */
-function CountUpPrice({ price }: { price: string }) {
-  const reduce = useReducedMotion();
-  const ref = useRef<HTMLSpanElement | null>(null);
-  const inView = useInView(ref, { once: true, margin: '-10% 0px' });
-  const match = /^\$(\d+)$/.exec(price);
-  const target = match ? parseInt(match[1], 10) : null;
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    if (target == null || reduce || !inView) return;
-    let raf = 0;
-    let start = 0;
-    const dur = 900;
-    const tick = (t: number) => {
-      if (!start) start = t;
-      const p = Math.min(1, (t - start) / dur);
-      setVal(Math.round((1 - Math.pow(1 - p, 3)) * target)); // easeOutCubic
-      if (p < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, reduce, inView]);
-  if (target == null) return <>{price}</>;
-  return <span ref={ref}>${reduce ? target : val}</span>;
-}
+   low-contrast, tabular. */
 
 export function SectionHead({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
   return (
     <div className="mx-auto max-w-2xl text-center">
       {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
-      <MaskedHeading
-        className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]"
-        style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}
-      >
+      <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
         {title}
-      </MaskedHeading>
+      </h2>
       {sub ? (
         <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>
           {sub}
@@ -334,109 +220,6 @@ export function Kpi({ label, value, tone = PALETTE.text, sub }: { label: string;
    extending left, faint dashed rules for pin & walls, a solid SPOT rule with
    its tabular price, right-edge CALL WALL / PUT WALL zone annotations, and a
    "FRICTION ZONE lo–hi" footer. Real rows only — nothing fabricated. */
-function MiniPositioningMap({ rows, metrics }: { rows: PressureRow[]; metrics: HeroMetrics }) {
-  const sorted = useMemo(() => [...rows].sort((a, b) => b.strike - a.strike), [rows]);
-  const W = 250;
-  const labelW = 40;   // strike labels
-  const zoneW = 56;    // right-edge annotation rail
-  const plotL = labelW + 4;
-  const plotR = W - zoneW - 4;
-  const centerX = (plotL + plotR) / 2;
-  const barMax = (plotR - plotL) / 2;
-  const rowH = 14;
-  const top = 4;
-  const H = top + sorted.length * rowH + 4;
-  const maxAbs = Math.max(1e-9, ...sorted.map((r) => Math.abs(r.net)));
-  const yOf = (i: number) => top + i * rowH + rowH / 2;
-
-  // Rule / annotation rows: prefer the explicit row kind tags, fall back to the
-  // row nearest the real metric level.
-  const idxOf = (kind: PressureRow['kind'], level?: number | null): number | null => {
-    const tagged = sorted.findIndex((r) => r.kind === kind);
-    if (tagged >= 0) return tagged;
-    if (!isNum(level) || sorted.length === 0) return null;
-    let best = 0;
-    for (let i = 1; i < sorted.length; i++) {
-      if (Math.abs(sorted[i].strike - level) < Math.abs(sorted[best].strike - level)) best = i;
-    }
-    return best;
-  };
-  const spotIdx = idxOf('spot', metrics.spot);
-  const pinIdx = idxOf('pin', metrics.pin);
-  const cwIdx = idxOf('callWall', metrics.callWall);
-  const pwIdx = idxOf('putWall', metrics.putWall);
-
-  const frictionLo = isNum(metrics.spot) && isNum(metrics.pin) ? Math.min(metrics.spot, metrics.pin) : null;
-  const frictionHi = isNum(metrics.spot) && isNum(metrics.pin) ? Math.max(metrics.spot, metrics.pin) : null;
-  const hasFriction = frictionLo != null && frictionHi != null && Math.round(frictionLo) !== Math.round(frictionHi);
-
-  const zone = (idx: number | null, label: string, color: string) =>
-    idx == null ? null : (
-      <g>
-        <path
-          d={`M ${plotR + 4} ${yOf(idx) - 5} L ${plotR + 8} ${yOf(idx) - 5} L ${plotR + 8} ${yOf(idx) + 5} L ${plotR + 4} ${yOf(idx) + 5}`}
-          fill="none" stroke={color} strokeOpacity="0.55" strokeWidth="0.8"
-        />
-        <text x={plotR + 11} y={yOf(idx) + 2.5} fontSize="6.5" fontWeight={600} fill={color} style={{ letterSpacing: '0.06em' }}>
-          {label}
-        </text>
-      </g>
-    );
-
-  return (
-    <div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ fontVariantNumeric: 'tabular-nums' }} role="img" aria-label="Dealer positioning by strike">
-        {/* centre zero axis */}
-        <line x1={centerX} x2={centerX} y1={top} y2={H - 4} stroke={lineStrong} strokeWidth="1" />
-        {/* dashed level rules — pin (amber), call wall (steel), put wall (red) */}
-        {pinIdx != null && <line x1={plotL} x2={plotR} y1={yOf(pinIdx)} y2={yOf(pinIdx)} stroke={PALETTE.amber} strokeOpacity="0.45" strokeWidth="0.8" strokeDasharray="3 3" />}
-        {cwIdx != null && <line x1={plotL} x2={plotR} y1={yOf(cwIdx)} y2={yOf(cwIdx)} stroke={PALETTE.steel} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="3 3" />}
-        {pwIdx != null && <line x1={plotL} x2={plotR} y1={yOf(pwIdx)} y2={yOf(pwIdx)} stroke={PALETTE.red} strokeOpacity="0.35" strokeWidth="0.8" strokeDasharray="3 3" />}
-        {/* strike labels + diverging bars (steel calls right / red puts left) */}
-        {sorted.map((r, i) => {
-          const pos = r.net >= 0;
-          const mag = (Math.abs(r.net) / maxAbs) * barMax;
-          const isSpotRow = i === spotIdx;
-          return (
-            <g key={`${r.strike}-${i}`}>
-              <text
-                x={labelW} y={yOf(i) + 2.5} textAnchor="end"
-                fontSize={isSpotRow ? 8 : 7.5} fontWeight={isSpotRow ? 700 : 400}
-                fill={isSpotRow ? PALETTE.ghost : muted}
-              >
-                {isSpotRow && isNum(metrics.spot) ? fmtPx(metrics.spot) : fmtLvl(r.strike)}
-              </text>
-              <rect
-                x={pos ? centerX : centerX - mag}
-                y={yOf(i) - 3}
-                width={Math.max(0.6, mag)}
-                height={6}
-                rx={1}
-                fill={pos ? PALETTE.steel : PALETTE.red}
-                fillOpacity={0.9}
-              />
-            </g>
-          );
-        })}
-        {/* spot — solid rule + centre marker (matches the real map) */}
-        {spotIdx != null && (
-          <g>
-            <line x1={plotL} x2={plotR} y1={yOf(spotIdx)} y2={yOf(spotIdx)} stroke={PALETTE.ghost} strokeOpacity="0.55" strokeWidth="0.8" />
-            <rect x={centerX - 1} y={yOf(spotIdx) - 5} width={2} height={10} fill={PALETTE.ghost} />
-          </g>
-        )}
-        {/* right-edge pressure-zone annotations */}
-        {zone(cwIdx, 'CALL WALL', PALETTE.steel)}
-        {zone(pwIdx, 'PUT WALL', PALETTE.red)}
-      </svg>
-      {hasFriction ? (
-        <div className="mt-1.5 text-[8.5px] font-semibold uppercase tracking-[0.14em] tabular-nums" style={{ color: faint }}>
-          Friction zone {fmtLvl(frictionLo)}–{fmtLvl(frictionHi)}
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 /* Minimal real-close sparkline (no glow, thin stroke) */
 /* Live intraday tape — a scrolling random-walk sparkline (mean-reverts toward
@@ -447,271 +230,15 @@ function MiniPositioningMap({ rows, metrics }: { rows: PressureRow[]; metrics: H
    spot (with the dealer walls as reference rules). Because the domain never
    re-derives from the sliding window, the axis can't rescale and the line glides
    instead of jittering. Frozen to a single smooth sample under reduced-motion. */
-function LiveChart({
-  center, band, callWall, putWall, pin, seed, reduce, height = 96,
-}: {
-  center: number; band: number; callWall: number; putWall: number; pin: number;
-  seed: number; reduce: boolean; height?: number;
-}) {
-  const N = 80;         // samples across the window
-  const step = 0.085;   // seconds of phase between samples (window ≈ N*step s)
-  // Snapshot the domain at mount so later KPI drift never yanks the axis.
-  const [dom] = useState(() => ({ c: center, b: Math.max(band, center * 0.0009) }));
-  const [phase, setPhase] = useState(0);
-  useEffect(() => {
-    if (reduce) return;
-    let raf = 0, t0 = 0, lastEmit = 0;
-    const loop = (ts: number) => {
-      if (!t0) t0 = ts;
-      const elapsed = (ts - t0) / 1000;
-      if (elapsed - lastEmit >= 0.032) { lastEmit = elapsed; setPhase(elapsed); } // ~30fps
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
-  }, [reduce]);
-
-  const yMin = dom.c - dom.b, yMax = dom.c + dom.b;
-  const yOf = (v: number) => height - ((v - yMin) / (yMax - yMin)) * (height - 8) - 4;
-  const amp = dom.b * 0.4;
-  // Three incommensurate sines → smooth, bounded, quasi-random drift (no jumps).
-  const noise = (u: number) =>
-    0.62 * Math.sin(u * 0.9 + seed) +
-    0.26 * Math.sin(u * 1.93 + seed * 1.7) +
-    0.12 * Math.sin(u * 4.10 + seed * 2.3);
-  const vals: number[] = [];
-  for (let i = 0; i < N; i++) vals.push(dom.c + amp * noise(phase - (N - 1 - i) * step));
-  const pts = vals.map((v, i) => `${((i / (N - 1)) * 100).toFixed(2)},${yOf(v).toFixed(2)}`).join(' ');
-  const lastYpct = (yOf(vals[N - 1]) / height) * 100;
-  const gid = `sparkfill-${Math.abs(Math.round(seed * 97))}`;
-  const refs = [
-    { v: callWall, c: PALETTE.steel },
-    { v: pin, c: PALETTE.amber },
-    { v: putWall, c: PALETTE.red },
-  ].filter((r) => isNum(r.v) && r.v > yMin && r.v < yMax);
-
-  return (
-    <div className="relative h-full w-full">
-      <svg viewBox={`0 0 100 ${height}`} preserveAspectRatio="none" className="h-full w-full">
-        <defs>
-          <linearGradient id={gid} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={PALETTE.steel} stopOpacity="0.16" />
-            <stop offset="100%" stopColor={PALETTE.steel} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {refs.map((r, i) => (
-          <line key={i} x1="0" y1={yOf(r.v)} x2="100" y2={yOf(r.v)} stroke={r.c}
-            strokeOpacity="0.32" strokeWidth={0.5} strokeDasharray="2 2" vectorEffect="non-scaling-stroke" />
-        ))}
-        <polygon points={`0,${height} ${pts} 100,${height}`} fill={`url(#${gid})`} stroke="none" />
-        <polyline points={pts} fill="none" stroke={PALETTE.steel} strokeWidth={1.15}
-          strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      </svg>
-      {/* head marker — HTML dot so it stays circular under the stretched viewBox */}
-      <span
-        className="pointer-events-none absolute"
-        style={{ right: 0, top: `${lastYpct}%`, transform: 'translate(50%,-50%)' }}
-      >
-        <span className="relative flex h-1.5 w-1.5">
-          {!reduce && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: PALETTE.steel }} />}
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.steel }} />
-        </span>
-      </span>
-    </div>
-  );
-}
 
 /* Live mock state — the hero card presents as a live desk: KPIs tick, the tape
    scrolls, the positioning bars breathe, and an ET clock runs. Seeded from real
    store fields when present, else from a plausible SPX 0DTE snapshot so a first
    visitor always sees a populated, moving terminal. Frozen under reduced-motion. */
-type MockState = {
-  spot: number; spot0: number; netGex: number; emPct: number; callWall: number; putWall: number; pin: number;
-  series: number[]; pressure: PressureRow[]; ranked: RankedRow[];
-};
 
-function seedMock(m: HeroMetrics, pressure: PressureRow[], ranked: RankedRow[]): MockState {
-  const spot = isNum(m.spot) ? m.spot : 5497.59;
-  const callWall = isNum(m.callWall) ? m.callWall : Math.round((spot + 2) / 50) * 50;
-  const putWall = isNum(m.putWall) ? m.putWall : Math.round((spot - 97) / 50) * 50;
-  const pin = isNum(m.pin) ? m.pin : callWall;
-  const netGex = isNum(m.netGex) ? m.netGex : -89.7e6;
-  const emPct = isNum(m.expectedMovePct) ? m.expectedMovePct : 0.0072;
-  // 46-point intraday walk centred just under spot so it reads as live chop
-  const series: number[] = [];
-  let p = spot - spot * 0.0012;
-  for (let i = 0; i < 46; i++) {
-    p += (Math.random() - 0.5) * spot * 0.0009 + (spot - p) * 0.04;
-    series.push(p);
-  }
-  const pr: PressureRow[] = pressure.length ? pressure : (() => {
-    const rows: PressureRow[] = [];
-    for (let k = 5; k >= -4; k--) {
-      const strike = Math.round((spot + k * 50) / 50) * 50;
-      const above = strike >= spot;
-      const mag = (2 + Math.random() * 8) * 1e7 * (1 - Math.abs(k) * 0.08);
-      rows.push({ strike, net: above ? mag : -mag, kind: strike === callWall ? 'callWall' : strike === putWall ? 'putWall' : undefined });
-    }
-    return rows;
-  })();
-  const rk: RankedRow[] = ranked.length ? ranked : [
-    { symbol: 'SPX 5450P', setup: 'Mispriced', bias: 'BEAR', confidence: 93, expMovePct: emPct },
-    { symbol: 'SPX 5550C', setup: 'Mispriced', bias: 'BULL', confidence: 91, expMovePct: emPct },
-    { symbol: 'NDX 19150P', setup: 'Mispriced', bias: 'BEAR', confidence: 90, expMovePct: emPct },
-    { symbol: 'SPY 545C', setup: 'Mispriced', bias: 'BULL', confidence: 89, expMovePct: emPct },
-    { symbol: 'QQQ 485C', setup: 'Mispriced', bias: 'BULL', confidence: 86, expMovePct: emPct },
-  ];
-  return { spot, spot0: spot, netGex, emPct, callWall, putWall, pin, series, pressure: pr, ranked: rk };
-}
 
-function stepMock(s: MockState): MockState {
-  // Spot drifts live but mean-reverts to its seed (spot0) so it stays within the
-  // chart's fixed band and never wanders off the dealer walls.
-  const spot = s.spot + (Math.random() - 0.5) * s.spot0 * 0.0007 + (s.spot0 - s.spot) * 0.12;
-  const series = s.series.slice(1).concat(spot);
-  const netGex = s.netGex + (Math.random() - 0.5) * 1.6e6;
-  const emPct = Math.max(0.003, s.emPct + (Math.random() - 0.5) * 0.00018);
-  const pressure = s.pressure.map((r) => ({ ...r, net: r.net * (1 + (Math.random() - 0.5) * 0.06) }));
-  // occasionally nudge one confidence so the ranked board isn't frozen
-  const ranked = Math.random() < 0.5
-    ? s.ranked.map((r, i) => (i === (Math.random() * s.ranked.length | 0) ? { ...r, confidence: Math.max(70, Math.min(97, r.confidence + (Math.random() < 0.5 ? -1 : 1))) } : r))
-    : s.ranked;
-  return { ...s, spot, netGex, emPct, series, pressure, ranked };
-}
 
-function useEtClock(active: boolean) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    if (!active) return;
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, [active]);
-  return now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/New_York' }) + ' ET';
-}
 
-/* ─────────────────────────── the terminal mockup (live) ─────────────────────────── */
-export function TerminalMock({ ticker, metrics, ranked, pressure, spark }: Required<Pick<SlayerLandingProps, 'metrics' | 'ranked' | 'pressure' | 'spark'>> & { ticker: string }) {
-  const reduce = useReducedMotion();
-  const [s, setS] = useState<MockState>(() => seedMock(metrics, pressure, ranked));
-  // re-seed if real store data arrives after mount
-  useEffect(() => { setS(seedMock(metrics, pressure, ranked)); /* eslint-disable-next-line */ }, [metrics.spot, pressure.length, ranked.length]);
-  useEffect(() => {
-    if (reduce) return;
-    const id = setInterval(() => setS((prev) => stepMock(prev)), 900);
-    return () => clearInterval(id);
-  }, [reduce]);
-  const clock = useEtClock(!reduce);
-  const emPts = s.emPct * s.spot;
-  // Fixed chart band: wide enough to hold the walls + ~1.7× expected move, anchored
-  // on the seed spot so the axis never rescales as the mock ticks.
-  const chartBand = Math.max(
-    emPts * 1.7,
-    Math.abs(s.callWall - s.spot0),
-    Math.abs(s.spot0 - s.putWall),
-    s.spot0 * 0.0012,
-  ) * 1.15;
-  const chartSeed = (Math.abs(Math.round(s.spot0)) % 17) * 0.37 + 0.6;
-
-  return (
-    <Panel className="overflow-hidden">
-      {/* window bar — the real slayerterminal.com wordmark + a running ET clock */}
-      <div className="flex items-center justify-between px-3 py-2" style={{ borderBottom: `1px solid ${line}` }}>
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center text-[12px] font-bold leading-none" style={{ fontFamily: 'var(--font-brand)', letterSpacing: '-0.01em' }}>
-            <span style={{ color: 'var(--brand-prompt, #6B7177)', fontWeight: 700, fontSize: '0.84em', marginRight: '0.05em' }}>&gt;</span>
-            <span style={{ color: 'var(--brand-ink, #F4F5F6)' }}>slayer_terminal</span>
-            <span aria-hidden="true" className="slayer-caret ml-[2px] inline-block" style={{ width: '0.42em', height: '0.86em', borderRadius: 1, background: 'var(--brand-ink, #F4F5F6)' }} />
-          </span>
-          <span className="text-[9px] tabular-nums" style={{ color: faint }}>· {ticker} · 0DTE</span>
-        </div>
-        <span className="flex items-center gap-1.5 text-[9px] tabular-nums" style={{ color: muted }}>
-          <span className="relative flex h-1.5 w-1.5">
-            {!reduce && <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60" style={{ background: PALETTE.green }} />}
-            <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.green }} />
-          </span>
-          {clock}
-        </span>
-      </div>
-
-      {/* KPI strip — same labels/order as the real Pinpoint page's top strip */}
-      <div className="grid grid-cols-3 sm:grid-cols-6" style={{ borderBottom: `1px solid ${line}` }}>
-        <Kpi label="Net GEX" value={fmtGex(s.netGex)} tone={s.netGex < 0 ? '#d9736f' : '#6fae7d'} />
-        <Kpi label="Spot" value={fmtPx(s.spot)} tone={PALETTE.ghost} />
-        <Kpi label="Call Wall" value={fmtLvl(s.callWall)} tone={PALETTE.steel} />
-        <Kpi label="Put Wall" value={fmtLvl(s.putWall)} tone={PALETTE.red} />
-        <Kpi label="Pin Level" value={fmtLvl(s.pin)} tone={PALETTE.amber} />
-        <Kpi label="Exp Move" value={fmtPct(s.emPct)} sub={`${emPts.toFixed(1)} pts`} tone={PALETTE.text} />
-      </div>
-
-      {/* body: chart + pressure map */}
-      <div className="grid grid-cols-1 gap-px lg:grid-cols-[1.5fr_1fr]" style={{ background: line }}>
-        <div className="p-3" style={{ background: PALETTE.panel }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Price · Key Levels</span>
-            <span className="text-[9px] tabular-nums" style={{ color: muted }}>{fmtPx(s.spot)}</span>
-          </div>
-          <div className="mt-2 h-[96px] w-full">
-            <LiveChart
-              center={s.spot0}
-              band={chartBand}
-              callWall={s.callWall}
-              putWall={s.putWall}
-              pin={s.pin}
-              seed={chartSeed}
-              reduce={!!reduce}
-            />
-          </div>
-          <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[8.5px] uppercase tracking-[0.12em]" style={{ color: muted }}>
-            <span style={{ color: PALETTE.steel }}>▬ Call Wall {fmtLvl(s.callWall)}</span>
-            <span style={{ color: PALETTE.amber }}>▬ Pin {fmtLvl(s.pin)}</span>
-            <span style={{ color: PALETTE.red }}>▬ Put Wall {fmtLvl(s.putWall)}</span>
-          </div>
-        </div>
-        <div className="p-3" style={{ background: PALETTE.panel }}>
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Dealer Positioning Map</span>
-            <span className="text-[8px] uppercase tracking-[0.12em]" style={{ color: faint }}>
-              <span style={{ color: PALETTE.red }}>▪ put</span> <span style={{ color: PALETTE.steel }}>▪ call</span>
-            </span>
-          </div>
-          <div className="mt-2">
-            <MiniPositioningMap rows={s.pressure} metrics={{ spot: s.spot, callWall: s.callWall, putWall: s.putWall, pin: s.pin }} />
-          </div>
-        </div>
-      </div>
-
-      {/* ranked contracts */}
-      <div className="p-3" style={{ borderTop: `1px solid ${line}` }}>
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Ranked Setups</span>
-          <span className="text-[8.5px] uppercase tracking-[0.14em]" style={{ color: faint }}>strongest first</span>
-        </div>
-        <table className="w-full text-[10px]">
-          <thead>
-            <tr style={{ color: faint }}>
-              <th className="pb-1 text-left font-medium uppercase tracking-[0.1em]">Symbol</th>
-              <th className="pb-1 text-left font-medium uppercase tracking-[0.1em]">Setup</th>
-              <th className="pb-1 text-left font-medium uppercase tracking-[0.1em]">Bias</th>
-              <th className="pb-1 text-right font-medium uppercase tracking-[0.1em]">Conf</th>
-              <th className="pb-1 text-right font-medium uppercase tracking-[0.1em]">Exp</th>
-            </tr>
-          </thead>
-          <tbody>
-            {s.ranked.map((r, i) => (
-              <tr key={i} style={{ borderTop: `1px solid ${line}` }}>
-                <td className="py-1 tabular-nums" style={{ color: PALETTE.ghost }}>{r.symbol}</td>
-                <td className="py-1" style={{ color: muted }}>{r.setup}</td>
-                <td className="py-1 font-semibold" style={{ color: r.bias === 'BULL' ? '#6fae7d' : '#d9736f' }}>{r.bias}</td>
-                <td className="py-1 text-right tabular-nums" style={{ color: PALETTE.text }}>{r.confidence}%</td>
-                <td className="py-1 text-right tabular-nums" style={{ color: muted }}>{fmtPct(r.expMovePct)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Panel>
-  );
-}
 
 /* ─────────────── sidebar — the SAME sidebar as the app shell ─────────────── */
 /* Renders AppShell's own NavItem rows (identical classes, flyouts, chevrons,
@@ -775,10 +302,11 @@ function LandingSidebarFooter({ onLaunch, onEnter, expanded }: { onLaunch: () =>
 export function LandingSidebar({ onLaunch, onEnter, scrollTop }: { onLaunch: () => void; onEnter: (t?: string) => void; scrollTop: () => void }) {
   const [expanded, setExpanded] = useState(() => {
     if (typeof window === 'undefined') return true;
-    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'true';
+    try { return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'true'; } catch { return true; }
   });
   useEffect(() => {
-    if (typeof window !== 'undefined') localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!expanded));
+    // storage can be blocked (private mode / permissions) — never crash the landing
+    try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!expanded)); } catch {}
   }, [expanded]);
 
   // Home is this page: it re-scrolls to top. Everything else (incl. flyout
@@ -846,6 +374,13 @@ export function LandingSidebar({ onLaunch, onEnter, scrollTop }: { onLaunch: () 
  *  footer CTAs. */
 export function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: () => void; onEnter: (t?: string) => void; scrollTop: () => void }) {
   const [open, setOpen] = useState(false);
+  // Escape dismisses the open menu (keyboard parity with the X button).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
   const ctx = useMemo<NavCtxValue>(() => ({
     activeTab: 'home',
     setActiveTab: (id: any) => { if (id === 'home') scrollTop(); else onEnter(id); },
@@ -858,9 +393,14 @@ export function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: (
     <NavCtx.Provider value={ctx}>
       <div className="md:hidden">
         <div className="sticky top-0 z-50 bg-[var(--surface)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
-          <div className="cursor-pointer scale-[0.85] origin-left" onClick={() => { setOpen(false); scrollTop(); }}>
+          <button
+            type="button"
+            aria-label="Scroll to top"
+            className="cursor-pointer scale-[0.85] origin-left bg-transparent border-0 p-0 text-left focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+            onClick={() => { setOpen(false); scrollTop(); }}
+          >
             <BrandHeader />
-          </div>
+          </button>
           <div className="flex items-center gap-3">
             <FeedPill status="live" />
             <button
@@ -868,6 +408,7 @@ export function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: (
               onClick={() => setOpen(!open)}
               className="text-[var(--text-tertiary)] p-2 rounded focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
               aria-label={open ? 'Close menu' : 'Open menu'}
+              aria-expanded={open}
             >
               {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -927,21 +468,6 @@ export function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: (
   );
 }
 
-/* Reveal — slides + fades its children in the first time they scroll into view. */
-export function Reveal({ children, y = 26, delay = 0 }: { children: React.ReactNode; y?: number; delay?: number }) {
-  const reduce = useReducedMotion();
-  if (reduce) return <>{children}</>;
-  return (
-    <motion.div
-      initial={{ opacity: 0, y }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-12% 0px -8% 0px' }}
-      transition={{ duration: 0.7, delay, ease: [0.16, 1, 0.3, 1] }}
-    >
-      {children}
-    </motion.div>
-  );
-}
 
 
 /* MarqueeTicker — full-width, slow, seamless terminal-phrase strip between the
@@ -984,125 +510,9 @@ export function MarqueeTicker() {
   );
 }
 
-export function ProblemSection() {
-  const cards = [
-    { t: 'Charts show price, not hidden positioning.', d: 'Candles tell you where price has been — not where dealers are forced to hedge next.' },
-    { t: 'Options chains are too slow to read manually.', d: 'By the time you have scanned strikes by hand, the structure has already moved.' },
-    { t: 'Flow without context leads to bad entries.', d: 'A print means nothing until you know the level, the regime, and the invalidation.' },
-  ];
-  return (
-    <section className="mx-auto max-w-6xl px-5 py-16">
-      <SectionHead eyebrow="The Problem" title="Most Traders Are Reacting Too Late" />
-      <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
-        {cards.map((c, i) => (
-          <Panel key={i} className="relative overflow-hidden p-5">
-            <div className="relative mt-1 max-w-[92%] text-[14px] font-semibold leading-snug" style={{ color: PALETTE.ghost }}>{c.t}</div>
-            <p className="relative mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{c.d}</p>
-          </Panel>
-        ))}
-      </div>
-    </section>
-  );
-}
 
-export function SolutionSection() {
-  const bullets = [
-    'See where dealers are trapped.',
-    'Identify call walls, put walls, pin zones, and gamma flips.',
-    'Rank contracts by structure, momentum, and risk.',
-    'Track setups with clean invalidation levels.',
-  ];
-  return (
-    <section className="mx-auto max-w-6xl px-5 py-16" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-        <div>
-          <Eyebrow>The Solution</Eyebrow>
-          <h2 className="mt-3 text-[28px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
-            <MaskedLine>One Terminal.</MaskedLine>
-            <MaskedLine delay={0.1}>The Levels That Matter.</MaskedLine>
-          </h2>
-          <p className="mt-4 max-w-md text-[13.5px] leading-relaxed" style={{ color: muted }}>
-            Slayer Terminal turns dealer positioning and options structure into clear levels and
-            contract ideas — the read, not the noise.
-          </p>
-        </div>
-        <div className="space-y-2.5">
-          {bullets.map((b, i) => (
-            <div key={i} className="flex items-start gap-3 rounded-[10px] p-3" style={{ background: PALETTE.panel, border: `1px solid ${line}` }}>
-              {/* uniform quiet marker — a bullet is not data, so it stays grey
-                  rather than cycling the data-accent quartet decoratively */}
-              <span className="mt-[6px] h-px w-2.5 shrink-0" style={{ background: lineStrong }} />
-              <span className="text-[13.5px]" style={{ color: PALETTE.text }}>{b}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
 
-export function ProductPreview({ ticker, metrics, ranked, pressure, spark, onEnter }: Required<Pick<SlayerLandingProps, 'metrics' | 'ranked' | 'pressure' | 'spark'>> & { ticker: string; onEnter: (t?: string) => void }) {
-  const modules = ['Dealer Positioning Map', 'Exposure Matrix', 'SkyVision Ranked Setups', 'Contract Detail', 'Key Levels Rail', 'Market Read'];
-  return (
-    <section id="product" className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
-      <div className="mx-auto max-w-6xl">
-        <SectionHead eyebrow="Product Preview" title="Structure, Rendered" sub="A live look at the command center. Every panel below reads market structure, not decoration." />
-        <div className="mt-10">
-          <TerminalMock ticker={ticker} metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} />
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
-          {modules.map((m) => (
-            <span key={m} className="rounded-[7px] px-2.5 py-1 text-[10px] font-medium uppercase tracking-[0.1em]" style={{ color: muted, border: `1px solid ${line}` }}>{m}</span>
-          ))}
-        </div>
-        <div className="mt-8 text-center"><GhostButton onClick={() => onEnter('pinpoint')}>Open the Terminal</GhostButton></div>
-      </div>
-    </section>
-  );
-}
 
-export function FeatureSection({ metrics, ranked, pressure, spark, onEnter }: { metrics: HeroMetrics; ranked: RankedRow[]; pressure: PressureRow[]; spark: number[]; onEnter: (t?: string) => void }) {
-  const feats: { t: string; d: string; tab?: string; visual: React.ReactNode }[] = [
-    { t: 'Pinpoint GEX', tab: 'pinpoint', d: 'Dealer positioning, gamma walls, put walls, call walls, pin levels.',
-      visual: <MicroPositioning rows={pressure} spot={metrics.spot} /> },
-    { t: 'SkyVision', tab: 'skyvision', d: 'Ranks trade setups and contracts by structure, momentum, and risk.',
-      visual: <MicroRanked rows={ranked} /> },
-    { t: 'Dealer Flow', tab: 'dealerflow', d: 'Tracks pressure changes across strikes as the tape develops.',
-      visual: <MicroGamma rows={pressure} spot={metrics.spot} callWall={metrics.callWall} putWall={metrics.putWall} /> },
-    { t: 'Quant Lab', tab: 'quant', d: 'Volatility surface, Greeks, regime, and expected move.',
-      visual: <MicroHeatmap /> },
-    { t: 'Trade History', tab: 'auditor', d: 'Tracks setups and outcomes with honest, realized results.',
-      visual: <MicroBlotter /> },
-    { t: 'Live Terminal', tab: 'liveterminal', d: 'One clean workspace for market structure, start to execution.',
-      visual: <MicroTicks data={spark} /> },
-  ];
-  return (
-    <section id="features" className="mx-auto max-w-6xl px-5 py-16">
-      <SectionHead eyebrow="Capabilities" title="Six Modules. One Read." />
-      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {feats.map((f) => (
-          <button
-            key={f.t}
-            type="button"
-            onClick={() => onEnter(f.tab)}
-            className="group h-full cursor-pointer rounded-[10px] p-5 text-left transition-colors duration-150"
-            style={{ background: PALETTE.panel, border: `1px solid ${line}` }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = lineStrong)}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = line)}
-          >
-            {/* no lift, no glow — hover only brightens the hairline border */}
-            <div className="flex items-center justify-between">
-              <span className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{f.t}</span>
-              <span className="text-[10px]" style={{ color: faint }}>→</span>
-            </div>
-            <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{f.d}</p>
-            <div className="mt-4">{f.visual}</div>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 /* ── product-true micro visuals (~60–80px, SVG/divs only) ──────────────────
    Each mini is a faithful thumbnail of its real page. Real props are used
@@ -1495,7 +905,7 @@ function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: nu
         <div className="mt-0.5 text-[11px] uppercase tracking-[0.14em]" style={{ color: faint }}>{p.tag}</div>
         <div className="mt-4 flex items-baseline gap-1.5">
           <span className="text-[34px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text, letterSpacing: '-0.02em' }}>
-            <CountUpPrice price={p.price} />
+            {p.price}
           </span>
           <span className="text-[11px]" style={{ color: faint }}>{p.note}</span>
         </div>
@@ -1552,7 +962,7 @@ export function FaqSection() {
     ['What is Slayer Terminal?', 'An options intelligence platform that reads dealer positioning, gamma exposure, flow, and volatility structure, then turns it into clear levels and ranked contract ideas.'],
     ['Is this a signal service?', 'No. It is an analytics terminal. It shows you the structure and the read — you make the trade.'],
     ['Does it choose contracts?', 'It ranks contracts by structure, momentum, and risk, and shows the reasoning. Selection stays with you.'],
-    ['What data does it use?', 'Live options chains, dealer-exposure aggregates (GEX/DEX/VEX), candles, and volatility structure. When a live feed is not connected, panels are clearly labeled as model mode.'],
+    ['What data does it use?', 'Live options chains, dealer-exposure aggregates (GEX/DEX/VEX), candles, and volatility structure — one consistent data spine across every module.'],
     ['Is it for beginners?', 'It is built for traders who already think in levels and risk. Beginners can use it, but it assumes you want structure, not tips.'],
     ['Is it available now?', 'Yes. Slayer Terminal is live — there is no waitlist. Create an account and open the full terminal immediately.'],
   ];
@@ -1568,6 +978,7 @@ export function FaqSection() {
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
+                aria-expanded={isOpen}
                 className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[7px] px-2 py-4 text-left transition-colors"
                 onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
