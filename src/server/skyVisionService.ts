@@ -25,6 +25,9 @@
 import { db } from './state';
 import { ASSET_LIST, optionDteDays } from '../data';
 import type { AssetInfo } from '../types';
+import { computeSkyVisionMaster, type SkyVisionMasterResult } from '../lib/skyVisionMaster';
+import type { AssetEdge } from '../lib/quantEdge';
+import type { DealerDynamics } from '../lib/dealerDynamics';
 import {
   snapshotFromMarket,
   scoreContract,
@@ -80,6 +83,10 @@ export interface SkyVisionTicker {
   leadContract: string;
   swing: SwingRead;
   master: ReturnType<typeof computeMasterScore>;
+  /** SkyVision v2 master score (spec §20) — mode-aware, regime-gated, edge-driven,
+   *  with the full per-component transparency breakdown in masterV2.regimeContext.
+   *  Present only when the ticker's AssetEdge is available this tick. */
+  masterV2?: SkyVisionMasterResult;
   /** 'LIVE' = built from db.liveOptionChains; 'MODEL' = deterministic fallback. */
   source: 'LIVE' | 'MODEL';
   /** Convenience boolean mirror of `source === 'LIVE'`. */
@@ -181,11 +188,15 @@ function trendScore(hist: ContractSnapshot[], pick: (s: ContractSnapshot) => num
  * round-robin avoids a second full 100-asset loop every second; tickers not in scope
  * keep their last cached SkyVision block, which the SSE broadcast still ships.
  */
-export function tickSkyVision(scope: AssetInfo[] = ASSET_LIST): void {
+export function tickSkyVision(
+  scope: AssetInfo[] = ASSET_LIST,
+  edgeCache: Record<string, AssetEdge> = {},
+  dealerDynCache: Record<string, DealerDynamics> = {},
+): void {
   tickIndex++;
   for (const asset of scope) {
     try {
-      computeForAsset(asset);
+      computeForAsset(asset, edgeCache[asset.ticker] ?? null, dealerDynCache[asset.ticker] ?? null);
     } catch (e) {
       // Never let one ticker break the tick.
       // eslint-disable-next-line no-console
@@ -195,7 +206,11 @@ export function tickSkyVision(scope: AssetInfo[] = ASSET_LIST): void {
   pruneStale();
 }
 
-function computeForAsset(asset: (typeof ASSET_LIST)[number]): void {
+function computeForAsset(
+  asset: (typeof ASSET_LIST)[number],
+  edge: AssetEdge | null = null,
+  dyn: DealerDynamics | null = null,
+): void {
   const ticker = asset.ticker;
   const spot = db.liveSpotPrices[ticker] || asset.defaultPrice;
   const ps = prevSpot.get(ticker) ?? spot;
@@ -383,6 +398,24 @@ function computeForAsset(asset: (typeof ASSET_LIST)[number]): void {
     target: targetStack[0] ? `${targetStack[0].label} ${targetStack[0].underlying}` : '—',
   });
 
+  // SkyVision v2 master score (spec §20) — mode-aware, regime-gated, edge-driven.
+  // Feeds on the REAL AssetEdge + DealerDynamics computed this tick by the market
+  // engine (no fabrication); abstains component-by-component when the edge is absent.
+  const masterV2 = computeSkyVisionMaster({
+    ticker,
+    dteDays: dte,
+    direction,
+    leadIsCall,
+    spot,
+    callWall,
+    putWall,
+    contractStrength: lead?.strength ?? 50,
+    emaStructure: emaStruct,
+    edge,
+    gammaVelocity: dyn?.gamma?.velocity ?? 0,
+    isLive: effectiveSource === 'LIVE',
+  });
+
   cache[ticker] = {
     ticker,
     spot: round2(spot),
@@ -396,6 +429,7 @@ function computeForAsset(asset: (typeof ASSET_LIST)[number]): void {
     leadContract: leadKey,
     swing,
     master,
+    masterV2,
     source: effectiveSource,
     isLive: effectiveSource === 'LIVE',
     updatedAt: Date.now(),
