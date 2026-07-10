@@ -307,7 +307,8 @@ export const useContractStore = create<ContractStore>((set, get) => ({
     return (raw && VALID.includes(raw) ? raw : 'home') as ContractStore['activeTab'];
   })(),
   setActiveTab: (tab, keepContract = false) => {
-    // 'dealerflow' is a first-class tab (renders DealerFlowView) alongside 'pinpoint'.
+    // 'dealerflow' is a first-class tab (the options-flow tape) alongside 'pinpoint'
+    // (dealer positioning + hedging analytics) and 'liveterminal'.
     const normalizedTab = tab;
     localStorage.setItem('lastActiveTab', normalizedTab);
     if (normalizedTab === 'skyvision' && !keepContract) {

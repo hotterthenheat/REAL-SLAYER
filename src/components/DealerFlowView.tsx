@@ -12,7 +12,6 @@ import { useMemo, useState, useEffect, lazy, Suspense } from 'react';
 import { useContractStore } from '../lib/store';
 import { ToggleGroup } from './ui/ToggleGroup';
 import { IntradayTargetsView } from './IntradayTargetsView';
-import PinpointTerminal from './PinpointTerminal';
 import { DealerFlowMap } from './DealerFlowMap';
 import { Popover } from './ui/Popover';
 import { Sheet } from './ui/Sheet';
@@ -103,7 +102,7 @@ const SUPPORT_TONE_TEXT: Record<NonNullable<Metric['tone']>, string> = {
 // ----------------------------------------------------------------
 // Main view
 // ----------------------------------------------------------------
-export function DealerFlowView() {
+export function DealerFlowView({ forcedView, showToggle = true }: { forcedView?: 'profile' | 'targets'; showToggle?: boolean } = {}) {
   const selectedAsset = useContractStore(s => s.selectedAsset);
   const setSelectedAsset = useContractStore(s => s.setSelectedAsset);
   const selectedTimeframe = useContractStore(s => s.selectedTimeframe);
@@ -117,18 +116,23 @@ export function DealerFlowView() {
     if (ticker !== selectedAsset.ticker) return null;
     return rawServerState;
   }, [rawServerState, selectedAsset.ticker]);
-  // 'physics' (Dealer Mechanics) now lives on the Quant Lab page — see QuantSuiteView.
-  const [activeEngineView, setActiveEngineView] = useState<'profile' | 'targets' | 'terminal'>('profile');
+  // 'physics' (Dealer Mechanics) lives on the Quant Lab page; the Live Terminal is
+  // its own standalone tab. This view carries only the dealer hedging analytics.
+  // When embedded inside Pinpoint GEX the parent controls the view (`forcedView`).
+  const [activeEngineView, setActiveEngineView] = useState<'profile' | 'targets'>('profile');
+  const engineView: 'profile' | 'targets' = forcedView ?? activeEngineView;
 
-  // Deep-link from the sidebar flyout: apply a `pinpoint:<sub>` intent once, then clear.
+  // Deep-link from the sidebar flyout only matters when this view owns its own
+  // sub-tab state (standalone). When the parent controls it, ignore the intent.
   const subTabIntent = useContractStore(s => s.subTabIntent);
   const setSubTabIntent = useContractStore(s => s.setSubTabIntent);
   useEffect(() => {
+    if (forcedView) return;
     if (!subTabIntent?.startsWith('pinpoint:')) return;
-    const sub = subTabIntent.split(':')[1] as 'profile' | 'targets' | 'terminal';
-    if (['profile', 'targets', 'terminal'].includes(sub)) setActiveEngineView(sub);
+    const sub = subTabIntent.split(':')[1] as 'profile' | 'targets';
+    if (['profile', 'targets'].includes(sub)) setActiveEngineView(sub);
     setSubTabIntent(null);
-  }, [subTabIntent, setSubTabIntent]);
+  }, [subTabIntent, setSubTabIntent, forcedView]);
 
   // Trader Intent Expirations
   const [expiryTab, setExpiryTab] = useState<'aggregated' | 'mon' | 'tue' | 'wed' | 'thu' | 'weekly' | 'custom' | 'weekly-front' | 'weekly-2' | 'weekly-3' | 'monthly' | 'fomc-weekly' | 'leaps' | 'custom-fomc' | 'custom-cpi' | 'custom-monthly'>('aggregated');
@@ -970,20 +974,21 @@ export function DealerFlowView() {
         </div>
       </div>
 
-      {/* ============== ENGINE-VIEW SUB-TABS — the restored "other pages" ============== */}
-      <ToggleGroup<'profile' | 'targets' | 'terminal'>
-        ariaLabel="Engine view"
-        size="sm"
-        value={activeEngineView}
-        onChange={setActiveEngineView}
-        options={[
-          { value: 'profile', label: 'Hedging Profile' },
-          { value: 'targets', label: 'Ranked Targets' },
-          { value: 'terminal', label: 'Terminal Flow' },
-        ]}
-      />
+      {/* ============== ENGINE-VIEW SUB-TABS ============== */}
+      {showToggle && !forcedView && (
+        <ToggleGroup<'profile' | 'targets'>
+          ariaLabel="Engine view"
+          size="sm"
+          value={activeEngineView}
+          onChange={setActiveEngineView}
+          options={[
+            { value: 'profile', label: 'Hedging Profile' },
+            { value: 'targets', label: 'Ranked Targets' },
+          ]}
+        />
+      )}
 
-      {activeEngineView === 'profile' && (
+      {engineView === 'profile' && (
       <div className="space-y-[var(--gap)]">
       {/* ============== ROW 1 — dealer net gamma map + dealer pressure matrix ============== */}
       {/* items-start: each panel sizes to its own content so a short matrix never
@@ -1147,11 +1152,8 @@ export function DealerFlowView() {
       </div>
       )}
 
-      {activeEngineView === 'targets' && (
+      {engineView === 'targets' && (
         <IntradayTargetsView profile={filteredProfile || profile} ticker={selectedAsset.ticker} decimals={selectedAsset.decimals} />
-      )}
-      {activeEngineView === 'terminal' && (
-        <PinpointTerminal ticker={selectedAsset.ticker} />
       )}
     </div>
   );

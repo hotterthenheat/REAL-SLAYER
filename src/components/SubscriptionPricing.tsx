@@ -183,6 +183,56 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
   const ghostCtaCls = "w-full py-3 rounded-[7px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(248,248,255,0.05)] font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
   const primaryCtaCls = "w-full py-3 rounded-[7px] bg-[var(--text-primary)] text-[#0A0806] hover:opacity-90 font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
+  // Compact CTA styling for the compare-plans matrix column headers (mirror the card CTAs).
+  const matrixGhostCta = "w-full py-2 px-2 rounded-[7px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(248,248,255,0.05)] font-semibold text-[10px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
+  const matrixPrimaryCta = "w-full py-2 px-2 rounded-[7px] bg-[var(--text-primary)] text-[#0A0806] hover:opacity-90 font-semibold text-[10px] uppercase tracking-[0.1em] transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
+
+  // Columns (tiers) for the Compare plans matrix. Prices track the billingCycle
+  // toggle just like the cards above; lifetime is always "Custom".
+  const matrixColumns = [
+    { key: 'pinpoint', name: 'Pinpoint', tagline: 'Dealer structure.', price: billingCycle === 'monthly' ? '$125' : '$103', sub: '/ mo', flagship: false, cta: 'Select plan', onSelect: () => handleStripeCheckout('pinpoint'), pending: checkoutPending === 'pinpoint' },
+    { key: 'skyvision', name: 'SkyVision', tagline: 'Everything included.', price: billingCycle === 'monthly' ? '$275' : '$226', sub: '/ mo', flagship: true, cta: 'Select plan', onSelect: () => handleStripeCheckout('skyvision'), pending: checkoutPending === 'skyvision' },
+    { key: 'lifetime', name: 'Lifetime', tagline: 'Talk to us.', price: 'Custom', sub: '', flagship: false, cta: 'Contact us', onSelect: () => handleCheckoutPlan('lifetime'), pending: false },
+  ] as const;
+
+  // Matrix rows grouped by section. Each cell is aligned to matrixColumns order
+  // [Pinpoint, SkyVision, Lifetime]: true = included, false = not included, string = short label.
+  const matrixGroups: { group: string; rows: { label: string; cells: (boolean | string)[] }[] }[] = [
+    {
+      group: 'Market structure',
+      rows: [
+        { label: 'Live dealer positioning — GEX · DEX · VEX', cells: [true, true, true] },
+        { label: 'Gamma exposure by strike', cells: [true, true, true] },
+        { label: 'Zero-DTE levels & dealer dynamics', cells: [true, true, true] },
+        { label: 'Dealer Flow options tape — unusual activity, dark-pool prints, sweeps', cells: [true, true, true] },
+        { label: 'Live Terminal — chart + GEX nodes', cells: [true, true, true] },
+      ],
+    },
+    {
+      group: 'Trade selection',
+      rows: [
+        { label: 'SkyVision ranked setups — which options to trade', cells: [false, true, true] },
+        { label: 'Live volatility surface & expected P&L', cells: [false, true, true] },
+        { label: 'Trade health-score tracker', cells: [false, true, true] },
+      ],
+    },
+    {
+      group: 'Quant',
+      rows: [
+        { label: 'Quant Lab — vol surface, backtester, order flow, momentum', cells: [false, true, true] },
+      ],
+    },
+    {
+      group: 'Tracking & access',
+      rows: [
+        { label: 'Trade History outcome tracking', cells: [true, true, true] },
+        { label: 'Real-time Discord chat & alerts', cells: [true, true, true] },
+        { label: 'Priority onboarding & support', cells: [false, true, true] },
+        { label: 'Billing', cells: ['Monthly / Annual', 'Monthly / Annual', 'One-time'] },
+      ],
+    },
+  ];
+
   return (
     <>
       <motion.section
@@ -401,6 +451,107 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           </motion.div>
 
         </div>
+
+        {/* COMPARE PLANS MATRIX — side-by-side capability comparison beneath the cards */}
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="max-w-[340px] sm:max-w-none lg:max-w-5xl mx-auto mt-12 sm:mt-16"
+        >
+          <div className="mb-5 sm:mb-6">
+            <span className="text-[var(--text-faint)] text-[10px] font-semibold uppercase tracking-[0.18em] block mb-2">
+              Compare
+            </span>
+            <h3 className="text-[18px] sm:text-[20px] font-semibold text-[var(--text-primary)] tracking-tight font-sans leading-none">
+              Compare plans
+            </h3>
+            <p className="text-[var(--text-muted)] text-[12.5px] mt-2 leading-relaxed">
+              Every capability, side by side &mdash; see exactly what each tier unlocks.
+            </p>
+          </div>
+
+          <div className="rounded-[10px] border border-[var(--border-subtle)] bg-[var(--bg-panel)] overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-20 bg-[var(--bg-panel)] text-left align-bottom p-4 min-w-[200px] sm:min-w-[240px] border-b border-[var(--border-subtle)]">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-faint)]">Features</span>
+                    </th>
+                    {matrixColumns.map((col) => (
+                      <th
+                        key={col.key}
+                        className={`align-bottom p-4 text-left border-b border-[var(--border-subtle)] min-w-[150px] ${col.flagship ? 'bg-[var(--bg-panel-raised)] border-t-2 border-t-[var(--accent-color)]' : ''}`}
+                      >
+                        <div className="flex flex-col gap-2.5">
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[13px] font-semibold text-[var(--text-primary)]">{col.name}</span>
+                              {col.flagship && (
+                                <span className="bg-[var(--text-primary)] text-[#0A0806] text-[8px] font-semibold uppercase tracking-[0.16em] px-1.5 py-0.5 rounded-[7px] whitespace-nowrap">
+                                  Flagship
+                                </span>
+                              )}
+                            </div>
+                            <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">{col.tagline}</span>
+                          </div>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-[22px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{col.price}</span>
+                            {col.sub && <span className="text-[11px] text-[var(--text-muted)]">{col.sub}</span>}
+                          </div>
+                          <button
+                            onClick={col.onSelect}
+                            disabled={col.pending}
+                            className={col.flagship ? matrixPrimaryCta : matrixGhostCta}
+                          >
+                            {col.pending ? 'Redirecting…' : col.cta}
+                          </button>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrixGroups.map((g) => (
+                    <React.Fragment key={g.group}>
+                      <tr>
+                        <td colSpan={1 + matrixColumns.length} className="bg-[var(--bg-panel-soft)] border-b border-[var(--border-subtle)] px-4 py-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">{g.group}</span>
+                        </td>
+                      </tr>
+                      {g.rows.map((row) => (
+                        <tr key={row.label} className="border-b border-[var(--border-subtle)] last:border-0">
+                          <th
+                            scope="row"
+                            className="sticky left-0 z-10 bg-[var(--bg-panel)] text-left font-normal px-4 py-3 text-[12.5px] text-[var(--text-secondary)] leading-snug align-top"
+                          >
+                            {row.label}
+                          </th>
+                          {row.cells.map((c, ci) => (
+                            <td
+                              key={ci}
+                              className={`px-4 py-3 align-top ${matrixColumns[ci].flagship ? 'bg-[var(--bg-panel-raised)]' : ''}`}
+                            >
+                              {c === true ? (
+                                <Check className="w-3.5 h-3.5 text-[var(--positive-ink)]" aria-label="Included" />
+                              ) : c === false ? (
+                                <span className="text-[var(--text-faint)] text-[13px] leading-none" aria-label="Not included">—</span>
+                              ) : (
+                                <span className="text-[12px] text-[var(--text-primary)] font-medium tabular-nums whitespace-nowrap">{c}</span>
+                              )}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </React.Fragment>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Compact risk caption directly beneath the plans, not just in the page footer. */}
         <p className="mt-8 mx-auto max-w-xl text-center text-[11px] leading-relaxed text-[var(--text-muted)]">

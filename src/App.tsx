@@ -26,9 +26,9 @@ import { SubscriptionPricing } from './components/SubscriptionPricing';
 // they load on demand inside the <Suspense> boundary in the main workspace.
 const SkyVisionView = lazy(() => import('./components/SkyVisionView').then(m => ({ default: m.SkyVisionView })));
 const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m => ({ default: m.QuantAuditView })));
-const DealerFlowView = lazy(() => import('./components/DealerFlowView').then(m => ({ default: m.DealerFlowView })));
+const OptionsFlowTape = lazy(() => import('./components/OptionsFlowTape'));
 const PinpointTerminal = lazy(() => import('./components/PinpointTerminal'));
-const PinpointExposureView = lazy(() => import('./components/PinpointExposureView'));
+const PinpointGexView = lazy(() => import('./components/PinpointGexView'));
 const ArborCapital = lazy(() => import('./components/ArborCapital'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const AdminOverseerPanel = lazy(() => import('./components/AdminOverseerPanel').then(m => ({ default: m.AdminOverseerPanel })));
@@ -1063,12 +1063,12 @@ export default function App() {
               </div>
             )}
 
-            {/* TAB 3: PINPOINT AI (MARKET INTELLIGENCE) */}
-            {/* TAB: DEALER FLOW — the live-flow terminal page (chart, order flow, chain). */}
+            {/* TAB: DEALER FLOW — the institutional options-flow tape: unusual
+                options activity, dark-pool prints and swept contracts. */}
             {activeTab === 'dealerflow' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
-                  <DealerFlowView />
+                  <OptionsFlowTape />
                 </TierGuard>
               </div>
             )}
@@ -1082,10 +1082,12 @@ export default function App() {
               </div>
             )}
 
+            {/* TAB: PINPOINT GEX — dealer positioning + hedging-flow analytics
+                (Exposure & Walls / Hedging Profile / Ranked Targets sub-tabs). */}
             {activeTab === 'pinpoint' && (
               <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
                 <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
-                  <PinpointExposureView />
+                  <PinpointGexView />
                 </TierGuard>
               </div>
             )}

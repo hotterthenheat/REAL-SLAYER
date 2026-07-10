@@ -41,8 +41,8 @@ export interface NavItemDef {
 export const NAV_MAIN_VIEWS: NavItemDef[] = [
   { id: 'home', label: 'Home', desc: 'Overview & landing', icon: Home, accent: true },
   { id: 'skyvision', label: 'SkyVision', desc: 'Ranked trade setups', icon: Sparkles, accent: true },
-  { id: 'pinpoint', label: 'Pinpoint GEX', desc: 'Dealer positioning & walls', icon: Dna, accent: true },
-  { id: 'dealerflow', label: 'Dealer Flow', desc: 'Live pressure by strike', icon: Waves, accent: true },
+  { id: 'pinpoint', label: 'Pinpoint GEX', desc: 'Dealer positioning & hedging flow', icon: Dna, accent: true },
+  { id: 'dealerflow', label: 'Dealer Flow', desc: 'Unusual options & dark-pool prints', icon: Waves, accent: true },
   { id: 'liveterminal', label: 'Live Terminal', desc: 'Chart + GEX nodes', icon: RadioTower, accent: true },
   { id: 'quant', label: 'Quant Lab', desc: 'Vol surface & models', icon: LineChart, accent: true },
   { id: 'auditor', label: 'Trade History', desc: 'Tracked outcomes', icon: Database },
@@ -66,9 +66,9 @@ export const NAV_ADMIN: NavItemDef = { id: 'admin', label: 'Admin Panel', desc: 
  */
 export const NAV_SUBTABS: Record<string, { id: string; label: string }[]> = {
   pinpoint: [
+    { id: 'exposure', label: 'Exposure & Walls' },
     { id: 'profile', label: 'Hedging Profile' },
     { id: 'targets', label: 'Ranked Targets' },
-    { id: 'terminal', label: 'Live Terminal Flow' },
   ],
   quant: [
     { id: 'volgeo', label: 'Volatility Geometry' },
