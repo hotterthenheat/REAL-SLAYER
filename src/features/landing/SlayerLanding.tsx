@@ -3,14 +3,12 @@ import { LandingMotionProvider, useLandingMotion } from './motion/LandingMotionP
 import { LandingPreloader } from './scenes/LandingPreloader';
 import { HeroAssemblyScene } from './scenes/HeroAssemblyScene';
 import { HeroExitScene } from './scenes/HeroExitScene';
-import { ProductCollageScene } from './scenes/ProductCollageScene';
 import { PinnedTerminalScene } from './scenes/PinnedTerminalScene';
 import { ProductGridScene } from './scenes/ProductGridScene';
 import { MotionDebugPanel } from './components/MotionDebugPanel';
 import {
   LandingSidebar,
   LandingMobileNav,
-  MarqueeTicker,
   ComparisonSection,
   HowItWorks,
   FaqSection,
@@ -60,15 +58,12 @@ function LandingLayout({ ticker, metrics, ranked, pressure, spark, onEnter, onLa
               the window. The preloader covers this one-frame gate. */}
           {ready && (
             <>
-              {/* Scene 2 — hero exit → kinetic manifesto (pinned, scrubbed) */}
+              {/* Scene 2 — the thesis (short reveal, never pinned) */}
               <HeroExitScene />
-              {/* kinetic phrase strip — supports the transition into the story */}
-              <MarqueeTicker />
-              {/* Scene 3 — scrubbed product collage */}
-              <ProductCollageScene onEnter={onEnter} />
-              {/* Scene 4 — pinned terminal-window sequence (real Slayer modules) */}
+              {/* Scene 3 — the desk: ONE large composed terminal band showing every
+                  module at once (no pin, no scrub — always a finished frame) */}
               <PinnedTerminalScene onEnter={onEnter} />
-              {/* Scene 5 — interactive module grid */}
+              {/* Scene 4 — interactive module grid (per-module detail on hover) */}
               <ProductGridScene metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} />
             </>
           )}

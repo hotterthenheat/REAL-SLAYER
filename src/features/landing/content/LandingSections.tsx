@@ -786,12 +786,13 @@ export function HowItWorks() {
     <section className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
       <div className="mx-auto max-w-6xl">
         <SectionHead eyebrow="Workflow" title="How a trade comes together" sub="Pick a ticker, read where dealers are positioned, take the ranked setup — with levels and an invalidation, not a signal." />
-        <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* a numbered rule-list, not a row of boxes: the sequence IS the design */}
+        <div className="mt-10 grid grid-cols-1 border-t sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[color:var(--border)]" style={{ borderColor: line }}>
           {steps.map((s, i) => (
-            <Panel key={i} className="relative overflow-hidden p-5">
-              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.accent[i] }} />
-              <div className="mt-3 text-[14px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
-            </Panel>
+            <div key={i} className="flex flex-col gap-3 py-6 max-lg:border-b lg:px-6 lg:first:pl-0 lg:last:pr-0" style={{ borderColor: line }}>
+              <span className="font-mono text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>{`0${i + 1}`}</span>
+              <div className="text-[14.5px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
+            </div>
           ))}
         </div>
       </div>

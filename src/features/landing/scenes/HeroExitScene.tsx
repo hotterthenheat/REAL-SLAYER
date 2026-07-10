@@ -85,7 +85,7 @@ export function HeroExitScene() {
     <section
       ref={scope}
       data-scene="hero-exit"
-      className="relative flex min-h-[86vh] flex-col justify-center px-5 py-24 sm:px-8 lg:px-10"
+      className="relative px-5 py-24 sm:px-8 lg:px-10 lg:py-28"
       style={{ background: '#08090A' }}
     >
       <div className="mx-auto w-full max-w-6xl">
@@ -107,14 +107,16 @@ export function HeroExitScene() {
           contracts that trade it.
         </p>
 
-        <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-white/10 bg-white/[0.04] sm:grid-cols-3">
+        {/* the three reads — a ruled band (top rule + interior hairlines), not a
+            row of floating boxes. The rules carry the structure; the type carries
+            the content. */}
+        <div className="mt-14 grid grid-cols-1 border-t border-white/10 sm:grid-cols-3 sm:divide-x sm:divide-white/10">
           {PILLARS.map((p) => (
-            <div key={p.k} data-pillar className="flex flex-col gap-3 bg-[#0B0C0E] p-6">
-              <div className="flex items-center gap-2.5">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color }} />
-                <span className="font-mono text-[11px] tracking-[0.16em]" style={{ color: 'rgba(245,245,245,0.38)' }}>{p.k}</span>
+            <div key={p.k} data-pillar className="flex flex-col gap-3 py-7 max-sm:border-b max-sm:border-white/10 sm:px-7 sm:first:pl-0 sm:last:pr-0">
+              <div className="flex items-baseline gap-3">
+                <span className="font-mono text-[12px] font-semibold tabular-nums" style={{ color: p.color }}>{p.k}</span>
+                <span className="text-[17px] font-semibold" style={{ color: '#F4F4F5' }}>{p.label}</span>
               </div>
-              <div className="text-[16px] font-semibold" style={{ color: '#F4F4F5' }}>{p.label}</div>
               <p className="text-[13.5px] leading-relaxed" style={{ color: 'rgba(245,245,245,0.56)' }}>{p.body}</p>
             </div>
           ))}

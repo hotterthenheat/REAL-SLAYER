@@ -5,6 +5,7 @@ import { LayeredTerminalAssembly } from '../components/LayeredTerminalAssembly';
 import { usePointerParallax } from '../hooks/usePointerParallax';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
 import { EASE_PRIMARY, DUR } from '../motion/motionTokens';
+import { MarqueeTicker } from '../content/LandingSections';
 
 const GHOST = '#F8F8FF';
 const MUTED = 'rgba(245,245,245,0.62)';
@@ -30,8 +31,8 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
 
   return (
     <section
-      className="relative overflow-hidden"
-      style={{ minHeight: '92vh', background: '#08090A' }}
+      className="relative flex flex-col overflow-hidden"
+      style={{ minHeight: '100vh', background: '#08090A' }}
       data-scene="hero"
     >
       {/* backdrop — a pool of light that follows the pointer, revealing the
@@ -40,7 +41,10 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
         <SlayerCodeRain />
       </CursorSpotlight>
 
-      <div className="relative z-10 mx-auto grid max-w-6xl grid-cols-1 items-center gap-10 px-5 py-16 lg:grid-cols-[1.02fr_1.18fr] lg:py-24">
+      {/* the composition fills the viewport: copy + assembly truly centred in the
+          available height, the capability strip anchored to the hero's bottom edge —
+          no dead band under the fold. */}
+      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 items-center gap-12 px-5 py-14 sm:px-8 lg:grid-cols-[0.92fr_1.25fr] lg:py-10">
         {/* copy */}
         <motion.div
           initial={reduced ? false : 'hidden'}
@@ -55,7 +59,7 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
             <span className="inline-block h-1 w-1 rounded-full" style={{ background: '#3F9C79' }} />
             From Traders. For Traders.
           </motion.div>
-          <h1 className="text-[36px] font-semibold leading-[1.05] sm:text-[46px]" style={{ color: GHOST, letterSpacing: '-0.02em' }}>
+          <h1 className="text-[38px] font-semibold leading-[1.04] sm:text-[52px]" style={{ color: GHOST, letterSpacing: '-0.02em' }}>
             {HERO_LINES.map((ln, i) => (
               <span key={ln} className="block overflow-hidden pb-[0.08em] -mb-[0.08em]">
                 <motion.span
@@ -122,6 +126,12 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
             The Slayer desk — dealer positioning, ranked setups &amp; live flow
           </motion.p>
         </div>
+      </div>
+
+      {/* what the desk reads — anchored to the hero's bottom edge so the fold
+          closes on signal, not on empty background */}
+      <div className="relative z-10" style={{ borderTop: '1px solid var(--border)' }}>
+        <MarqueeTicker />
       </div>
     </section>
   );
