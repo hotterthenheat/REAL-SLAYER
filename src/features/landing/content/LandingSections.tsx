@@ -785,7 +785,7 @@ export function HowItWorks() {
   return (
     <section className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
       <div className="mx-auto max-w-6xl">
-        <SectionHead eyebrow="Workflow" title="From Market Noise to Trade Structure" />
+        <SectionHead eyebrow="Workflow" title="How a trade comes together" sub="Pick a ticker, read where dealers are positioned, take the ranked setup — with levels and an invalidation, not a signal." />
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
             <Panel key={i} className="relative overflow-hidden p-5">
@@ -815,7 +815,7 @@ export function ComparisonSection() {
   };
   return (
     <section className="mx-auto max-w-6xl px-5 py-16">
-      <SectionHead eyebrow="Comparison" title="Built for Structure, Not Signals" />
+      <SectionHead eyebrow="Comparison" title="Why Slayer, not a signal group" sub="Signal groups tell you what to buy. Slayer shows you the dealer levels, risk context and market structure behind the trade — so you know why." />
       <div className="mt-10 overflow-x-auto">
         <table className="w-full min-w-[560px] text-[12.5px]">
           <thead>

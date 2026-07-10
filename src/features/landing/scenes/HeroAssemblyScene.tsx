@@ -104,10 +104,23 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
         </motion.div>
 
         {/* the assembly stage — pointer parallax owns THIS wrapper's transform */}
-        <div style={{ perspective: 1400 }}>
-          <div ref={stageRef} style={{ transformStyle: 'preserve-3d' }}>
-            <LayeredTerminalAssembly reduced={reduced} />
+        <div className="flex flex-col items-center gap-4">
+          <div style={{ perspective: 1400 }} className="w-full">
+            <div ref={stageRef} style={{ transformStyle: 'preserve-3d' }}>
+              <LayeredTerminalAssembly reduced={reduced} />
+            </div>
           </div>
+          {/* orienting caption — so a first-time visitor knows what the card is */}
+          <motion.p
+            initial={reduced ? false : { opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: DUR.reveal, delay: 0.6, ease: EASE_PRIMARY }}
+            className="flex items-center gap-2 text-center text-[11.5px] font-medium tracking-[0.02em]"
+            style={{ color: FAINT }}
+          >
+            <span className="inline-block h-1 w-1 rounded-full" style={{ background: '#3F9C79' }} />
+            The Slayer desk — dealer positioning, ranked setups &amp; live flow
+          </motion.p>
         </div>
       </div>
     </section>
