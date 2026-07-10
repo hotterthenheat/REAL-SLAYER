@@ -101,7 +101,9 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
       id: 'liveterminal', tab: 'liveterminal', name: 'Live Terminal', accent: PALETTE.steel,
       desc: 'One clean workspace — chart and key levels, start to execution.',
       chips: ['PRICE', 'KEY LEVELS', 'GEX NODES'],
-      preview: () => <MicroTicks data={sp} />,
+      // Empty → MicroTicks uses its built-in realistic candle series (the landing
+      // spark is flat/empty, which collapses the candles).
+      preview: () => <MicroTicks data={[]} />,
     },
     {
       id: 'quant', tab: 'quant', name: 'Quant Lab', accent: PALETTE.amber,
