@@ -182,6 +182,7 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
 
   return (
     <section
+      id="product"
       className="px-5 py-16"
       style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}
       data-scene="product-grid"
