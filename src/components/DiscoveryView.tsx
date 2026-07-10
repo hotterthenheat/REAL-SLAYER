@@ -1072,10 +1072,11 @@ export function DiscoveryView({
       }
     };
 
-    eventSource.onerror = (err) => {
-      console.error('[SkyVision Discovery Client] EventSource Error', err);
-      // Surface a subtle reconnecting state without tearing down the pipeline —
-      // EventSource reconnects on its own; onopen/onmessage will clear this.
+    eventSource.onerror = () => {
+      // A dropped/absent feed is an expected transient (no keys yet, network blip);
+      // EventSource reconnects on its own and onopen/onmessage clear the state. Log
+      // at warn, not error, so it doesn't read as a red fault in the console.
+      console.warn('[SkyVision Discovery Client] Feed disconnected — reconnecting…');
       setFeedError(true);
     };
 

@@ -24,6 +24,9 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
   const [nickname, setNickname] = useState(() => session?.name || '');
   const [handle, setHandle] = useState(() => session?.username || '');
   const [avatarUrl, setAvatarUrl] = useState(() => session?.avatar || '');
+  // A stored avatar URL can 404 (deleted/expired/blocked host); fall back to the User
+  // glyph on load error instead of leaving the raw "Profile Avatar" alt text showing.
+  const [avatarBroken, setAvatarBroken] = useState(false);
   const [coverUrl, setCoverUrl] = useState(() => session?.cover_photo || '');
   // Stable per-mount cache-bust so a re-uploaded avatar (same S3 URL) isn't served stale.
   const [avatarBust] = useState(() => Date.now());
@@ -299,6 +302,7 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
           if (res.ok) {
             const data = await res.json();
             if (cropParams.type === 'avatar') {
+              setAvatarBroken(false); // fresh upload: retry rendering
               setAvatarUrl(data.cdnUrl);
             } else {
               setCoverUrl(data.cdnUrl);
@@ -493,13 +497,14 @@ export function UserProfile({ session, onUpdateSession }: UserProfileProps) {
               onChange={handleAvatarFileSelected}
             />
 
-            {avatarUrl ? (
+            {avatarUrl && !avatarBroken ? (
               <>
                 <img
                   src={withCacheBust(avatarUrl, avatarBust)}
                   alt="Profile Avatar"
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
+                  onError={() => setAvatarBroken(true)}
                 />
                 <div className="absolute inset-0 bg-black/75 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
                   <Camera className="w-4 h-4 text-[var(--accent-color)] animate-pulse" />

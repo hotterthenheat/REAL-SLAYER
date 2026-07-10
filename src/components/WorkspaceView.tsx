@@ -15,6 +15,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import {
   PaneLayout, WidgetType, WIDGETS, widgetMeta, paneId, TEMPLATES, cloneTemplate, GRID_COLS,
 } from '../lib/workspace';
+import { useContractStore } from '../lib/store';
 
 const ROW_HEIGHT = 40;
 const GAP = 8;
@@ -32,6 +33,10 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   const [loadOpen, setLoadOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [colWidth, setColWidth] = useState(80);
+  // Below md the absolute drag-grid is unusably cramped (panes shrink to ~90px and
+  // titles/columns truncate), and pointer drag/resize is a desktop affordance anyway.
+  // On narrow screens we render the same panes as a full-width vertical stack.
+  const [isNarrow, setIsNarrow] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const interaction = useRef<null | { id: string; mode: 'move' | 'resize'; startX: number; startY: number; orig: PaneLayout }>(null);
 
@@ -61,6 +66,14 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
     return () => window.removeEventListener('resize', measure);
   }, []);
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsNarrow(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+
   const persist = useCallback((next: PaneLayout[]) => {
     try { localStorage.setItem('slayer_workspace', JSON.stringify(next)); } catch {}
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -81,7 +94,12 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
           notifyError('Saved locally. Cloud sync will retry on your next change.');
         });
     };
-    saveTimer.current = setTimeout(() => syncCloud(0), 1000);
+    // Guests have no server profile — persisting to localStorage above is the whole
+    // save. Skip the cloud PATCH so we don't fire a guaranteed 401 into the console.
+    saveTimer.current = setTimeout(() => {
+      if (!useContractStore.getState().isAuthenticated) return;
+      syncCloud(0);
+    }, 1000);
   }, [notifyError]);
 
   const commit = useCallback((next: PaneLayout[]) => { setLayout(next); persist(next); }, [persist]);
@@ -90,7 +108,10 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   // component that no longer exists.
   useEffect(() => () => { if (saveTimer.current) clearTimeout(saveTimer.current); }, []);
 
-  // Hydrate: API -> localStorage -> Template A (never render an empty terminal).
+  // Hydrate: (cloud, if signed-in) -> localStorage -> Template A (never render an
+  // empty terminal). Guests skip the cloud read entirely so no 401 hits the console;
+  // the effect re-runs when auth resolves, upgrading a guest layout to the profile one.
+  const isAuthenticated = useContractStore((s) => s.isAuthenticated);
   useEffect(() => {
     let cancelled = false;
     const fallback = (): PaneLayout[] => {
@@ -100,6 +121,12 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
       } catch {}
       return cloneTemplate('A');
     };
+    if (!isAuthenticated) {
+      // Local-only hydrate for guests — never touch the authenticated endpoint.
+      setLayout((cur) => (cur.length ? cur : fallback()));
+      setLoading(false);
+      return () => { cancelled = true; };
+    }
     fetch('/api/users/workspace', { credentials: 'same-origin' })
       .then((r) => r.json())
       .then((d) => {
@@ -115,7 +142,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
       .catch(() => { if (!cancelled) setLayout(fallback()); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [persist]);
+  }, [persist, isAuthenticated]);
 
   const onPointerMove = useCallback((e: PointerEvent) => {
     const it = interaction.current;
@@ -330,6 +357,26 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
         </div>
 
         <div ref={containerRef} className="flex-1 overflow-auto bg-[var(--background)] p-2 relative h-full">
+          {isNarrow && layout.length > 0 ? (
+            // Narrow screens: full-width vertical stack in reading order (row then
+            // column). No absolute positioning, no drag/resize handles — those are
+            // desktop affordances. Each pane keeps a usable height derived from its
+            // grid rows so charts/tables have room to breathe.
+            <div className="flex flex-col gap-2 w-full">
+              {[...layout].sort((a, b) => (a.y - b.y) || (a.x - b.x)).map((p) => {
+                const meta = widgetMeta(p.widget);
+                return (
+                  <div key={p.i} style={{ height: Math.max(240, p.h * ROW_HEIGHT) }}>
+                    <Pane title={meta.title} onClose={() => closePane(p.i)} onMaximize={() => setMaximized(p.i)}>
+                      <ErrorBoundary label={meta.title}>
+                        {renderWidget(p.widget)}
+                      </ErrorBoundary>
+                    </Pane>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div className="relative w-full" style={{ height: gridHeight }}>
             {layout.map((p) => {
               const meta = widgetMeta(p.widget);
@@ -435,6 +482,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {maximized && (() => {

@@ -341,7 +341,9 @@ app.post('/api/auth/clerk-signup', express.json(), async (req, res) => {
     id: `usr-${Math.random().toString(36).substring(2, 10)}`,
     email: userEmail,
     name: name.trim(),
-    avatar: avatar && avatar.trim() !== '' ? avatar.trim() : `https://cdn.discordapp.com/embed/avatars/${Math.floor(Math.random() * 5)}.png`,
+    // No avatar ⇒ empty; the client renders on-brand initials/glyph rather than
+    // depending on an external CDN (Discord) that can be blocked or go down.
+    avatar: avatar && avatar.trim() !== '' ? avatar.trim() : '',
     access_tier: 'guest', // Default is Guest (unpaid)
     referral_tokens_pool: 0,
     custom_referral_code: customReferralCode,
@@ -475,7 +477,7 @@ app.post('/api/auth/clerk-login', express.json(), async (req, res) => {
       id: `usr-${Math.random().toString(36).substring(2, 10)}`,
       email: userEmail,
       name: email.split('@')[0],
-      avatar: `https://cdn.discordapp.com/embed/avatars/${Math.floor(Math.random() * 5)}.png`,
+      avatar: '', // client renders initials/glyph; no external CDN dependency
       access_tier: 'guest',
       referral_tokens_pool: 0,
       custom_referral_code: customReferralCode,
@@ -624,7 +626,7 @@ app.get('/api/auth/callback', async (req, res) => {
       id: `usr-${Math.random().toString(36).substring(2, 10)}`,
       email: userEmail,
       name: String(name || 'Sandbox Quant User'),
-      avatar: 'https://cdn.discordapp.com/embed/avatars/0.png',
+      avatar: '', // client renders initials/glyph; no external CDN dependency
       access_tier: 'guest', // Always start as guest to enforce paywall shield
       referral_tokens_pool: 3,
       custom_referral_code: `SLAYER${Math.random().toString(36).substring(2, 6).toUpperCase()}`,
@@ -684,7 +686,7 @@ app.get('/api/auth/session', async (req, res) => {
         id: `usr-${Math.random().toString(36).substring(2, 10)}`,
         email: userEmail,
         name: session.name || session.email.split('@')[0],
-        avatar: session.avatar || `https://cdn.discordapp.com/embed/avatars/${Math.floor(Math.random() * 5)}.png`,
+        avatar: session.avatar || '', // client renders initials/glyph; no external CDN dependency
         access_tier: session.access_tier || 'guest', // Rely on session payload tier or default to guest
         referral_tokens_pool: 0,
         custom_referral_code: customReferralCode,

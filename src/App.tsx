@@ -759,8 +759,10 @@ export default function App() {
       }, 2500);
     }
 
-    eventSource.onerror = (err) => {
-      console.error('[SkyVision Client] Stream Connection Error', err);
+    eventSource.onerror = () => {
+      // Expected transient when no live feed is connected; the client reconnects and
+      // falls back to synthetic. Warn (not error) so it isn't a red console fault.
+      console.warn('[SkyVision Client] Stream disconnected — falling back / reconnecting…');
       setFeedStatus('offline');
     };
 
