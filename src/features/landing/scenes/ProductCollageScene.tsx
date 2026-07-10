@@ -176,7 +176,7 @@ export function ProductCollageScene({ onEnter }: Props) {
       // Reduced motion: build NO pin/scrub. The panels are already rendered in
       // their final readable layout via CSS (see panelStyle), so there is nothing
       // to animate — bail before creating any timeline or ScrollTrigger.
-      if (reduced) return;
+      if (reduced || mode === 'mobile') return;
 
       const section = scope.current;
       const stage = stageRef.current;
@@ -302,7 +302,7 @@ export function ProductCollageScene({ onEnter }: Props) {
       zIndex: p.z,
       willChange: 'transform',
     };
-    if (reduced) {
+    if (reduced || mode === 'mobile') {
       return {
         ...base,
         transform: `translate(-50%, -50%) translate(${p.out.x * cfg.k}px, ${p.out.y * cfg.k}px) scale(${p.dominant ? 1.04 : 1})`,
@@ -317,7 +317,7 @@ export function ProductCollageScene({ onEnter }: Props) {
       ref={scope}
       data-scene="collage"
       className="relative w-full"
-      style={{ minHeight: reduced ? undefined : cfg.minH, background: PALETTE.bg, overflowX: 'clip' }}
+      style={{ minHeight: (reduced || mode === 'mobile') ? undefined : cfg.minH, background: PALETTE.bg, overflowX: 'clip' }}
     >
       {/* pinned stage — held in place while the section scrolls past */}
       <div
@@ -382,7 +382,7 @@ export function ProductCollageScene({ onEnter }: Props) {
                       textTransform: 'uppercase',
                       color: PALETTE.text,
                       // reduced motion: label already visible (no wipe mask)
-                      clipPath: reduced ? undefined : 'inset(0 100% 0 0)',
+                      clipPath: (reduced || mode === 'mobile') ? undefined : 'inset(0 100% 0 0)',
                     }}
                   >
                     {p.title}

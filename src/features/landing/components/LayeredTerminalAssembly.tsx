@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { GSAP_EASE_PRIMARY, GSAP_EASE_SMOOTH, STAGGER } from '../motion/motionTokens';
+import { useFitScale } from '../hooks/useFitScale';
 
 /**
  * LayeredTerminalAssembly — the hero's centrepiece. A Slayer terminal built from
@@ -34,14 +35,14 @@ interface LayerCfg {
 // (no random paths); exit peels them to different depth planes.
 const LAYERS: LayerCfg[] = [
   { id: 'grid',      depth: 0, z: 0,  box: { left: 0,   top: 0,   width: 560, height: 380 }, from: { x: 0,    y: 0,   rot: 0,   scale: 1.08 }, exit: { x: 0,   y: 0,   rot: 0,   scale: 1.12 } },
-  { id: 'frame',     depth: 1, z: 10, box: { left: 24,  top: 20,  width: 512, height: 340 }, from: { x: 0,    y: 40,  rot: 0,   scale: 0.9  }, exit: { x: 0,   y: 26,  rot: 0,   scale: 0.94 } },
-  { id: 'nav',       depth: 2, z: 20, box: { left: 36,  top: 62,  width: 74,  height: 286 }, from: { x: -220, y: 0,   rot: -6,  scale: 0.9  }, exit: { x: -180,y: -30, rot: -5,  scale: 0.92 } },
-  { id: 'metrics',   depth: 3, z: 30, box: { left: 122, top: 62,  width: 402, height: 46  }, from: { x: 0,    y: -180,rot: 0,   scale: 0.94 }, exit: { x: 0,   y: -150,rot: 0,   scale: 0.95 } },
-  { id: 'chart',     depth: 3, z: 30, box: { left: 122, top: 120, width: 244, height: 150 }, from: { x: -260, y: 120, rot: 5,   scale: 0.88 }, exit: { x: -60, y: 120, rot: 4,   scale: 0.9  } },
-  { id: 'gex',       depth: 3, z: 30, box: { left: 378, top: 120, width: 146, height: 150 }, from: { x: 260,  y: 120, rot: -5,  scale: 0.88 }, exit: { x: 210, y: 90,  rot: -4,  scale: 0.9  } },
-  { id: 'levels',    depth: 4, z: 40, box: { left: 122, top: 282, width: 244, height: 62  }, from: { x: -160, y: 220, rot: 3,   scale: 0.9  }, exit: { x: -120,y: 170, rot: 3,   scale: 0.92 } },
-  { id: 'skyvision', depth: 5, z: 60, box: { left: 356, top: 286, width: 200, height: 92  }, from: { x: 260,  y: 200, rot: 7,   scale: 0.86 }, exit: { x: 220, y: 150, rot: 6,   scale: 0.88 } },
-  { id: 'feed',      depth: 5, z: 60, box: { left: 356, top: 30,  width: 172, height: 30  }, from: { x: 200,  y: -140,rot: 4,   scale: 0.9  }, exit: { x: 170, y: -120,rot: 4,   scale: 0.92 } },
+  { id: 'frame',     depth: 1, z: 10, box: { left: 20,  top: 24,  width: 520, height: 332 }, from: { x: 0,    y: 40,  rot: 0,   scale: 0.9  }, exit: { x: 0,   y: 26,  rot: 0,   scale: 0.94 } },
+  { id: 'nav',       depth: 2, z: 20, box: { left: 34,  top: 66,  width: 68,  height: 274 }, from: { x: -220, y: 0,   rot: -6,  scale: 0.9  }, exit: { x: -180,y: -30, rot: -5,  scale: 0.92 } },
+  { id: 'metrics',   depth: 3, z: 30, box: { left: 112, top: 62,  width: 420, height: 52  }, from: { x: 0,    y: -180,rot: 0,   scale: 0.94 }, exit: { x: 0,   y: -150,rot: 0,   scale: 0.95 } },
+  { id: 'chart',     depth: 3, z: 30, box: { left: 112, top: 120, width: 252, height: 150 }, from: { x: -260, y: 120, rot: 5,   scale: 0.88 }, exit: { x: -60, y: 120, rot: 4,   scale: 0.9  } },
+  { id: 'gex',       depth: 3, z: 30, box: { left: 376, top: 120, width: 156, height: 150 }, from: { x: 260,  y: 120, rot: -5,  scale: 0.88 }, exit: { x: 210, y: 90,  rot: -4,  scale: 0.9  } },
+  { id: 'levels',    depth: 4, z: 40, box: { left: 112, top: 280, width: 252, height: 60  }, from: { x: -160, y: 220, rot: 3,   scale: 0.9  }, exit: { x: -120,y: 170, rot: 3,   scale: 0.92 } },
+  { id: 'skyvision', depth: 5, z: 60, box: { left: 374, top: 282, width: 158, height: 74  }, from: { x: 240,  y: 200, rot: 7,   scale: 0.86 }, exit: { x: 220, y: 150, rot: 6,   scale: 0.88 } },
+  { id: 'feed',      depth: 5, z: 60, box: { left: 372, top: 2,   width: 160, height: 26  }, from: { x: 200,  y: -140,rot: 4,   scale: 0.9  }, exit: { x: 170, y: -120,rot: 4,   scale: 0.92 } },
 ];
 
 const STEEL = '#6A93B5';
@@ -109,32 +110,44 @@ function LayerBody({ id }: { id: string }) {
         <LayerChrome style={{ background: PANEL }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: '100%' }}>
             {[['NET GEX', '−$1.84B', RED], ['SPOT', '5,993.9', TEXT], ['CALL WALL', '6,050', STEEL], ['EXP MOVE', '0.61%', AMBER]].map(([l, v, c], i) => (
-              <div key={i} style={{ padding: '6px 10px', borderLeft: i ? `1px solid ${BORDER}` : 'none' }}>
+              <div key={i} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '0 10px', borderLeft: i ? `1px solid ${BORDER}` : 'none', minWidth: 0 }}>
                 {label(l as string)}
-                <div style={{ marginTop: 3, fontFamily: 'var(--font-brand,monospace)', fontSize: 13, fontWeight: 700, color: c as string }}>{v}</div>
+                <div style={{ fontFamily: 'var(--font-brand,monospace)', fontSize: 12, fontWeight: 700, lineHeight: 1, color: c as string, whiteSpace: 'nowrap' }}>{v}</div>
               </div>
             ))}
           </div>
         </LayerChrome>
       );
-    case 'chart':
+    case 'chart': {
+      // real candlesticks (OHLC) — not a line — on a faint grid with wall levels
+      const closes = [50, 58, 52, 62, 55, 66, 61, 54, 49, 60, 70, 65, 74, 68, 78, 72];
+      const lo = 42, hi = 84, span = hi - lo;
+      const yOf = (v: number) => 88 - ((v - lo) / span) * 76 - 6;
+      const stepX = 236 / closes.length, bw = stepX * 0.56;
       return (
         <LayerChrome>
           <div style={{ padding: '7px 9px' }}>{label('Price · Key Levels', STEEL)}</div>
-          <svg viewBox="0 0 244 96" preserveAspectRatio="none" style={{ width: '100%', height: 96 }}>
-            <defs>
-              <linearGradient id="asmFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={STEEL} stopOpacity="0.18" />
-                <stop offset="100%" stopColor={STEEL} stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <line x1="0" y1="30" x2="244" y2="30" stroke={STEEL} strokeOpacity="0.28" strokeDasharray="2 3" />
-            <line x1="0" y1="66" x2="244" y2="66" stroke={RED} strokeOpacity="0.28" strokeDasharray="2 3" />
-            <polygon points="0,96 4,54 30,58 56,44 84,50 112,36 140,46 168,30 196,42 224,34 244,40 244,96" fill="url(#asmFill)" />
-            <polyline points="4,54 30,58 56,44 84,50 112,36 140,46 168,30 196,42 224,34 244,40" fill="none" stroke={STEEL} strokeWidth="1.4" />
+          <svg viewBox="0 0 244 96" style={{ width: '100%', height: 96, display: 'block' }}>
+            <line x1="4" y1={yOf(74)} x2="240" y2={yOf(74)} stroke={STEEL} strokeOpacity="0.26" strokeDasharray="2 3" />
+            <line x1="4" y1={yOf(50)} x2="240" y2={yOf(50)} stroke={RED} strokeOpacity="0.26" strokeDasharray="2 3" />
+            {closes.map((c, i) => {
+              const o = i === 0 ? c - 3 : closes[i - 1];
+              const wig = 2 + Math.abs(Math.sin(i * 12.9)) * 4;
+              const up = c >= o;
+              const col = up ? GREEN : RED;
+              const cx = 4 + i * stepX + stepX / 2;
+              const yO = yOf(o), yC = yOf(c);
+              return (
+                <g key={i}>
+                  <line x1={cx} y1={yOf(Math.max(o, c) + wig)} x2={cx} y2={yOf(Math.min(o, c) - wig)} stroke={col} strokeWidth={0.8} />
+                  <rect x={cx - bw / 2} y={Math.min(yO, yC)} width={bw} height={Math.max(1.2, Math.abs(yC - yO))} fill={col} rx={0.5} />
+                </g>
+              );
+            })}
           </svg>
         </LayerChrome>
       );
+    }
     case 'gex':
       return (
         <LayerChrome>
@@ -190,7 +203,10 @@ function LayerBody({ id }: { id: string }) {
 }
 
 export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
-  const scope = useRef<HTMLDivElement | null>(null);
+  // Lay the terminal out at a FIXED 560×380 design size and scale the whole thing
+  // uniformly to fit its column, so the aspect ratio is always locked and type/SVG
+  // never squish or overlap (the fix for the distorted, cramped render).
+  const { ref: scope, scale } = useFitScale<HTMLDivElement>(560);
   const breatheRef = useRef<HTMLDivElement | null>(null);
 
   useGSAP(
@@ -226,26 +242,31 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
   );
 
   return (
+    // Outer box holds the aspect ratio responsively; the inner box is the exact
+    // 560×380 design, scaled to fill it. Everything inside is positioned in real
+    // design pixels, so one transform scales positions + type + SVG together.
     <div ref={scope} style={{ position: 'relative', width: '100%', maxWidth: 560, aspectRatio: '560 / 380', margin: '0 auto' }}>
-      <div ref={breatheRef} style={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%' }}>
-        {LAYERS.map((l) => (
-          <div
-            key={l.id}
-            data-layer={l.id}
-            data-depth={l.depth}
-            style={{
-              position: 'absolute',
-              left: `${(l.box.left / 560) * 100}%`,
-              top: `${(l.box.top / 380) * 100}%`,
-              width: `${(l.box.width / 560) * 100}%`,
-              height: l.box.height ? `${(l.box.height / 380) * 100}%` : undefined,
-              zIndex: l.z,
-              willChange: 'transform, opacity',
-            }}
-          >
-            <LayerBody id={l.id} />
-          </div>
-        ))}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: 560, height: 380, transformOrigin: 'top left', transform: `scale(${scale})` }}>
+        <div ref={breatheRef} style={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%' }}>
+          {LAYERS.map((l) => (
+            <div
+              key={l.id}
+              data-layer={l.id}
+              data-depth={l.depth}
+              style={{
+                position: 'absolute',
+                left: l.box.left,
+                top: l.box.top,
+                width: l.box.width,
+                height: l.box.height,
+                zIndex: l.z,
+                willChange: 'transform, opacity',
+              }}
+            >
+              <LayerBody id={l.id} />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

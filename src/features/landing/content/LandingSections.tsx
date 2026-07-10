@@ -996,12 +996,7 @@ export function ProblemSection() {
       <div className="mt-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         {cards.map((c, i) => (
           <Panel key={i} className="relative overflow-hidden p-5">
-            {/* oversized editorial index — giant, low-contrast, scroll-revealed */}
-            <div className="pointer-events-none absolute -top-1 right-3">
-              <GiantIndex n={`0${i + 1}`} color={PALETTE.accent[i] ?? PALETTE.accent[0]} />
-            </div>
-            <div className="relative text-[10px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] ?? PALETTE.accent[0] }}>0{i + 1}</div>
-            <div className="relative mt-3 max-w-[85%] text-[14px] font-semibold leading-snug" style={{ color: PALETTE.ghost }}>{c.t}</div>
+            <div className="relative mt-1 max-w-[92%] text-[14px] font-semibold leading-snug" style={{ color: PALETTE.ghost }}>{c.t}</div>
             <p className="relative mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{c.d}</p>
           </Panel>
         ))}
@@ -1207,28 +1202,80 @@ export function MicroGamma({ rows, spot, callWall, putWall }: { rows: PressureRo
 
 /* Quant Lab — micro IV-surface heatmap: moneyness × DTE grid shading steel
    (low IV) → amber (high IV) in a smile/short-dated silhouette. */
+/** MicroHeatmap — a real 3D implied-volatility SURFACE the way quants read it:
+ *  a dense filled mesh over Strike × Time-to-maturity with height = IV and a
+ *  thermal colour scale (deep violet = low IV → red → amber → yellow = high IV),
+ *  showing the volatility smile + put skew + term structure. Modeled on a gnuplot
+ *  "ES Volatility Surface". */
 export function MicroHeatmap() {
-  const cols = 10; const rowsN = 5;
-  // steel #6A93B5 → amber #C79350 interpolation
-  const mix = (t: number) => {
-    const a = [106, 147, 181]; const b = [199, 147, 80];
-    const c = a.map((av, i) => Math.round(av + (b[i] - av) * t));
-    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  const NX = 15; const NY = 11; // strike × time-to-maturity resolution
+  const W = 240; const H = 132;
+  // thermal ramp: violet → magenta → red → orange → yellow
+  const thermal = (t: number) => {
+    t = Math.max(0, Math.min(1, t));
+    const stops: [number, number[]][] = [[0, [46, 28, 92]], [0.32, [120, 32, 110]], [0.58, [188, 52, 46]], [0.8, [224, 138, 44]], [1, [244, 214, 60]]];
+    for (let k = 1; k < stops.length; k++) {
+      if (t <= stops[k][0]) {
+        const [t0, c0] = stops[k - 1]; const [t1, c1] = stops[k];
+        const f = (t - t0) / (t1 - t0);
+        const c = c0.map((v, m) => Math.round(v + (c1[m] - v) * f));
+        return `rgb(${c[0]},${c[1]},${c[2]})`;
+      }
+    }
+    return 'rgb(244,214,60)';
   };
+  const model = useMemo(() => {
+    const ax = 12.6, ay = -2.2;  // strike axis (right, slight up)
+    const bx = 6.4, by = 6.2;    // maturity axis (right, into depth)
+    const hz = 40;               // IV → screen-up
+    const iv = (i: number, j: number) => {
+      const m = (i / (NX - 1)) * 2 - 1;                       // moneyness −1…+1
+      const smile = 0.32 + 0.60 * m * m - 0.16 * m;           // U + put skew
+      const term = 0.9 + 0.18 * (j / (NY - 1)) + 0.05 * Math.sin(j * 0.9); // term structure
+      return Math.max(0.1, Math.min(1.2, smile * term));
+    };
+    const raw: { x: number; y: number; h: number }[][] = [];
+    let mn = Infinity, mx = -Infinity;
+    for (let j = 0; j < NY; j++) {
+      raw[j] = [];
+      for (let i = 0; i < NX; i++) {
+        const h = iv(i, j);
+        mn = Math.min(mn, h); mx = Math.max(mx, h);
+        raw[j][i] = { x: i * ax + j * bx, y: i * ay + j * by - h * hz, h };
+      }
+    }
+    const xs = raw.flat().map((p) => p.x); const ys = raw.flat().map((p) => p.y);
+    const ox = (W - 20 - (Math.max(...xs) - Math.min(...xs))) / 2 - Math.min(...xs);
+    const oy = (H - (Math.max(...ys) - Math.min(...ys))) / 2 - Math.min(...ys);
+    const grid = raw.map((row) => row.map((p) => ({ ...p, x: p.x + ox, y: p.y + oy })));
+    return { grid, mn, mx };
+  }, []);
+
+  const norm = (h: number) => (h - model.mn) / (model.mx - model.mn || 1);
+  const pt = (p: { x: number; y: number }) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+
   return (
     <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
-      <div className="grid gap-[2px]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }} role="img" aria-label="IV surface preview">
-        {Array.from({ length: rowsN * cols }, (_, k) => {
-          const r = Math.floor(k / cols); const c = k % cols;
-          const m = (c / (cols - 1)) * 2 - 1;            // moneyness −1…+1
-          const smile = 0.28 + 0.62 * m * m + 0.18 * Math.max(0, -m); // put-skewed smile
-          const term = 1 - r / (rowsN - 1) * 0.45;        // short DTE runs hotter
-          const t = Math.max(0, Math.min(1, smile * term));
-          return <div key={k} className="h-[10px] rounded-[1px]" style={{ background: mix(t), opacity: 0.85 }} />;
-        })}
-      </div>
-      <div className="mt-1.5 flex justify-between text-[8px] uppercase tracking-[0.12em]" style={{ color: faint }}>
-        <span>K/F −</span><span>ATM</span><span>K/F +</span>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 132, display: 'block' }} role="img" aria-label="3D implied-volatility surface">
+        {/* filled surface quads, painted back-to-front, thermal by IV */}
+        {model.grid.slice(0, NY - 1).map((_, j) =>
+          model.grid[j].slice(0, NX - 1).map((__, i) => {
+            const a = model.grid[j][i], b = model.grid[j][i + 1], c = model.grid[j + 1][i + 1], d = model.grid[j + 1][i];
+            const h = (a.h + b.h + c.h + d.h) / 4;
+            return <polygon key={`q${j}-${i}`} points={`${pt(a)} ${pt(b)} ${pt(c)} ${pt(d)}`} fill={thermal(norm(h))} fillOpacity={0.9} stroke={thermal(norm(h))} strokeOpacity={0.5} strokeWidth={0.35} />;
+          }),
+        )}
+        {/* crisp mesh lines over the fill for the wireframe read */}
+        {model.grid.map((row, j) => <polyline key={`r${j}`} points={row.map(pt).join(' ')} fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth={0.35} vectorEffect="non-scaling-stroke" />)}
+        {model.grid[0].map((_, i) => <polyline key={`c${i}`} points={model.grid.map((r) => pt(r[i])).join(' ')} fill="none" stroke="rgba(255,255,255,0.16)" strokeWidth={0.3} vectorEffect="non-scaling-stroke" />)}
+        {/* colour scale */}
+        {Array.from({ length: 24 }, (_, k) => (
+          <rect key={`s${k}`} x={W - 8} y={14 + (23 - k) * 3.6} width={5} height={3.7} fill={thermal(k / 23)} />
+        ))}
+        <text x={W - 10} y={12} fontSize="6" fill={faint} textAnchor="end" style={{ fontFamily: 'var(--font-brand,monospace)' }}>σ</text>
+      </svg>
+      <div className="mt-1 flex justify-between text-[8px] uppercase tracking-[0.12em]" style={{ color: faint }}>
+        <span>Strike</span><span>IV surface</span><span>Maturity</span>
       </div>
     </div>
   );
@@ -1264,25 +1311,60 @@ export function MicroBlotter() {
 
 /* Live Terminal — micro tick chart: the real close series with GEX node dots. */
 export function MicroTicks({ data }: { data: number[] }) {
-  const H = 56; const W = 220;
-  const pts = useMemo(() => {
-    if (!data || data.length < 2) return null;
-    const min = Math.min(...data); const max = Math.max(...data);
-    const span = max - min || 1;
-    return data.map((v, i) => [ (i / (data.length - 1)) * (W - 8) + 4, H - 8 - ((v - min) / span) * (H - 16) ] as const);
+  // A real candlestick preview — OHLC bodies + wicks, green/red by direction, on
+  // a faint grid with a dashed last-price line, so it reads as an actual chart
+  // rather than a bare line. OHLC is derived deterministically from the close
+  // series (intrabar wicks scale off a seeded wiggle) — stable across renders.
+  const W = 240; const H = 88; const PAD_L = 4; const PAD_R = 26; const PAD_Y = 8;
+  const model = useMemo(() => {
+    // A shaped intraday close series with real ups AND downs, used whenever the
+    // passed data is short or ~flat (e.g. the marketing spark is empty) so the
+    // preview always reads as a proper chart instead of a squashed line.
+    const REALISTIC = [100, 102.6, 101.1, 103.8, 102.0, 105.0, 103.4, 101.2, 99.8, 102.9, 105.4, 103.6, 106.6, 104.4, 107.3, 105.1, 102.7, 104.8, 107.8, 105.9, 108.6, 106.4, 109.0, 107.2];
+    const variance = data && data.length ? Math.max(...data) - Math.min(...data) : 0;
+    const usable = !!data && data.length >= 8 && variance > Math.abs(Math.max(...(data.length ? data : [1]))) * 0.002 + 1e-9;
+    const src = usable ? data : REALISTIC;
+    const n = Math.min(24, src.length);
+    const closes = src.slice(-n);
+    const candles = closes.map((c, i) => {
+      const o = i === 0 ? c - (closes[1] - c) * 0.4 : closes[i - 1];
+      const base = Math.abs(c - o) || (Math.abs(c) * 0.004 + 0.2);
+      const wig = base * (0.6 + Math.abs(Math.sin(i * 12.9898)) * 1.1);
+      return { o, c, hi: Math.max(o, c) + wig, lo: Math.min(o, c) - wig * 0.85, up: c >= o };
+    });
+    const lo = Math.min(...candles.map((k) => k.lo));
+    const hi = Math.max(...candles.map((k) => k.hi));
+    const span = hi - lo || 1;
+    const plotW = W - PAD_L - PAD_R;
+    const y = (v: number) => PAD_Y + (1 - (v - lo) / span) * (H - PAD_Y * 2);
+    const step = plotW / candles.length;
+    const bw = Math.max(2, step * 0.58);
+    const last = candles[candles.length - 1];
+    return { candles, y, step, bw, lastY: y(last.c) };
   }, [data]);
-  const nodes = pts ? [0.25, 0.55, 0.85].map((f) => pts[Math.min(pts.length - 1, Math.round(f * (pts.length - 1)))]) : null;
+
+  const grid = [0.25, 0.5, 0.75].map((f) => PAD_Y + f * (H - PAD_Y * 2));
   return (
     <div className="rounded-[7px] p-2" style={MICRO_FRAME}>
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-[60px] w-full" role="img" aria-label="Live tick chart preview">
-        {pts ? (
-          <>
-            <polyline points={pts.map(([x, y]) => `${x},${y}`).join(' ')} fill="none" stroke={PALETTE.steel} strokeWidth={1} vectorEffect="non-scaling-stroke" />
-            {nodes!.map(([x, y], i) => <circle key={i} cx={x} cy={y} r={2} fill={PALETTE.amber} />)}
-          </>
-        ) : (
-          <line x1={4} y1={H / 2} x2={W - 4} y2={H / 2} stroke={line} strokeWidth={0.8} strokeDasharray="3 3" />
-        )}
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 88, display: 'block' }} role="img" aria-label="Candlestick chart preview">
+        {grid.map((gy, i) => (
+          <line key={i} x1={PAD_L} y1={gy} x2={W - PAD_R} y2={gy} stroke={lineStrong} strokeOpacity={0.28} strokeWidth={0.5} strokeDasharray="1 4" />
+        ))}
+        {model.candles.map((k, i) => {
+          const cx = PAD_L + i * model.step + model.step / 2;
+          const col = k.up ? PALETTE.green : PALETTE.red;
+          const yo = model.y(k.o); const yc = model.y(k.c);
+          const top = Math.min(yo, yc); const bh = Math.max(1, Math.abs(yc - yo));
+          return (
+            <g key={i}>
+              <line x1={cx} y1={model.y(k.hi)} x2={cx} y2={model.y(k.lo)} stroke={col} strokeWidth={0.9} vectorEffect="non-scaling-stroke" />
+              <rect x={cx - model.bw / 2} y={top} width={model.bw} height={bh} fill={col} rx={0.5} />
+            </g>
+          );
+        })}
+        {/* last-price rule + tag */}
+        <line x1={PAD_L} y1={model.lastY} x2={W - PAD_R} y2={model.lastY} stroke={PALETTE.steel} strokeOpacity={0.55} strokeWidth={0.6} strokeDasharray="3 3" />
+        <rect x={W - PAD_R + 1} y={model.lastY - 6} width={PAD_R - 2} height={12} rx={2} fill={PALETTE.steel} opacity={0.9} />
       </svg>
     </div>
   );
@@ -1297,12 +1379,8 @@ export function HowItWorks() {
         <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((s, i) => (
             <Panel key={i} className="relative overflow-hidden p-5">
-              {/* oversized editorial step numeral — reveals on scroll */}
-              <div className="pointer-events-none absolute -top-1 right-3">
-                <GiantIndex n={String(i + 1)} color={PALETTE.accent[i]} />
-              </div>
-              <div className="relative text-[11px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>STEP {i + 1}</div>
-              <div className="relative mt-3 max-w-[85%] text-[14px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
+              <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: PALETTE.accent[i] }} />
+              <div className="mt-3 text-[14px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
             </Panel>
           ))}
         </div>
@@ -1407,10 +1485,6 @@ function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: nu
       {p.featured ? (
         <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: accentFill }} />
       ) : null}
-      {/* oversized editorial tier index */}
-      <span aria-hidden="true" className="pointer-events-none absolute -top-2 right-4 select-none text-[56px] font-semibold leading-none tabular-nums" style={{ color: 'color-mix(in srgb, var(--text-tertiary) 16%, transparent)' }}>
-        0{index + 1}
-      </span>
       {p.featured ? (
         <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[7px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
           Most Popular
