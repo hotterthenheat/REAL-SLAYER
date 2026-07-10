@@ -33,6 +33,10 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   const [loadOpen, setLoadOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [colWidth, setColWidth] = useState(80);
+  // Below md the absolute drag-grid is unusably cramped (panes shrink to ~90px and
+  // titles/columns truncate), and pointer drag/resize is a desktop affordance anyway.
+  // On narrow screens we render the same panes as a full-width vertical stack.
+  const [isNarrow, setIsNarrow] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const interaction = useRef<null | { id: string; mode: 'move' | 'resize'; startX: number; startY: number; orig: PaneLayout }>(null);
 
@@ -60,6 +64,14 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
     measure();
     window.addEventListener('resize', measure);
     return () => window.removeEventListener('resize', measure);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsNarrow(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
   }, []);
 
   const persist = useCallback((next: PaneLayout[]) => {
@@ -345,6 +357,26 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
         </div>
 
         <div ref={containerRef} className="flex-1 overflow-auto bg-[var(--background)] p-2 relative h-full">
+          {isNarrow && layout.length > 0 ? (
+            // Narrow screens: full-width vertical stack in reading order (row then
+            // column). No absolute positioning, no drag/resize handles — those are
+            // desktop affordances. Each pane keeps a usable height derived from its
+            // grid rows so charts/tables have room to breathe.
+            <div className="flex flex-col gap-2 w-full">
+              {[...layout].sort((a, b) => (a.y - b.y) || (a.x - b.x)).map((p) => {
+                const meta = widgetMeta(p.widget);
+                return (
+                  <div key={p.i} style={{ height: Math.max(240, p.h * ROW_HEIGHT) }}>
+                    <Pane title={meta.title} onClose={() => closePane(p.i)} onMaximize={() => setMaximized(p.i)}>
+                      <ErrorBoundary label={meta.title}>
+                        {renderWidget(p.widget)}
+                      </ErrorBoundary>
+                    </Pane>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div className="relative w-full" style={{ height: gridHeight }}>
             {layout.map((p) => {
               const meta = widgetMeta(p.widget);
@@ -450,6 +482,7 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               </div>
             )}
           </div>
+          )}
         </div>
 
         {maximized && (() => {
