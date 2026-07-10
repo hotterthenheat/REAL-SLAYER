@@ -9,7 +9,9 @@
 import assert from 'node:assert';
 import {
   labelOutcome, isMatured, makePredictionId, shapeCalibrationHistory, HORIZON_MS,
+  wilsonInterval, toCalibratorHistory, CALIBRATION_MIN_SAMPLES,
 } from '../src/lib/forwardLog';
+import { calibrateIsotonicLoss } from '../src/lib/v11Math';
 
 console.log('--- RUNNING FORWARD-LOG CORE SUITE ---');
 
@@ -64,6 +66,18 @@ console.log('Testing shapeCalibrationHistory — drops unlabeled, maps prob & wi
   assert.deepStrictEqual(pts[1], { predicted: 0.4, actual: 0 }, 'loss ⇒ actual 0');
   assert.strictEqual(pts[2].predicted, 1, 'prob>100 clamps to 1');
   console.log('✔ calibration-history shaping');
+}
+
+console.log('Testing Wilson interval + calibrator mapping + cold-start passthrough (§25)...');
+{
+  assert.deepStrictEqual(wilsonInterval(0, 0), { center: 0, low: 0, high: 0 }, 'n=0 ⇒ zeros');
+  const w = wilsonInterval(60, 100);
+  assert.ok(w.low > 0 && w.high < 1 && w.low < 0.6 && w.high > 0.6, `60/100 ⇒ CI brackets 0.6 (${w.low.toFixed(2)}-${w.high.toFixed(2)})`);
+  const hist = toCalibratorHistory([{ predicted: 0.8, actual: 1 }, { predicted: 0.3, actual: 0 }]);
+  assert.deepStrictEqual(hist, [{ pred: 0.8, win: 1 }, { pred: 0.3, win: 0 }], 'maps to {pred,win} (win 0/1)');
+  assert.strictEqual(calibrateIsotonicLoss(0.62, hist), 0.62, 'cold-start (<200) ⇒ isotonic passes raw prob through');
+  assert.strictEqual(CALIBRATION_MIN_SAMPLES, 200, 'cold-start floor is 200 (Rule 27 — do not lower)');
+  console.log(`✔ calibration helpers — wilson 60/100 = [${w.low.toFixed(2)}, ${w.high.toFixed(2)}], cold-start passthrough ok`);
 }
 
 console.log('🎉 ALL FORWARD-LOG CORE TESTS PASSED! 🎉');

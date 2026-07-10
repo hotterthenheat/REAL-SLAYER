@@ -97,3 +97,27 @@ export function shapeCalibrationHistory(rows: LabeledRow[]): CalibrationPoint[] 
   }
   return out;
 }
+
+/** Map calibration points to the `{pred, win}` shape the isotonic calibrator
+ *  (v11Math.calibrateIsotonicLoss) consumes — win is 0/1, matching that engine. */
+export function toCalibratorHistory(points: CalibrationPoint[]): { pred: number; win: number }[] {
+  return points.map((p) => ({ pred: p.predicted, win: p.actual }));
+}
+
+export interface WilsonInterval { center: number; low: number; high: number; }
+
+/** Wilson score interval (§25) — the honest confidence bound on a win rate, shown
+ *  next to every displayed probability with its n. z=1.96 ⇒ 95%. n=0 ⇒ all zero. */
+export function wilsonInterval(wins: number, n: number, z = 1.96): WilsonInterval {
+  if (!(n > 0)) return { center: 0, low: 0, high: 0 };
+  const p = wins / n;
+  const z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denom;
+  const half = (z * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n))) / denom;
+  return { center, low: Math.max(0, center - half), high: Math.min(1, center + half) };
+}
+
+/** Cold-start threshold (§25/§26 #27 — do not lower). Below this the calibrator
+ *  passes the raw probability through and the display shows "calibration not active". */
+export const CALIBRATION_MIN_SAMPLES = 200;
