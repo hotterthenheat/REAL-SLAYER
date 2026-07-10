@@ -574,8 +574,11 @@ export function computeDealerInventory(
     const sign = isCallType ? 1 : -1;
     
     const GEX_strike = c.gamma * c.openInterest * 100 * (spot * spot) * 0.01 * sign;
-    // Delta exposure matches the long call (+1) / short put (-1) inventory position sign.
-    const DEX_strike = c.delta * c.openInterest * 100 * spot * sign;
+    // Delta exposure: delta ALREADY encodes call/put direction (call Δ>0, put Δ<0),
+    // so it nets on its own sign — do NOT apply the ±1 here. (The old ·sign flipped
+    // every put's delta positive, making netDex ≡ grossDex and e_DEX a constant
+    // tanh(3)≈0.995 on every chain, so the DEX term of the DSI carried no signal.)
+    const DEX_strike = c.delta * c.openInterest * 100 * spot;
     // Vanna exposure: $-scaled per 1% IV move, matching the canonical skyQuantCore.netVannaStrike
     // (× S × 0.01) so VEX is in the same $-units as GEX/DEX instead of ~spot/100× too small.
     const VEX_strike = c.vanna * c.openInterest * 100 * spot * 0.01 * sign;

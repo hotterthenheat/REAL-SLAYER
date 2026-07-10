@@ -76,4 +76,33 @@ console.log('Testing charm/vega profiles are finite with correct net sign...');
   console.log(`✔ charm net ${(charm.net / 1e3).toFixed(1)}k $Δ/day, vega net ${(vega.net / 1e3).toFixed(1)}k $/1%`);
 }
 
+console.log('Testing DEX is informative — delta nets on its own sign (net ≠ gross), not double-signed...');
+{
+  const inv = computeDealerInventory(chain, spot, 1, 1);
+  const grossDex = inv.dexStrikes.reduce((a, s) => a + Math.abs(s.dex), 0);
+  // Regression guard for the double-sign bug: it made every put's delta positive so
+  // netDex ≡ grossDex and e_DEX = tanh(3). With natural delta signs the two-sided
+  // book must NOT be pegged (|net| strictly below gross), so e_DEX carries signal.
+  assert.ok(grossDex > 0, 'gross DEX non-zero');
+  assert.ok(Math.abs(inv.netDex) < grossDex * 0.98, `DEX informative: |net| ${Math.abs(inv.netDex).toFixed(0)} < gross ${grossDex.toFixed(0)}`);
+  // Closed-form: natural-sign net delta exposure (calls +, puts −), no per-leg flip.
+  const expDexNet = chain.reduce((a, c) => a + c.delta * c.openInterest * 100 * spot, 0);
+  assert.ok(Math.abs(inv.netDex - expDexNet) < 1, `netDex ${inv.netDex.toFixed(0)} == Σ Δ·OI·100·S ${expDexNet.toFixed(0)}`);
+  const eDex = Math.tanh((inv.netDex / (grossDex || 1)) * 3);
+  assert.ok(Math.abs(eDex - Math.tanh(3)) > 0.05, `e_DEX ${eDex.toFixed(3)} is not pinned at tanh(3)=${Math.tanh(3).toFixed(3)}`);
+  console.log(`✔ DEX informative — netDex ${(inv.netDex / 1e6).toFixed(1)}M vs gross ${(grossDex / 1e6).toFixed(1)}M, e_DEX ${eDex.toFixed(3)}`);
+}
+
+console.log('Testing charm is dollarized with ·S (per-day charm), not a second ÷365...');
+{
+  const charm = computeGreekExposureProfile(chain, spot, 'charm', 5)!;
+  // ChainContract.charm is already per-DAY; correct dollarization is Charm·OI·100·S·sgn.
+  const expCharmNet = chain.reduce((a, c) => a + c.charm * c.openInterest * 100 * spot * (c.type === 'call' ? 1 : -1), 0);
+  assert.ok(Math.abs(charm.net - expCharmNet) < 1, `charm net ${charm.net.toFixed(0)} == Σ Charm·OI·100·S ${expCharmNet.toFixed(0)}`);
+  // The old bug divided by 365 again — that value would be ~365× smaller; assert we are NOT there.
+  const buggyNet = expCharmNet / 365;
+  assert.ok(Math.abs(charm.net - buggyNet) > Math.abs(expCharmNet) * 0.5, 'charm is not the ÷365-understated value');
+  console.log(`✔ charm dollarized ·S — net ${(charm.net / 1e3).toFixed(1)}k $Δ/day (buggy ÷365 would be ${(buggyNet / 1e3).toFixed(2)}k)`);
+}
+
 console.log('🎉 ALL GREEK-EXPOSURE TESTS PASSED! 🎉');

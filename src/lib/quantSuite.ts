@@ -582,7 +582,11 @@ export function computeSkewAnalytics(
 
   const riskReversal25D = call25DIV - put25DIV;
   const butterfly25D = ((call25DIV + put25DIV) / 2) - atmIV;
-  const skewSlopeAtm = (put25DIV - call25DIV) / (spot * 0.1); // estimated derivative dVol/dK
+  // dσ/dK: the 25Δ call sits ABOVE the 25Δ put in strike, so a genuine slope is
+  // (σ_call − σ_put)/(K_call − K_put) with K_call > K_put ⇒ sign = sign(call − put).
+  // (put − call) was the NEGATION — it reported a positive slope for a normal
+  // equity put-skew (which is truly downward-sloping in strike).
+  const skewSlopeAtm = (call25DIV - put25DIV) / (spot * 0.1); // proxy derivative dVol/dK (sign-correct)
 
   // Risk-reversal / butterfly percentiles require a real rolling history of past
   // readings, which this stateless function does not hold. The previous version
