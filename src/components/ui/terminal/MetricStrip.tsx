@@ -28,6 +28,9 @@ export type Metric = {
 
 type MetricStripProps = {
   metrics: Metric[];
+  /** Preferred metric count — used only to pick a sensible desktop column count.
+   *  Regardless of value the strip is CAPPED at 6 columns and wraps 7+ metrics to
+   *  even rows, so cells never get too narrow to hold their label + value. */
   columns?: 4 | 5 | 6 | 7 | 8 | 9;
   className?: string;
 };
@@ -41,43 +44,52 @@ const toneClass: Record<MetricTone, string> = {
   pin: 'text-[var(--pin)]',
 };
 
-const columnClass: Record<NonNullable<MetricStripProps['columns']>, string> = {
+// Desktop columns per row. Capped at 6 so a cell is always wide enough for its
+// value; strips with 7–9 metrics resolve to 4 and wrap to two even rows instead
+// of cramming one row where labels wrap unevenly and values clip/overlap.
+const desktopColClass: Record<2 | 3 | 4 | 5 | 6, string> = {
+  2: 'xl:grid-cols-2',
+  3: 'xl:grid-cols-3',
   4: 'xl:grid-cols-4',
   5: 'xl:grid-cols-5',
   6: 'xl:grid-cols-6',
-  7: 'xl:grid-cols-7',
-  8: 'xl:grid-cols-8',
-  9: 'xl:grid-cols-9',
 };
 
-export function MetricStrip({ metrics, columns = 8, className }: MetricStripProps) {
+export function MetricStrip({ metrics, columns, className }: MetricStripProps) {
+  const count = columns ?? metrics.length;
+  // ≤6 metrics keep their own single row; 7+ wrap to rows of 4.
+  const cols = (count <= 6 ? Math.max(2, count) : 4) as 2 | 3 | 4 | 5 | 6;
   // Denser strips get a smaller value type so multi-digit prices fit a cell
   // intact — otherwise a tabular value like "5,453.11" breaks mid-number.
-  const valueSize = columns >= 8 ? 'text-[17px]' : columns >= 6 ? 'text-[19px]' : 'text-[22px]';
+  const valueSize = cols >= 6 ? 'text-[18px]' : cols >= 5 ? 'text-[19px]' : 'text-[21px]';
   return (
+    // gap-px over a hairline background draws clean 1px rules between every cell in
+    // BOTH directions, so a wrapped second row reads correctly (per-cell left
+    // borders would leave a dangling edge and no row divider when wrapping).
     <div
       className={cx(
-        'slayer-panel grid grid-cols-2 gap-0 overflow-hidden md:grid-cols-4',
-        columnClass[columns],
+        'slayer-panel grid grid-cols-2 gap-px overflow-hidden bg-[var(--border-subtle)] md:grid-cols-4',
+        desktopColClass[cols],
         className,
       )}
     >
       {metrics.map((metric, index) => (
         <div
           key={`${metric.label}-${index}`}
-          className={cx(
-            'min-w-0 px-4 py-3',
-            index !== 0 && 'border-l border-[var(--border-subtle)]',
-          )}
+          className="min-w-0 bg-[var(--surface)] px-4 py-3"
         >
-          <div className="text-[var(--text-3xs)] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+          <div
+            title={typeof metric.label === 'string' ? metric.label : undefined}
+            className="min-h-[2.3em] text-[var(--text-3xs)] font-semibold uppercase leading-[1.15] tracking-[0.16em] text-[var(--text-muted)] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden"
+          >
             {metric.label}
           </div>
           <div
             className={cx(
               // nowrap so a two-word value ("SHORT GAMMA") can't wrap and stretch
-              // the whole row taller than its neighbours.
-              'mt-1.5 leading-[1.1] slayer-num whitespace-nowrap [overflow-wrap:normal] [word-break:keep-all]',
+              // the whole row taller than its neighbours; truncate keeps it inside
+              // its cell (cells are now wide enough that this rarely triggers).
+              'mt-1.5 leading-[1.1] slayer-num truncate [overflow-wrap:normal] [word-break:keep-all]',
               metric.primary ? 'font-bold' : 'font-semibold',
               valueSize,
               metric.primary && 'text-[1.08em]',
@@ -87,7 +99,7 @@ export function MetricStrip({ metrics, columns = 8, className }: MetricStripProp
             {metric.value}
           </div>
           {metric.sub ? (
-            <div className="mt-1 text-[11px] leading-tight text-[var(--text-secondary)]">
+            <div className="mt-1 text-[11px] leading-tight text-[var(--text-secondary)] truncate">
               {metric.sub}
             </div>
           ) : null}
