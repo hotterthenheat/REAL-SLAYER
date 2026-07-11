@@ -912,6 +912,41 @@ export function DealerFlowView({ forcedView, showToggle = true }: { forcedView?:
     </Popover>
   );
 
+  // Ticker selector — switches the active underlying driving the whole dealer view.
+  // Wires the previously-unrendered ASSET_LIST / setSelectedAsset scaffolding.
+  const tickerSelector = (
+    <Popover
+      align="end"
+      width={230}
+      closeOnInsideClick
+      trigger={
+        <button className={expiryTriggerCls} aria-label={`Ticker: ${selectedAsset.ticker}. Change underlying`}>
+          <div className="flex flex-col leading-none gap-0.5 min-w-0">
+            <span className="text-[7.5px] font-semibold uppercase tracking-widest text-[var(--text-tertiary)]">Ticker</span>
+            <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)] truncate">{selectedAsset.ticker}</span>
+          </div>
+          <ChevronDown className="w-3.5 h-3.5 text-[var(--text-tertiary)] shrink-0" />
+        </button>
+      }
+    >
+      <div className="max-h-[60vh] overflow-y-auto p-1" role="listbox" aria-label="Select ticker">
+        {ASSET_LIST.map((a) => (
+          <button
+            key={a.key}
+            type="button"
+            role="option"
+            aria-selected={a.ticker === selectedAsset.ticker}
+            onClick={() => setSelectedAsset(a)}
+            className={`flex w-full items-baseline justify-between gap-3 rounded-[var(--radius-control)] px-2.5 py-1.5 text-left transition-colors hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:bg-[var(--surface-2)] ${a.ticker === selectedAsset.ticker ? 'bg-[var(--surface-2)]' : ''}`}
+          >
+            <span className="slayer-num text-[12px] font-semibold text-[var(--text-primary)]">{a.ticker}</span>
+            <span className="truncate text-[10px] text-[var(--text-tertiary)]">{a.name}</span>
+          </button>
+        ))}
+      </div>
+    </Popover>
+  );
+
   const expiryStatus = isMultiExpiry
     ? `${activeExpiries.length} ${activeExpiries.length === 1 ? 'expiry' : 'expiries'}`
     : expiryTab === 'aggregated'
@@ -1005,7 +1040,7 @@ export function DealerFlowView({ forcedView, showToggle = true }: { forcedView?:
           className="xl:col-span-5"
           title="Dealer Pressure Matrix"
           subtitle={expiryStatus}
-          actions={expirySelector}
+          actions={<div className="flex items-center gap-2">{tickerSelector}{expirySelector}</div>}
           padded={false}
         >
           <DataTable

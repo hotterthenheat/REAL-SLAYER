@@ -187,7 +187,7 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
         onKeyDown={enterFlyout}
         aria-haspopup={hasFlyout ? 'menu' : undefined}
         style={{ borderRadius: 'var(--radius-control)' }}
-        className={`w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
+        className={`w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium tracking-normal transition-colors border ${isMobile ? 'min-h-[44px]' : ''} ${
           isActive
             ? adminOnly
               ? 'bg-rose-950/40 text-[var(--text-primary)] border-rose-500/50'
@@ -213,18 +213,22 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
   );
 }
 
-// Quiet connection indicator: a small dot. Callers still pass a status prop
-// (kept for signature compatibility), but the indicator renders neutrally.
-export function FeedPill({ compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
-  // Resolve the theme token once so the dot matches the token-driven UI
-  // (instead of a hardcoded hex) across light/dark/custom themes.
-  const css = getComputedStyle(document.documentElement);
-  const c = css.getPropertyValue('--success').trim() || '#4ADE80';
+// Connection indicator: a small dot whose colour reflects the actual feed state,
+// with a matching label when not compact. Live gets a subtle ping.
+export function FeedPill({ status = 'connecting', compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
+  const token = status === 'live' ? '--success' : status === 'offline' ? '--text-muted' : '--warning';
+  const label = status === 'live' ? 'Live' : status === 'offline' ? 'Offline' : status === 'stale' ? 'Stale' : 'Connecting';
   return (
     <div className={`flex items-center ${compact ? '' : 'gap-1.5'}`}>
       <span className="relative flex h-1.5 w-1.5 shrink-0">
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: c }} />
+        {status === 'live' && (
+          <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style={{ background: `var(${token})` }} />
+        )}
+        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: `var(${token})` }} />
       </span>
+      {!compact && (
+        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{label}</span>
+      )}
     </div>
   );
 }
@@ -297,7 +301,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
         </div>
         
         <div 
-          className="flex-1 overflow-y-auto px-2 py-4 flex flex-col gap-1.5 scrollbar-none scroll-smooth touch-pan-y overflow-x-hidden"
+          className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-1 scrollbar-none scroll-smooth touch-pan-y overflow-x-hidden"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
           <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 pointer-events-none'}`}>
@@ -306,21 +310,39 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
 
           {NAV_MAIN_VIEWS.map((it) => renderNavItem(it))}
 
-          <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mt-4 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
+          <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mt-3 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
             Tools
           </div>
 
           {NAV_TOOLS.map((it) => renderNavItem(it))}
+        </div>
 
-          <div className="mt-auto pt-4 flex flex-col gap-1.5 border-t border-[var(--border)]">
-            {renderNavItem(NAV_SETTINGS)}
-            {renderNavItem(NAV_ADMIN)}
-          </div>
+        {/* Settings + Admin are pinned directly below the scroll so they are always
+            visible. Previously they sat at the bottom of the scroll area and clipped
+            under the footer whenever the nav list overflowed (e.g. shorter viewports). */}
+        <div className="shrink-0 px-2 pt-2 pb-1 flex flex-col gap-1.5 border-t border-[var(--border)]">
+          {renderNavItem(NAV_SETTINGS)}
+          {renderNavItem(NAV_ADMIN)}
         </div>
 
         <div className={`p-4 border-t border-[var(--border)] bg-[var(--surface)] overflow-hidden whitespace-nowrap transition-[padding] duration-300 ${isSidebarExpanded ? 'px-4' : 'px-2'}`}>
-           <div className={`flex mb-3 ${isSidebarExpanded ? 'justify-start px-1' : 'justify-center'}`}>
-             <FeedPill status={feedStatus} compact={!isSidebarExpanded} />
+           {/* Labeled feed status — a lone dot with no text read as a stray artifact.
+               Dot colour + label now reflect the actual feed state. */}
+           <div className={`flex items-center gap-2 mb-3 ${isSidebarExpanded ? 'px-1' : 'justify-center'}`}>
+             <span className="relative flex h-1.5 w-1.5 shrink-0">
+               {feedStatus === 'live' && (
+                 <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style={{ background: 'var(--success)' }} />
+               )}
+               <span
+                 className="relative inline-flex rounded-full h-1.5 w-1.5"
+                 style={{ background: feedStatus === 'live' ? 'var(--success)' : feedStatus === 'offline' ? 'var(--text-muted)' : 'var(--warning)' }}
+               />
+             </span>
+             {isSidebarExpanded && (
+               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+                 {feedStatus === 'live' ? 'Feed · Live' : feedStatus === 'offline' ? 'Feed · Offline' : feedStatus === 'stale' ? 'Feed · Stale' : 'Feed · Connecting'}
+               </span>
+             )}
            </div>
            {/* Tier Info — only for signed-in users. A guest must never see an owned plan
                ("Lifetime access") next to a "Log in" CTA; that read as fake/contradictory. */}

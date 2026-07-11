@@ -131,28 +131,21 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
         return;
       }
 
-      // matchMedia: 3-col desktop / 2-col tablet / 1-col mobile, with smaller
-      // rise on narrower viewports so nothing translates far enough to overflow.
-      const mm = gsap.matchMedia();
-      const build = (rise: number) => () => {
-        gsap.fromTo(
-          wraps,
-          { autoAlpha: 0, y: rise },
-          {
-            autoAlpha: 1,
-            y: 0,
-            ease: GSAP_EASE_PRIMARY,
-            stagger: STAGGER.tight,
-            duration: DUR.reveal,
-            // Short scrubbed reveal — reversible as the grid scrolls back out.
-            scrollTrigger: { id: TRIGGER.productGrid, trigger: root, start: 'top 85%', end: 'top 52%', scrub: 0.6 },
-          },
-        );
-      };
-      mm.add('(min-width: 1024px)', build(46));
-      mm.add('(min-width: 640px) and (max-width: 1023.98px)', build(30));
-      mm.add('(max-width: 639.98px)', build(16));
-      return () => mm.revert();
+      // Enter ONCE and stay composed: the ruled surface appears, cells rise into
+      // their tracks. Never scrubbed — stopping the scroll can't strand the grid
+      // in a half-revealed state.
+      gsap.fromTo(
+        wraps,
+        { autoAlpha: 0, y: 18 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          ease: GSAP_EASE_PRIMARY,
+          stagger: STAGGER.tight,
+          duration: DUR.reveal,
+          scrollTrigger: { id: TRIGGER.productGrid, trigger: root, start: 'top 78%', once: true },
+        },
+      );
     },
     { scope: gridScope, dependencies: [reduced], revertOnUpdate: true },
   );
@@ -210,7 +203,13 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
         onBlur={handleContainerBlur}
         onKeyDown={handleKeyDown}
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {/* ONE ruled surface — hairline internal dividers via gap-px over the line
+            colour — instead of six floating bordered cards. The grid reads as a
+            single instrument panel, matching the terminal itself. */}
+        <div
+          className="grid grid-cols-1 gap-px overflow-hidden rounded-[10px] sm:grid-cols-2 lg:grid-cols-3"
+          style={{ border: `1px solid ${line}`, background: line }}
+        >
           {MODULES.map((m) => {
             const isActive = active === m.id;
             const isDim = active != null && !isActive;
@@ -226,14 +225,14 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
                   onFocus={() => setActive(m.id)}
                   aria-expanded={isActive}
                   aria-label={`${m.name} — ${m.desc} Open module`}
-                  className="flex h-full w-full cursor-pointer flex-col rounded-[10px] p-5 text-left focus:outline-none focus-visible:ring-1"
+                  className="flex h-full w-full cursor-pointer flex-col p-5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-inset"
                   style={{
                     background: PALETTE.panel,
-                    border: `1px solid ${isActive ? lineStrong : line}`,
                     ['--tw-ring-color' as any]: lineStrong,
                   }}
-                  // Motion owns the inner card: neighbours dim + recede to make room.
-                  animate={reduced ? { opacity: isDim ? 0.55 : 1 } : { opacity: isDim ? 0.5 : 1, y: isDim ? 10 : 0 }}
+                  // Motion owns the inner card: neighbours dim (opacity only — the
+                  // cells are flush in a ruled grid, so they must never translate).
+                  animate={{ opacity: isDim ? 0.45 : 1 }}
                   transition={{ duration: DUR.fast, ease: EASE_PRIMARY }}
                 >
                   <div className="flex items-center justify-between gap-3">
@@ -247,7 +246,7 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
 
                   {/* preview slot — fixed height keeps the card stable when the
                       preview clone flies out to the floating frame. */}
-                  <div className="relative mt-4 h-[92px] overflow-hidden rounded-[7px]">
+                  <div className="relative mt-4 h-[96px] overflow-hidden rounded-[7px] [&_svg]:!h-full [&>div>div]:h-full">
                     <motion.div
                       layoutId={reduced ? undefined : `pg-frame-${m.id}`}
                       className="absolute inset-0"

@@ -182,6 +182,24 @@ export default function PinpointExposureView() {
   // so it doesn't flicker on tick noise.
   const prevNetGexRef = useRef<number | null>(null);
   const [netGexTrend, setNetGexTrend] = useState<string>('—');
+
+  // Exposure-matrix column-group visibility. The GEX/DEX/VEX headers used to be
+  // static labels; they are now real toggles (via the chip strip above the table)
+  // so a trader can focus on a single greek. At least one group always stays on.
+  const MATRIX_GROUPS = [
+    { key: 'gex' as const, label: 'GEX 1%', color: 'var(--call)' },
+    { key: 'dex' as const, label: 'DEX 1σ', color: 'var(--pin)' },
+    { key: 'vex' as const, label: 'VEX 1%v', color: 'var(--warning)' },
+  ];
+  const [matrixGroups, setMatrixGroups] = useState<Set<'gex' | 'dex' | 'vex'>>(() => new Set(['gex', 'dex', 'vex']));
+  const toggleMatrixGroup = (k: 'gex' | 'dex' | 'vex') =>
+    setMatrixGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) { if (next.size > 1) next.delete(k); } else next.add(k);
+      return next;
+    });
+  const shownGroups = MATRIX_GROUPS.filter((g) => matrixGroups.has(g.key));
+  const matrixGridStyle = { gridTemplateColumns: `52px repeat(${shownGroups.length * 3}, minmax(0, 1fr))` };
   useEffect(() => {
     if (netGex == null || !isFinite(netGex)) return;
     const prev = prevNetGexRef.current;
@@ -431,7 +449,7 @@ export default function PinpointExposureView() {
   const panelActions = (
     <div className="flex items-center gap-1.5">
       <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Expiry</span>
-      <span className="slayer-control slayer-num cursor-default select-none">{expiry} · All Dates</span>
+      <span className="slayer-readout slayer-num cursor-default select-none">{expiry} · All Dates</span>
     </div>
   );
 
@@ -569,21 +587,44 @@ export default function PinpointExposureView() {
             <span>VEX: $ per 1% vol shift</span>
           </div>
 
+          {/* Column-group toggles — focus the matrix on one or more greeks. */}
+          <div className="flex items-center gap-1.5 pb-1.5">
+            <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Columns</span>
+            {MATRIX_GROUPS.map((g) => {
+              const on = matrixGroups.has(g.key);
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  onClick={() => toggleMatrixGroup(g.key)}
+                  aria-pressed={on}
+                  title={on ? `Hide ${g.label} columns` : `Show ${g.label} columns`}
+                  className={`rounded-[var(--radius-control)] border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${
+                    on ? 'border-[var(--border-mid)] bg-[var(--surface-2)]' : 'border-[var(--border-subtle)] text-[var(--text-faint)] line-through decoration-[var(--text-faint)]/60'
+                  }`}
+                  style={on ? { color: g.color } : undefined}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
+          </div>
+
           {/* TABLE — fits without scroll at ≥1280px (xl); scrolls in-container below that. */}
           <div className="overflow-x-auto border border-[var(--border-subtle)]">
             <div className="min-w-[500px] xl:min-w-0">
               {/* Group header */}
-              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] items-end border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">
+              <div className="grid items-end border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]" style={matrixGridStyle}>
                 <div className="px-1 py-1.5">Strike</div>
-                <div className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)] text-[var(--call)]">GEX 1%</div>
-                <div className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)] text-[var(--pin)]">DEX 1σ</div>
-                <div className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)] text-[var(--warning)]">VEX 1%v</div>
+                {shownGroups.map((g) => (
+                  <div key={g.key} className="col-span-3 text-center py-1.5 border-l border-[var(--border-subtle)]" style={{ color: g.color }}>{g.label}</div>
+                ))}
               </div>
               {/* Sub header */}
-              <div className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-faint)]">
+              <div className="grid border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-faint)]" style={matrixGridStyle}>
                 <div className="px-1 py-1" />
-                {(['gex', 'dex', 'vex'] as const).map((g) => (
-                  <div key={g} className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
+                {shownGroups.map((g) => (
+                  <div key={g.key} className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
                     <div className="text-right px-1 py-1 text-[#d94646]/80">Put</div>
                     <div className="text-right px-1 py-1 text-[var(--call)]/90">Call</div>
                     <div className="text-right px-1 py-1">Net</div>
@@ -607,20 +648,20 @@ export default function PinpointExposureView() {
                   <div key={r.strike}>
                     {showSpotDivider && (
                       <div
-                        className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-y border-[var(--border-mid)]"
-                        style={{ background: 'rgba(248,248,255,0.06)' }}
+                        className="grid border-y border-[var(--border-mid)]"
+                        style={{ ...matrixGridStyle, background: 'rgba(248,248,255,0.06)' }}
                       >
                         <div className="px-1 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">
                           Spot
                         </div>
-                        <div className="col-span-9 flex items-center px-1.5 py-1 text-[10px] slayer-num font-bold text-[var(--text-primary)]">
+                        <div className="flex items-center px-1.5 py-1 text-[10px] slayer-num font-bold text-[var(--text-primary)]" style={{ gridColumn: `span ${shownGroups.length * 3}` }}>
                           {fmtLevel(spot)}
                         </div>
                       </div>
                     )}
                     <div
-                      className="grid grid-cols-[52px_repeat(9,minmax(0,1fr))] border-b border-[var(--border-subtle)] items-center"
-                      style={{ background: rowTint(isPin, isCallWall, isPutWall) }}
+                      className="grid border-b border-[var(--border-subtle)] items-center"
+                      style={{ ...matrixGridStyle, background: rowTint(isPin, isCallWall, isPutWall) }}
                     >
                       <div className="px-1 py-0.5 flex items-center gap-0.5 min-w-0 overflow-hidden">
                         <span className="text-[9.5px] slayer-num font-bold text-[var(--text-secondary)]">
@@ -630,24 +671,19 @@ export default function PinpointExposureView() {
                         {isCallWall && <span className="text-[6.5px] font-bold text-[var(--call)] tracking-wide">CW</span>}
                         {isPutWall && <span className="text-[6.5px] font-bold text-[#d94646] tracking-wide">PW</span>}
                       </div>
-                      {/* GEX */}
-                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
-                        <MatrixCell value={r.putGex} max={matrixMax.gex} side="put" />
-                        <MatrixCell value={r.callGex} max={matrixMax.gex} side="call" />
-                        <MatrixCell value={r.netGex} max={matrixMax.gex} side="net" />
-                      </div>
-                      {/* DEX */}
-                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
-                        <MatrixCell value={r.putDex} max={matrixMax.dex} side="put" />
-                        <MatrixCell value={r.callDex} max={matrixMax.dex} side="call" />
-                        <MatrixCell value={r.netDex} max={matrixMax.dex} side="net" />
-                      </div>
-                      {/* VEX */}
-                      <div className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
-                        <MatrixCell value={r.putVex} max={matrixMax.vex} side="put" />
-                        <MatrixCell value={r.callVex} max={matrixMax.vex} side="call" />
-                        <MatrixCell value={r.netVex} max={matrixMax.vex} side="net" />
-                      </div>
+                      {shownGroups.map((g) => {
+                        const cells =
+                          g.key === 'gex' ? [r.putGex, r.callGex, r.netGex, matrixMax.gex] as const
+                          : g.key === 'dex' ? [r.putDex, r.callDex, r.netDex, matrixMax.dex] as const
+                          : [r.putVex, r.callVex, r.netVex, matrixMax.vex] as const;
+                        return (
+                          <div key={g.key} className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
+                            <MatrixCell value={cells[0]} max={cells[3]} side="put" />
+                            <MatrixCell value={cells[1]} max={cells[3]} side="call" />
+                            <MatrixCell value={cells[2]} max={cells[3]} side="net" />
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );

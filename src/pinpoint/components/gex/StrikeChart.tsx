@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCcw } from 'lucide-react';
 import {
   createChart,
@@ -23,7 +23,6 @@ import { GexNodesPrimitive } from './gexNodesPrimitive';
 import { candleTheme } from './candleTheme';
 import type { Candle } from '../../types/market';
 import type { KeyLevels, OverlayMode } from '../../types/gex';
-import { Term } from '../../../components/ui/Tooltip';
 
 interface StrikeChartProps {
   ticker: string;
@@ -68,6 +67,17 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
   const levelsRef = useRef<KeyLevels>(levels);
   const barCountRef = useRef(0);
   const loadedRef = useRef<{ ticker: string; timeframe: Timeframe }>({ ticker: '', timeframe: '1m' });
+
+  // Per-series visibility, toggled by clicking the legend (TradingView-style). A
+  // series renders only when its overlay category is on AND it is not hidden here.
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  const toggle = useCallback((id: string) => {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
 
   // Keep the autoscale provider reading the freshest levels without re-mounting
   levelsRef.current = levels;
@@ -214,31 +224,49 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
     if (overlay === 'LEVELS' || overlay === 'BOTH') {
       const mk = (price: number, color: string, title: string, style: LineStyle, width: 1 | 2 = 1) =>
         candleSeries.createPriceLine({ price, color, title, lineStyle: style, lineWidth: width, axisLabelVisible: true });
-      levelLinesRef.current = [
-        mk(levels.callWall, CALL_WALL, 'CALL WALL', LineStyle.Solid),
-        mk(levels.putWall, PUT_WALL, 'PUT WALL', LineStyle.Solid),
-        mk(levels.flip, '#f59e0b', 'FLIP', LineStyle.Dashed),
-        mk(levels.king, '#eab308', 'KING', LineStyle.Solid, 2),
+      const defs: Array<[string, number, string, string, LineStyle, (1 | 2)?]> = [
+        ['callWall', levels.callWall, CALL_WALL, 'CALL WALL', LineStyle.Solid],
+        ['putWall', levels.putWall, PUT_WALL, 'PUT WALL', LineStyle.Solid],
+        ['flip', levels.flip, '#f59e0b', 'FLIP', LineStyle.Dashed],
+        ['king', levels.king, '#eab308', 'KING', LineStyle.Solid, 2],
       ];
+      levelLinesRef.current = defs
+        .filter(([id]) => !hidden.has(id))
+        .map(([, price, color, title, style, width]) => mk(price, color, title, style, width ?? 1));
     }
-  }, [levels, overlay]);
+  }, [levels, overlay, hidden]);
+
+  // Sync +GEX / −GEX node visibility to the legend toggles (no data reload).
+  useEffect(() => {
+    nodesRef.current?.setSignVisibility(!hidden.has('posNode'), !hidden.has('negNode'));
+  }, [hidden]);
 
   return (
     <div className="flex flex-col gap-2 h-full">
       <div className="flex items-center gap-3.5 px-1 flex-wrap select-none">
         {([
-          { label: 'Call Wall', cls: 'bg-bull', term: 'callWall' },
-          { label: 'Put Wall', cls: 'bg-bear', term: 'putWall' },
-          { label: 'Flip', cls: 'bg-warn', term: 'gammaFlip' },
-          { label: 'King', cls: 'bg-[#eab308]', term: 'king' },
-          { label: '+GEX node', cls: 'bg-[#32CBFF]', term: 'gexNode' },
-          { label: '−GEX node', cls: 'bg-[#EF9CDA]', term: 'gexNode' },
-        ] as const).map(item => (
-          <span key={item.label} className="flex items-center gap-1.5 font-mono text-[10px] text-textSecondary">
-            <span className={`inline-block w-3 h-0.5 rounded-full ${item.cls}`} />
-            <Term id={item.term}>{item.label}</Term>
-          </span>
-        ))}
+          { id: 'callWall', label: 'Call Wall', cls: 'bg-bull' },
+          { id: 'putWall', label: 'Put Wall', cls: 'bg-bear' },
+          { id: 'flip', label: 'Flip', cls: 'bg-warn' },
+          { id: 'king', label: 'King', cls: 'bg-[#eab308]' },
+          { id: 'posNode', label: '+GEX node', cls: 'bg-[#32CBFF]' },
+          { id: 'negNode', label: '−GEX node', cls: 'bg-[#EF9CDA]' },
+        ] as const).map(item => {
+          const off = hidden.has(item.id);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => toggle(item.id)}
+              aria-pressed={!off}
+              title={`${off ? 'Show' : 'Hide'} ${item.label}`}
+              className={`flex items-center gap-1.5 font-mono text-[10px] rounded px-1 -mx-1 transition-colors hover:bg-panel focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-select/60 ${off ? 'text-textMuted line-through decoration-textMuted/60' : 'text-textSecondary'}`}
+            >
+              <span className={`inline-block w-3 h-0.5 rounded-full ${item.cls} transition-opacity ${off ? 'opacity-30' : ''}`} />
+              {item.label}
+            </button>
+          );
+        })}
         <span className="ml-auto font-mono text-[10px] text-textMuted uppercase tracking-wider">
           scroll zoom · drag pan · dbl-click reset
         </span>

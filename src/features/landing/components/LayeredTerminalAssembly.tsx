@@ -254,7 +254,7 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
     // Outer box holds the aspect ratio responsively; the inner box is the exact
     // 560×380 design, scaled to fill it. Everything inside is positioned in real
     // design pixels, so one transform scales positions + type + SVG together.
-    <div ref={scope} style={{ position: 'relative', width: '100%', maxWidth: 560, aspectRatio: '560 / 380', margin: '0 auto' }}>
+    <div ref={scope} style={{ position: 'relative', width: '100%', maxWidth: 680, aspectRatio: '560 / 380', margin: '0 auto' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, width: 560, height: 380, transformOrigin: 'top left', transform: `scale(${scale})` }}>
         <div ref={breatheRef} style={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%' }}>
           {LAYERS.map((l) => (

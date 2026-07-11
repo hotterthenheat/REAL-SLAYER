@@ -127,6 +127,19 @@
   outline: none;
 }
 
+/* Passive readout chip: same footprint as .slayer-control but no hover/focus
+   affordance and a recessed fill, so a static value (current expiry, model,
+   calibrated-at) never reads as an interactive control sitting next to real ones. */
+.slayer-readout {
+  appearance: none;
+  background: var(--bg-well, var(--bg-shell));
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-control);
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 7px 10px;
+}
+
 .slayer-table {
   width: 100%;
   border-collapse: collapse;
