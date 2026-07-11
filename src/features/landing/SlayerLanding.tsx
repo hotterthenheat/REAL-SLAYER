@@ -3,7 +3,6 @@ import { LandingMotionProvider, useLandingMotion } from './motion/LandingMotionP
 import { LandingPreloader } from './scenes/LandingPreloader';
 import { HeroAssemblyScene } from './scenes/HeroAssemblyScene';
 import { HeroExitScene } from './scenes/HeroExitScene';
-import { PinnedTerminalScene } from './scenes/PinnedTerminalScene';
 import { ProductGridScene } from './scenes/ProductGridScene';
 import { MotionDebugPanel } from './components/MotionDebugPanel';
 import {
@@ -60,10 +59,10 @@ function LandingLayout({ ticker, metrics, ranked, pressure, spark, onEnter, onLa
             <>
               {/* Scene 2 — the thesis (short reveal, never pinned) */}
               <HeroExitScene />
-              {/* Scene 3 — the desk: ONE large composed terminal band showing every
-                  module at once (no pin, no scrub — always a finished frame) */}
-              <PinnedTerminalScene onEnter={onEnter} />
-              {/* Scene 4 — the module directory (index into the desk above) */}
+              {/* Scene 3 — the module directory. The hero terminal is now the one
+                  live, page-faithful desk, so the old static "desk" band was a
+                  redundant second terminal and was removed — this indexes straight
+                  into each module. */}
               <ProductGridScene onEnter={onEnter} />
             </>
           )}

@@ -6,8 +6,8 @@ import { DUR, GSAP_EASE_PRIMARY, STAGGER, TRIGGER } from '../motion/motionTokens
 import { PALETTE } from '../content/LandingSections';
 
 /**
- * Scene 5 — the module directory. The desk above (PinnedTerminalScene) is the one
- * page-faithful visual of the product; this scene is the *index* into it, so it
+ * Scene 4 — the module directory. The live hero terminal is the one page-faithful
+ * visual of the product; this scene is the *index* into it, so it
  * deliberately does NOT re-render the same mini-charts — that repetition ("the
  * same cards over and over") was the whole problem. Instead each module is a crisp
  * hairline tile: accent, name, one-line read and its real vocabulary, with a hover
@@ -118,7 +118,7 @@ export function ProductGridScene({ onEnter }: Props) {
           Every module, one click away.
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>
-          You just saw the desk. Here's the map — pick a read and open it live.
+          You just watched the terminal run. Here's the map — pick a read and open it live.
         </p>
       </div>
 
