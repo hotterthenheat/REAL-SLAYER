@@ -22,7 +22,7 @@ import { motion, useReducedMotion } from 'motion/react';
 export function DrawnAccent({
   children,
   variant = 'underline',
-  color = '#3F9C79',
+  color = '#CCDBDC',
   delay = 0.3,
 }: {
   children: ReactNode;
