@@ -998,11 +998,18 @@ export function FaqSection() {
 
 export function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
-    <section className="relative overflow-hidden px-5 py-24" style={{ borderTop: `1px solid ${line}` }}>
+    <section className="relative overflow-hidden px-5 py-20" style={{ borderTop: `1px solid ${line}` }}>
       <div className="relative mx-auto max-w-2xl text-center">
-        <h2 className="text-[30px] font-semibold leading-tight sm:text-[38px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
+        <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: faint }}>
+          <span className="inline-block h-1 w-1 rounded-full" style={{ background: PALETTE.green }} />
+          Slayer Terminal
+        </div>
+        <h2 className="text-[30px] font-semibold leading-tight sm:text-[40px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
           From Traders. For Traders.
         </h2>
+        <p className="mx-auto mt-4 max-w-md text-[14px] leading-relaxed" style={{ color: muted }}>
+          The dealer structure, ranked contracts and live flow — one desk. Open it and read the market the way it actually moves.
+        </p>
         <div className="mt-8 flex justify-center"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
       </div>
     </section>

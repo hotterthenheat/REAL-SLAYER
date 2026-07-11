@@ -40,7 +40,9 @@ export function DrawnAccent({
       className="relative inline-block"
       initial={reduce ? 'show' : 'hidden'}
       whileInView="show"
-      viewport={{ once: true, amount: 0.6 }}
+      /* not once — the mark un-draws when it leaves the viewport and re-draws
+         when it comes back, so it plays scrolling down AND up. */
+      viewport={{ once: false, amount: 0.6 }}
     >
       {children}
       <svg

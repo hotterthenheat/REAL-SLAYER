@@ -48,8 +48,11 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
 
       {/* the composition fills the viewport: copy + assembly truly centred in the
           available height, the capability strip anchored to the hero's bottom edge —
-          no dead band under the fold. */}
-      <div className="relative z-10 mx-auto grid w-full max-w-7xl flex-1 grid-cols-1 items-center gap-12 px-5 py-14 sm:px-8 lg:grid-cols-[0.92fr_1.25fr] lg:py-10">
+          no dead band under the fold. The flex-1 wrapper (items-center) is what
+          vertically centres the grid; a grid's own `items-center` only centres the
+          columns within their row, leaving the row itself pinned to the top. */}
+      <div className="relative z-10 flex flex-1 items-center px-5 py-14 sm:px-8 lg:py-10">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[0.92fr_1.25fr]">
         {/* copy */}
         <motion.div
           initial={reduced ? false : 'hidden'}
@@ -130,6 +133,7 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
             <span className="inline-block h-1 w-1 rounded-full" style={{ background: '#3F9C79' }} />
             The Slayer desk — dealer positioning, ranked setups &amp; live flow
           </motion.p>
+        </div>
         </div>
       </div>
 
