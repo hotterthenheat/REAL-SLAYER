@@ -120,8 +120,10 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
         return;
       }
 
-      // Enter ONCE and stay composed — never scrubbed, never reversed into a
-      // half-built frame. Head copy leads, the window rises, panels follow.
+      // A discrete (non-scrubbed) reveal that plays on the way DOWN and cleanly
+      // REVERSES on the way back UP — toggleActions, not `once`. Because it's a
+      // timeline tween (not scrubbed to scroll position) it always runs to a
+      // finished state in either direction; it never strands a half-built frame.
       gsap.set(head, { autoAlpha: 0, y: 18 });
       gsap.set(frame, { autoAlpha: 0, y: 34 });
       gsap.set(cells, { autoAlpha: 0, y: 14 });
@@ -130,8 +132,9 @@ export function PinnedTerminalScene({ onEnter }: { onEnter: (tab?: string) => vo
         scrollTrigger: {
           id: TRIGGER.terminalPin,
           trigger: scope.current!,
-          start: 'top 72%',
-          once: true,
+          start: 'top 78%',
+          // onEnter play · onLeave none · onEnterBack none · onLeaveBack reverse
+          toggleActions: 'play none none reverse',
         },
       });
       tl.to(head, { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.08 }, 0);

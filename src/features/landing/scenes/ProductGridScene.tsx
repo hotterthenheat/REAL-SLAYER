@@ -131,9 +131,9 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
         return;
       }
 
-      // Enter ONCE and stay composed: the ruled surface appears, cells rise into
-      // their tracks. Never scrubbed — stopping the scroll can't strand the grid
-      // in a half-revealed state.
+      // A discrete reveal that plays scrolling DOWN and reverses scrolling UP
+      // (toggleActions, not `once`, not scrub) — reversible in both directions
+      // yet always resolving to a finished state, never a half-revealed grid.
       gsap.fromTo(
         wraps,
         { autoAlpha: 0, y: 18 },
@@ -143,7 +143,7 @@ export function ProductGridScene({ metrics, ranked, pressure, spark, onEnter }: 
           ease: GSAP_EASE_PRIMARY,
           stagger: STAGGER.tight,
           duration: DUR.reveal,
-          scrollTrigger: { id: TRIGGER.productGrid, trigger: root, start: 'top 78%', once: true },
+          scrollTrigger: { id: TRIGGER.productGrid, trigger: root, start: 'top 82%', toggleActions: 'play none none reverse' },
         },
       );
     },
