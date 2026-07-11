@@ -39,7 +39,20 @@
           if (ts && sizeMap[ts]) d.setAttribute('data-text-size', sizeMap[ts]);
 
           if (localStorage.getItem('slayer_compact') === 'true') d.setAttribute('data-compact', 'true');
-          if (localStorage.getItem('slayer_ultrawide') === 'true') d.setAttribute('data-ultrawide', 'true');
+
+          // Ultrawide layout is AUTO-DETECTED from the viewport (no manual toggle).
+          // Keep this query in sync with ULTRAWIDE_MEDIA_QUERY in src/lib/displayPrefs.ts
+          // so the first-paint attribute matches the React runtime. Applied before
+          // React mounts (no flash) and kept live via a matchMedia change listener.
+          if (typeof window.matchMedia === 'function') {
+            var uw = window.matchMedia('(min-width: 1920px), (min-aspect-ratio: 21/9)');
+            var syncUw = function () {
+              if (uw.matches) d.setAttribute('data-ultrawide', 'true');
+              else d.removeAttribute('data-ultrawide');
+            };
+            syncUw();
+            uw.addEventListener('change', syncUw);
+          }
         } catch (e) {}
       })();
     </script>

@@ -57,13 +57,34 @@ export function applyCompact(on: boolean) {
   try { localStorage.setItem('slayer_compact', on ? 'true' : 'false'); } catch {}
 }
 
+/**
+ * Ultrawide layout is now AUTO-DETECTED from the viewport, not a manual pref, so
+ * this query is the single source of truth — mirror it in index.html's inline
+ * boot script so first paint matches. Triggers on genuinely wide displays
+ * (>=1920px) or very-wide ultrawide aspect ratios (>=21/9).
+ */
+export const ULTRAWIDE_MEDIA_QUERY = '(min-width: 1920px), (min-aspect-ratio: 21/9)';
+
 /** Toggles ultrawide multi-column layout via <html data-ultrawide>. */
 export function applyUltrawide(on: boolean) {
   const el = root();
   if (!el) return;
   if (on) el.setAttribute('data-ultrawide', 'true');
   else el.removeAttribute('data-ultrawide');
-  try { localStorage.setItem('slayer_ultrawide', on ? 'true' : 'false'); } catch {}
+}
+
+/**
+ * Auto-applies the ultrawide layout based on the viewport and keeps it in sync
+ * live as the window resizes or the display changes. SSR-safe. Returns a cleanup
+ * function that detaches the listener (or undefined when unavailable).
+ */
+export function initUltrawideAutoDetect(): (() => void) | undefined {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return undefined;
+  const mql = window.matchMedia(ULTRAWIDE_MEDIA_QUERY);
+  const sync = () => applyUltrawide(mql.matches);
+  sync();
+  mql.addEventListener('change', sync);
+  return () => mql.removeEventListener('change', sync);
 }
 
 /** Applies every display preference at once (used on session load). */
@@ -76,5 +97,7 @@ export function applyAllPreferences(prefs: {
   if (prefs.selected_theme !== undefined) applyTheme(prefs.selected_theme);
   if (prefs.selected_font_scale !== undefined) applyTextSize(prefs.selected_font_scale);
   if (prefs.compact_view_enabled !== undefined) applyCompact(!!prefs.compact_view_enabled);
-  if (prefs.ultrawide_enabled !== undefined) applyUltrawide(!!prefs.ultrawide_enabled);
+  // ultrawide_enabled is intentionally ignored: ultrawide is auto-detected from the
+  // viewport (see initUltrawideAutoDetect), so a stored pref must not override it.
+  // The field is kept in the type only for backward-compatible call sites.
 }

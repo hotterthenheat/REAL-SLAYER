@@ -491,10 +491,6 @@ export default function OptionsFlowTape() {
 
   const liveTag = (
     <div className="flex items-center gap-2">
-      <span
-        className={`h-1.5 w-1.5 rounded-full bg-[var(--positive-ink)] ${reduce ? '' : 'animate-pulse'}`}
-        aria-hidden
-      />
       <span className="slayer-num text-[11px] tabular-nums text-[var(--text-secondary)]">{fmtET(now.getTime())} ET</span>
     </div>
   );

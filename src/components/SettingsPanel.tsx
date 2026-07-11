@@ -34,7 +34,7 @@ import { useContractStore, ContractStore } from '../lib/store';
 import { zodError } from './ui/Field';
 import { CopyButton } from './ui/CopyButton';
 import { emailSchema, passwordSchema, referralCodeSchema } from '../lib/formSchemas';
-import { THEMES, applyTheme, applyTextSize, applyCompact, applyUltrawide } from '../lib/displayPrefs';
+import { THEMES, applyTheme, applyTextSize, applyCompact } from '../lib/displayPrefs';
 import { formatTime, formatDateTime } from '../lib/timeUtils';
 
 // Ordered, de-duplicated theme groups (preserves the curated order from the generator).
@@ -331,7 +331,6 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
   const [selectedFont, setSelectedFont] = useState<'STANDARD' | 'ENHANCED' | 'ENHANCED_XL'>(session?.selected_font_scale || 'STANDARD');
   const [compactMode, setCompactMode] = useState<boolean>(!!session?.compact_view_enabled);
-  const [ultrawideMode, setUltrawideMode] = useState<boolean>(!!session?.ultrawide_enabled);
   // '' = native Slayer default (no data-theme). Any other value is a theme id from the generated library.
   const [activeTheme, setActiveTheme] = useState<string>(session?.selected_theme || '');
 
@@ -451,14 +450,17 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     : PUBLIC_BASE;
   const referralLink = `${referralBase}/join/${session?.custom_referral_code || 'SLAYERX'}`;
 
-  // Applying appearance prefs is optimistic (state + DOM change instantly). If the
-  // server rejects the write, revert both so the UI never diverges from what was
-  // actually persisted — mirroring the privacy handlers' revert contract.
+  // Display prefs are LOCAL-FIRST: applyTheme/applyTextSize/applyCompact change the
+  // DOM instantly and persist to localStorage (so the choice survives reload + gives
+  // zero-flash boot regardless of the server). We therefore do NOT revert on a sync
+  // failure — reverting a global font/compact/theme change forces a SECOND full-page
+  // re-flow, which reads as the screen "jittering" and makes the setting look broken
+  // by snapping back. Instead we keep the user's choice and report only that the
+  // account sync was unavailable; it re-syncs on the next successful save.
   const handleSaveSettings = async (
     font: 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL',
     compact: boolean,
-    theme: string,
-    revert?: () => void
+    theme: string
   ) => {
     setIsUpdating(true);
     try {
@@ -474,38 +476,15 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
       if (res.ok) {
         onUpdateSession();
-        showToast('Display preferences saved and synchronized.');
+        showToast('Display preferences saved.');
       } else {
-        revert?.();
-        showToast('Failed to save display preferences.', 'error');
+        showToast('Saved on this device — account sync unavailable.', 'error');
       }
     } catch (e) {
-      console.error('Failed to update Settings parameters', e);
-      revert?.();
-      showToast('Backend connection error.', 'error');
+      console.error('Failed to sync display preferences', e);
+      showToast('Saved on this device — account sync unavailable.', 'error');
     } finally {
       setIsUpdating(false);
-    }
-  };
-
-  const saveUltrawide = async (on: boolean, revert?: () => void) => {
-    try {
-      const res = await fetch('/api/users/preferences', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ultrawide_enabled: on }),
-      });
-      if (res.ok) {
-        onUpdateSession();
-        showToast('Display preferences saved and synchronized.');
-      } else {
-        revert?.();
-        showToast('Failed to save display preferences.', 'error');
-      }
-    } catch (e) {
-      console.error('Failed to update ultrawide preference', e);
-      revert?.();
-      showToast('Backend connection error.', 'error');
     }
   };
 
@@ -515,7 +494,6 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
       // so re-sync here when the session loads/changes to avoid stale values).
       if (session.selected_font_scale) setSelectedFont(session.selected_font_scale);
       setCompactMode(!!session.compact_view_enabled);
-      setUltrawideMode(!!session.ultrawide_enabled);
       if (session.selected_theme) setActiveTheme(session.selected_theme);
 
       if (session.notification_preferences) {
@@ -1292,13 +1270,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     value={selectedFont}
                     onChange={(e) => {
                       const newVal = e.target.value as 'STANDARD' | 'ENHANCED' | 'ENHANCED_XL';
-                      const prev = selectedFont;
                       setSelectedFont(newVal);
                       applyTextSize(newVal);
-                      handleSaveSettings(newVal, compactMode, activeTheme, () => {
-                        setSelectedFont(prev);
-                        applyTextSize(prev);
-                      });
+                      handleSaveSettings(newVal, compactMode, activeTheme);
                     }}
                     className={`${CONTROL} cursor-pointer appearance-none pr-9`}
                   >
@@ -1361,35 +1335,13 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                   checked={compactMode}
                   onChange={(e) => {
                     const newVal = e.target.checked;
-                    const prev = compactMode;
                     setCompactMode(newVal);
                     applyCompact(newVal);
-                    handleSaveSettings(selectedFont, newVal, activeTheme, () => {
-                      setCompactMode(prev);
-                      applyCompact(prev);
-                    });
+                    handleSaveSettings(selectedFont, newVal, activeTheme);
                   }}
                 />
               </div>
 
-              {/* Ultrawide Layout */}
-              <div className="pt-4 border-t border-[var(--border)]">
-                <Toggle
-                  label="Ultrawide Layout"
-                  description="Expands the terminal to more columns on very wide monitors."
-                  checked={ultrawideMode}
-                  onChange={(e) => {
-                    const newVal = e.target.checked;
-                    const prev = ultrawideMode;
-                    setUltrawideMode(newVal);
-                    applyUltrawide(newVal);
-                    saveUltrawide(newVal, () => {
-                      setUltrawideMode(prev);
-                      applyUltrawide(prev);
-                    });
-                  }}
-                />
-              </div>
             </SettingsCard>
 
             {/* Interface Theme */}
@@ -1412,13 +1364,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                       title="Default (Slayer)"
                       type="button"
                       onClick={() => {
-                        const prev = activeTheme;
                         setActiveTheme('');
                         applyTheme('');
-                        handleSaveSettings(selectedFont, compactMode, '', () => {
-                          setActiveTheme(prev);
-                          applyTheme(prev);
-                        });
+                        handleSaveSettings(selectedFont, compactMode, '');
                       }}
                       className={`group relative aspect-square rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
                         isDefaultThemeActive
@@ -1448,13 +1396,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                           aria-label={`Apply ${t.name} theme`}
                           type="button"
                           onClick={() => {
-                            const prev = activeTheme;
                             setActiveTheme(t.id);
                             applyTheme(t.id);
-                            handleSaveSettings(selectedFont, compactMode, t.id, () => {
-                              setActiveTheme(prev);
-                              applyTheme(prev);
-                            });
+                            handleSaveSettings(selectedFont, compactMode, t.id);
                           }}
                           className={`group relative aspect-square rounded-[var(--radius-control)] border overflow-hidden transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-color)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)] ${
                             activeTheme === t.id

@@ -1010,7 +1010,7 @@ export default function App() {
               fresh ticks) reads amber with a live age — never let frozen prices pass as live. */}
           {(feedStatus === 'offline' || feedStatus === 'stale') && !['home', 'subscription'].includes(activeTab) && (
             <div role="status" aria-live="polite" className={`shrink-0 flex items-center justify-center gap-2 px-4 py-1.5 text-[10px] font-mono uppercase tracking-widest border-b ${feedStatus === 'offline' ? 'bg-[var(--danger)]/10 border-[var(--danger)]/30 text-[var(--danger)]' : 'bg-[var(--warning)]/10 border-[var(--warning)]/30 text-[var(--warning)]'}`}>
-              <span className={`h-1.5 w-1.5 rounded-full animate-pulse ${feedStatus === 'offline' ? 'bg-[var(--danger)]' : 'bg-[var(--warning)]'}`} aria-hidden="true" />
+              <span className={`h-1.5 w-1.5 rounded-full ${feedStatus === 'offline' ? 'bg-[var(--danger)]' : 'bg-[var(--warning)]'}`} aria-hidden="true" />
               {feedStatus === 'offline'
                 ? 'Live feed disconnected — reconnecting. Figures may be stale.'
                 : `Feed quiet ${staleSec}s — prices may be delayed, not live.`}
@@ -1233,16 +1233,6 @@ export default function App() {
           <button onClick={() => useLegal.getState().open('risk')} className="text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer">Risk Disclosure</button>
           <span className="text-[var(--border-strong)]" aria-hidden="true">·</span>
           <span className="text-[var(--text-tertiary)]">Not investment advice.</span>
-        </div>
-        <div className="flex items-center gap-2 mt-2 sm:mt-0">
-          <div className={`w-1.5 h-1.5 rounded-full ${feedStatus === 'offline' ? 'bg-[var(--danger)]' : feedStatus === 'stale' ? 'bg-[var(--warning)]' : 'bg-[var(--success)] animate-pulse'}`}></div>
-          <span className="text-[var(--text-tertiary)] font-bold">
-            {feedStatus === 'offline'
-              ? 'Offline'
-              : feedStatus === 'stale'
-                ? `Stale Feed · ${staleSec}s`
-                : 'Streaming'}
-          </span>
         </div>
       </footer>
       )}

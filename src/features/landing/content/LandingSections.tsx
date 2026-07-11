@@ -2,10 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { LogIn, Menu, X, Check, ArrowUpRight, CreditCard } from 'lucide-react';
 // The landing sidebar IS the app shell sidebar: it renders AppShell's own
-// NavItem rows (same classes, flyouts, chevrons), FeedPill and brand header,
+// NavItem rows (same classes, flyouts, chevrons) and brand header,
 // fed by the ONE shared nav definition in src/lib/navItems.ts. Zero drift —
 // clicking "Launch Terminal" produces no visual jump in either direction.
-import { NavCtx, FeedPill, renderNavItem } from '../../../components/AppShell';
+import { NavCtx, renderNavItem } from '../../../components/AppShell';
 import type { NavCtxValue } from '../../../components/AppShell';
 import { BrandHeader, TerminalLogo } from '../../../components/BrandLogo';
 import { NAV_MAIN_VIEWS, NAV_TOOLS, NAV_SETTINGS, SIDEBAR_COLLAPSED_KEY } from '../../../lib/navItems';
@@ -276,13 +276,10 @@ export function Kpi({ label, value, tone = PALETTE.text, sub }: { label: string;
 
 /** Footer for visitors — same container styling as AppShell's footer
  *  (p-4, border-t var(--border), var(--surface) bg), with the logged-out
- *  affordances: FeedPill LIVE, the primary Launch CTA, and log in / sign up. */
+ *  affordances: the primary Launch CTA, and log in / sign up. */
 function LandingSidebarFooter({ onLaunch, onEnter, expanded }: { onLaunch: () => void; onEnter: (t?: string) => void; expanded: boolean }) {
   return (
     <div className={`p-4 border-t border-[var(--border)] bg-[var(--surface)] overflow-hidden whitespace-nowrap transition-[padding] duration-300 ${expanded ? 'px-4' : 'px-2'}`}>
-      <div className={`flex mb-3 ${expanded ? 'justify-start px-1' : 'justify-center'}`}>
-        <FeedPill status="live" compact={!expanded} />
-      </div>
       {/* Plans/pricing card — the visitor's equivalent of the terminal's tier
           card, same slot + container styling; opens the live Pricing page. */}
       <button
@@ -430,7 +427,6 @@ export function LandingMobileNav({ onLaunch, onEnter, scrollTop }: { onLaunch: (
             <BrandHeader />
           </button>
           <div className="flex items-center gap-3">
-            <FeedPill status="live" />
             <button
               type="button"
               onClick={() => setOpen(!open)}
