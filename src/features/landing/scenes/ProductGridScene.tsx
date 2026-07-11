@@ -93,7 +93,7 @@ export function ProductGridScene({ onEnter }: Props) {
           ease: GSAP_EASE_PRIMARY,
           stagger: STAGGER.tight,
           duration: DUR.reveal,
-          scrollTrigger: { id: TRIGGER.productGrid, trigger: root, start: 'top 82%', toggleActions: 'play none none reverse' },
+          scrollTrigger: { id: TRIGGER.productGrid, trigger: root, start: 'top 78%', toggleActions: 'play none none reverse' },
         },
       );
     },

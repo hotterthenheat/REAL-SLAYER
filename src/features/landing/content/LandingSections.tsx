@@ -10,6 +10,7 @@ import type { NavCtxValue } from '../../../components/AppShell';
 import { BrandHeader, TerminalLogo } from '../../../components/BrandLogo';
 import { NAV_MAIN_VIEWS, NAV_TOOLS, NAV_SETTINGS, SIDEBAR_COLLAPSED_KEY } from '../../../lib/navItems';
 import { useContractStore } from '../../../lib/store';
+import { Reveal } from '../components/Reveal';
 
 /**
  * SlayerLanding — the full-screen marketing landing page for Slayer Terminal.
@@ -134,7 +135,7 @@ const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 
 export function SectionHead({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
   return (
-    <div className="mx-auto max-w-2xl text-center">
+    <Reveal className="mx-auto max-w-2xl text-center">
       {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
       <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
         {title}
@@ -144,7 +145,7 @@ export function SectionHead({ eyebrow, title, sub }: { eyebrow?: string; title: 
           {sub}
         </p>
       ) : null}
-    </div>
+    </Reveal>
   );
 }
 
@@ -784,16 +785,16 @@ export function MicroTicks({ data }: { data: number[] }) {
 export function HowItWorks() {
   const steps = ['Select ticker', 'Read dealer positioning', 'Review ranked setups', 'Execute with levels and invalidation'];
   return (
-    <section className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
+    <section className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
       <div className="mx-auto max-w-6xl">
         <SectionHead eyebrow="Workflow" title="How a trade comes together" sub="Pick a ticker, read where dealers are positioned, take the ranked setup — with levels and an invalidation, not a signal." />
         {/* a numbered rule-list, not a row of boxes: the sequence IS the design */}
         <div className="mt-10 grid grid-cols-1 border-t sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[color:var(--border)]" style={{ borderColor: line }}>
           {steps.map((s, i) => (
-            <div key={i} className="flex flex-col gap-3 py-6 max-lg:border-b lg:px-6 lg:first:pl-0 lg:last:pr-0" style={{ borderColor: line }}>
+            <Reveal key={i} delay={i * 0.08} className="flex flex-col gap-3 py-6 max-lg:border-b max-lg:border-[color:var(--border)] lg:px-6 lg:first:pl-0 lg:last:pr-0">
               <span className="font-mono text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>{`0${i + 1}`}</span>
               <div className="text-[14.5px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
-            </div>
+            </Reveal>
           ))}
         </div>
       </div>
@@ -818,7 +819,7 @@ export function ComparisonSection() {
   return (
     <section className="mx-auto max-w-6xl px-5 py-16">
       <SectionHead eyebrow="Comparison" title="Why Slayer, not a signal group" sub="Signal groups tell you what to buy. Slayer shows you the dealer levels, risk context and market structure behind the trade — so you know why." />
-      <div className="mt-10 overflow-x-auto">
+      <Reveal delay={0.05} className="mt-10 overflow-x-auto">
         <table className="w-full min-w-[560px] text-[12.5px]">
           <thead>
             <tr style={{ color: faint }}>
@@ -839,7 +840,7 @@ export function ComparisonSection() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -886,7 +887,7 @@ const PLANS: { key: string; name: string; tag: string; price: string; note: stri
 function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: number; onSelect: (p: (typeof PLANS)[number]) => void }) {
   return (
     <div
-      className="group relative flex flex-col overflow-hidden rounded-[10px] p-6 transition-colors duration-150"
+      className="group relative flex h-full w-full flex-col overflow-hidden rounded-[10px] p-6 transition-colors duration-150"
       style={{
         background: p.featured ? PALETTE.panel : PALETTE.panelSoft,
         border: `1px solid ${p.featured ? lineStrong : line}`,
@@ -943,11 +944,15 @@ export function PricingSection({ onLaunch, onEnter }: { onLaunch: () => void; on
     onEnter('subscription');
   };
   return (
-    <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}`, background: PALETTE.panelSoft }}>
+    <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
       <div className="mx-auto max-w-5xl">
         <SectionHead eyebrow="Pricing" title="Plans & Access" sub="Slayer Terminal is live — no waitlist. Pick a plan and open the full terminal. Annual billing saves up to 18%." />
         <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3 md:items-stretch">
-          {PLANS.map((p, i) => <PlanCard key={p.key} p={p} index={i} onSelect={select} />)}
+          {PLANS.map((p, i) => (
+            <Reveal key={p.key} delay={i * 0.1} className="h-full">
+              <PlanCard p={p} index={i} onSelect={select} />
+            </Reveal>
+          ))}
         </div>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton>
@@ -972,7 +977,7 @@ export function FaqSection() {
   return (
     <section id="faq" className="mx-auto max-w-3xl px-5 py-16" style={{ borderTop: `1px solid ${line}` }}>
       <SectionHead eyebrow="FAQ" title="Direct Answers" />
-      <div className="mt-8 divide-y" style={{ borderColor: line }}>
+      <Reveal delay={0.05} amount={0.1} className="mt-8 divide-y divide-[color:var(--border)]">
         {faqs.map(([q, a], i) => {
           const isOpen = open === i;
           return (
@@ -992,7 +997,7 @@ export function FaqSection() {
             </div>
           );
         })}
-      </div>
+      </Reveal>
     </section>
   );
 }
@@ -1000,7 +1005,7 @@ export function FaqSection() {
 export function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
     <section className="relative overflow-hidden px-5 py-20" style={{ borderTop: `1px solid ${line}` }}>
-      <div className="relative mx-auto max-w-2xl text-center">
+      <Reveal className="relative mx-auto max-w-2xl text-center">
         <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: faint }}>
           <span className="inline-block h-1 w-1 rounded-full" style={{ background: PALETTE.green }} />
           Slayer Terminal
@@ -1012,7 +1017,7 @@ export function FinalCta({ onLaunch }: { onLaunch: () => void }) {
           The dealer structure, ranked contracts and live flow — one desk. Open it and read the market the way it actually moves.
         </p>
         <div className="mt-8 flex justify-center"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
-      </div>
+      </Reveal>
     </section>
   );
 }
