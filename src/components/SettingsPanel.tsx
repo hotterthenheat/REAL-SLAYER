@@ -34,7 +34,7 @@ import { useContractStore, ContractStore } from '../lib/store';
 import { zodError } from './ui/Field';
 import { CopyButton } from './ui/CopyButton';
 import { emailSchema, passwordSchema, referralCodeSchema } from '../lib/formSchemas';
-import { THEMES, applyTheme, applyTextSize, applyCompact, applyUltrawide } from '../lib/displayPrefs';
+import { THEMES, applyTheme, applyTextSize, applyCompact } from '../lib/displayPrefs';
 import { formatTime, formatDateTime } from '../lib/timeUtils';
 
 // Ordered, de-duplicated theme groups (preserves the curated order from the generator).
@@ -331,7 +331,6 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
   const [selectedFont, setSelectedFont] = useState<'STANDARD' | 'ENHANCED' | 'ENHANCED_XL'>(session?.selected_font_scale || 'STANDARD');
   const [compactMode, setCompactMode] = useState<boolean>(!!session?.compact_view_enabled);
-  const [ultrawideMode, setUltrawideMode] = useState<boolean>(!!session?.ultrawide_enabled);
   // '' = native Slayer default (no data-theme). Any other value is a theme id from the generated library.
   const [activeTheme, setActiveTheme] = useState<string>(session?.selected_theme || '');
 
@@ -488,34 +487,12 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
     }
   };
 
-  const saveUltrawide = async (on: boolean, revert?: () => void) => {
-    try {
-      const res = await fetch('/api/users/preferences', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ultrawide_enabled: on }),
-      });
-      if (res.ok) {
-        onUpdateSession();
-        showToast('Display preferences saved and synchronized.');
-      } else {
-        revert?.();
-        showToast('Failed to save display preferences.', 'error');
-      }
-    } catch (e) {
-      console.error('Failed to update ultrawide preference', e);
-      revert?.();
-      showToast('Backend connection error.', 'error');
-    }
-  };
-
   useEffect(() => {
     if (session) {
       // Sync appearance prefs (these only seed via useState on first mount,
       // so re-sync here when the session loads/changes to avoid stale values).
       if (session.selected_font_scale) setSelectedFont(session.selected_font_scale);
       setCompactMode(!!session.compact_view_enabled);
-      setUltrawideMode(!!session.ultrawide_enabled);
       if (session.selected_theme) setActiveTheme(session.selected_theme);
 
       if (session.notification_preferences) {
@@ -1372,24 +1349,6 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                 />
               </div>
 
-              {/* Ultrawide Layout */}
-              <div className="pt-4 border-t border-[var(--border)]">
-                <Toggle
-                  label="Ultrawide Layout"
-                  description="Expands the terminal to more columns on very wide monitors."
-                  checked={ultrawideMode}
-                  onChange={(e) => {
-                    const newVal = e.target.checked;
-                    const prev = ultrawideMode;
-                    setUltrawideMode(newVal);
-                    applyUltrawide(newVal);
-                    saveUltrawide(newVal, () => {
-                      setUltrawideMode(prev);
-                      applyUltrawide(prev);
-                    });
-                  }}
-                />
-              </div>
             </SettingsCard>
 
             {/* Interface Theme */}

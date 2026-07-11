@@ -36,8 +36,8 @@ export interface NavCtxValue {
   closeMobile: () => void;
   session: any;
 }
-// Exported (with NavItem/FeedPill below) so SlayerLanding renders the EXACT same
-// sidebar rows/flyouts/pill — one implementation, zero landing-vs-app drift.
+// Exported (with NavItem below) so SlayerLanding renders the EXACT same
+// sidebar rows/flyouts — one implementation, zero landing-vs-app drift.
 export const NavCtx = React.createContext<NavCtxValue>({
   activeTab: 'home', setActiveTab: () => {}, isSidebarExpanded: false, closeMobile: () => {}, session: null,
 });
@@ -213,26 +213,6 @@ export function NavItem({ id, label, desc, icon: Icon, adminOnly = false, active
   );
 }
 
-// Connection indicator: a small dot whose colour reflects the actual feed state,
-// with a matching label when not compact. Live gets a subtle ping.
-export function FeedPill({ status = 'connecting', compact = false }: { status?: 'connecting' | 'live' | 'offline' | 'stale'; compact?: boolean }) {
-  const token = status === 'live' ? '--success' : status === 'offline' ? '--text-muted' : '--warning';
-  const label = status === 'live' ? 'Live' : status === 'offline' ? 'Offline' : status === 'stale' ? 'Stale' : 'Connecting';
-  return (
-    <div className={`flex items-center ${compact ? '' : 'gap-1.5'}`}>
-      <span className="relative flex h-1.5 w-1.5 shrink-0">
-        {status === 'live' && (
-          <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style={{ background: `var(${token})` }} />
-        )}
-        <span className="relative inline-flex rounded-full h-1.5 w-1.5" style={{ background: `var(${token})` }} />
-      </span>
-      {!compact && (
-        <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)]">{label}</span>
-      )}
-    </div>
-  );
-}
-
 // Render one shared nav definition as a NavItem row (desktop or mobile).
 export const renderNavItem = (it: NavItemDef, isMobile = false) => (
   <NavItem
@@ -247,7 +227,7 @@ export const renderNavItem = (it: NavItemDef, isMobile = false) => (
   />
 );
 
-export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick, setShowAuthModal, feedStatus }: AppShellProps) {
+export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick, setShowAuthModal }: AppShellProps) {
   const activeTab = useContractStore(s => s.activeTab);
   const setActiveTab = useContractStore(s => s.setActiveTab);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -326,24 +306,6 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
         </div>
 
         <div className={`p-4 border-t border-[var(--border)] bg-[var(--surface)] overflow-hidden whitespace-nowrap transition-[padding] duration-300 ${isSidebarExpanded ? 'px-4' : 'px-2'}`}>
-           {/* Labeled feed status — a lone dot with no text read as a stray artifact.
-               Dot colour + label now reflect the actual feed state. */}
-           <div className={`flex items-center gap-2 mb-3 ${isSidebarExpanded ? 'px-1' : 'justify-center'}`}>
-             <span className="relative flex h-1.5 w-1.5 shrink-0">
-               {feedStatus === 'live' && (
-                 <span className="absolute inline-flex h-full w-full rounded-full opacity-60 animate-ping" style={{ background: 'var(--success)' }} />
-               )}
-               <span
-                 className="relative inline-flex rounded-full h-1.5 w-1.5"
-                 style={{ background: feedStatus === 'live' ? 'var(--success)' : feedStatus === 'offline' ? 'var(--text-muted)' : 'var(--warning)' }}
-               />
-             </span>
-             {isSidebarExpanded && (
-               <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
-                 {feedStatus === 'live' ? 'Feed · Live' : feedStatus === 'offline' ? 'Feed · Offline' : feedStatus === 'stale' ? 'Feed · Stale' : 'Feed · Connecting'}
-               </span>
-             )}
-           </div>
            {/* Tier Info — only for signed-in users. A guest must never see an owned plan
                ("Lifetime access") next to a "Log in" CTA; that read as fake/contradictory. */}
            {session?.authenticated && (
@@ -398,7 +360,6 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
              <BrandHeader />
          </div>
          <div className="flex items-center gap-3">
-           <FeedPill status={feedStatus} />
            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-[var(--text-tertiary)] p-2 rounded focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none">
              {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
            </button>
