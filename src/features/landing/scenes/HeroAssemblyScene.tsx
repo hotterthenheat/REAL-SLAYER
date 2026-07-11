@@ -6,12 +6,17 @@ import { usePointerParallax } from '../hooks/usePointerParallax';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
 import { EASE_PRIMARY, DUR } from '../motion/motionTokens';
 import { MarqueeTicker } from '../content/LandingSections';
+import { DrawnAccent } from '../components/DrawnAccent';
 
 const GHOST = '#F8F8FF';
 const MUTED = 'rgba(245,245,245,0.62)';
 const FAINT = 'rgba(245,245,245,0.42)';
 
-const HERO_LINES = ['Read the flow.', 'Rank the contract.'];
+// "flow." carries the drawn accent — one hand-drawn emphasis mark per viewport.
+const HERO_LINES: { key: string; node: React.ReactNode }[] = [
+  { key: 'l1', node: <>Read the <DrawnAccent variant="underline" delay={1.15}>flow.</DrawnAccent></> },
+  { key: 'l2', node: 'Rank the contract.' },
+];
 
 interface Props {
   onEnter: (tab?: string) => void;
@@ -61,14 +66,14 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
           </motion.div>
           <h1 className="text-[38px] font-semibold leading-[1.04] sm:text-[52px]" style={{ color: GHOST, letterSpacing: '-0.02em' }}>
             {HERO_LINES.map((ln, i) => (
-              <span key={ln} className="block overflow-hidden pb-[0.08em] -mb-[0.08em]">
+              <span key={ln.key} className="block overflow-hidden pb-[0.14em] -mb-[0.14em]">
                 <motion.span
                   className="block will-change-transform"
                   initial={reduced ? false : { y: '110%' }}
                   animate={{ y: '0%' }}
                   transition={{ duration: 0.9, delay: 0.1 + i * 0.12, ease: EASE_PRIMARY }}
                 >
-                  {ln}
+                  {ln.node}
                 </motion.span>
               </span>
             ))}

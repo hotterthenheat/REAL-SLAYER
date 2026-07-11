@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 /**
  * KineticHeadline — oversized statement lines, each clipped by its own
@@ -12,19 +12,23 @@ import type { CSSProperties } from 'react';
  * parent can move alternating lines in opposite directions without hard-coding.
  */
 interface Props {
-  lines: string[];
+  /** Plain strings, or rich nodes (e.g. a word wrapped in a DrawnAccent). */
+  lines: ReactNode[];
+  /** Accessible transcript. Required when any line is a non-string node. */
+  srText?: string;
   className?: string;
   style?: CSSProperties;
   /** color of the statement text. */
   color?: string;
 }
 
-export function KineticHeadline({ lines, className = '', style, color = '#F4F4F5' }: Props) {
+export function KineticHeadline({ lines, srText, className = '', style, color = '#F4F4F5' }: Props) {
+  const transcript = srText ?? lines.filter((l): l is string => typeof l === 'string').join('. ');
   return (
     <>
       <div className={className} style={style} aria-hidden="true">
         {lines.map((ln, i) => (
-          <span key={ln} className="block overflow-hidden leading-[0.98]">
+          <span key={i} className="block overflow-hidden pb-[0.12em] -mb-[0.12em] leading-[0.98]">
             <span
               data-kinetic-line
               data-dir={i % 2 === 0 ? 1 : -1}
@@ -38,7 +42,7 @@ export function KineticHeadline({ lines, className = '', style, color = '#F4F4F5
       </div>
       {/* accessible transcript — a SIBLING of the aria-hidden visual, so screen
           readers actually receive the statement */}
-      <span className="sr-only">{lines.join('. ')}</span>
+      <span className="sr-only">{transcript}</span>
     </>
   );
 }

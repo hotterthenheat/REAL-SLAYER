@@ -1051,6 +1051,7 @@ export default function QuantSuiteView() {
                           valueFormat={(v) => `${(v * 100).toFixed(1)}%`}
                           markers={ivHeroMarkers}
                           floorHeatmap
+                          wallProjections
                           legend
                           dataState={isLiveData ? 'live' : 'model'}
                           sliceCol={ivHeroSliceCol}
