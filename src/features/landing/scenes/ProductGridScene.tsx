@@ -31,6 +31,8 @@ interface ModuleDef {
   desc: string;
   accent: string;
   chips: string[];
+  /** real screenshot of the actual page — the box photo, not a mock. */
+  img: string;
 }
 
 interface Props {
@@ -42,31 +44,37 @@ const MODULES: ModuleDef[] = [
     id: 'skyvision', tab: 'skyvision', name: 'SkyVision', accent: PALETTE.steel,
     desc: 'Ranks setups and contracts by structure, momentum and risk.',
     chips: ['RANKED', 'CONFIDENCE', 'BIAS', 'INVALIDATION'],
+    img: '/previews/skyvision.jpg',
   },
   {
     id: 'pinpoint', tab: 'pinpoint', name: 'Pinpoint GEX', accent: PALETTE.amber,
     desc: 'Dealer positioning by strike — call walls, put walls, pin zones.',
     chips: ['CALL WALL', 'PUT WALL', 'PIN', 'GAMMA FLIP'],
+    img: '/previews/pinpoint.jpg',
   },
   {
     id: 'dealerflow', tab: 'dealerflow', name: 'Dealer Flow', accent: PALETTE.green,
     desc: 'Net gamma pressure shifting across strikes as the tape develops.',
     chips: ['GEX', 'DEX', 'VEX', 'NET FLOW'],
+    img: '/previews/dealerflow.jpg',
   },
   {
     id: 'liveterminal', tab: 'liveterminal', name: 'Live Terminal', accent: PALETTE.steel,
     desc: 'One clean workspace — chart and key levels, start to execution.',
     chips: ['PRICE', 'KEY LEVELS', 'GEX NODES'],
+    img: '/previews/liveterminal.jpg',
   },
   {
     id: 'quant', tab: 'quant', name: 'Quant Lab', accent: PALETTE.amber,
     desc: 'Volatility surface, Greeks, regime and expected move.',
     chips: ['IV SURFACE', 'GREEKS', 'REGIME', 'EXP MOVE'],
+    img: '/previews/quant.jpg',
   },
   {
     id: 'auditor', tab: 'auditor', name: 'Trade History', accent: PALETTE.green,
     desc: 'Tracked setups and outcomes with honest, realized results.',
     chips: ['ENTRIES', 'OUTCOMES', 'REALIZED', 'HEALTH'],
+    img: '/previews/auditor.jpg',
   },
 ];
 
@@ -118,7 +126,7 @@ export function ProductGridScene({ onEnter }: Props) {
           Every module, one click away.
         </h2>
         <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>
-          You just watched the terminal run. Here's the map — pick a read and open it live.
+          These are the actual screens — not mockups. Pick a read and open it live.
         </p>
       </div>
 
@@ -134,34 +142,43 @@ export function ProductGridScene({ onEnter }: Props) {
               type="button"
               onClick={() => onEnter(m.tab)}
               aria-label={`Open ${m.name} — ${m.desc}`}
-              className="pg-tile group relative flex h-full min-w-0 cursor-pointer flex-col p-5 text-left transition-[transform,background-color] duration-200 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-inset hover:-translate-y-[2px]"
+              className="pg-tile group relative flex h-full min-w-0 cursor-pointer flex-col overflow-hidden text-left transition-[transform] duration-200 ease-out focus:outline-none focus-visible:ring-1 focus-visible:ring-inset hover:-translate-y-[2px]"
               style={{ background: PALETTE.panel, ['--tw-ring-color' as any]: lineStrong }}
             >
-              {/* accent spine — grows on hover/focus, the one moving affordance */}
-              <span
-                aria-hidden="true"
-                className="absolute left-0 top-5 h-6 w-[2px] origin-top scale-y-100 rounded-full opacity-70 transition-[height,opacity] duration-200 ease-out group-hover:opacity-100 group-focus-visible:opacity-100"
-                style={{ background: m.accent }}
-              />
-              <div className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-2.5 text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>
-                  <span aria-hidden="true" className="h-2.5 w-[3px] rounded-full" style={{ background: m.accent }} />
-                  {m.name}
-                </span>
-                <span
-                  aria-hidden="true"
-                  className="text-[13px] transition-transform duration-200 ease-out group-hover:translate-x-1 group-focus-visible:translate-x-1"
-                  style={{ color: m.accent }}
-                >
-                  →
-                </span>
+              {/* box photo — a real screenshot of the actual page, gently zooming on
+                  hover. object-top so the module's header/KPIs read first. */}
+              <div className="relative overflow-hidden" style={{ aspectRatio: '124 / 76', borderBottom: `1px solid ${line}`, background: PALETTE.bg }}>
+                <img
+                  src={m.img}
+                  alt={`${m.name} — a live Slayer Terminal screen`}
+                  loading="lazy"
+                  className="h-full w-full object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.045]"
+                />
+                {/* accent hairline seats the shot into the module's colour */}
+                <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[2px]" style={{ background: m.accent, opacity: 0.85 }} />
               </div>
-              <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{m.desc}</p>
-              {/* real module vocabulary — always visible, the tile's substance */}
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {m.chips.map((c) => (
-                  <span key={c} className="rounded-[5px] px-2 py-1 text-[9px] font-semibold uppercase" style={chipStyle}>{c}</span>
-                ))}
+
+              <div className="flex flex-1 flex-col p-5">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2.5 text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>
+                    <span aria-hidden="true" className="h-2.5 w-[3px] rounded-full" style={{ background: m.accent }} />
+                    {m.name}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="text-[13px] transition-transform duration-200 ease-out group-hover:translate-x-1 group-focus-visible:translate-x-1"
+                    style={{ color: m.accent }}
+                  >
+                    →
+                  </span>
+                </div>
+                <p className="mt-2 text-[12.5px] leading-relaxed" style={{ color: muted }}>{m.desc}</p>
+                {/* real module vocabulary — the tile's supporting substance */}
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {m.chips.map((c) => (
+                    <span key={c} className="rounded-[5px] px-2 py-1 text-[9px] font-semibold uppercase" style={chipStyle}>{c}</span>
+                  ))}
+                </div>
               </div>
             </button>
           ))}
