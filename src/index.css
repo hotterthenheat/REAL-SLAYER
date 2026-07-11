@@ -61,11 +61,11 @@ html, body, #root {
   --grey-700: #1F1F1F;         /* Panel Borders */
   --grey-900: #161616;         /* Hover States */
 
-  /* INSTITUTIONAL STATUS COLORS (Desaturated/Matte) */
-  --status-holding: #4ADE80;
-  --status-holding-bg: rgba(74, 222, 128, 0.1);
-  --status-failing: #F87171;
-  --status-failing-bg: rgba(248, 113, 113, 0.1);
+  /* INSTITUTIONAL STATUS COLORS (Desaturated/Matte, brand-derived) */
+  --status-holding: #3A8A68;
+  --status-holding-bg: rgba(58, 138, 104, 0.12);
+  --status-failing: #B03838;
+  --status-failing-bg: rgba(176, 56, 56, 0.12);
   --status-testing: #A1A1AA;
   --status-testing-bg: rgba(161, 161, 170, 0.1);
 
@@ -76,9 +76,16 @@ html, body, #root {
      override them; anything not overridden falls back to these dark defaults.
      Contrast tuned for WCAG AA+ on the dark surfaces.
      ==================================================================== */
-  --primary: #4ADE80;            /* brand / positive accent */
+  /* BRAND ANCHORS — the three colors that are genuinely ours. Every semantic
+     tone below is derived from one of these, so nothing resolves to a framework
+     default: success ← arbor, warning ← amber, info ← steel. */
+  --steel: #6A93B5;              /* SkyVision · calls · positioning · info origin */
+  --amber: #C79350;              /* Pinpoint · pins · dealer flow · warning origin */
+  --arbor: #3F9C79;              /* Arbor Capital · call wall · success origin */
+
+  --primary: #3A8A68;            /* brand / positive accent (arbor-derived) */
   --primary-contrast: #04140A;   /* text on a primary fill */
-  --secondary: #60A5FA;          /* secondary accent (info) */
+  --secondary: #5580A4;          /* secondary accent (steel info) */
   --background: var(--bg-base);  /* app background */
   --surface: #141414;            /* card / panel surface */
   --surface-2: #1C1C1C;          /* nested surface */
@@ -88,12 +95,22 @@ html, body, #root {
   --text-primary: #E5E5E5;       /* ~13:1 on surface */
   --text-secondary: #C4C4C4;     /* ~11:1 on surface (AAA) */
   --text-tertiary: #A3A3A3;      /* ~7:1 on surface (AA) */
-  --success: #4ADE80;
-  --warning: #FBBF24;
-  --danger: #F87171;
-  --info: #60A5FA;
-  --greek: #B06FE6;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
-  --dealer: #29B6F6;             /* §9 — dealer / market-maker tracking */
+  /* Semantic state — brand-derived. The base token fills; the -ink variant is the
+     brighter text tone used when a number itself carries the sign; -soft is a wash. */
+  --success: #3A8A68;
+  --success-ink: #3F9C79;
+  --success-soft: rgba(30, 92, 66, 0.20);
+  --warning: #B5862A;
+  --warning-ink: #C79350;
+  --warning-soft: rgba(181, 134, 42, 0.20);
+  --danger: #B03838;
+  --danger-ink: #C84848;
+  --danger-soft: rgba(152, 4, 4, 0.18);
+  --info: #5580A4;
+  --info-ink: #6A93B5;
+  --info-soft: rgba(85, 128, 164, 0.18);
+  --greek: #8A5AA0;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
+  --dealer: #4A9BC4;             /* §9 — dealer / market-maker tracking */
   /* Brand default accent is monochrome (black & white identity). The 73 theme
      presets each override --accent-color with their own hue, so picking a theme
      is what introduces color — the default stays on-brand. */
@@ -115,8 +132,12 @@ html, body, #root {
   --border-mid: rgba(248, 248, 255, 0.14);
   --text-muted: rgba(248, 248, 255, 0.50);
   --text-faint: rgba(248, 248, 255, 0.29);
-  --positive-ink: #2f9d45;
-  --negative-ink: #d94646;
+  --positive: #1E5430;
+  --positive-ink: #3A8A68;
+  --positive-soft: rgba(30, 84, 48, 0.22);
+  --negative: #980404;
+  --negative-ink: #C84848;
+  --negative-soft: rgba(152, 4, 4, 0.18);
   --call: #6A93B5;
   --pin: #C79350;
 

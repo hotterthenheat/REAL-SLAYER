@@ -38,26 +38,32 @@
   --text-muted: rgba(248, 248, 255, 0.50);
   --text-faint: rgba(248, 248, 255, 0.29);
 
-  /* Data tones — deep anchors (fills/borders) + readable ink (text) */
+  /* Data tones — deep anchors (fills/borders) + readable ink (text).
+     Brand-derived and kept in lock-step with index.css :root so the terminal
+     and the rest of the app read one palette. */
   --negative: #980404;
-  --negative-ink: #d94646;
+  --negative-ink: #C84848;
   --negative-soft: rgba(152, 4, 4, 0.18);
-  --positive: #0D4715;
-  --positive-ink: #2f9d45;
-  --positive-soft: rgba(13, 71, 21, 0.22);
+  --positive: #1E5430;
+  --positive-ink: #3A8A68;
+  --positive-soft: rgba(30, 84, 48, 0.22);
 
   /* Market-specific accents */
   --call: #6A93B5;
   --pin: #C79350;
-  --warning: #C49A3A;
-  --info: #4A6FB8;
+  --warning: #B5862A;
+  --warning-ink: #C79350;
+  --warning-soft: rgba(181, 134, 42, 0.20);
+  --info: #5580A4;
+  --info-ink: #6A93B5;
   --neutral: rgba(248, 248, 255, 0.55);
 
-  /* Recommended GEX palette */
-  --gex-1: #443199;
-  --gex-2: #792CA2;
-  --gex-3: #C13383;
-  --gex-4: #E05454;
+  /* GEX palette — brand-routed (steel navy → steel → arbor → danger) so the
+     ramp reads in the same language as the IV surface and the rest of the app. */
+  --gex-1: #1E4870;
+  --gex-2: #2A6890;
+  --gex-3: #4A8A60;
+  --gex-4: #A84020;
 
   /* Geometry */
   --radius-panel: 10px;
@@ -214,7 +220,7 @@
 .slayer-kpi-down { color: var(--negative-ink); }
 .slayer-call { color: var(--call); }
 .slayer-pin { color: var(--pin); }
-.slayer-warning { color: var(--warning); }
+.slayer-warning { color: var(--warning-ink, var(--warning)); }
 
 .slayer-grid-lines {
   background-image:

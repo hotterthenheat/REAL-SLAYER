@@ -73,7 +73,7 @@ function fmtPct(v: number | null | undefined, signed = true): string {
 
 // Brand colours used for inline styles (matrix cells / row markers). Color = data.
 const SLAYER_RED = 'var(--slayer-red)'; // #980404 — deepest put/risk red (bars)
-const CALL_PURPLE = 'var(--call)';       // #792CA2 — calls
+const CALL_PURPLE = 'var(--call)';       // #6A93B5 steel — calls
 const NEG_RED = '#d94646';               // .slayer-neg — legible negative
 const POS_GREEN = '#2f9d45';             // .slayer-pos — legible positive
 

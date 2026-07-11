@@ -89,17 +89,19 @@ const RED: [number, number, number] = [0xb2 / 255, 0x3b / 255, 0x3b / 255];   //
 const GREEN: [number, number, number] = [0x3f / 255, 0x9c / 255, 0x79 / 255]; // #3F9C79 bullish / long-γ
 const SLATE: [number, number, number] = [0x33 / 255, 0x41 / 255, 0x55 / 255]; // #334155 (dim neutral so red/green extremes pop)
 
-// Spectral stops (turbo-like, tuned to stay readable on true black).
+// Brand-routed IV colormap — the story of calm → active → tense → elevated:
+// steel navy (low vol) → steel → arbor green → olive → amber → orange → danger red.
+// Derived from the brand anchors, not a generic turbo/spectral ramp.
 const SPECTRAL: [number, number, number][] = [
-  [0x46 / 255, 0x2e / 255, 0xb9 / 255], // deep violet
-  [0x37 / 255, 0x66 / 255, 0xe8 / 255], // blue
-  [0x2f / 255, 0xb1 / 255, 0xd4 / 255], // cyan
-  [0x5f / 255, 0xcf / 255, 0x8f / 255], // green
-  [0xd9 / 255, 0xe0 / 255, 0x6b / 255], // yellow
-  [0xf0 / 255, 0x9a / 255, 0x3e / 255], // orange
-  [0xd6 / 255, 0x3a / 255, 0x2f / 255], // red
+  [0x0f / 255, 0x1e / 255, 0x3a / 255], // steel navy — low vol / calm
+  [0x2a / 255, 0x5a / 255, 0x8a / 255], // steel blue
+  [0x3a / 255, 0x8a / 255, 0x68 / 255], // arbor green — mid vol
+  [0x6a / 255, 0x8a / 255, 0x40 / 255], // olive
+  [0x9a / 255, 0x78 / 255, 0x30 / 255], // amber — tension
+  [0xc8 / 255, 0x60 / 255, 0x20 / 255], // orange
+  [0xa8 / 255, 0x40 / 255, 0x20 / 255], // danger red — elevated vol
 ];
-const SPECTRAL_CSS = 'linear-gradient(to top, #462EB9, #3766E8, #2FB1D4, #5FCF8F, #D9E06B, #F09A3E, #D63A2F)';
+const SPECTRAL_CSS = 'linear-gradient(to top, #0F1E3A, #2A5A8A, #3A8A68, #6A8A40, #9A7830, #C86020, #A84020)';
 
 // Marker wall colours (hex ints for three, css for the chip legend) — brand accents.
 const MARKER_HEX: Record<SurfaceMarker['kind'], number> = { spot: 0xe5e7eb, flip: 0xc79350, callWall: 0x3f9c79, putWall: 0xb23b3b };

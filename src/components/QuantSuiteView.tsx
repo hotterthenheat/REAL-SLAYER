@@ -120,7 +120,7 @@ function ivAtDte(curve: { d: number; v: number }[], d: number): number | null {
 
 // The design system's magnitude ramp (--gex-1..4) extended with a near-surface dark
 // anchor — monotonic lightness, calm recedes / stress pops on the dark panel.
-const IV_RAMP = ['#221650', '#443199', '#792CA2', '#C13383', '#E05454'];
+const IV_RAMP = ['#0F1E3A', '#2A5A8A', '#3A8A68', '#9A7830', '#A84020'];
 const MODEL_TENOR_MAX_DAYS = 365; // the surface's tenor axis is a documented 0→1y model
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -617,8 +617,8 @@ export default function QuantSuiteView() {
             sigmaLine(rndResult.mean, 'μ', 'rgba(248,248,255,0.5)'),
             sigmaLine(mean - stdDev, '-1σ', '#C49A3A'),
             sigmaLine(mean + stdDev, '+1σ', '#C49A3A'),
-            sigmaLine(mean - 2 * stdDev, '-2σ', '#E05454'),
-            sigmaLine(mean + 2 * stdDev, '+2σ', '#E05454'),
+            sigmaLine(mean - 2 * stdDev, '-2σ', '#C84848'),
+            sigmaLine(mean + 2 * stdDev, '+2σ', '#C84848'),
           ],
         },
       }],
