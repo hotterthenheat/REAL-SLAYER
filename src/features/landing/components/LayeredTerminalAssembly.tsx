@@ -1,8 +1,50 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { GSAP_EASE_PRIMARY, GSAP_EASE_SMOOTH, STAGGER } from '../motion/motionTokens';
+import { GSAP_EASE_PRIMARY, STAGGER } from '../motion/motionTokens';
 import { useFitScale } from '../hooks/useFitScale';
+
+/**
+ * Live tick engine for the hero terminal. This is a marketing surface, not a real
+ * feed — but the whole point of the hero is that it BREATHES like the product, so
+ * the numbers move: spot random-walks in a tight band, Net GEX / expected-move
+ * flicker, the candle series rolls a fresh print in every ~1.5s, dealer bars
+ * jitter, and the SkyVision score ticks. Direction flags let a value flash green/
+ * red on the frame it changes. Frozen entirely under reduced motion.
+ */
+type Live = {
+  spot: number; netGex: number; expMove: number; score: number;
+  bars: number[]; candles: number[]; spotDir: number;
+};
+const BASE_CANDLES = [50, 58, 52, 62, 55, 66, 61, 54, 49, 60, 70, 65, 74, 68, 78, 72];
+const BASE_LIVE: Live = { spot: 5993.9, netGex: -1.84, expMove: 0.61, score: 93, bars: [42, 66, 30, 78, 54, 22], candles: BASE_CANDLES, spotDir: 0 };
+
+function useLiveTicker(reduced: boolean): Live {
+  const [d, setD] = useState<Live>(BASE_LIVE);
+  useEffect(() => {
+    if (reduced) return;
+    let spot = BASE_LIVE.spot, gex = BASE_LIVE.netGex, em = BASE_LIVE.expMove, score = BASE_LIVE.score;
+    let bars = BASE_LIVE.bars.slice();
+    let candles = BASE_LIVE.candles.slice();
+    const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+    const metrics = setInterval(() => {
+      const prev = spot;
+      spot = clamp(spot + (Math.random() - 0.48) * 1.7, 5972, 6014);
+      gex = clamp(gex + (Math.random() - 0.5) * 0.07, -2.4, -1.2);
+      em = clamp(em + (Math.random() - 0.5) * 0.03, 0.47, 0.83);
+      score = Math.round(clamp(score + (Math.random() - 0.5) * 2.2, 88, 96));
+      bars = bars.map((b) => clamp(b + (Math.random() - 0.5) * 11, 16, 92));
+      setD((p) => ({ ...p, spot, netGex: gex, expMove: em, score, bars: bars.slice(), spotDir: Math.sign(spot - prev) }));
+    }, 1300);
+    const roll = setInterval(() => {
+      const next = clamp(candles[candles.length - 1] + (Math.random() - 0.5) * 11, 44, 82);
+      candles = [...candles.slice(1), next];
+      setD((p) => ({ ...p, candles: candles.slice() }));
+    }, 1500);
+    return () => { clearInterval(metrics); clearInterval(roll); };
+  }, [reduced]);
+  return d;
+}
 
 /**
  * LayeredTerminalAssembly — the hero's centrepiece. A Slayer terminal built from
@@ -67,8 +109,11 @@ function label(t: string, color = DIM) {
   return <span style={{ fontFamily: 'var(--font-brand, monospace)', fontSize: 8, letterSpacing: '0.16em', textTransform: 'uppercase', color }}>{t}</span>;
 }
 
-/** The visual content of each named layer — Slayer product silhouettes. */
-function LayerBody({ id }: { id: string }) {
+/** The visual content of each named layer — Slayer product silhouettes, fed the
+ *  live tick values so the metrics, chart, bars and score all move. */
+function LayerBody({ id, live }: { id: string; live: Live }) {
+  const fmtSpot = live.spot.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const spotColor = live.spotDir > 0 ? GREEN : live.spotDir < 0 ? RED : TEXT;
   switch (id) {
     case 'grid':
       return (
@@ -109,18 +154,25 @@ function LayerBody({ id }: { id: string }) {
       return (
         <LayerChrome style={{ background: PANEL }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', height: '100%' }}>
-            {[['NET GEX', '−$1.84B', RED], ['SPOT', '5,993.9', TEXT], ['CALL WALL', '6,050', STEEL], ['EXP MOVE', '0.61%', AMBER]].map(([l, v, c], i) => (
+            {[
+              ['NET GEX', `−$${Math.abs(live.netGex).toFixed(2)}B`, RED],
+              ['SPOT', fmtSpot, spotColor],
+              ['CALL WALL', '6,050', STEEL],
+              ['EXP MOVE', `${live.expMove.toFixed(2)}%`, AMBER],
+            ].map(([l, v, c], i) => (
               <div key={i} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4, padding: '0 10px', borderLeft: i ? `1px solid ${BORDER}` : 'none', minWidth: 0 }}>
                 {label(l as string)}
-                <div style={{ fontFamily: 'var(--font-brand,monospace)', fontSize: 12, fontWeight: 700, lineHeight: 1, color: c as string, whiteSpace: 'nowrap' }}>{v}</div>
+                <div style={{ fontFamily: 'var(--font-brand,monospace)', fontSize: 12, fontWeight: 700, lineHeight: 1, color: c as string, whiteSpace: 'nowrap', transition: 'color 240ms ease' }}>{v}</div>
               </div>
             ))}
           </div>
         </LayerChrome>
       );
     case 'chart': {
-      // real candlesticks (OHLC) — not a line — on a faint grid with wall levels
-      const closes = [50, 58, 52, 62, 55, 66, 61, 54, 49, 60, 70, 65, 74, 68, 78, 72];
+      // real candlesticks (OHLC) — not a line — on a faint grid with wall levels.
+      // The series rolls: a fresh print arrives every ~1.5s and the newest candle
+      // is emphasised, so the chart reads as a live tape.
+      const closes = live.candles;
       const lo = 42, hi = 84, span = hi - lo;
       const yOf = (v: number) => 88 - ((v - lo) / span) * 76 - 6;
       const stepX = 236 / closes.length, bw = stepX * 0.56;
@@ -137,10 +189,12 @@ function LayerBody({ id }: { id: string }) {
               const col = up ? GREEN : RED;
               const cx = 4 + i * stepX + stepX / 2;
               const yO = yOf(o), yC = yOf(c);
+              const isLast = i === closes.length - 1;
               return (
-                <g key={i}>
-                  <line x1={cx} y1={yOf(Math.max(o, c) + wig)} x2={cx} y2={yOf(Math.min(o, c) - wig)} stroke={col} strokeWidth={0.8} />
+                <g key={i} opacity={isLast ? 1 : 0.82}>
+                  <line x1={cx} y1={yOf(Math.max(o, c) + wig)} x2={cx} y2={yOf(Math.min(o, c) - wig)} stroke={col} strokeWidth={isLast ? 1.1 : 0.8} />
                   <rect x={cx - bw / 2} y={Math.min(yO, yC)} width={bw} height={Math.max(1.2, Math.abs(yC - yO))} fill={col} rx={0.5} />
+                  {isLast ? <circle cx={cx} cy={yC} r={1.6} fill={col} /> : null}
                 </g>
               );
             })}
@@ -153,9 +207,9 @@ function LayerBody({ id }: { id: string }) {
         <LayerChrome>
           <div style={{ padding: '7px 9px' }}>{label('Dealer Positioning', AMBER)}</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '2px 9px' }}>
-            {[42, 66, 30, 78, 54, 22].map((w, i) => (
+            {live.bars.map((w, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: i % 2 ? 'flex-start' : 'flex-end' }}>
-                <span style={{ height: 6, width: `${w}%`, background: i % 2 ? RED : STEEL, borderRadius: 2 }} />
+                <span style={{ height: 6, width: `${w}%`, background: i % 2 ? RED : STEEL, borderRadius: 2, transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)' }} />
               </div>
             ))}
           </div>
@@ -179,12 +233,12 @@ function LayerBody({ id }: { id: string }) {
         <LayerChrome style={{ background: '#14151a', boxShadow: '0 18px 40px -18px rgba(0,0,0,0.8)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderBottom: `1px solid ${BORDER}` }}>
             {label('SkyVision · Ranked', STEEL)}
-            <span style={{ fontFamily: 'var(--font-brand,monospace)', fontSize: 10, color: GREEN }}>93</span>
+            <span style={{ fontFamily: 'var(--font-brand,monospace)', fontSize: 10, color: GREEN }}>{live.score}</span>
           </div>
           <div style={{ padding: '8px 10px' }}>
             <div style={{ fontFamily: 'var(--font-brand,monospace)', fontSize: 12, color: TEXT }}>SPX 5450P · 0DTE</div>
             <div style={{ marginTop: 6, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.08)' }}>
-              <div style={{ height: '100%', width: '93%', borderRadius: 3, background: GREEN }} />
+              <div style={{ height: '100%', width: `${live.score}%`, borderRadius: 3, background: GREEN, transition: 'width 700ms cubic-bezier(0.16,1,0.3,1)' }} />
             </div>
           </div>
         </LayerChrome>
@@ -208,6 +262,7 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
   // never squish or overlap (the fix for the distorted, cramped render).
   const { ref: scope, scale } = useFitScale<HTMLDivElement>(560);
   const breatheRef = useRef<HTMLDivElement | null>(null);
+  const live = useLiveTicker(reduced);
 
   useGSAP(
     () => {
@@ -254,7 +309,7 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
     // Outer box holds the aspect ratio responsively; the inner box is the exact
     // 560×380 design, scaled to fill it. Everything inside is positioned in real
     // design pixels, so one transform scales positions + type + SVG together.
-    <div ref={scope} style={{ position: 'relative', width: '100%', maxWidth: 680, aspectRatio: '560 / 380', margin: '0 auto' }}>
+    <div ref={scope} style={{ position: 'relative', width: '100%', maxWidth: 760, aspectRatio: '560 / 380', margin: '0 auto' }}>
       <div style={{ position: 'absolute', top: 0, left: 0, width: 560, height: 380, transformOrigin: 'top left', transform: `scale(${scale})` }}>
         <div ref={breatheRef} style={{ position: 'absolute', inset: 0, transformOrigin: '50% 50%' }}>
           {LAYERS.map((l) => (
@@ -272,7 +327,7 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
                 willChange: 'transform, opacity',
               }}
             >
-              <LayerBody id={l.id} />
+              <LayerBody id={l.id} live={live} />
             </div>
           ))}
         </div>
