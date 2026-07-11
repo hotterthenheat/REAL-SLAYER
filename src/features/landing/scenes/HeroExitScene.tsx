@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import { KineticHeadline } from '../components/KineticHeadline';
+import { DrawnAccent } from '../components/DrawnAccent';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
 import { GSAP_EASE_SMOOTH, TRIGGER } from '../motion/motionTokens';
 
@@ -10,7 +11,12 @@ const AMBER = '#C79350';
 const RED = '#B23B3B';
 const GREEN = '#3F9C79';
 
-const STATEMENT = ['Trade the structure,', 'not the noise.'];
+// "the noise." is literally crossed out — the drawn strike IS the argument.
+const STATEMENT: React.ReactNode[] = [
+  'Trade the structure,',
+  <>not <DrawnAccent variant="strike" delay={0.55}>the noise.</DrawnAccent></>,
+];
+const STATEMENT_SR = 'Trade the structure, not the noise.';
 
 /** The three concrete things Slayer reads — each one a real market-structure
  *  concept, so the statement lands on substance rather than a slogan. */
@@ -97,6 +103,7 @@ export function HeroExitScene() {
         {/* the thesis — plain English, no cryptic three-word chant */}
         <KineticHeadline
           lines={STATEMENT}
+          srText={STATEMENT_SR}
           className="max-w-4xl text-[9vw] font-semibold leading-[0.98] sm:text-[7vw] lg:text-[64px]"
           color="#F4F4F5"
         />

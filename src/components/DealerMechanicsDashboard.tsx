@@ -188,6 +188,7 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
             valueFormat={valueFormat}
             markers={markers}
             floorHeatmap
+            wallProjections
             legend
             dataState={dataState}
             sliceCol={sliceCol}

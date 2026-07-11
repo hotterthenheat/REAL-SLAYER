@@ -71,6 +71,10 @@ interface QuantSurface3DProps {
   markers?: SurfaceMarker[];
   /** Project the field onto the floor as a filled heatmap. */
   floorHeatmap?: boolean;
+  /** Project slice curves onto the chamber walls — term structure (columns) on the
+   *  left wall, skew (rows) on the back wall — the scientific-plot read where the
+   *  3D shape casts its own 2D shadows. */
+  wallProjections?: boolean;
   /** Show the colour legend + axis-domain readouts. */
   legend?: boolean;
   /** Clean data-provenance chip. */
@@ -81,12 +85,26 @@ interface QuantSurface3DProps {
   sliceRow?: number | null;
 }
 
-// ── Directive-08 data-status palette, on Slayer's brand data accents (not neon) ──
+// ── Palette. Diverging keeps Slayer's signed semantics (red neg · slate zero ·
+// green pos — those colours ARE the trading read). Sequential surfaces use a full
+// SPECTRAL colormap (violet → blue → cyan → green → yellow → orange → red), the
+// scientific-plot look of the reference render: cold lows, hot peaks, maximum
+// perceptual range across the smile/term geometry. ──
 const RED: [number, number, number] = [0xb2 / 255, 0x3b / 255, 0x3b / 255];   // #B23B3B bearish / short-γ
 const GREEN: [number, number, number] = [0x3f / 255, 0x9c / 255, 0x79 / 255]; // #3F9C79 bullish / long-γ
 const SLATE: [number, number, number] = [0x33 / 255, 0x41 / 255, 0x55 / 255]; // #334155 (dim neutral so red/green extremes pop)
-const BLUE: [number, number, number] = [0x6a / 255, 0x93 / 255, 0xb5 / 255];  // #6A93B5 steel (low intensity)
-const AMBER: [number, number, number] = [0xc7 / 255, 0x93 / 255, 0x50 / 255]; // #C79350 (mid intensity)
+
+// Spectral stops (turbo-like, tuned to stay readable on true black).
+const SPECTRAL: [number, number, number][] = [
+  [0x46 / 255, 0x2e / 255, 0xb9 / 255], // deep violet
+  [0x37 / 255, 0x66 / 255, 0xe8 / 255], // blue
+  [0x2f / 255, 0xb1 / 255, 0xd4 / 255], // cyan
+  [0x5f / 255, 0xcf / 255, 0x8f / 255], // green
+  [0xd9 / 255, 0xe0 / 255, 0x6b / 255], // yellow
+  [0xf0 / 255, 0x9a / 255, 0x3e / 255], // orange
+  [0xd6 / 255, 0x3a / 255, 0x2f / 255], // red
+];
+const SPECTRAL_CSS = 'linear-gradient(to top, #462EB9, #3766E8, #2FB1D4, #5FCF8F, #D9E06B, #F09A3E, #D63A2F)';
 
 // Marker wall colours (hex ints for three, css for the chip legend) — brand accents.
 const MARKER_HEX: Record<SurfaceMarker['kind'], number> = { spot: 0xe5e7eb, flip: 0xc79350, callWall: 0x3f9c79, putWall: 0xb23b3b };
@@ -103,9 +121,10 @@ function rampColor(ramp: Ramp, t: number, out: THREE.Color) {
     else lerp3(SLATE, GREEN, (t - 0.5) / 0.5, out);
     return;
   }
-  // sequential: blue → amber → red
-  if (t < 0.5) lerp3(BLUE, AMBER, t / 0.5, out);
-  else lerp3(AMBER, RED, (t - 0.5) / 0.5, out);
+  // sequential: interpolate across the spectral stops
+  const seg = t * (SPECTRAL.length - 1);
+  const i = Math.min(SPECTRAL.length - 2, Math.floor(seg));
+  lerp3(SPECTRAL[i], SPECTRAL[i + 1], seg - i, out);
 }
 
 // Probe WebGL ONCE and cache it. The probe itself creates a GL context; running it on
@@ -134,7 +153,7 @@ const num = (v: number) => (Math.abs(v) >= 1000 ? v.toLocaleString(undefined, { 
 export default function QuantSurface3D({
   grid, points, ramp = 'diverging', height = 380, axisLabels, autoRotate = true, loading, error,
   xDomain, zDomain, xFormat = num, zFormat = num, valueFormat = num, markers, floorHeatmap, legend,
-  dataState, sliceCol = null, sliceRow = null,
+  wallProjections, dataState, sliceCol = null, sliceRow = null,
 }: QuantSurface3DProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [glState, setGlState] = useState<'ok' | 'nowebgl' | 'lost'>('ok');
@@ -183,6 +202,28 @@ export default function QuantSurface3D({
 
     const disposables: Array<{ dispose: () => void }> = [floor.geometry, floor.material as THREE.Material, axisMat, ax.geometry, ay.geometry, az.geometry];
     const color = new THREE.Color();
+
+    // ── Chamber walls: faint grids on the back (z = −S/2) and left (x = −S/2)
+    // planes, closing the plot into the boxed scientific chamber of the reference
+    // render. Same stark grey as the floor, slightly dimmer. ──
+    {
+      const wallPts: number[] = [];
+      const NX = 7, NY = 4;
+      for (let i = 0; i <= NX; i++) {
+        const t = -SPAN / 2 + (SPAN * i) / NX;
+        wallPts.push(t, 0, -SPAN / 2, t, HEIGHT, -SPAN / 2);       // back wall verticals
+        wallPts.push(-SPAN / 2, 0, t, -SPAN / 2, HEIGHT, t);       // left wall verticals
+      }
+      for (let i = 0; i <= NY; i++) {
+        const y = (HEIGHT * i) / NY;
+        wallPts.push(-SPAN / 2, y, -SPAN / 2, SPAN / 2, y, -SPAN / 2);   // back wall horizontals
+        wallPts.push(-SPAN / 2, y, -SPAN / 2, -SPAN / 2, y, SPAN / 2);   // left wall horizontals
+      }
+      const wallGeo = new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array(wallPts), 3));
+      const wallMat = new THREE.LineBasicMaterial({ color: 0x27272a, transparent: true, opacity: 0.55 });
+      scene.add(new THREE.LineSegments(wallGeo, wallMat));
+      disposables.push(wallGeo, wallMat);
+    }
 
     // ── Axis ticks — short perpendicular marks along the three framing edges. ──
     const tickPts: number[] = [];
@@ -240,7 +281,7 @@ export default function QuantSurface3D({
       // then a crisp WIREFRAME rides on top for the lattice. depthWrite:false on the fill
       // keeps the wire and points from z-fighting through it. This is the default so the
       // plot looks finished rather than skeletal.
-      const fillMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false });
+      const fillMat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.58, side: THREE.DoubleSide, depthWrite: false });
       const fillMesh = new THREE.Mesh(geo, fillMat);
       group.add(fillMesh);
       const mat = new THREE.MeshBasicMaterial({ wireframe: true, vertexColors: true, transparent: true, opacity: 0.75 });
@@ -267,6 +308,48 @@ export default function QuantSurface3D({
         const fmat = new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.34, side: THREE.DoubleSide, depthWrite: false });
         group.add(new THREE.Mesh(fgeo, fmat));
         disposables.push(fgeo, fmat);
+      }
+
+      // ── Wall projections: the surface casts its own 2D shadows. A handful of
+      // column slices (term structure) flatten onto the LEFT wall and row slices
+      // (skew/smile) onto the BACK wall, each polyline coloured by its own mean
+      // level — the signature read of the reference render. ──
+      if (wallProjections) {
+        const N_PROJ = 5;
+        const meanNorm = (vals: number[]) => {
+          const m = vals.reduce((s, v) => s + v, 0) / vals.length;
+          return ramp === 'diverging' ? (m / absMax + 1) / 2 : (m - vMin) / range;
+        };
+        // term structure: value along depth (rows) at a fixed strike column
+        for (let k = 0; k < N_PROJ; k++) {
+          const c = Math.round(((k + 0.5) / N_PROJ) * (cols - 1));
+          const pl: THREE.Vector3[] = [];
+          const vals: number[] = [];
+          for (let r = 0; r < rows; r++) {
+            vals.push(grid[r][c]);
+            pl.push(new THREE.Vector3(-SPAN / 2 + 0.03, heightOf(grid[r][c]), (r / (rows - 1) - 0.5) * SPAN));
+          }
+          rampColor(ramp, meanNorm(vals), color);
+          const pg = new THREE.BufferGeometry().setFromPoints(pl);
+          const pm = new THREE.LineBasicMaterial({ color: color.clone(), transparent: true, opacity: 0.85 });
+          scene.add(new THREE.Line(pg, pm));
+          disposables.push(pg, pm);
+        }
+        // skew/smile: value along strikes (cols) at a fixed expiry row
+        for (let k = 0; k < N_PROJ; k++) {
+          const r = Math.round(((k + 0.5) / N_PROJ) * (rows - 1));
+          const pl: THREE.Vector3[] = [];
+          const vals: number[] = [];
+          for (let c = 0; c < cols; c++) {
+            vals.push(grid[r][c]);
+            pl.push(new THREE.Vector3((c / (cols - 1) - 0.5) * SPAN, heightOf(grid[r][c]), -SPAN / 2 + 0.03));
+          }
+          rampColor(ramp, meanNorm(vals), color);
+          const pg = new THREE.BufferGeometry().setFromPoints(pl);
+          const pm = new THREE.LineBasicMaterial({ color: color.clone(), transparent: true, opacity: 0.85 });
+          scene.add(new THREE.Line(pg, pm));
+          disposables.push(pg, pm);
+        }
       }
 
       // ── Slices: light one column (term structure) and/or one row (smile). ──
@@ -421,7 +504,7 @@ export default function QuantSurface3D({
       if (el.parentNode) el.parentNode.removeChild(el);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasData, loading, error, grid, points, ramp, floorHeatmap, sliceCol, sliceRow, markers, xDomain, zDomain]);
+  }, [hasData, loading, error, grid, points, ramp, floorHeatmap, wallProjections, sliceCol, sliceRow, markers, xDomain, zDomain]);
 
   if (error) return <Frame height={height}><State tone="danger" title="Surface failed to render" sub={error} /></Frame>;
   if (loading) return <Frame height={height}><Sk /></Frame>;
@@ -431,7 +514,7 @@ export default function QuantSurface3D({
   const mid = stats ? (ramp === 'diverging' ? 0 : (stats.vMin + stats.vMax) / 2) : 0;
   const gradient = ramp === 'diverging'
     ? 'linear-gradient(to top, #B23B3B, #334155 50%, #3F9C79)'
-    : 'linear-gradient(to top, #6A93B5, #C79350 50%, #B23B3B)';
+    : SPECTRAL_CSS;
 
   return (
     <Frame height={height}>
@@ -440,14 +523,22 @@ export default function QuantSurface3D({
 
       {dataState && <StatePill state={dataState} />}
 
-      {/* Colour legend — the value ramp with real numeric endpoints. */}
+      {/* Colour legend — a real colorbar: the full value ramp with numeric stops. */}
       {legend && stats && (
         <div className="pointer-events-none absolute right-3 top-9 flex items-stretch gap-1.5">
           <div className="flex flex-col justify-between py-0.5 font-mono text-[8px] tabular-nums text-[var(--text-tertiary)] text-right leading-none">
             <span>{valueFormat(stats.vMax)}</span><span>{valueFormat(mid)}</span><span>{valueFormat(stats.vMin)}</span>
           </div>
-          <div className="w-2 rounded-[2px] border border-white/10" style={{ background: gradient, height: 74 }} />
+          <div className="w-2.5 rounded-[2px] border border-white/15" style={{ background: gradient, height: 128 }} />
         </div>
+      )}
+
+      {/* Wall captions — name the projected shadows so the read is instant. */}
+      {wallProjections && grid && (
+        <>
+          <div className="pointer-events-none absolute left-3 top-2 font-mono text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]/80">Term structure ·  left wall</div>
+          <div className="pointer-events-none absolute right-3 top-2 font-mono text-[8px] uppercase tracking-widest text-[var(--text-tertiary)]/80">Skew · back wall</div>
+        </>
       )}
 
       {/* Marker legend chips. */}
