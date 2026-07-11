@@ -58,7 +58,7 @@
   --info-ink: #6A93B5;
   --neutral: rgba(248, 248, 255, 0.55);
 
-  /* GEX palette — brand-routed (steel navy → steel → arbor → danger) so the
+  /* GEX palette — brand-routed (steel navy → steel → signal green → danger) so the
      ramp reads in the same language as the IV surface and the rest of the app. */
   --gex-1: #1E4870;
   --gex-2: #2A6890;

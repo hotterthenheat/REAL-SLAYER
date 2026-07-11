@@ -70,7 +70,7 @@ function tokensFor(seed) {
 const SEEDS = [
   // Platform — the engines
   ['terminal','Terminal','Platform','dark',220,6,8,'#E5E5E5'],
-  ['arbor','Arbor','Platform','dark',153,26,7,'#3F9C79'],
+  ['bull','Bull','Mechanics','dark',153,26,7,'#3F9C79'],
   ['skyvision','SkyVision','Platform','dark',207,26,8,'#6A93B5'],
   ['pinpoint','Pinpoint','Platform','dark',34,30,8,'#C79350'],
   // Mechanics — 0DTE / SPX vocabulary

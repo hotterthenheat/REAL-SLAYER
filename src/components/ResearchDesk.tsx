@@ -31,7 +31,7 @@ const CHANNELS: { key: ChannelKey; label: string; sub: string; Icon: typeof File
 
 const WIN_OUTCOMES = ['Target 1 Winner', 'Target 2 Winner', 'Target 3 Winner', 'Stretch Winner'];
 
-export default function ArborCapital() {
+export default function ResearchDesk() {
   const [activeChannel, setActiveChannel] = useState<ChannelKey>('verified');
 
   // Real platform data — trade ledger and market clock come straight from the store.
@@ -178,7 +178,7 @@ export default function ArborCapital() {
           <div className="flex items-center gap-2">
             <Users className="w-3.5 h-3.5 text-[var(--text-tertiary)]" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
-              Arbor Capital — Research &amp; Education
+              Research &amp; Education
             </span>
           </div>
           <p className="mt-2 max-w-2xl text-xs leading-relaxed text-[var(--text-secondary)]">

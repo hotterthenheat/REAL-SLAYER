@@ -2,7 +2,7 @@
 export interface ThemeDef { id: string; name: string; group: string; surface: string; accent: string; }
 export const THEMES: ThemeDef[] = [
   { id: 'terminal', name: "Terminal", group: "Platform", surface: '#1f2123', accent: '#E5E5E5' },
-  { id: 'arbor', name: "Arbor", group: "Platform", surface: '#17261f', accent: '#3F9C79' },
+  { id: 'bull', name: "Bull", group: "Mechanics", surface: '#17261f', accent: '#3F9C79' },
   { id: 'skyvision', name: "SkyVision", group: "Platform", surface: '#192229', accent: '#6A93B5' },
   { id: 'pinpoint', name: "Pinpoint", group: "Platform", surface: '#2a2218', accent: '#C79350' },
   { id: 'expiry', name: "Expiry", group: "Mechanics", surface: '#2a1c13', accent: '#E85A00' },

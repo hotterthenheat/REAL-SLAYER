@@ -1088,7 +1088,7 @@ export function Footer({ onLaunch, onEnter, scrollTo }: { onLaunch: () => void; 
           </div>
         </div>
         <div className="mt-10 flex flex-col items-start justify-between gap-3 border-t pt-6 sm:flex-row sm:items-center" style={{ borderColor: line }}>
-          <span className="text-[10px] font-medium uppercase tracking-[0.16em]" style={{ color: faint }}>© 2026 Slayer Terminal · SkyVision · Pinpoint AI · Arbor</span>
+          <span className="text-[10px] font-medium uppercase tracking-[0.16em]" style={{ color: faint }}>© 2026 Slayer Terminal · SkyVision · Pinpoint AI</span>
           <span className="max-w-lg text-[10px] leading-relaxed sm:text-right" style={{ color: faint }}>
             For informational purposes only. Not investment advice. Analytics platform — not guaranteed profit.
           </span>

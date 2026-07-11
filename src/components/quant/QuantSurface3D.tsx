@@ -90,12 +90,12 @@ const GREEN: [number, number, number] = [0x3f / 255, 0x9c / 255, 0x79 / 255]; //
 const SLATE: [number, number, number] = [0x33 / 255, 0x41 / 255, 0x55 / 255]; // #334155 (dim neutral so red/green extremes pop)
 
 // Brand-routed IV colormap — the story of calm → active → tense → elevated:
-// steel navy (low vol) → steel → arbor green → olive → amber → orange → danger red.
+// steel navy (low vol) → steel → signal green → olive → amber → orange → danger red.
 // Derived from the brand anchors, not a generic turbo/spectral ramp.
 const SPECTRAL: [number, number, number][] = [
   [0x0f / 255, 0x1e / 255, 0x3a / 255], // steel navy — low vol / calm
   [0x2a / 255, 0x5a / 255, 0x8a / 255], // steel blue
-  [0x3a / 255, 0x8a / 255, 0x68 / 255], // arbor green — mid vol
+  [0x3a / 255, 0x8a / 255, 0x68 / 255], // signal green — mid vol
   [0x6a / 255, 0x8a / 255, 0x40 / 255], // olive
   [0x9a / 255, 0x78 / 255, 0x30 / 255], // amber — tension
   [0xc8 / 255, 0x60 / 255, 0x20 / 255], // orange

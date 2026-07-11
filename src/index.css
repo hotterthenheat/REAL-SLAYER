@@ -78,12 +78,12 @@ html, body, #root {
      ==================================================================== */
   /* BRAND ANCHORS — the three colors that are genuinely ours. Every semantic
      tone below is derived from one of these, so nothing resolves to a framework
-     default: success ← arbor, warning ← amber, info ← steel. */
+     default: success ← signal, warning ← amber, info ← steel. */
   --steel: #6A93B5;              /* SkyVision · calls · positioning · info origin */
   --amber: #C79350;              /* Pinpoint · pins · dealer flow · warning origin */
-  --arbor: #3F9C79;              /* Arbor Capital · call wall · success origin */
+  --signal: #3F9C79;             /* call wall · bullish · success origin */
 
-  --primary: #3A8A68;            /* brand / positive accent (arbor-derived) */
+  --primary: #3A8A68;            /* brand / positive accent (signal-derived) */
   --primary-contrast: #04140A;   /* text on a primary fill */
   --secondary: #5580A4;          /* secondary accent (steel info) */
   --background: var(--bg-base);  /* app background */

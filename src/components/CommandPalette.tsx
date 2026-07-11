@@ -103,7 +103,7 @@ export function CommandPalette() {
             <PaletteItem icon={<BarChart3 />} label="Quant Lab" keywords="volatility surface monte carlo risk neutral density model" onRun={run(() => setActiveTab('quant'))} />
             <PaletteItem icon={<History />} label="Trade History" keywords="audit record registry track" onRun={run(() => setActiveTab('auditor'))} />
             <PaletteItem icon={<LayoutGrid />} label="Workspace" keywords="widgets layout panels grid" onRun={run(() => setActiveTab('workspace'))} />
-            <PaletteItem icon={<Users />} label="Community" keywords="arbor capital discord research" onRun={run(() => setActiveTab('community'))} />
+            <PaletteItem icon={<Users />} label="Community" keywords="community discord research education" onRun={run(() => setActiveTab('community'))} />
             <PaletteItem icon={<Settings />} label="Settings" hint="⇧O" keywords="preferences theme account alerts display" onRun={run(() => setActiveTab('settings'))} />
             <PaletteItem icon={<CreditCard />} label="Plans & Pricing" keywords="upgrade subscribe tier billing" onRun={run(() => setActiveTab('subscription'))} />
           </Command.Group>
