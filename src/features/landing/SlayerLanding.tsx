@@ -63,8 +63,8 @@ function LandingLayout({ ticker, metrics, ranked, pressure, spark, onEnter, onLa
               {/* Scene 3 — the desk: ONE large composed terminal band showing every
                   module at once (no pin, no scrub — always a finished frame) */}
               <PinnedTerminalScene onEnter={onEnter} />
-              {/* Scene 4 — interactive module grid (per-module detail on hover) */}
-              <ProductGridScene metrics={metrics} ranked={ranked} pressure={pressure} spark={spark} onEnter={onEnter} />
+              {/* Scene 4 — the module directory (index into the desk above) */}
+              <ProductGridScene onEnter={onEnter} />
             </>
           )}
           {/* supporting informational sections */}

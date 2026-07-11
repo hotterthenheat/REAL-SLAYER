@@ -620,10 +620,11 @@ export function MicroGamma({ rows, spot, callWall, putWall }: { rows: PressureRo
 export function MicroHeatmap() {
   const NX = 15; const NY = 11; // strike × time-to-maturity resolution
   const W = 240; const H = 132;
-  // thermal ramp: violet → magenta → red → orange → yellow
+  // Brand-routed IV ramp — matches the app's 3D surface exactly:
+  // steel navy (low vol) → steel → signal green → amber → danger red.
   const thermal = (t: number) => {
     t = Math.max(0, Math.min(1, t));
-    const stops: [number, number[]][] = [[0, [46, 28, 92]], [0.32, [120, 32, 110]], [0.58, [188, 52, 46]], [0.8, [224, 138, 44]], [1, [244, 214, 60]]];
+    const stops: [number, number[]][] = [[0, [15, 30, 58]], [0.28, [42, 90, 138]], [0.55, [58, 138, 104]], [0.8, [154, 120, 48]], [1, [168, 64, 32]]];
     for (let k = 1; k < stops.length; k++) {
       if (t <= stops[k][0]) {
         const [t0, c0] = stops[k - 1]; const [t1, c1] = stops[k];
