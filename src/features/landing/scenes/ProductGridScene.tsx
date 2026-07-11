@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
 import { EASE_PRIMARY } from '../motion/motionTokens';
 import { Reveal } from '../components/Reveal';
 import { PALETTE } from '../content/LandingSections';
+
+// The Quant engine uses the ACTUAL 3D IV surface the terminal renders — lazy so
+// three.js only loads when a visitor opens that engine, keeping the landing light.
+const QuantSurface3D = lazy(() => import('../../../components/quant/QuantSurface3D'));
+const GREEK = '#8A5AA0';
 
 /**
  * Scene 4 — the interactive product showcase. Instead of static mockups (or literal
@@ -140,33 +145,51 @@ function PinpointPreview() {
   );
 }
 
-/* ─────────────────────── Dealer Flow — net gamma by strike ─────────────────────── */
+/* ───────────── Dealer Flow — unusual options flow tape (sweeps · dark pool) ───────────── */
+const FLOW_UNIV: [string, number][] = [['SPX', 5990], ['SPY', 598], ['QQQ', 521], ['NVDA', 178], ['TSLA', 250], ['META', 720], ['AAPL', 232], ['AMD', 168], ['MSFT', 470]];
+type Print = { id: number; tk: string; label: string; type: 'SWEEP' | 'BLOCK' | 'SPLIT' | 'DARK POOL'; tint: string; bull: boolean | null; prem: number; fresh: boolean };
+let _pid = 0;
+function makePrint(): Print {
+  const [tk, spot] = FLOW_UNIV[Math.floor(Math.random() * FLOW_UNIV.length)];
+  const dark = Math.random() < 0.24;
+  if (dark) {
+    const notion = 3e6 + Math.pow(Math.random(), 1.7) * 90e6;
+    return { id: _pid++, tk, label: 'dark-pool block', type: 'DARK POOL', tint: GREEK, bull: null, prem: notion, fresh: true };
+  }
+  const cp = Math.random() < 0.55 ? 'C' : 'P';
+  const bull = cp === 'C' ? Math.random() < 0.72 : Math.random() < 0.3;
+  const strike = Math.round(spot * (1 + (Math.random() - 0.5) * 0.06));
+  const type = Math.random() < 0.5 ? 'SWEEP' : Math.random() < 0.62 ? 'BLOCK' : 'SPLIT';
+  const tint = type === 'SWEEP' ? AMBER : type === 'BLOCK' ? STEEL : faint;
+  return { id: _pid++, tk, label: `${strike}${cp} · 0DTE`, type: type as Print['type'], tint, bull, prem: 100000 + Math.pow(Math.random(), 2) * 2.1e6, fresh: true };
+}
+const fmtPrem = (v: number) => (v >= 1e6 ? `$${(v / 1e6).toFixed(1)}M` : `$${Math.round(v / 1e3)}K`);
 function DealerFlowPreview() {
   const { reduced } = useLandingMotion();
-  const [bars, setBars] = useState(() => [22, 38, 30, 52, 44, 18, -26, -40, -34, -58, -30, -20]);
-  const [hi, setHi] = useState<number | null>(null);
+  const [rows, setRows] = useState<Print[]>(() => Array.from({ length: 7 }, () => ({ ...makePrint(), fresh: false })));
   useEffect(() => {
     if (reduced) return;
-    const t = setInterval(() => setBars((b) => b.map((v) => clamp(v + (Math.random() - 0.5) * 8, -64, 64))), 1400);
+    const t = setInterval(() => setRows((r) => [makePrint(), ...r.map((x) => ({ ...x, fresh: false }))].slice(0, 7)), 1150);
     return () => clearInterval(t);
   }, [reduced]);
-  const strikes = [6050, 6000, 5950, 5900, 5850, 5750, 5650, 5600, 5550, 5500, 5450, 5400];
   return (
     <div className="flex h-full flex-col" style={{ background: panel }}>
       <div className="flex items-center justify-between px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint, borderBottom: `1px solid ${line}` }}>
-        <span>Net Gamma · flowing by strike</span>
-        <span className="tabular-nums" style={{ color: hi != null ? (bars[hi] >= 0 ? GREEN : RED) : muted }}>{hi != null ? `${strikes[hi]} · ${bars[hi] >= 0 ? '+' : ''}${Math.round(bars[hi])}M` : 'GEX · DEX · VEX'}</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-1 w-1 rounded-full" style={{ background: GREEN }} />Options Flow · unusual prints</span>
+        <span>Sweep · Block · Dark</span>
       </div>
-      <div className="relative flex flex-1 items-stretch gap-[3px] px-3 py-3">
-        <div className="absolute inset-x-3 top-1/2 h-px" style={{ background: 'rgba(255,255,255,0.12)' }} />
-        {bars.map((v, i) => {
-          const on = hi === i;
-          const up = v >= 0;
-          const hpct = (Math.abs(v) / 64) * 46;
+      <div className="flex-1 overflow-hidden">
+        {rows.map((r) => {
+          const dir = r.bull == null ? faint : r.bull ? GREEN : RED;
           return (
-            <button key={i} onMouseEnter={() => setHi(i)} onMouseLeave={() => setHi(null)} onFocus={() => setHi(i)} className="relative flex-1 cursor-pointer" aria-label={`Strike ${strikes[i]}`}>
-              <span className="absolute left-0 right-0" style={{ [up ? 'bottom' : 'top']: '50%', height: `${hpct}%`, background: up ? GREEN : RED, opacity: on ? 1 : 0.7, borderRadius: 2, transition: 'height 700ms cubic-bezier(0.16,1,0.3,1)' } as React.CSSProperties} />
-            </button>
+            <div key={r.id} className="flex items-center gap-2 px-3 py-[7px] text-[11px]" style={{ background: r.fresh ? 'color-mix(in srgb, var(--text-primary) 5%, transparent)' : 'transparent', borderLeft: `2px solid ${r.fresh ? r.tint : 'transparent'}`, transition: 'background 600ms ease' }}>
+              <span className="w-10 shrink-0 font-semibold" style={{ color: ghost }}>{r.tk}</span>
+              <span className="hidden w-[92px] shrink-0 truncate sm:block" style={{ color: muted }}>{r.label}</span>
+              <span className="shrink-0 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em]" style={{ color: r.tint, background: `color-mix(in srgb, ${r.tint} 14%, transparent)` }}>{r.type}</span>
+              <span className="flex-1" />
+              <span aria-hidden="true" className="shrink-0 text-[10px]" style={{ color: dir }}>{r.bull == null ? '◼' : r.bull ? '▲' : '▼'}</span>
+              <span className="w-12 shrink-0 text-right font-semibold tabular-nums" style={{ color: ghost }}>{fmtPrem(r.prem)}</span>
+            </div>
           );
         })}
       </div>
@@ -222,52 +245,34 @@ function LiveTerminalPreview() {
   );
 }
 
-/* ──────────────────────── Quant Lab — IV surface heatmap ──────────────────────── */
-const IV_RAMP: number[][] = [[15, 30, 58], [42, 90, 138], [58, 138, 104], [154, 120, 48], [168, 64, 32]];
-function ivColor(t: number) {
-  t = clamp(t, 0, 1) * (IV_RAMP.length - 1);
-  const i = Math.min(IV_RAMP.length - 2, Math.floor(t)), f = t - i;
-  const a = IV_RAMP[i], b = IV_RAMP[i + 1];
-  return `rgb(${a.map((v, k) => Math.round(v + (b[k] - v) * f)).join(',')})`;
-}
+/* ──────────── Quant Lab — the REAL 3D implied-vol surface (three.js) ──────────── */
 function QuantPreview() {
-  const NX = 16, NY = 9;
-  const cells = useMemo(() => {
-    const g: { iv: number; m: number; dte: number }[] = [];
-    let mn = Infinity, mx = -Infinity;
-    for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) {
-      const m = (i / (NX - 1)) * 0.4 + 0.8;
-      const mm = (m - 1) / 0.2;
-      const iv = clamp((0.32 + 0.6 * mm * mm - 0.16 * mm) * (0.9 + 0.18 * (j / (NY - 1))), 0.1, 1.2);
-      g.push({ iv, m, dte: Math.round(15 + (j / (NY - 1)) * 350) }); mn = Math.min(mn, iv); mx = Math.max(mx, iv);
+  // A smile × term IV grid (rows = tenor, cols = moneyness) fed to the exact
+  // surface the terminal renders, so the landing shows the actual thing quants
+  // read — an auto-rotating 3D vol surface, not a flat heatmap.
+  const grid = useMemo(() => {
+    const NX = 30, NY = 20, g: number[][] = [];
+    for (let j = 0; j < NY; j++) {
+      const term = 0.9 + 0.2 * (j / (NY - 1));
+      const row: number[] = [];
+      for (let i = 0; i < NX; i++) {
+        const mm = ((i / (NX - 1)) * 0.4 + 0.8 - 1) / 0.2; // moneyness → −1…1
+        row.push((0.30 + 0.62 * mm * mm - 0.16 * mm) * term);
+      }
+      g.push(row);
     }
-    return { g, mn, mx };
+    return g;
   }, []);
-  const [hi, setHi] = useState<number | null>(Math.floor((NY / 2) * NX + NX / 2));
-  const norm = (iv: number) => (iv - cells.mn) / (cells.mx - cells.mn || 1);
-  const h = hi != null ? cells.g[hi] : null;
   return (
     <div className="flex h-full flex-col" style={{ background: panel }}>
       <div className="flex items-center justify-between px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint, borderBottom: `1px solid ${line}` }}>
         <span>IV Surface · smile × term</span>
-        <span className="tabular-nums" style={{ color: ghost }}>{h ? `K/F ${h.m.toFixed(2)} · ${h.dte}d · ${(h.iv * 100).toFixed(0)}% IV` : ''}</span>
+        <span style={{ color: STEEL }}>3D · drag to orbit</span>
       </div>
-      <div className="flex-1 p-2">
-        <div className="grid h-full gap-[2px]" style={{ gridTemplateColumns: `repeat(${NX},1fr)`, gridTemplateRows: `repeat(${NY},1fr)` }}>
-          {cells.g.map((c, idx) => (
-            <button
-              key={idx}
-              onMouseEnter={() => setHi(idx)}
-              onFocus={() => setHi(idx)}
-              className="rounded-[1px] transition-transform duration-150"
-              style={{ background: ivColor(norm(c.iv)), outline: hi === idx ? '1.5px solid rgba(255,255,255,0.85)' : 'none', outlineOffset: -1, cursor: 'pointer', transform: hi === idx ? 'scale(1.12)' : 'none', zIndex: hi === idx ? 2 : 1 }}
-              aria-label={`Moneyness ${c.m.toFixed(2)}, ${c.dte} days, IV ${(c.iv * 100).toFixed(0)}%`}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="flex items-center justify-between px-3 py-1 text-[8px] uppercase tracking-[0.14em]" style={{ color: faint }}>
-        <span>0.80 K/F</span><span>Moneyness</span><span>1.20 K/F</span>
+      <div className="relative flex-1 overflow-hidden" style={{ minHeight: 300 }}>
+        <Suspense fallback={<div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.2em]" style={{ color: faint }}>Rendering surface…</div>}>
+          <QuantSurface3D grid={grid} ramp="sequential" height={320} autoRotate axisLabels={['Moneyness', 'Tenor', 'IV']} />
+        </Suspense>
       </div>
     </div>
   );
@@ -314,9 +319,9 @@ interface Mod { id: string; tab: string; name: string; accent: string; desc: str
 const MODULES: Mod[] = [
   { id: 'skyvision', tab: 'skyvision', name: 'SkyVision', accent: STEEL, desc: 'Ranks every setup by structure, momentum and risk — hover a row to inspect it.', chips: ['RANKED', 'CONFIDENCE', 'R / R', 'INVALIDATION'], Preview: SkyVisionPreview },
   { id: 'pinpoint', tab: 'pinpoint', name: 'Pinpoint GEX', accent: AMBER, desc: 'Dealer positioning by strike — call walls, put walls and the pin. Brush a strike.', chips: ['CALL WALL', 'PUT WALL', 'PIN', 'GAMMA FLIP'], Preview: PinpointPreview },
-  { id: 'dealerflow', tab: 'dealerflow', name: 'Dealer Flow', accent: GREEN, desc: 'Net gamma pressure shifting across strikes as the tape develops, live.', chips: ['GEX', 'DEX', 'VEX', 'NET FLOW'], Preview: DealerFlowPreview },
+  { id: 'dealerflow', tab: 'dealerflow', name: 'Dealer Flow', accent: GREEN, desc: 'Unusual options flow — sweeps, blocks and dark-pool prints as they hit the tape.', chips: ['SWEEPS', 'DARK POOL', 'BLOCKS', 'SENTIMENT'], Preview: DealerFlowPreview },
   { id: 'liveterminal', tab: 'liveterminal', name: 'Live Terminal', accent: STEEL, desc: 'Price against the dealer walls — one clean chart from read to execution.', chips: ['PRICE', 'KEY LEVELS', 'GEX NODES'], Preview: LiveTerminalPreview },
-  { id: 'quant', tab: 'quant', name: 'Quant Lab', accent: AMBER, desc: 'The implied-vol surface — sweep the smile × term grid to read any cell.', chips: ['IV SURFACE', 'GREEKS', 'REGIME', 'EXP MOVE'], Preview: QuantPreview },
+  { id: 'quant', tab: 'quant', name: 'Quant Lab', accent: AMBER, desc: 'The implied-vol surface in 3D — orbit the smile × term structure quants actually trade.', chips: ['IV SURFACE', 'GREEKS', 'REGIME', 'EXP MOVE'], Preview: QuantPreview },
   { id: 'auditor', tab: 'auditor', name: 'Trade History', accent: GREEN, desc: 'Every tracked setup and its realized outcome — accountable, not alerted.', chips: ['ENTRIES', 'OUTCOMES', 'REALIZED', 'WIN RATE'], Preview: TradeHistoryPreview },
 ];
 
@@ -329,11 +334,11 @@ export function ProductGridScene({ onEnter }: { onEnter: (tab?: string) => void 
 
   return (
     <section id="product" className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }} data-scene="product-grid" aria-label="Interactive product showcase">
-      <div className="mx-auto mb-10 max-w-2xl text-center">
+      <Reveal className="mx-auto mb-10 max-w-2xl text-center">
         <div className="text-[10px] font-semibold uppercase" style={{ letterSpacing: '0.28em', color: faint }}>The Terminal</div>
         <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>Six engines. Try each one.</h2>
         <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>Not screenshots — the real reads, running. Pick an engine and put your cursor in it.</p>
-      </div>
+      </Reveal>
 
       <Reveal className="mx-auto max-w-6xl">
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[12px] lg:grid-cols-[220px_1fr]" style={{ border: `1px solid ${line}`, background: line }}>

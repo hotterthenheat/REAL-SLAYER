@@ -133,19 +133,46 @@ const EASE_EXPO = [0.16, 1, 0.3, 1] as const;
 /* Oversized editorial index numeral (the "giant number" motif) — huge,
    low-contrast, tabular. */
 
+// Section headers land with a crafted internal cadence: eyebrow → title → sub
+// rise in sequence (0.08s apart) once the header is properly in view, so every
+// section across the page opens with the SAME directed choreography rather than
+// a single block fade. Reverses with the page; static under reduced motion.
+const HEAD_ITEM = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.55, ease: EASE_EXPO } },
+} as const;
 export function SectionHead({ eyebrow, title, sub }: { eyebrow?: string; title: string; sub?: string }) {
+  const reduced = useReducedMotion();
+  const heading = (
+    <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
+      {title}
+    </h2>
+  );
+  if (reduced) {
+    return (
+      <div className="mx-auto max-w-2xl text-center">
+        {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
+        {heading}
+        {sub ? <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>{sub}</p> : null}
+      </div>
+    );
+  }
   return (
-    <Reveal className="mx-auto max-w-2xl text-center">
-      {eyebrow ? <Eyebrow>{eyebrow}</Eyebrow> : null}
-      <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>
-        {title}
-      </h2>
+    <motion.div
+      className="mx-auto max-w-2xl text-center"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: false, amount: 0.5 }}
+      variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+    >
+      {eyebrow ? <motion.div variants={HEAD_ITEM}><Eyebrow>{eyebrow}</Eyebrow></motion.div> : null}
+      <motion.div variants={HEAD_ITEM}>{heading}</motion.div>
       {sub ? (
-        <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>
+        <motion.p variants={HEAD_ITEM} className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>
           {sub}
-        </p>
+        </motion.p>
       ) : null}
-    </Reveal>
+    </motion.div>
   );
 }
 
@@ -1040,7 +1067,7 @@ function FootLink({ label, onClick, external }: { label: string; onClick: () => 
 export function Footer({ onLaunch, onEnter, scrollTo }: { onLaunch: () => void; onEnter: (t?: string) => void; scrollTo: (id: string) => void }) {
   return (
     <footer className="px-5 pb-10 pt-14" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
-      <div className="mx-auto max-w-6xl">
+      <Reveal className="mx-auto max-w-6xl" amount={0.1}>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:grid-cols-[1.6fr_1fr_1fr_1fr]">
           {/* brand + tagline + social — the ONE canonical logo (BrandLogo.tsx),
               HTML-exact: dim ">" prompt, all-one-ink wordmark, glowing caret. */}
@@ -1099,7 +1126,7 @@ export function Footer({ onLaunch, onEnter, scrollTo }: { onLaunch: () => void; 
             For informational purposes only. Not investment advice. Analytics platform — not guaranteed profit.
           </span>
         </div>
-      </div>
+      </Reveal>
     </footer>
   );
 }
