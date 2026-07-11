@@ -41,10 +41,14 @@ export function TwoFactorFlow() {
         return;
       }
       
-      // Verified! Now fetch 2FA secret generation
+      // Verified! Now fetch 2FA secret generation. The server enforces step-up
+      // re-auth on generate-2fa whenever a password hash exists (and verify-password
+      // above sets one for password-less sandbox/OAuth accounts), so we must forward
+      // the just-confirmed password here — otherwise generate-2fa 403s and setup stalls.
       const genRes = await fetch('/api/auth/generate-2fa', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ currentPassword: password })
       });
       const genData = await genRes.json();
       if (!genRes.ok) {

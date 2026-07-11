@@ -971,8 +971,9 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
 
                 <ul className="text-[11px] text-[var(--text-tertiary)] space-y-1 leading-relaxed list-disc pl-4">
                   <li>At least 8 characters.</li>
-                  <li>At least one letter.</li>
+                  <li>At least one uppercase letter (A-Z).</li>
                   <li>At least one number (0-9).</li>
+                  <li>At least one special character (!@#$%…).</li>
                 </ul>
 
                 <div className="flex justify-end">
