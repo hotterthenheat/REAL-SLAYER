@@ -34,9 +34,6 @@ export interface CloudPoint { x: number; y: number; z: number; v: number }
 
 type Ramp = 'diverging' | 'sequential';
 
-/** Clean data-provenance state — never a large fake "SIMULATED" stamp. */
-export type DataState = 'live' | 'delayed' | 'model' | 'required';
-
 /** A market level rendered as a vertical reference wall across the surface. */
 export interface SurfaceMarker {
   /** Value in the x-domain (e.g. a strike) where the wall sits. */
@@ -77,8 +74,6 @@ interface QuantSurface3DProps {
   wallProjections?: boolean;
   /** Show the colour legend + axis-domain readouts. */
   legend?: boolean;
-  /** Clean data-provenance chip. */
-  dataState?: DataState;
   /** Light up a single column (a strike's term-structure slice). */
   sliceCol?: number | null;
   /** Light up a single row (an expiry's smile slice). */
@@ -153,7 +148,7 @@ const num = (v: number) => (Math.abs(v) >= 1000 ? v.toLocaleString(undefined, { 
 export default function QuantSurface3D({
   grid, points, ramp = 'diverging', height = 380, axisLabels, autoRotate = true, loading, error,
   xDomain, zDomain, xFormat = num, zFormat = num, valueFormat = num, markers, floorHeatmap, legend,
-  wallProjections, dataState, sliceCol = null, sliceRow = null,
+  wallProjections, sliceCol = null, sliceRow = null,
 }: QuantSurface3DProps) {
   const mountRef = useRef<HTMLDivElement | null>(null);
   const [glState, setGlState] = useState<'ok' | 'nowebgl' | 'lost'>('ok');
@@ -508,7 +503,7 @@ export default function QuantSurface3D({
 
   if (error) return <Frame height={height}><State tone="danger" title="Surface failed to render" sub={error} /></Frame>;
   if (loading) return <Frame height={height}><Sk /></Frame>;
-  if (!hasData) return <Frame height={height}>{dataState && <StatePill state={dataState} />}<State tone="muted" title="Awaiting inputs" sub="No grid / cloud to plot yet." /></Frame>;
+  if (!hasData) return <Frame height={height}><State tone="muted" title="Awaiting inputs" sub="No grid / cloud to plot yet." /></Frame>;
   if (glState === 'nowebgl') return <Frame height={height}><State tone="warn" title="3D renderer unavailable" sub="WebGL is disabled or unsupported here." /></Frame>;
 
   const mid = stats ? (ramp === 'diverging' ? 0 : (stats.vMin + stats.vMax) / 2) : 0;
@@ -520,8 +515,6 @@ export default function QuantSurface3D({
     <Frame height={height}>
       <div ref={mountRef} className="absolute inset-0" />
       {glState === 'lost' && <div className="absolute inset-0 flex items-center justify-center"><State tone="warn" title="GL context lost" sub="Scroll away and back to restore." /></div>}
-
-      {dataState && <StatePill state={dataState} />}
 
       {/* Colour legend — a real colorbar: the full value ramp with numeric stops. */}
       {legend && stats && (
@@ -583,25 +576,6 @@ export default function QuantSurface3D({
 const Frame: React.FC<{ height: number; children: React.ReactNode }> = ({ height, children }) => (
   <div style={{ height }} className="relative w-full overflow-hidden bg-[#0a0a0b]">{children}</div>
 );
-
-const STATE_META: Record<DataState, { label: string; css: string }> = {
-  live: { label: '', css: 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10' },
-  delayed: { label: '', css: 'text-[var(--warning)] border-[var(--warning)]/40 bg-[var(--warning)]/10' },
-  model: { label: '', css: 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10' },
-  required: { label: 'Data Required', css: 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]' },
-};
-
-function StatePill({ state }: { state: DataState }) {
-  // Provenance stamps (live / delayed / model) are not surfaced — only the genuine
-  // "not enough data yet" empty-state is shown.
-  if (state !== 'required') return null;
-  const m = STATE_META[state];
-  return (
-    <div className={`pointer-events-none absolute left-3 top-2 z-10 rounded-[7px] border px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-widest ${m.css}`}>
-      {m.label}
-    </div>
-  );
-}
 
 function State({ tone, title, sub }: { tone: 'danger' | 'warn' | 'muted'; title: string; sub: string }) {
   const c = tone === 'danger' ? 'var(--danger)' : tone === 'warn' ? 'var(--warning)' : 'var(--text-tertiary)';

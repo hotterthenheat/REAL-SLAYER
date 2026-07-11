@@ -21,7 +21,6 @@
 import { useRef } from 'react';
 import { type VolConePoint } from '../lib/quantSuite';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
-import { DataStateBadge } from './ui/DataStateBadge';
 
 interface VolConePanelProps {
   cone: VolConePoint[];  // precomputed by calculateVolatilityCone (real, annualized)
@@ -117,7 +116,6 @@ export function VolConePanel({ cone: coneRaw, atmIv, realizedVol, ticker, live }
         <div className="flex items-center gap-2">
           <ChartTools name={`vol-cone-${ticker || 'spx'}`} svgRef={svgRef} fullscreenRef={wrapRef}
             csv={() => ({ headers: ['window', 'min', 'p25', 'median', 'p75', 'max', 'current'], rows: cone.map((c) => [c.window, c.min.toFixed(4), c.p25.toFixed(4), c.p50.toFixed(4), c.p75.toFixed(4), c.max.toFixed(4), c.current.toFixed(4)]) })} />
-          <DataStateBadge state={live ? 'live' : 'model'} />
         </div>
       </div>
 

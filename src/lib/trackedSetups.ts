@@ -34,7 +34,8 @@ export const isTerminal = (s: TrackStatus) => TERMINAL_STATUSES.includes(s);
 
 export type TrackSource = 'skyvision' | 'pinpoint';
 export type TrackKind = 'contract' | 'structure';
-/** Mirrors DataStateBadge's taxonomy — recorded at track time, never mutated. */
+/** How the setup's data was sourced at track time — recorded once, never mutated.
+ *  Used only to keep live tracks separate from model/sample tracks in win-rate math. */
 export type TrackDataMode = 'live' | 'delayed' | 'model' | 'sample';
 
 export interface TrackedSetup {
@@ -409,13 +410,3 @@ export const STATUS_LABEL: Record<TrackStatus, string> = {
   EXPIRED: 'Expired',
   CANCELLED: 'Cancelled',
 };
-
-/** The "SAMPLE TRACK" / "MODEL TRACK" provenance label for a tracked row. */
-export function trackModeLabel(mode: TrackDataMode): string {
-  switch (mode) {
-    case 'live': return 'LIVE TRACK';
-    case 'delayed': return 'DELAYED TRACK';
-    case 'model': return 'MODEL TRACK';
-    case 'sample': return 'SAMPLE TRACK';
-  }
-}

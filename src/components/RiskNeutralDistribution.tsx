@@ -23,7 +23,6 @@ import { touchProbability } from '../lib/probability';
 import type { BreedenLitzenbergerResult } from '../lib/quantSuite';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
 import { useStrikeSync, StrikePublisher } from './quant/crosshairSync';
-import { DataStateBadge } from './ui/DataStateBadge';
 
 interface RiskNeutralDistributionProps {
   rnd: BreedenLitzenbergerResult;
@@ -136,7 +135,6 @@ export function RiskNeutralDistribution({
         <div className="flex items-center gap-2">
           <ChartTools name={`rnd-cdf-${ticker || 'spx'}`} svgRef={svgRef} fullscreenRef={wrapRef}
             csv={() => ({ headers: ['strike', 'pdf', 'cdf'], rows: m.sorted.map((d) => [d.strike.toFixed(2), d.probability.toExponential(6), d.cumulativeProb.toFixed(6)]) })} />
-          <DataStateBadge state={live ? 'live' : 'model'} />
         </div>
       </div>
 

@@ -165,10 +165,8 @@ export function FactorLabPanel({ chain, spot, ticker, live }: Props) {
   const n = BASKET.length;
 
   const state = factors.mode; // 'live' | 'model' | 'warming'
-  const stateCss = state === 'live'
-    ? 'text-[var(--success)] border-[var(--success)]/40 bg-[var(--success)]/10'
-    : state === 'model' ? 'text-[var(--info)] border-[var(--info)]/40 bg-[var(--info)]/10'
-      : 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]';
+  // Only the genuine warm-up empty-state surfaces a chip; provenance (live/model) is never labelled.
+  const stateCss = 'text-[var(--text-tertiary)] border-[var(--border)] bg-[var(--surface-2)]';
   const stateLabel = state === 'warming' ? 'Collecting' : '';
   const method = `Pearson · log returns · ${lookback}D`;
 

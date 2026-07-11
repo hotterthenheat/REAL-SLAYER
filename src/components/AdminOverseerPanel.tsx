@@ -4,7 +4,6 @@ import { cx } from '../lib/cx';
 import { ConfirmDialog } from './ConfirmDialog';
 import { FieldError, zodError, type SubmitState } from './ui/Field';
 import { SearchInput } from './ui/SearchInput';
-import { DataStateBadge, type DataState } from './ui/DataStateBadge';
 import { ConversionCard } from './admin/ConversionCard';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
@@ -17,10 +16,10 @@ import {
 } from 'lucide-react';
 
 /**
- * Map the server's provider identifier to a data-state + human label for the Feed Health card.
- * Any live provider reads green; the synthetic sandbox reads as Model Mode.
+ * Map the server's provider identifier to a live-flag + human label for the Feed Health card.
+ * Any live provider reads green; the synthetic sandbox reads as info.
  */
-const FEED_META: Record<string, { state: DataState; label: string }> = {
+const FEED_META: Record<string, { state: 'live' | 'model'; label: string }> = {
   THETADATA_LIVE: { state: 'live', label: 'ThetaData Live' },
   TRADIER_POLYGON_COMPLEMENTARY: { state: 'live', label: 'Tradier + Polygon' },
   TRADIER_LIVE: { state: 'live', label: 'Tradier Live' },
@@ -158,7 +157,7 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
     reload();
   };
   const flags = overview?.feature_flags || {};
-  const feed = FEED_META[overview?.data_source] || { state: 'required' as DataState, label: overview?.data_source || 'Unknown' };
+  const feed = FEED_META[overview?.data_source] || { state: 'model' as const, label: overview?.data_source || 'Unknown' };
   const serverTime = typeof overview?.server_time === 'number' ? overview.server_time : null;
 
   const metrics: Metric[] = [
@@ -186,10 +185,6 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
               <span className={cx('h-2 w-2 rounded-full', feed.state === 'live' ? 'animate-pulse bg-[var(--positive-ink)]' : 'bg-[var(--info)]')}></span>
               <span className="text-[12px] font-semibold text-[var(--text-primary)]">{feed.label}</span>
             </div>
-          </div>
-          <div>
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Mode</div>
-            <DataStateBadge state={feed.state} />
           </div>
           <div>
             <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Server Time</div>

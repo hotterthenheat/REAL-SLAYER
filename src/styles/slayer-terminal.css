@@ -63,7 +63,25 @@
   --radius-panel: 10px;
   --radius-control: 7px;
   --gap: 10px;
+  --gap-tight: 6px;
   --panel-pad: 14px;
+
+  /* Named type scale — the one layer of the system that was never tokenized, and
+     the root of the size drift the audit flagged (ad-hoc 8/9/10/11/12/13/15px
+     literals). 10px is a HARD floor: nothing below --text-3xs. Consumed by name
+     (var(--text-xs)) so a single edit re-scales the terminal proportionally. */
+  --text-3xs: 10px;  /* caption / label floor */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+
+  /* Recessed well — the fill that makes a PASSIVE readout sit visibly below an
+     interactive control instead of matching it. .slayer-readout references this
+     (it was undefined, so readouts silently equalled controls). */
+  --bg-well: #030303;
 
   /* Overlay shadow — the single shadow token, reserved for things that truly
      float (modals, popovers, flyouts). Panels stay flat, so this is no longer
@@ -91,11 +109,29 @@
   padding: 12px 14px;
 }
 
+/* Three heading tiers so structural depth reads by WEIGHT, not just position.
+   Before this, one .slayer-title class served page + panel + section, so a reader
+   couldn't tell the view title from a panel title from an in-panel section head.
+   One clear step between each: page (brightest/largest) → panel → section (dim). */
+.slayer-title-page {
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
 .slayer-title {
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.slayer-title-section {
+  color: var(--text-muted);
+  font-size: var(--text-3xs);
+  font-weight: 600;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 

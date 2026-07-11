@@ -4,7 +4,7 @@ import { Boxes, Waves, Wind, Timer, Layers, RefreshCw, Zap } from 'lucide-react'
 import { LiveValue } from './ui/LiveValue';
 import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
 import { exposureSurfaceGrid, ivSurfaceGrid, strikeDomain, ivStrikeDomain, tenorDomainDays, type ExposureField, type SurfaceProfile } from './quant/dealerSurfaces';
-import type { SurfaceMarker, DataState } from './quant/QuantSurface3D';
+import type { SurfaceMarker } from './quant/QuantSurface3D';
 
 // Directive-08 renderer is lazy so three.js stays off the initial bundle and only one
 // WebGL context is ever live (the active surface).
@@ -94,7 +94,6 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
   const valueFormat = isIv ? (v: number) => `${(v * 100).toFixed(1)}%` : (v: number) => fmtGamma(v);
   const xFormat = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 0 });
   const zFormat = (v: number) => `${Math.round(v)}d`;
-  const dataState: DataState = grid.length === 0 ? 'required' : live ? 'live' : 'model';
 
   // Live dealer-physics scalars as a single hairline-separated strip (Net Gamma leads as
   // the directional focal figure). When a feed omits net vanna/charm the value reads
@@ -190,7 +189,6 @@ export function DealerMechanicsDashboard({ profile: external, ticker, decimals =
             floorHeatmap
             wallProjections
             legend
-            dataState={dataState}
             sliceCol={sliceCol}
             sliceRow={sliceRow}
           />

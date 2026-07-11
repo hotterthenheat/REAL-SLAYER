@@ -27,7 +27,6 @@ import { ASSET_LIST } from '../data';
 import { useContractStore } from '../lib/store';
 import { formatTime } from '../lib/timeUtils';
 import { fmtNum } from '../lib/format';
-import { DataStateBadge } from './ui/DataStateBadge';
 import { deriveSetup, type DerivedSetup, type ScannerContract } from './scanner/SetupQueue';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { DataTable, type Column } from './ui/terminal/DataTable';
@@ -1366,8 +1365,7 @@ export function DiscoveryView({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <DataStateBadge state="sample" />
-          {/* Scan-activity state (never claims "Live" — the data-state badge owns data provenance). */}
+          {/* Scan-activity state — connection/scan status, not a data-provenance label. */}
           <StatusBadge tone={feedError ? 'warning' : 'neutral'} dot>
             {isMockScanning ? 'Scanning' : feedError ? 'Reconnecting' : 'Idle'}
           </StatusBadge>

@@ -350,7 +350,6 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
                   <span className="font-bold text-[var(--text-tertiary)]">
                     Illustrative example — not actual trades
                   </span>
-                  <span>Sample data</span>
                 </div>
               </div>
             </div>
@@ -473,10 +472,6 @@ export const FeatureMatrix: React.FC<FeatureMatrixProps> = ({ onEnterApp }) => {
 
               {/* Mock discord message embed card */}
               <div className="bg-[#2f3136] rounded-lg p-4 font-sans text-left border border-[var(--border)] space-y-3 relative overflow-hidden shadow-xl select-none">
-                <div className="absolute top-0 right-0 bg-[var(--success)]/15 text-[var(--text-secondary)] text-[7.5px] font-mono tracking-widest px-2.5 py-1.5 rounded-bl-lg font-black uppercase">
-                  SAMPLE ALERT
-                </div>
-
                 <div className="flex items-center gap-2 font-mono">
                   <div className="w-7 h-7 rounded-full bg-[var(--success)]/20 flex items-center justify-center">
                     <Bot className="w-4 h-4 text-[var(--text-secondary)]" />
