@@ -20,6 +20,10 @@ export type Metric = {
   value: React.ReactNode;
   sub?: React.ReactNode;
   tone?: MetricTone;
+  /** The lead figure of the strip (e.g. Net GEX, Spot). Renders one weight/size
+   *  step above supporting cells so the strip has a readable focal point instead
+   *  of every value sharing the same weight. */
+  primary?: boolean;
 };
 
 type MetricStripProps = {
@@ -66,13 +70,17 @@ export function MetricStrip({ metrics, columns = 8, className }: MetricStripProp
             index !== 0 && 'border-l border-[var(--border-subtle)]',
           )}
         >
-          <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+          <div className="text-[var(--text-3xs)] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
             {metric.label}
           </div>
           <div
             className={cx(
-              'mt-1.5 font-semibold leading-[1.1] slayer-num [overflow-wrap:normal] [word-break:keep-all]',
+              // nowrap so a two-word value ("SHORT GAMMA") can't wrap and stretch
+              // the whole row taller than its neighbours.
+              'mt-1.5 leading-[1.1] slayer-num whitespace-nowrap [overflow-wrap:normal] [word-break:keep-all]',
+              metric.primary ? 'font-bold' : 'font-semibold',
               valueSize,
+              metric.primary && 'text-[1.08em]',
               toneClass[metric.tone || 'neutral'],
             )}
           >

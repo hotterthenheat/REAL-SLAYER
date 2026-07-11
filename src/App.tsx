@@ -1068,7 +1068,7 @@ export default function App() {
             {/* TAB: DEALER FLOW — the institutional options-flow tape: unusual
                 options activity, dark-pool prints and swept contracts. */}
             {activeTab === 'dealerflow' && (
-              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+              <div className="view-enter">
                 <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <OptionsFlowTape />
                 </TierGuard>
@@ -1077,7 +1077,7 @@ export default function App() {
 
             {/* TAB: LIVE TERMINAL — the GEX-node tick chart + strike×expiry heatmap + flow board. */}
             {activeTab === 'liveterminal' && (
-              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+              <div className="view-enter">
                 <TierGuard requiredTier={2} tabKey="live terminal" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <PinpointTerminal ticker={selectedAsset.ticker} />
                 </TierGuard>
@@ -1087,7 +1087,7 @@ export default function App() {
             {/* TAB: PINPOINT GEX — dealer positioning + hedging-flow analytics
                 (Exposure & Walls / Hedging Profile / Ranked Targets sub-tabs). */}
             {activeTab === 'pinpoint' && (
-              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+              <div className="view-enter">
                 <TierGuard requiredTier={2} tabKey="pinpoint" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
                   <PinpointGexView />
                 </TierGuard>
@@ -1096,7 +1096,7 @@ export default function App() {
 
             {/* TAB: INSTITUTIONAL QUANT LAB */}
             {activeTab === 'quant' && (
-              <div className="view-enter border border-[var(--border)] bg-[var(--surface)]/90 rounded-md p-1 drop-shadow-2xl">
+              <div className="view-enter">
                 <TierGuard requiredTier={3} tabKey="quant" planKey="skyvision" planName="SkyVision" planPrice="$275">
                   <QuantSuiteView />
                 </TierGuard>
