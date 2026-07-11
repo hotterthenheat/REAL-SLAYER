@@ -205,9 +205,6 @@ function RatioBar({ left, right }: { left: number; right: number }) {
 const cpColor = (cp: CP): string =>
   cp === 'C' ? 'var(--call)' : cp === 'P' ? 'var(--negative-ink)' : 'var(--text-faint)';
 
-const sentColor = (s: Sentiment): string =>
-  s === 'BULLISH' ? 'var(--positive-ink)' : s === 'BEARISH' ? 'var(--negative-ink)' : 'var(--text-muted)';
-
 const typeTone = (t: FlowType): 'warning' | 'info' | 'neutral' | 'pin' =>
   t === 'SWEEP' ? 'warning' : t === 'BLOCK' ? 'info' : t === 'DARKPOOL' ? 'pin' : 'neutral';
 
@@ -377,23 +374,23 @@ export default function OptionsFlowTape() {
     },
     {
       id: 'strike',
+      // Strike carries its own call/put tag (tinted C/P) — no standalone C/P column.
       title: 'STRIKE',
       align: 'right',
-      render: (r) => (
-        <span className="slayer-num text-[11px] text-[var(--text-primary)]">
-          {r.strike == null ? '—' : fmtInt(r.strike)}
-        </span>
-      ),
-    },
-    {
-      id: 'cp',
-      title: 'C/P',
-      align: 'center',
-      render: (r) => (
-        <span className="slayer-num text-[11px] font-bold" style={{ color: cpColor(r.cp) }}>
-          {r.cp ?? '—'}
-        </span>
-      ),
+      className: 'whitespace-nowrap',
+      render: (r) =>
+        r.strike == null ? (
+          <span className="slayer-num text-[11px] text-[var(--text-faint)]">—</span>
+        ) : (
+          <span className="slayer-num text-[11px] text-[var(--text-primary)]">
+            {fmtInt(r.strike)}
+            {r.cp && (
+              <span className="ml-1 font-bold" style={{ color: cpColor(r.cp) }}>
+                {r.cp}
+              </span>
+            )}
+          </span>
+        ),
     },
     {
       id: 'side',
@@ -427,55 +424,45 @@ export default function OptionsFlowTape() {
       ),
     },
     {
-      id: 'spot',
-      title: 'SPOT',
-      align: 'right',
-      render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-muted)]">{fmtPrice(r.spot)}</span>,
-    },
-    {
       id: 'type',
       title: 'TYPE',
       align: 'center',
+      className: 'whitespace-nowrap',
       render: (r) => <StatusBadge tone={typeTone(r.type)}>{r.type}</StatusBadge>,
-    },
-    {
-      id: 'sentiment',
-      title: 'SENTIMENT',
-      align: 'right',
-      render: (r) => (
-        <span
-          className="slayer-num text-[10px] font-semibold uppercase tracking-[0.12em]"
-          style={{ color: sentColor(r.sentiment) }}
-        >
-          {r.sentiment}
-        </span>
-      ),
     },
   ];
 
+  // The dark-pool rail lives in the narrow xl:col-span-4 panel; tighten cell
+  // padding (6px vs the table default 10px) so all five columns — including the
+  // TIME header — fit without clipping.
+  const denseCell = 'px-1.5!';
   const darkColumns: DataColumn<DarkPrint>[] = [
     {
       id: 'ticker',
       title: 'TICKER',
       align: 'left',
+      className: denseCell,
       render: (r) => <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>,
     },
     {
       id: 'size',
       title: 'SIZE',
       align: 'right',
+      className: denseCell,
       render: (r) => <span className="slayer-num text-[11px] text-[var(--text-secondary)]">{fmtInt(r.size)}</span>,
     },
     {
       id: 'price',
       title: 'PRICE',
       align: 'right',
+      className: denseCell,
       render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-muted)]">{fmtPrice(r.price)}</span>,
     },
     {
       id: 'notional',
       title: 'NOTIONAL',
       align: 'right',
+      className: denseCell,
       render: (r) => (
         <span className="slayer-num text-[11px] font-semibold text-[var(--pin)]">{fmtUsd(r.notional)}</span>
       ),
@@ -484,7 +471,7 @@ export default function OptionsFlowTape() {
       id: 'time',
       title: 'TIME',
       align: 'right',
-      className: 'whitespace-nowrap',
+      className: `${denseCell} whitespace-nowrap`,
       render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-muted)]">{fmtET(r.ts)}</span>,
     },
   ];
