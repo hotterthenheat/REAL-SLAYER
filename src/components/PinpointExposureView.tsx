@@ -187,9 +187,11 @@ export default function PinpointExposureView() {
   // static labels; they are now real toggles (via the chip strip above the table)
   // so a trader can focus on a single greek. At least one group always stays on.
   const MATRIX_GROUPS = [
+    // Three distinct hues so the greeks never collide: gamma = steel, delta =
+    // dealer-cyan, vega = greek-purple (DEX/VEX used to both read amber).
     { key: 'gex' as const, label: 'GEX 1%', color: 'var(--call)' },
-    { key: 'dex' as const, label: 'DEX 1σ', color: 'var(--pin)' },
-    { key: 'vex' as const, label: 'VEX 1%v', color: 'var(--warning)' },
+    { key: 'dex' as const, label: 'DEX 1σ', color: 'var(--dealer)' },
+    { key: 'vex' as const, label: 'VEX 1%v', color: 'var(--greek)' },
   ];
   const [matrixGroups, setMatrixGroups] = useState<Set<'gex' | 'dex' | 'vex'>>(() => new Set(['gex', 'dex', 'vex']));
   const toggleMatrixGroup = (k: 'gex' | 'dex' | 'vex') =>
