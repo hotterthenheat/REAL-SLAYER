@@ -2,7 +2,6 @@ import { ArrowUpRight, TrendingUp, TrendingDown, ShieldCheck, Crosshair, CheckCi
 import { ASSET_LIST } from '../../data';
 import { useContractStore } from '../../lib/store';
 import { useTrackingStore, setupKey, isTerminal } from '../../lib/trackedSetups';
-import { DataStateBadge } from '../ui/DataStateBadge';
 import { toast } from '../ui/toast';
 
 /**
@@ -213,7 +212,7 @@ export function SetupInspector({ s, onReview }: { s: DerivedSetup | null; onRevi
       liquidityGrade: s.liquidity, entryDelta: s.c.delta, entryThetaPerDay: s.c.theta, dteDays: 0,
     }, Date.now());
     toast[res.duplicate ? 'info' : 'success'](res.duplicate ? 'Already tracking this setup' : 'Setup tracked', {
-      description: res.duplicate ? 'It’s in Trade History (Sample track).' : `${s.label} · Sample track · in Trade History`,
+      description: res.duplicate ? 'It’s in Trade History.' : `${s.label} · in Trade History`,
     });
   };
 
@@ -227,7 +226,6 @@ export function SetupInspector({ s, onReview }: { s: DerivedSetup | null; onRevi
             <span className={`mt-1 block text-[9px] font-black uppercase tracking-widest ${dirColor}`}>{s.direction} · {s.conviction}</span>
           </div>
         </div>
-        <DataStateBadge state="sample" title="Demo data. Live scan requires a connected market feed." className="shrink-0" />
       </div>
 
       {/* headline stats */}

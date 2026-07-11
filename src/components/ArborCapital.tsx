@@ -19,7 +19,6 @@ import { V8TradeRecord } from '../types';
 import { FieldError, zodError } from './ui/Field';
 import { supportRequestSchema } from '../lib/formSchemas';
 import { SectionHeader } from './ui/SectionHeader';
-import { DataStateBadge } from './ui/DataStateBadge';
 
 type ChannelKey = 'verified' | 'research' | 'education' | 'support';
 
@@ -270,11 +269,6 @@ export default function ArborCapital() {
                 className="border-b border-[var(--border)] pb-3"
                 icon={<ShieldCheck className="w-4 h-4 text-[var(--text-tertiary)]" />}
                 label="Trade Ledger"
-                right={
-                  ledgerSource ? (
-                    <DataStateBadge state={ledgerSource === 'SANDBOX_SYNTHETIC' ? 'model' : 'live'} />
-                  ) : undefined
-                }
               />
 
               {/* Focal strip — Win Rate is the hero, supporters step down, hairline-separated */}

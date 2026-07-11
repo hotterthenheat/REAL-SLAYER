@@ -32,7 +32,7 @@ import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricS
 import { DataTable, type Column } from './ui/terminal/DataTable';
 import { StatusBadge } from './ui/terminal/StatusBadge';
 import {
-  useTrackingStore, computeStats, splitByMode, isTerminal, trackModeLabel,
+  useTrackingStore, computeStats, splitByMode, isTerminal,
   type TrackedSetup, type TrackStats,
 } from '../lib/trackedSetups';
 import { useTrackedCount } from './TrackedSetupsPanel';
@@ -844,7 +844,7 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
   const tags = useMemo(() => {
     const out: string[] = [row.optionType === 'C' ? 'CALL' : 'PUT'];
     if (t) { out.push('SERVER ARCHIVE'); if (t.gexState) out.push(t.gexState); if (t.rvolState) out.push(t.rvolState); }
-    if (s) { out.push(trackModeLabel(s.dataMode)); out.push(s.source === 'skyvision' ? 'SKYVISION' : 'PINPOINT'); if (s.liquidityGrade && s.liquidityGrade !== '—') out.push(`LIQ ${s.liquidityGrade}`); }
+    if (s) { out.push(s.source === 'skyvision' ? 'SKYVISION' : 'PINPOINT'); if (s.liquidityGrade && s.liquidityGrade !== '—') out.push(`LIQ ${s.liquidityGrade}`); }
     return Array.from(new Set(out));
   }, [row, t, s]);
 

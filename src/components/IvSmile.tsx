@@ -18,7 +18,6 @@ import { computeSkew, ivAtDelta } from '../lib/skewAnalytics';
 import type { ChainContract } from '../lib/v11Math';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
 import { useStrikeSync, StrikePublisher } from './quant/crosshairSync';
-import { DataStateBadge } from './ui/DataStateBadge';
 
 interface IvSmileProps {
   chain: ChainContract[];
@@ -123,7 +122,6 @@ export function IvSmile({ chain, spot, decimals = 0, ticker, live, windowPct = 0
           <ChartTools name={`iv-smile-${ticker || 'spx'}`} svgRef={svgRef} fullscreenRef={wrapRef}
             csv={() => ({ headers: ['strike', 'iv'], rows: m.pts.map((p) => [p.strike.toFixed(2), p.iv.toFixed(6)]) })} />
           <span className="text-[9px] font-black tracking-widest px-1.5 py-0.5 rounded uppercase" style={{ color: biasColor, background: `color-mix(in srgb, ${biasColor} 12%, transparent)`, border: `1px solid color-mix(in srgb, ${biasColor} 30%, transparent)` }}>{bias}</span>
-          <DataStateBadge state={live ? 'live' : 'model'} />
         </div>
       </div>
 

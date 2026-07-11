@@ -9,7 +9,7 @@ import React from 'react';
 
 interface SectionHeaderProps {
   label: React.ReactNode;
-  /** Right-aligned content — a count, a button, a DataStateBadge. */
+  /** Right-aligned content — a count, a button, or a status chip. */
   right?: React.ReactNode;
   icon?: React.ReactNode;
   description?: React.ReactNode;

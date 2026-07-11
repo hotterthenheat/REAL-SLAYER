@@ -1241,9 +1241,7 @@ export default function App() {
               ? 'Offline'
               : feedStatus === 'stale'
                 ? `Stale Feed · ${staleSec}s`
-                : serverState?.data_source === 'SANDBOX_SYNTHETIC'
-                  ? <>Live<span className="text-[var(--text-tertiary)]/60"> · Sim</span></>
-                  : 'Live Feed'}
+                : 'Streaming'}
           </span>
         </div>
       </footer>

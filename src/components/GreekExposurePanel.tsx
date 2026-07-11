@@ -22,7 +22,6 @@ import type { ChainContract } from '../lib/v11Math';
 import { computeGreekExposureProfile, GREEK_META, GREEK_ORDER, type GreekKey } from '../lib/greekExposure';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
 import { useStrikeSync, StrikePublisher } from './quant/crosshairSync';
-import { DataStateBadge } from './ui/DataStateBadge';
 
 interface GreekExposurePanelProps {
   chain: ChainContract[];
@@ -105,7 +104,6 @@ export function GreekExposurePanel({ chain, spot, decimals = 0, ticker, live, ca
           </div>
           <ChartTools name={`greek-exposure-${greek}-${ticker || 'spx'}`} svgRef={svgRef} fullscreenRef={wrapRef}
             csv={() => ({ headers: ['strike', 'net_exposure', 'call', 'put'], rows: prof.nodes.map((n) => [n.strike.toFixed(2), n.exposure.toFixed(2), n.call.toFixed(2), n.put.toFixed(2)]) })} />
-          <DataStateBadge state={live ? 'live' : 'model'} />
         </div>
       </div>
 

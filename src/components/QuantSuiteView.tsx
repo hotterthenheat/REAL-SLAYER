@@ -59,7 +59,6 @@ const QuantSurface3D = lazy(() => import('./quant/QuantSurface3D'));
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
 import { ivSurfaceGrid, ivStrikeDomain, type SurfaceProfile } from './quant/dealerSurfaces';
-import { DataStateBadge, liveState } from './ui/DataStateBadge';
 import type { SurfaceMarker } from './quant/QuantSurface3D';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
@@ -712,10 +711,6 @@ export default function QuantSuiteView() {
     { id: 'factor', label: 'Factor Lab' },
   ];
 
-  const modelBadge = (
-    <DataStateBadge state={liveState(isLiveData)} />
-  );
-
   return (
     <StrikeSyncProvider>
       <div className="slayer-terminal p-3 sm:p-4 space-y-[var(--gap)] w-full font-mono" id="quant-suite-terminal-view">
@@ -725,7 +720,6 @@ export default function QuantSuiteView() {
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="slayer-title whitespace-nowrap">Quant Lab / Quant Suite</h2>
-              <DataStateBadge state={liveState(isLiveData)} className="shrink-0" />
             </div>
             <p className="slayer-subtitle">Research, model, and scenario analytics</p>
           </div>
@@ -776,7 +770,6 @@ export default function QuantSuiteView() {
           <TerminalPanel
             title="IV Surface (Mid)"
             subtitle={`Smile × term model anchored on the 1σ expected move (±${expectedMovePct.toFixed(2)}%)`}
-            actions={modelBadge}
             contentClassName="p-2"
           >
             {heatmapOption ? (
@@ -796,7 +789,6 @@ export default function QuantSuiteView() {
           <TerminalPanel
             title="Volatility Term Structure (ATM)"
             subtitle="ATM column of the vol model vs DTE"
-            actions={modelBadge}
             contentClassName="flex flex-col gap-2 p-2"
           >
             {termOption ? (
@@ -863,7 +855,6 @@ export default function QuantSuiteView() {
             <TerminalPanel
               title="Monte Carlo Scenario Summary"
               subtitle={`Seeded GBM / jump-diffusion / Heston paths · σ = ${fmtPct(defaultIv)} · ${dteD}D horizon · r = 5.0%`}
-              actions={<DataStateBadge state="model" />}
               contentClassName="p-2"
               className="min-h-0 flex-1"
             >
@@ -1053,7 +1044,6 @@ export default function QuantSuiteView() {
                           floorHeatmap
                           wallProjections
                           legend
-                          dataState={isLiveData ? 'live' : 'model'}
                           sliceCol={ivHeroSliceCol}
                           sliceRow={0}
                         />

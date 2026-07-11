@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Activity, TrendingUp, TrendingDown, X, Radio, FlaskConical } from 'lucide-react';
 import {
   useTrackingStore, computeStats, splitByMode, isTerminal,
-  STATUS_LABEL, trackModeLabel, type TrackedSetup, type TrackStatus, type TrackStats,
+  STATUS_LABEL, type TrackedSetup, type TrackStatus, type TrackStats,
 } from '../lib/trackedSetups';
 import { SectionHeader } from './ui/SectionHeader';
 
@@ -140,9 +140,6 @@ function SetupRow({ s, now, onCancel }: { s: TrackedSetup; now: number; onCancel
         {s.targetReached && (
           <span className="rounded border border-[var(--success)]/40 bg-[var(--success)]/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-[var(--success)]">Target reached</span>
         )}
-        <span className="ml-auto rounded border border-[var(--info)]/30 bg-[var(--info)]/5 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest text-[var(--info)]" title="How this setup was tracked — model/sample tracks are excluded from live performance.">
-          {trackModeLabel(s.dataMode)}
-        </span>
       </div>
     </div>
   );
