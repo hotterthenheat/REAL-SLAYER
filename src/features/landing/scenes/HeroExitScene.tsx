@@ -69,20 +69,24 @@ export function HeroExitScene() {
       gsap.set(sub, { y: 22, autoAlpha: 0 });
       gsap.set(pillars, { y: 30, autoAlpha: 0 });
 
+      // DISCRETE (not scrubbed) reveal: a scrubbed timeline ties the animation to
+      // scroll position, so you literally scrub through the half-built states as
+      // you approach — "seeing the next thing working". A toggleActions timeline
+      // instead stays hidden until the section is properly in view, then plays to
+      // a finished frame in one clean motion, and reverses on the way back up.
       const tl = gsap.timeline({
         scrollTrigger: {
           id: TRIGGER.heroExit,
           trigger: scope.current!,
-          start: 'top 78%',
-          end: 'bottom 60%',
-          scrub: 0.6,
+          start: 'top 72%',
+          toggleActions: 'play none none reverse',
         },
         defaults: { ease: GSAP_EASE_SMOOTH },
       });
 
-      tl.to(lines, { yPercent: 0, autoAlpha: 1, duration: 0.5, stagger: 0.1 }, 0);
-      tl.to(sub, { y: 0, autoAlpha: 1, duration: 0.5 }, 0.35);
-      tl.to(pillars, { y: 0, autoAlpha: 1, duration: 0.6, stagger: 0.12 }, 0.5);
+      tl.to(lines, { yPercent: 0, autoAlpha: 1, duration: 0.6, stagger: 0.09 }, 0);
+      tl.to(sub, { y: 0, autoAlpha: 1, duration: 0.55 }, 0.28);
+      tl.to(pillars, { y: 0, autoAlpha: 1, duration: 0.55, stagger: 0.1 }, 0.42);
     },
     { scope, dependencies: [reduced], revertOnUpdate: true },
   );

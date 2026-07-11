@@ -206,7 +206,7 @@ const cpColor = (cp: CP): string =>
   cp === 'C' ? 'var(--call)' : cp === 'P' ? 'var(--negative-ink)' : 'var(--text-faint)';
 
 const sentColor = (s: Sentiment): string =>
-  s === 'BULLISH' ? 'var(--call)' : s === 'BEARISH' ? 'var(--negative-ink)' : 'var(--text-muted)';
+  s === 'BULLISH' ? 'var(--positive-ink)' : s === 'BEARISH' ? 'var(--negative-ink)' : 'var(--text-muted)';
 
 const typeTone = (t: FlowType): 'warning' | 'info' | 'neutral' | 'pin' =>
   t === 'SWEEP' ? 'warning' : t === 'BLOCK' ? 'info' : t === 'DARKPOOL' ? 'pin' : 'neutral';

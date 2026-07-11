@@ -1,5 +1,5 @@
 //@version=5
-indicator("Institutional Market Microstructure [Arbor Capital]", overlay=true, max_boxes_count=50)
+indicator("Institutional Market Microstructure [Slayer Terminal]", overlay=true, max_boxes_count=50)
 
 // --- Webhook Input Receivers (Populated by Python Backend) ---
 // In production, these arrive via JSON webhook replacing the default values

@@ -29,7 +29,7 @@ const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m =
 const OptionsFlowTape = lazy(() => import('./components/OptionsFlowTape'));
 const PinpointTerminal = lazy(() => import('./components/PinpointTerminal'));
 const PinpointGexView = lazy(() => import('./components/PinpointGexView'));
-const ArborCapital = lazy(() => import('./components/ArborCapital'));
+const ResearchDesk = lazy(() => import('./components/ResearchDesk'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const AdminOverseerPanel = lazy(() => import('./components/AdminOverseerPanel').then(m => ({ default: m.AdminOverseerPanel })));
 const WorkspaceView = lazy(() => import('./components/WorkspaceView').then(m => ({ default: m.WorkspaceView })));
@@ -1123,7 +1123,7 @@ export default function App() {
             {activeTab === 'community' && (
               <div className="view-enter">
                 <TierGuard requiredTier={1} tabKey="research & community" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
-                  <ArborCapital />
+                  <ResearchDesk />
                 </TierGuard>
               </div>
             )}
