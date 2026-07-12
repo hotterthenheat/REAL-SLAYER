@@ -209,14 +209,47 @@ function RatioBar({ left, right }: { left: number; right: number }) {
 const cpColor = (cp: CP): string =>
   cp === 'C' ? 'var(--call)' : cp === 'P' ? 'var(--negative-ink)' : 'var(--text-faint)';
 
+// TYPE ink — sweep=amber pin · block=steel call · dark=greek · split=muted
 const typeInk = (t: FlowType): string =>
   t === 'SWEEP'
-    ? 'var(--warning-ink)'
+    ? 'var(--pin)'
     : t === 'BLOCK'
-      ? 'var(--info-ink)'
+      ? 'var(--call)'
       : t === 'DARKPOOL'
-        ? 'var(--pin)'
+        ? 'var(--greek)'
         : 'var(--text-muted)';
+
+const typeLabel = (t: FlowType): string => (t === 'DARKPOOL' ? 'DARK' : t);
+
+// Sentiment lane color — the thin left edge on every print row.
+const sentEdge = (s: Sentiment): string =>
+  s === 'BULLISH' ? '--positive-ink' : s === 'BEARISH' ? '--negative-ink' : '--border-strong';
+
+// TYPE chip — tinted, hairline-ringed pill in the type ink.
+function TypeChip({ type }: { type: FlowType }) {
+  const ink = typeInk(type);
+  return (
+    <span
+      className="slayer-num inline-flex items-center rounded-[3px] px-1.5 py-[1.5px] text-[9.5px] font-bold uppercase tracking-[0.08em]"
+      style={{
+        color: ink,
+        background: `color-mix(in srgb, ${ink} 14%, transparent)`,
+        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${ink} 32%, transparent)`,
+      }}
+    >
+      {typeLabel(type)}
+    </span>
+  );
+}
+
+// Premium micro-bar — relative $ premium so the whales pop off the tape.
+function PremiumBar({ pct, color }: { pct: number; color: string }) {
+  return (
+    <span aria-hidden className="mt-1 block h-[3px] w-[60px] overflow-hidden rounded-full bg-[var(--surface-2)]">
+      <span className="block h-full rounded-full" style={{ width: `${Math.max(4, pct)}%`, background: color }} />
+    </span>
+  );
+}
 
 // ── Rail panel — the intelligence-rail frame (quiet section-tier header) ────
 function RailPanel({
@@ -353,6 +386,10 @@ export default function OptionsFlowTape() {
     [rows, typeFilter, sentFilter, minPrem],
   );
 
+  // Bar-scale references — micro-bars scale to the largest print in view.
+  const maxPrem = useMemo(() => filtered.reduce((m, r) => Math.max(m, r.premium), 0) || 1, [filtered]);
+  const maxNotional = useMemo(() => darkPrints.reduce((m, r) => Math.max(m, r.notional), 0) || 1, [darkPrints]);
+
   // ── Session-pulse cells — the same session KPIs, value-first ──────────────
   const pulseCells: PulseCell[] = [
     {
@@ -470,27 +507,32 @@ export default function OptionsFlowTape() {
       title: 'PREMIUM',
       align: 'right',
       className: dense,
-      render: (r) => (
-        <span
-          className={`slayer-num text-[11.5px] font-semibold ${r.premium >= 1e6 ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}
-        >
-          {fmtUsd(r.premium)}
-        </span>
-      ),
+      render: (r) => {
+        const big = r.premium >= 1e6;
+        const barColor =
+          r.sentiment === 'BULLISH'
+            ? 'var(--positive-ink)'
+            : r.sentiment === 'BEARISH'
+              ? 'var(--negative-ink)'
+              : 'var(--text-muted)';
+        return (
+          <span className="flex flex-col items-end">
+            <span
+              className={`slayer-num text-[11.5px] font-semibold ${big ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}
+            >
+              {fmtUsd(r.premium)}
+            </span>
+            <PremiumBar pct={(r.premium / maxPrem) * 100} color={barColor} />
+          </span>
+        );
+      },
     },
     {
       id: 'type',
       title: 'TYPE',
       align: 'left',
       className: `${dense} whitespace-nowrap`,
-      render: (r) => (
-        <span
-          className="slayer-num text-[10px] font-semibold uppercase tracking-[0.1em]"
-          style={{ color: typeInk(r.type) }}
-        >
-          {r.type}
-        </span>
-      ),
+      render: (r) => <TypeChip type={r.type} />,
     },
     {
       id: 'time',
@@ -509,7 +551,16 @@ export default function OptionsFlowTape() {
       title: 'TICKER',
       align: 'left',
       className: denseCell,
-      render: (r) => <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>,
+      render: (r) => (
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden
+            title="Off-exchange"
+            className="h-1 w-1 shrink-0 rounded-full bg-[var(--greek)]"
+          />
+          <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>
+        </span>
+      ),
     },
     {
       id: 'size',
@@ -531,7 +582,10 @@ export default function OptionsFlowTape() {
       align: 'right',
       className: denseCell,
       render: (r) => (
-        <span className="slayer-num text-[11px] font-semibold text-[var(--pin)]">{fmtUsd(r.notional)}</span>
+        <span className="flex flex-col items-end">
+          <span className="slayer-num text-[11px] font-semibold text-[var(--pin)]">{fmtUsd(r.notional)}</span>
+          <PremiumBar pct={(r.notional / maxNotional) * 100} color="var(--greek)" />
+        </span>
       ),
     },
     {
@@ -665,8 +719,8 @@ export default function OptionsFlowTape() {
           className="max-h-[60vh] min-h-0 rounded-none border-0 xl:max-h-none xl:flex-1"
           rowClassName={(r) =>
             r.id === flashId
-              ? '[&>td:first-child]:shadow-[inset_2px_0_0_var(--accent-color)]'
-              : undefined
+              ? '[&>td:first-child]:shadow-[inset_3px_0_0_var(--accent-color)]'
+              : `[&>td:first-child]:shadow-[inset_2px_0_0_var(${sentEdge(r.sentiment)})]`
           }
           emptyState="No prints match the current filters."
         />
@@ -683,6 +737,7 @@ export default function OptionsFlowTape() {
           rows={darkPrints}
           rowKey={(r) => r.id}
           className="max-h-[240px] rounded-none border-0"
+          rowClassName={() => '[&>td:first-child]:shadow-[inset_2px_0_0_var(--greek)]'}
           emptyState="No dark-pool prints yet."
         />
       </RailPanel>
@@ -705,8 +760,14 @@ export default function OptionsFlowTape() {
                 <span className="slayer-num w-12 shrink-0 text-[11.5px] font-semibold text-[var(--text-primary)]">
                   {t.ticker}
                 </span>
-                <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-[2px] bg-[var(--surface-2)]">
-                  <div className="h-full rounded-[2px]" style={{ width: `${t.pct}%`, background: 'var(--call)' }} />
+                <div className="h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.max(3, t.pct)}%`,
+                      background: 'linear-gradient(90deg, color-mix(in srgb, var(--call) 65%, transparent), var(--accent-color))',
+                    }}
+                  />
                 </div>
                 <span className="slayer-num w-16 shrink-0 text-right text-[11px] text-[var(--text-secondary)]">
                   {fmtUsd(t.premium)}
