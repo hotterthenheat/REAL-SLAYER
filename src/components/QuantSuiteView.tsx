@@ -511,24 +511,33 @@ export default function QuantSuiteView() {
     const live = serverState?.candles as Array<{ timestamp?: number; time?: number; open: number; high: number; low: number; close: number; volume: number }> | undefined;
     if (Array.isArray(live) && live.length >= 10) {
       return live.slice(-90).map((c, i) => ({
+        // Carry the real epoch ms so the realized-vol suite infers the TRUE bar
+        // interval (e.g. 15-min) instead of defaulting to 5-min and over-annualizing
+        // ~1.7×. Keep `time` for the chart primitives that read it.
+        timestamp: c.timestamp ?? c.time ?? i + 1,
         time: c.timestamp ?? c.time ?? i + 1,
         open: c.open,
         high: c.high,
         low: c.low,
         close: c.close,
         volume: c.volume,
-      }));
+      })) as unknown as Candle[];
     }
+    // Placeholder shape used only until real candles stream. Sized so the vol
+    // suite reads like a real index (~12–16% annualized on 15-min bars) instead
+    // of the old ±1.8% sine that produced ~120% HV. Real epoch timestamps (15-min
+    // spacing) so the estimator infers the true interval and annualizes correctly.
     const list: Candle[] = [];
     const base = spotPrice;
-    let curr = base * 0.96;
-    for (let i = 0; i < 20; i++) {
-      const scale = 1.0 + (Math.sin(i * 0.5) * 0.018);
+    let curr = base * 0.985;
+    const t0 = 1_700_000_000_000; // fixed epoch base (no Date.now — render-stable)
+    for (let i = 0; i < 40; i++) {
+      const scale = 1.0 + Math.sin(i * 0.5) * 0.0016 + Math.sin(i * 1.7) * 0.0009;
       const open = curr;
       const close = curr * scale;
-      const high = Math.max(open, close) * (1.0 + (Math.abs(Math.sin(i)) * 0.012));
-      const low = Math.min(open, close) * (1.0 - (Math.abs(Math.cos(i)) * 0.01));
-      list.push({ time: i + 1, open, high, low, close, volume: 240000 + Math.floor(Math.sin(i) * 45000) });
+      const high = Math.max(open, close) * (1.0 + Math.abs(Math.sin(i)) * 0.0011);
+      const low = Math.min(open, close) * (1.0 - Math.abs(Math.cos(i)) * 0.0010);
+      list.push({ timestamp: t0 + i * 15 * 60000, time: i + 1, open, high, low, close, volume: 240000 + Math.floor(Math.sin(i) * 45000) } as unknown as Candle);
       curr = close;
     }
     return list;
