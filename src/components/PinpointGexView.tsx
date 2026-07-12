@@ -691,7 +691,7 @@ function ExposureDeck() {
           the Dealer Positioning Map on the right (~52%). On xl the row takes a
           fixed tall height and each panel scrolls internally; below xl it stacks
           to a single column and each panel takes its natural height. */}
-      <div className="grid min-w-0 grid-cols-1 gap-[var(--gap)] xl:h-[calc(100vh-320px)] xl:min-h-[520px] xl:grid-cols-[minmax(0,48fr)_minmax(0,52fr)]">
+      <div className="grid min-w-0 grid-cols-1 gap-[var(--gap)] xl:h-[calc(100vh-452px)] xl:min-h-[440px] xl:grid-cols-[minmax(0,48fr)_minmax(0,52fr)]">
       {/* ── EXPOSURE MATRIX — dense data sheet, scrolls inside its own panel ── */}
       <TerminalPanel
         title="Exposure Matrix"

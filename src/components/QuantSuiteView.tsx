@@ -70,7 +70,7 @@ const QuantSurface3D = lazy(() => import('./quant/QuantSurface3D'));
 // Dealer Mechanics moved here from the Pinpoint GEX page — the brutalist 3D dealer
 // surfaces + advanced quant panels belong with the rest of the quant tooling.
 const DealerMechanicsDashboard = lazy(() => import('./DealerMechanicsDashboard').then(m => ({ default: m.DealerMechanicsDashboard })));
-import { ivSurfaceGrid, ivStrikeDomain, type SurfaceProfile } from './quant/dealerSurfaces';
+import { ivSurfaceGrid, ivStrikeDomain, exposureSurfaceGrid, strikeDomain, type SurfaceProfile, type StrikeRow } from './quant/dealerSurfaces';
 import type { SurfaceMarker } from './quant/QuantSurface3D';
 import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
@@ -236,15 +236,77 @@ function ModelNote({ label, children }: { label: string; children: React.ReactNo
 }
 
 /** Labeled loading state for the heavy lazy WebGL panels. */
-function Surface3DLoading({ label }: { label: string }) {
+function Surface3DLoading({ label, compact }: { label: string; compact?: boolean }) {
   return (
     <div
-      className="flex h-[460px] w-full flex-col items-center justify-center gap-3 rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--bg-panel-soft)]"
+      className={`flex w-full flex-col items-center justify-center gap-3 rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] ${compact ? 'h-full' : 'h-[460px]'}`}
       role="status"
       aria-live="polite"
     >
       <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--text-secondary)]" />
       <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
+    </div>
+  );
+}
+
+/** Top vol-stat cell in the terminal header bar (label over tabular value). */
+function TopStat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: 'pos' | 'neg' | 'warn' | 'gold' }) {
+  const color =
+    tone === 'pos' ? 'text-[var(--positive-ink)]'
+      : tone === 'neg' ? 'text-[var(--negative-ink)]'
+        : tone === 'warn' ? 'text-[var(--warning)]'
+          : tone === 'gold' ? 'text-[var(--gold,#C79350)]'
+            : 'text-[var(--text-primary)]';
+  return (
+    <div className="min-w-0 border-l border-[var(--border)] px-2.5 first:border-l-0">
+      <div className="truncate text-[8px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{label}</div>
+      <div className={`slayer-num mt-0.5 truncate text-[12px] font-semibold leading-none ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+/** One compact instrument cell of the QUANT LAB grid — numbered micro-header + body. */
+function GridCell({
+  num,
+  title,
+  controls,
+  children,
+  bodyClassName,
+  className,
+}: {
+  num: string;
+  title: string;
+  controls?: React.ReactNode;
+  children: React.ReactNode;
+  bodyClassName?: string;
+  className?: string;
+}) {
+  return (
+    <section className={`slayer-panel flex min-w-0 flex-col rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--surface)] ${className ?? ''}`}>
+      <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-2.5 py-1.5">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <span aria-hidden className="slayer-num text-[9px] font-bold tracking-[0.08em] text-[var(--accent-color)]">{num}</span>
+          <h3 className="truncate text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-primary)]">{title}</h3>
+        </div>
+        {controls ? <div className="flex shrink-0 items-center gap-1.5">{controls}</div> : null}
+      </div>
+      <div className={bodyClassName ?? 'min-w-0 p-2'}>{children}</div>
+    </section>
+  );
+}
+
+/** Compact KPI cell for the bottom KEY METRICS grid. */
+function KpiCell({ label, value, tone }: { label: string; value: React.ReactNode; tone?: 'pos' | 'neg' | 'warn' | 'gold' }) {
+  const color =
+    tone === 'pos' ? 'text-[var(--positive-ink)]'
+      : tone === 'neg' ? 'text-[var(--negative-ink)]'
+        : tone === 'warn' ? 'text-[var(--warning)]'
+          : tone === 'gold' ? 'text-[var(--gold,#C79350)]'
+            : 'text-[var(--text-primary)]';
+  return (
+    <div className="min-w-0 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-2.5 py-2">
+      <div className="truncate text-[8px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{label}</div>
+      <div className={`slayer-num mt-1 truncate text-[13px] font-semibold leading-none ${color}`}>{value}</div>
     </div>
   );
 }
@@ -306,6 +368,11 @@ export default function QuantSuiteView() {
   const activeTicker = useContractStore(s => s.selectedAsset?.ticker || 'SPX');
   const setSelectedAsset = useContractStore(s => s.setSelectedAsset);
   const serverState = useContractStore(s => s.serverState);
+
+  // Top-level view tabs (reference: MONITOR / ANALYZE / RESEARCH / SIMULATE). The dense
+  // instrument grid is the MONITOR/ANALYZE surface; RESEARCH/SIMULATE reveal the deep-dive
+  // Advanced Labs (3D dealer mechanics, tail risk, factor structure) below.
+  const [activeView, setActiveView] = useState<'monitor' | 'analyze' | 'research' | 'simulate'>('analyze');
 
   // Advanced-labs chip control (the original four deep-dive sections, kept reachable).
   const [activeSubTab, setActiveSubTab] = useState<LabTab>('volgeo');
@@ -804,6 +871,178 @@ export default function QuantSuiteView() {
     URL.revokeObjectURL(url);
   };
 
+  // ===================================
+  // GRID-CELL DERIVATIONS (real inputs)
+  // ===================================
+
+  // HV(10D) / HV(30D) — the same Yang-Zhang estimator over shorter/longer windows of the
+  // real candle tape (honest "—" when too few bars).
+  const hv10 = useMemo(() => calculateRealizedVolSuite(candles, defaultIv, 10), [candles, defaultIv]);
+  const hv30 = useMemo(() => calculateRealizedVolSuite(candles, defaultIv, 30), [candles, defaultIv]);
+  const enoughCandles = candles.length >= 6;
+
+  // Per-strike net dealer gamma from the actual chain (calls long-γ, puts short-γ),
+  // in $/1%. Feeds both the GAMMA EXPOSURE surface and the DEALER HEDGING simulator.
+  const gammaStrikes: StrikeRow[] = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const c of optionChain) {
+      const g = c.gamma * (c.openInterest || 0) * 100 * spotPrice * (c.type === 'put' ? -1 : 1);
+      map.set(c.strike, (map.get(c.strike) || 0) + g);
+    }
+    return [...map.entries()].map(([strike, netGex]) => ({ strike, netGex })).sort((a, b) => a.strike - b.strike);
+  }, [optionChain, spotPrice]);
+
+  // Surface profile for the exposure grids — prefers the server's streamed dealer strikes
+  // when present, else the chain-derived per-strike net gamma.
+  const gammaProfile: SurfaceProfile = useMemo(() => {
+    const streamed = gexProfile?.strikes as Array<{ strike: number; netGex: number }> | undefined;
+    const strikes = Array.isArray(streamed) && streamed.length >= 4
+      ? streamed.map((s) => ({ strike: s.strike, netGex: s.netGex }))
+      : gammaStrikes;
+    return {
+      spot: spotPrice,
+      strikes,
+      expiries: gexProfile?.expiries as any,
+      gammaFlip: gexProfile?.gammaFlip,
+      callWall: gexProfile?.callWall,
+      putWall: gexProfile?.putWall,
+    };
+  }, [gexProfile, gammaStrikes, spotPrice]);
+
+  const gexGrid = useMemo(() => exposureSurfaceGrid(gammaProfile, 'netGex'), [gammaProfile]);
+  const gexDomain = useMemo(() => strikeDomain(gammaProfile), [gammaProfile]);
+  const gexMarkers: SurfaceMarker[] = useMemo(() => ([
+    spotPrice ? { at: spotPrice, kind: 'spot' as const, label: 'Spot' } : null,
+    gexProfile?.gammaFlip != null ? { at: gexProfile.gammaFlip, kind: 'flip' as const, label: 'γ-Flip' } : null,
+  ].filter(Boolean) as SurfaceMarker[]), [spotPrice, gexProfile?.gammaFlip]);
+
+  // OPEN INTEREST surface — real total OI per strike over spot ±8%, with a documented
+  // near-dated concentration model across the tenor axis. Sequential (unsigned) intensity.
+  const oiGrid = useMemo(() => {
+    if (!spotPrice || spotPrice <= 0) return [];
+    const oiByStrike = new Map<number, number>();
+    for (const c of optionChain) oiByStrike.set(c.strike, (oiByStrike.get(c.strike) || 0) + (c.openInterest || 0));
+    const entries = [...oiByStrike.entries()].sort((a, b) => a[0] - b[0]);
+    if (entries.length < 4) return [];
+    const COLS = 30, ROWS = 16;
+    const lo = spotPrice * 0.92, hi = spotPrice * 1.08;
+    const valAt = (k: number) => {
+      let best = entries[0][1], bd = Infinity;
+      for (const [s, v] of entries) { const d = Math.abs(s - k); if (d < bd) { bd = d; best = v; } }
+      return best;
+    };
+    const axis = Array.from({ length: COLS }, (_, c) => lo + (hi - lo) * (c / (COLS - 1)));
+    return Array.from({ length: ROWS }, (_, r) => {
+      const w = 1 / Math.sqrt(1 + (r / (ROWS - 1)) * 5); // OI thins in far tenors
+      return axis.map((k) => valAt(k) * w);
+    });
+  }, [optionChain, spotPrice]);
+  const oiDomain = useMemo(() => strikeDomain(gammaProfile), [gammaProfile]);
+
+  // Max Pain — settle strike minimizing total option intrinsic value (real chain OI).
+  const maxPain = useMemo(() => {
+    const strikes = [...new Set(optionChain.map((c) => c.strike))].sort((a, b) => a - b);
+    if (strikes.length < 3) return null;
+    let bestK = strikes[0], bestPain = Infinity;
+    for (const K of strikes) {
+      let pain = 0;
+      for (const c of optionChain) {
+        const oi = c.openInterest || 0;
+        if (c.type === 'call') pain += oi * Math.max(0, K - c.strike);
+        else pain += oi * Math.max(0, c.strike - K);
+      }
+      if (pain < bestPain) { bestPain = pain; bestK = K; }
+    }
+    return bestK;
+  }, [optionChain]);
+
+  // Put / Call open-interest ratio (real chain).
+  const putCallRatio = useMemo(() => {
+    let callOi = 0, putOi = 0;
+    for (const c of optionChain) { if (c.type === 'call') callOi += c.openInterest || 0; else putOi += c.openInterest || 0; }
+    return callOi > 0 ? putOi / callOi : null;
+  }, [optionChain]);
+
+  // Regime label — a measurable classification off the realized-vol percentile in its own
+  // cone (low RV ⇒ risk-on, elevated ⇒ risk-off). Honest "—" when there is no history.
+  const regime = useMemo(() => {
+    if (!enoughCandles) return { label: '—', tone: undefined as 'pos' | 'neg' | 'gold' | undefined };
+    const p = volSuite.rvPercentile;
+    if (p <= 33) return { label: 'Risk-On', tone: 'pos' as const };
+    if (p >= 67) return { label: 'Risk-Off', tone: 'neg' as const };
+    return { label: 'Neutral', tone: 'gold' as const };
+  }, [enoughCandles, volSuite.rvPercentile]);
+
+  // Net dealer gamma sign → dealer positioning read.
+  const netGamma = useMemo(() => greekRows.find((r) => r.greek.startsWith('Gamma'))?.net ?? 0, [greekRows]);
+  const netVanna = useMemo(() => greekRows.find((r) => r.greek === 'Vanna')?.net ?? 0, [greekRows]);
+  const netCharm = useMemo(() => greekRows.find((r) => r.greek === 'Charm')?.net ?? 0, [greekRows]);
+
+  // Recent alerts & signals — DERIVED from real, computed conditions on this page only.
+  // Nothing here is fabricated; each row is a measurable state stamped at calibration time.
+  const alerts = useMemo(() => {
+    const t = calibratedAt.toLocaleTimeString('en-US', { hour12: false });
+    const out: { tone: 'pos' | 'neg' | 'warn' | 'gold'; text: string; time: string }[] = [];
+    if (rndResult.isFatTailed) out.push({ tone: 'warn', text: `Fat-tailed risk-neutral density (kurtosis ${rndResult.kurtosis.toFixed(2)})`, time: t });
+    if (rndResult.skewness < -0.05) out.push({ tone: 'neg', text: `Downside-skewed density (skew ${rndResult.skewness.toFixed(2)})`, time: t });
+    if (skewMetrics.riskReversal25D < 0) out.push({ tone: 'neg', text: `Put skew bid · 25Δ RR ${fmtPct(skewMetrics.riskReversal25D)}`, time: t });
+    if (enoughCandles) out.push({
+      tone: volSuite.varianceRiskPremium >= 0 ? 'pos' : 'neg',
+      text: `${volSuite.varianceRiskPremium >= 0 ? 'Positive' : 'Negative'} variance risk premium · ${(volSuite.varianceRiskPremium * 100).toFixed(2)} pts`,
+      time: t,
+    });
+    if (gexProfile?.gammaFlip != null) out.push({ tone: 'gold', text: `Gamma flip level at ${Math.round(gexProfile.gammaFlip).toLocaleString()}`, time: t });
+    if (netGamma < 0) out.push({ tone: 'neg', text: 'Dealers net short gamma — flows amplify moves', time: t });
+    return out;
+  }, [calibratedAt, rndResult, skewMetrics.riskReversal25D, enoughCandles, volSuite.varianceRiskPremium, gexProfile?.gammaFlip, netGamma]);
+
+  // RISK-NEUTRAL DISTRIBUTION cell — density (left axis) + cumulative probability (right
+  // axis), the reference's two-curve read, straight off the real B-L solve.
+  const rndCellOption = useMemo(() => {
+    const { density, mean, stdDev } = rndResult;
+    if (density.length < 3) return null;
+    return {
+      animation: false,
+      grid: { left: 40, right: 38, top: 14, bottom: 30 },
+      tooltip: {
+        trigger: 'axis',
+        formatter: (ps: Array<{ data: [number, number]; seriesName: string }>) => {
+          if (!ps?.length) return '';
+          const k = ps[0].data[0];
+          const rows = ps.map((p) => `${p.seriesName} <b>${p.seriesName === 'CDF' ? `${(p.data[1] * 100).toFixed(1)}%` : (p.data[1] * 100).toFixed(2)}</b>`).join('<br/>');
+          return `K <b>${k.toLocaleString()}</b><br/>${rows}`;
+        },
+      },
+      xAxis: {
+        type: 'value',
+        scale: true,
+        axisLabel: { fontSize: 8, formatter: (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 }) },
+      },
+      yAxis: [
+        { type: 'value', axisLabel: { show: false }, splitLine: { show: false } },
+        { type: 'value', min: 0, max: 1, axisLabel: { fontSize: 8, formatter: (v: number) => `${(v * 100).toFixed(0)}%` }, splitLine: { show: false } },
+      ],
+      series: [
+        {
+          name: 'Density', type: 'line', yAxisIndex: 0, data: density.map((n) => [n.strike, n.probability]),
+          showSymbol: false, smooth: true, lineStyle: { width: 2, color: 'rgba(248,248,255,0.82)' }, areaStyle: { color: 'rgba(248,248,255,0.06)' },
+          markLine: {
+            symbol: 'none', silent: true,
+            data: [
+              { xAxis: spotPrice, lineStyle: { color: '#2C687B', type: 'dashed', width: 1 }, label: { formatter: 'SPOT', fontSize: 8, color: '#2C687B' } },
+              { xAxis: mean - stdDev, lineStyle: { color: '#C49A3A', type: 'dashed', width: 1 }, label: { show: false } },
+              { xAxis: mean + stdDev, lineStyle: { color: '#C49A3A', type: 'dashed', width: 1 }, label: { show: false } },
+            ],
+          },
+        },
+        {
+          name: 'CDF', type: 'line', yAxisIndex: 1, data: density.map((n) => [n.strike, n.cumulativeProb]),
+          showSymbol: false, smooth: true, lineStyle: { width: 1.5, color: '#5B8DB8' },
+        },
+      ],
+    };
+  }, [rndResult, spotPrice]);
+
   const labTabs: { id: LabTab; label: string }[] = [
     { id: 'volgeo', label: 'Volatility Geometry' },
     { id: 'mechanics', label: 'Dealer Mechanics' },
@@ -815,29 +1054,55 @@ export default function QuantSuiteView() {
     <StrikeSyncProvider>
       <div className="slayer-terminal w-full font-mono" id="quant-suite-terminal-view">
 
-        {/* ───────────── COMMAND ROW — sticky compact toolbar: identity + controls ───────────── */}
+        {/* ───────────── HEADER BAR — identity + big price + vol-stat cells + view tabs ───────────── */}
         <div className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4">
-            <div className="flex min-w-0 items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2 sm:px-4">
+            {/* identity + price */}
+            <div className="flex items-center gap-2.5">
               <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--accent-color)] shadow-[0_0_8px_var(--accent-glow)]" />
-              <div className="min-w-0 leading-tight">
-                <h2 className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-primary)]">Quant Lab</h2>
-                <p className="truncate text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Research Sheet · {activeTicker}</p>
+              <div className="leading-tight">
+                <h2 className="text-[15px] font-bold tracking-[0.06em] text-[var(--text-primary)]">{activeTicker}</h2>
+                <p className="truncate text-[8px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{activeAsset.name}</p>
               </div>
-              <span
-                className={`slayer-num ml-1 shrink-0 rounded-[var(--radius-control,5px)] border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] ${
-                  isLiveData
-                    ? 'border-[var(--accent-color)] bg-[var(--accent-soft)] text-[var(--accent-color)]'
-                    : 'border-[var(--border)] text-[var(--text-tertiary)]'
-                }`}
-              >
-                {isLiveData ? 'Live Chain' : 'Model Chain'}
-              </span>
+              <div className="flex items-baseline gap-2 pl-1">
+                <span className="slayer-num text-[20px] font-bold leading-none text-[var(--text-primary)]">
+                  {spotPrice.toLocaleString('en-US', { minimumFractionDigits: activeAsset.decimals, maximumFractionDigits: activeAsset.decimals })}
+                </span>
+                {(() => {
+                  // Session change — spot vs the oldest streamed candle, matching the
+                  // command bar's method so the two Δ reads never contradict each other.
+                  const n = candles.length;
+                  const ref = n >= 1 ? (candles[0].open ?? candles[0].close) : null;
+                  const cur = spotPrice ?? (n >= 1 ? candles[n - 1].close : null);
+                  const chg = ref != null && cur != null ? cur - ref : null;
+                  const prev = ref ?? 0;
+                  const pct = chg != null && prev ? (chg / prev) * 100 : null;
+                  const tone = chg == null ? 'text-[var(--text-tertiary)]' : chg >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]';
+                  return (
+                    <span className={`slayer-num text-[12px] font-semibold ${tone}`}>
+                      {chg == null ? '—' : `${chg >= 0 ? '+' : ''}${chg.toFixed(activeAsset.decimals)}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)` : ''}`}
+                    </span>
+                  );
+                })()}
+              </div>
             </div>
 
-            <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
+            {/* vol-stat cells */}
+            <div className="flex flex-wrap items-center gap-y-1">
+              <TopStat label="IV Rank" value="—" />
+              <TopStat label="IV Pctl" value="—" />
+              <TopStat label="IV 1D" value="—" />
+              <TopStat label="HV 10D" value={enoughCandles && !hv10.isEstimate ? fmtPct(hv10.yangZhang) : '—'} />
+              <TopStat label="HV 30D" value={enoughCandles && !hv30.isEstimate ? fmtPct(hv30.yangZhang) : '—'} />
+              <TopStat label="VIX" value="—" />
+              <TopStat label="Realized Vol" value={enoughCandles && !volSuite.isEstimate ? fmtPct(volSuite.yangZhang) : '—'} />
+              <TopStat label="Regime" value={regime.label} tone={regime.tone} />
+            </div>
+
+            {/* controls + actions */}
+            <div className="ml-auto flex flex-wrap items-center gap-2">
               <ControlSelect
-                label="Symbol"
+                label="Sym"
                 value={activeTicker}
                 onChange={(v) => {
                   const asset = ASSET_LIST.find((a) => a.ticker === v);
@@ -845,340 +1110,188 @@ export default function QuantSuiteView() {
                 }}
                 options={ASSET_LIST.map((a) => a.ticker)}
               />
-              <ControlSelect
-                label="Expiry"
-                value={`${dteD}D`}
-                onChange={(v) => setDteD(parseInt(v, 10) || 14)}
-                options={['7D', '14D', '21D', '30D']}
-              />
-              <span className="slayer-readout hidden items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] sm:inline-flex">
-                <span className="text-[var(--text-tertiary)]">Model</span>
-                <span className="font-semibold text-[var(--text-primary)]">BSM · B-L RND</span>
-              </span>
-              <span className="slayer-readout slayer-num hidden items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] md:inline-flex">
-                <span className="text-[var(--text-tertiary)]">Calibrated</span>
-                <span className="font-semibold text-[var(--text-primary)]">{calibratedAt.toLocaleTimeString('en-US', { hour12: false })}</span>
-              </span>
-              <button
-                type="button"
-                onClick={() => setRefreshNonce((n) => n + 1)}
-                className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              <ControlSelect label="Exp" value={`${dteD}D`} onChange={(v) => setDteD(parseInt(v, 10) || 14)} options={['7D', '14D', '21D', '30D']} />
+              <span
+                className={`slayer-num shrink-0 rounded-[var(--radius-control,5px)] border px-2 py-1 text-[8px] font-semibold uppercase tracking-[0.14em] ${
+                  isLiveData ? 'border-[var(--accent-color)] bg-[var(--accent-soft)] text-[var(--accent-color)]' : 'border-[var(--border)] text-[var(--text-tertiary)]'
+                }`}
               >
-                <RefreshCw className="h-3 w-3" /> Refresh
+                {isLiveData ? 'Live' : 'Model'} · {calibratedAt.toLocaleTimeString('en-US', { hour12: false })}
+              </span>
+              <button type="button" onClick={() => setRefreshNonce((n) => n + 1)} aria-label="Recalibrate" className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                <RefreshCw className="h-3 w-3" /> View
               </button>
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
-              >
-                <Download className="h-3 w-3" /> Export
+              <button type="button" onClick={exportCsv} className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]">
+                <Download className="h-3 w-3" /> Save
               </button>
             </div>
           </div>
+
+          {/* view tabs */}
+          <div className="flex items-center gap-1 border-t border-[var(--border)] px-2 sm:px-3">
+            {(['monitor', 'analyze', 'research', 'simulate'] as const).map((v) => {
+              const active = activeView === v;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setActiveView(v)}
+                  aria-pressed={active}
+                  className={`cursor-pointer border-b-2 px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors ${
+                    active
+                      ? 'border-[var(--accent-color)] text-[var(--text-primary)]'
+                      : 'border-transparent text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]'
+                  }`}
+                >
+                  {v}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* ───────────── SHEET BODY — sticky section rail (left) + instrument sections ───────────── */}
-        <div className="flex w-full gap-[var(--gap)] px-3 pb-8 pt-[var(--gap)] sm:px-4">
+        {/* ───────────── BODY ───────────── */}
+        <div className="w-full px-3 pb-8 pt-[var(--gap)] sm:px-4">
 
-          {/* SECTION RAIL — anchor index of the sheet; hidden on mobile (sections just stack). */}
-          <nav aria-label="Sheet sections" className="hidden w-[176px] shrink-0 lg:block">
-            <div className="sticky top-[72px] flex flex-col gap-3">
-              <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Sheet Index</span>
-              <div className="flex flex-col gap-1">
-                {SHEET_SECTIONS.map((s) => {
-                  const active = activeSection === s.id;
-                  return (
-                    <button
-                      key={s.id}
-                      type="button"
-                      onClick={() => scrollToSection(s.id)}
-                      aria-current={active ? 'true' : undefined}
-                      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[var(--radius-control,5px)] border px-2 py-1.5 text-left transition-colors ${
-                        active
-                          ? 'border-[var(--border)] bg-[var(--accent-soft)]'
-                          : 'border-transparent hover:bg-[var(--surface)]'
-                      }`}
-                    >
-                      <span
-                        aria-hidden
-                        className={`h-6 w-[2px] shrink-0 rounded-full ${
-                          active ? 'bg-[var(--accent-color)] shadow-[0_0_6px_var(--accent-glow)]' : 'bg-[var(--border)]'
-                        }`}
-                      />
-                      <span className="flex min-w-0 flex-col">
-                        <span className={`slayer-num text-[8px] tracking-[0.14em] ${active ? 'text-[var(--accent-color)]' : 'text-[var(--text-tertiary)]'}`}>
-                          {s.num}
-                        </span>
-                        <span
-                          className={`truncate text-[10px] font-semibold uppercase tracking-[0.1em] ${
-                            active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
-                          }`}
-                        >
-                          {s.label}
-                        </span>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="border-t border-[var(--border)] px-1 pt-2">
-                <span className="slayer-num block text-[8px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
-                  Calibrated {calibratedAt.toLocaleTimeString('en-US', { hour12: false })}
-                </span>
-              </div>
-            </div>
-          </nav>
+          {(activeView === 'monitor' || activeView === 'analyze') && (
+            <>
+              {/* DENSE INSTRUMENT GRID — nine numbered instrument cells */}
+              <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-2 2xl:grid-cols-3">
 
-          {/* SHEET COLUMN — the full-width instrument sections, in reading order. */}
-          <div className="min-w-0 flex-1 space-y-[var(--gap)]">
+                {/* 01 · IMPLIED VOLATILITY SURFACE (3D) */}
+                <GridCell num="01" title="Implied Volatility Surface" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">K/S × tenor · 3D</span>} bodyClassName="p-0">
+                  <div className="h-[260px] overflow-hidden rounded-b-[var(--radius-panel,8px)] bg-[#0a0a0b]">
+                    <ErrorBoundary label="IV Surface (WebGL)">
+                      <Suspense fallback={<Surface3DLoading compact label="Loading IV surface…" />}>
+                        <QuantSurface3D grid={ivHeroGrid} ramp="sequential" height={260} axisLabels={['strike', 'tenor', 'IV']} xDomain={ivHeroDomain} xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })} valueFormat={(v) => `${(v * 100).toFixed(1)}%`} markers={ivHeroMarkers} floorHeatmap legend sliceCol={ivHeroSliceCol} sliceRow={0} />
+                      </Suspense>
+                    </ErrorBoundary>
+                  </div>
+                </GridCell>
 
-            {/* ── 01 · IV SURFACE — the sheet's hero, biggest instrument on the page ── */}
-            <SheetSection
-              id="sheet-iv-surface"
-              num="01"
-              title="IV Surface (Mid)"
-              subtitle={`Smile × term model anchored on the 1σ expected move (±${expectedMovePct.toFixed(2)}%)`}
-              meta={
-                <span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">moneyness × tenor × σ</span>
-              }
-              contentClassName="p-3"
-            >
-              <div className="grid min-w-0 grid-cols-1 gap-[var(--gap)] lg:grid-cols-[minmax(0,1fr)_200px]">
-                <div className="min-w-0">
-                  {heatmapOption ? (
-                    <div className="h-[320px] lg:h-[440px]" id="quant-suite-iv-heatmap">
-                      <EChart option={heatmapOption} notMerge />
+                {/* 02 · GAMMA EXPOSURE SURFACE (3D) */}
+                <GridCell num="02" title="Gamma Exposure Surface" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">Γ · net · 3D</span>} bodyClassName="p-0">
+                  <div className="h-[260px] overflow-hidden rounded-b-[var(--radius-panel,8px)] bg-[#0a0a0b]">
+                    {gexGrid.length ? (
+                      <ErrorBoundary label="Gamma Surface (WebGL)">
+                        <Suspense fallback={<Surface3DLoading compact label="Loading gamma surface…" />}>
+                          <QuantSurface3D grid={gexGrid} ramp="diverging" height={260} axisLabels={['strike', 'tenor', 'net Γ']} xDomain={gexDomain} xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })} valueFormat={(v) => fmtCompact(v)} markers={gexMarkers} floorHeatmap legend />
+                        </Suspense>
+                      </ErrorBoundary>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Chain too sparse for a gamma surface</div>
+                    )}
+                  </div>
+                </GridCell>
+
+                {/* 03 · RISK-NEUTRAL DISTRIBUTION (density + CDF) */}
+                <GridCell num="03" title="Risk-Neutral Distribution" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">B-L · density + CDF</span>}>
+                  {rndCellOption ? (
+                    <div className="h-[240px]" id="quant-suite-rnd-chart"><EChart option={rndCellOption} notMerge /></div>
+                  ) : (
+                    <div className="flex h-[240px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Chain too sparse for a density solve</div>
+                  )}
+                </GridCell>
+
+                {/* 04 · MONTE CARLO SIMULATION */}
+                <GridCell num="04" title="Monte Carlo Simulation" controls={<span className="slayer-num text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">σ {fmtPct(defaultIv)} · {dteD}D</span>} bodyClassName="max-h-[300px] min-w-0 overflow-auto p-2" className="min-w-0">
+                  <div id="quant-suite-monte-carlo" className="min-w-0">
+                    <MonteCarloPanel spot={spotPrice} r={0.05} sigma={defaultIv} tYears={Math.max(1, dteD) / 365} ticker={activeTicker} decimals={activeAsset.decimals} />
+                  </div>
+                </GridCell>
+
+                {/* 05 · DEALER HEDGING SIMULATOR */}
+                <GridCell num="05" title="Dealer Hedging Simulator" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">net flow</span>} bodyClassName="max-h-[300px] min-w-0 overflow-auto p-2">
+                  {gammaProfile.strikes && gammaProfile.strikes.length >= 2 && spotPrice > 0 && expectedMovePct > 0 ? (
+                    <div id="quant-suite-hedging" className="min-w-0">
+                      <DealerHedgingPanel strikes={gammaProfile.strikes.map((s) => ({ strike: s.strike, netGex: s.netGex }))} spot={spotPrice} emPct={expectedMovePct / 100} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
                     </div>
                   ) : (
-                    <div className="flex h-[320px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] lg:h-[440px]">
-                      Surface unavailable
-                    </div>
+                    <div className="flex h-[240px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Awaiting dealer strike profile</div>
                   )}
-                </div>
-                {/* Hero readout rail — real figures already computed on this page. */}
-                <div className="grid min-w-0 grid-cols-2 content-start gap-[6px] sm:grid-cols-4 lg:grid-cols-1">
-                  <Cell label="Exp Move" value={`±${expectedMovePct.toFixed(2)}%`} sub={`1σ · ${dteD}D`} />
-                  <Cell label="ATM IV" value={fmtPct(defaultIv)} sub="front" />
-                  <Cell label="Spot" value={spotPrice.toLocaleString('en-US', { maximumFractionDigits: activeAsset.decimals })} sub={activeTicker} />
-                  <Cell label="Contracts" value={optionChain.length} sub={isLiveData ? 'live chain' : 'model chain'} />
-                </div>
-              </div>
-              <p className="pt-2 text-[9px] leading-relaxed text-[var(--text-faint)]">
-                Put-side lift is skew; the U across moneyness is the smile. Tenor axis is a documented 0→1y model — the chain carries a single front expiry.
-              </p>
-            </SheetSection>
+                </GridCell>
 
-            {/* ── 02 · TERM STRUCTURE ── */}
-            <SheetSection
-              id="sheet-term-structure"
-              num="02"
-              title="Volatility Term Structure (ATM)"
-              subtitle="ATM column of the vol model vs DTE"
-              contentClassName="flex flex-col gap-2 p-3"
-            >
-              {termOption ? (
-                <div className="h-[260px]" id="quant-suite-term-structure">
-                  <EChart option={termOption} notMerge />
-                </div>
-              ) : (
-                <div className="flex h-[260px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
-                  Term structure unavailable
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
-                <Cell label="ATM IV" value={fmtPct(defaultIv)} sub="front" />
-                <Cell label="IV 1M" value={termStats.m1 != null ? `${termStats.m1.toFixed(2)}%` : '—'} sub="term" />
-                <Cell label="IV 3M" value={termStats.m3 != null ? `${termStats.m3.toFixed(2)}%` : '—'} sub="term" />
-                <Cell label="IV 6M" value={termStats.m6 != null ? `${termStats.m6.toFixed(2)}%` : '—'} sub="term" />
-                <Cell label="IV 1Y" value={termStats.y1 != null ? `${termStats.y1.toFixed(2)}%` : '—'} sub="term" />
-              </div>
-            </SheetSection>
+                {/* 06 · OPEN INTEREST SURFACE (3D) */}
+                <GridCell num="06" title="Open Interest Surface" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">OI · 3D</span>} bodyClassName="p-0">
+                  <div className="h-[260px] overflow-hidden rounded-b-[var(--radius-panel,8px)] bg-[#0a0a0b]">
+                    {oiGrid.length ? (
+                      <ErrorBoundary label="OI Surface (WebGL)">
+                        <Suspense fallback={<Surface3DLoading compact label="Loading OI surface…" />}>
+                          <QuantSurface3D grid={oiGrid} ramp="sequential" height={260} axisLabels={['strike', 'tenor', 'OI']} xDomain={oiDomain} xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })} valueFormat={(v) => fmtCompact(v)} floorHeatmap legend />
+                        </Suspense>
+                      </ErrorBoundary>
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">No open-interest chain streamed</div>
+                    )}
+                  </div>
+                </GridCell>
 
-            {/* ── 03 · RISK-NEUTRAL DISTRIBUTION ── */}
-            <SheetSection
-              id="sheet-rnd"
-              num="03"
-              title="Risk-Neutral Distribution"
-              subtitle={`Breeden–Litzenberger ∂²C/∂K² on the option chain · ${dteD}D horizon · r = 5.1%`}
-              contentClassName="flex flex-col gap-2 p-3"
-            >
-              {rndOption ? (
-                <div className="h-[300px]" id="quant-suite-rnd-chart">
-                  <EChart option={rndOption} notMerge />
-                </div>
-              ) : (
-                <div className="flex h-[300px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
-                  Chain too sparse for a density solve
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
-                <Cell label="Exp Move" value={`±${expectedMovePct.toFixed(2)}%`} sub={`1σ · ${dteD}D`} />
-                <Cell
-                  label="Skew"
-                  value={rndResult.skewness.toFixed(3)}
-                  tone={rndResult.skewness < 0 ? 'neg' : 'pos'}
-                  sub={rndResult.skewness < 0 ? 'Put-tailed' : 'Call-tailed'}
-                />
-                <Cell
-                  label="Kurtosis"
-                  value={rndResult.kurtosis.toFixed(2)}
-                  tone={rndResult.isFatTailed ? 'warn' : undefined}
-                  sub={rndResult.isFatTailed ? 'Fat-tailed' : 'Excess'}
-                />
-                <Cell label="P(>+2σ)" value={rndTails.pAbove2 != null ? fmtPct(rndTails.pAbove2) : '—'} sub="Upper tail" />
-                <Cell label="P(<-2σ)" value={rndTails.pBelow2 != null ? fmtPct(rndTails.pBelow2) : '—'} sub="Lower tail" />
-              </div>
-            </SheetSection>
-
-            {/* ── 04 · REGIME & SCENARIOS — the sheet's one side-by-side pair. The Regime
-                signal column is intrinsically tall (11 live signals + candle classifier);
-                the Monte-Carlo sample-path cloud stretches to match it, so neither panel
-                pads out into dead space. ── */}
-            <SheetSection
-              id="sheet-regime"
-              num="04"
-              title="Regime & Scenario Engine"
-              subtitle="Streamed quant-edge signal grid + candle classifier, beside seeded GBM / jump-diffusion / Heston paths"
-              contentClassName="p-3"
-            >
-              <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2 xl:items-stretch">
-                <div className="flex min-w-0 flex-col gap-[var(--gap)]">
-                  <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">quant-edge stream</span>}>
-                    Regime Detection
-                  </LabLabel>
-                  <RegimeMatrixPanel />
+                {/* 07 · MARKET REGIME DETECTION */}
+                <GridCell num="07" title="Market Regime Detection" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">multi-signal</span>} bodyClassName="max-h-[320px] min-w-0 overflow-auto p-2">
                   {candles.length >= 30 ? (
                     <RegimeDetectionPanel candles={candles} ticker={activeTicker} />
                   ) : (
-                    <p className="px-1 text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-                      Candle-series classifier needs ≥30 live bars — awaiting stream.
-                    </p>
+                    <RegimeMatrixPanel />
                   )}
-                </div>
+                </GridCell>
 
-                <div className="flex min-w-0 flex-col">
-                  <LabLabel right={<span className="slayer-num text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">σ = {fmtPct(defaultIv)} · {dteD}D · r = 5.0%</span>}>
-                    Monte Carlo Scenarios
-                  </LabLabel>
-                  <div id="quant-suite-monte-carlo" className="min-h-0 flex-1">
-                    <MonteCarloPanel
-                      spot={spotPrice}
-                      r={0.05}
-                      sigma={defaultIv}
-                      tYears={Math.max(1, dteD) / 365}
-                      ticker={activeTicker}
-                      decimals={activeAsset.decimals}
-                    />
+                {/* 08 · CORRELATION / PCA EXPLORER */}
+                <GridCell num="08" title="Correlation / PCA Explorer" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">corr · PCA</span>} bodyClassName="max-h-[320px] min-w-0 overflow-auto p-2">
+                  <FactorLabPanel chain={optionChain} spot={spotPrice} ticker={activeTicker} live={isLiveData} />
+                </GridCell>
+
+                {/* 09 · VOLATILITY TERM STRUCTURE */}
+                <GridCell num="09" title="Volatility Term Structure" controls={<span className="text-[8px] uppercase tracking-[0.12em] text-[var(--text-faint)]">multi-tenor</span>} bodyClassName="max-h-[320px] min-w-0 overflow-auto p-2">
+                  <div id="quant-suite-vol-cone" className="min-w-0">
+                    <VolConePanel cone={volCone} atmIv={defaultIv} realizedVol={volSuite.yangZhang} ticker={activeTicker} live={isLiveData} />
                   </div>
-                </div>
+                </GridCell>
+
               </div>
-            </SheetSection>
 
-            {/* ── 05 · GREEKS & FACTOR EXPOSURES ── */}
-            <SheetSection
-              id="sheet-greeks"
-              num="05"
-              title="Greeks & Factor Exposures"
-              subtitle="OI-weighted chain aggregates · smile factors · per-expiry profile · per-strike exposure"
-              contentClassName="flex flex-col gap-[var(--gap)] p-3"
-            >
-              <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-5">
-                <div className="flex min-w-0 flex-col gap-[var(--gap)] lg:col-span-2">
-                  <div>
-                    <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Σ greek × OI × 100</span>}>
-                      Aggregate Greeks
-                    </LabLabel>
-                    <DataTable columns={greekColumns} rows={greekRows} rowKey={(r) => r.greek} />
+              {/* 10 · KEY METRICS & SUMMARY + RECENT ALERTS & SIGNALS */}
+              <div className="mt-[var(--gap)] grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                <GridCell num="10" title="Key Metrics & Summary">
+                  <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-3 lg:grid-cols-6">
+                    <KpiCell label="IV Rank" value="—" />
+                    <KpiCell label="IV Pctl" value="—" />
+                    <KpiCell label="IV 1D" value="—" />
+                    <KpiCell label="HV 10D" value={enoughCandles && !hv10.isEstimate ? fmtPct(hv10.yangZhang) : '—'} />
+                    <KpiCell label="HV 30D" value={enoughCandles && !hv30.isEstimate ? fmtPct(hv30.yangZhang) : '—'} />
+                    <KpiCell label="Realized" value={enoughCandles && !volSuite.isEstimate ? fmtPct(volSuite.yangZhang) : '—'} />
+                    <KpiCell label="Gamma Exp" value={fmtCompact(netGamma)} tone={netGamma >= 0 ? 'pos' : 'neg'} />
+                    <KpiCell label="Vanna Exp" value={fmtCompact(netVanna)} tone={netVanna >= 0 ? 'pos' : 'neg'} />
+                    <KpiCell label="Charm Exp" value={fmtCompact(netCharm)} tone={netCharm >= 0 ? 'pos' : 'neg'} />
+                    <KpiCell label="Dealer Pos" value={netGamma >= 0 ? 'Long γ' : 'Short γ'} tone={netGamma >= 0 ? 'pos' : 'neg'} />
+                    <KpiCell label="Max Pain" value={maxPain != null ? maxPain.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—'} tone="gold" />
+                    <KpiCell label="Put / Call" value={putCallRatio != null ? putCallRatio.toFixed(2) : '—'} tone={putCallRatio != null && putCallRatio > 1 ? 'neg' : 'pos'} />
                   </div>
-                  <div>
-                    <LabLabel>Smile / Vol Factor Exposures</LabLabel>
-                    <div className="grid grid-cols-2 gap-[6px]">
-                      <Cell
-                        label="25Δ RR"
-                        value={fmtPct(skewMetrics.riskReversal25D)}
-                        tone={skewMetrics.riskReversal25D < 0 ? 'neg' : 'pos'}
-                        sub="Call − put IV"
-                      />
-                      <Cell label="25Δ Fly" value={fmtPct(skewMetrics.butterfly25D)} sub="Wings − ATM" />
-                      <Cell
-                        label="VRP"
-                        value={`${(volSuite.varianceRiskPremium * 100).toFixed(2)} pts`}
-                        tone={volSuite.varianceRiskPremium >= 0 ? 'pos' : 'neg'}
-                        sub="IV − RV (Y-Z)"
-                      />
-                      <Cell label="RV %ile" value={`${volSuite.rvPercentile}th`} sub="Own cone" />
-                    </div>
-                  </div>
-                </div>
+                </GridCell>
 
-                <div className="min-w-0 lg:col-span-3">
-                  <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Chain carries the front expiry only</span>}>
-                    Per-Expiry Greek Profile
-                  </LabLabel>
-                  {expiryGex.length ? (
-                    <div className="flex flex-col gap-1">
-                      {expiryGex.map((node) => (
-                        <div key={node.expiry} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px]">
-                          <span className="font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">{node.expiry}</span>
-                          <span className="slayer-num text-[var(--call)]">Call GEX {fmtCompact(node.callGex)}</span>
-                          <span className="slayer-num text-[var(--negative-ink)]">Put GEX {fmtCompact(node.putGex)}</span>
-                          <span className={`slayer-num font-semibold ${node.totalGex >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
-                            Net {fmtCompact(node.totalGex)}
-                          </span>
-                          <span className="slayer-num text-[var(--text-tertiary)]">Dominant K {node.dominantStrike.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                        </div>
-                      ))}
-                    </div>
+                <GridCell num="" title="Recent Alerts & Signals" bodyClassName="max-h-[240px] overflow-auto p-2">
+                  {alerts.length ? (
+                    <ul className="flex flex-col gap-1.5">
+                      {alerts.map((a, i) => {
+                        const dot = a.tone === 'pos' ? 'bg-[var(--positive-ink)]' : a.tone === 'neg' ? 'bg-[var(--negative-ink)]' : a.tone === 'warn' ? 'bg-[var(--warning)]' : 'bg-[var(--gold,#C79350)]';
+                        return (
+                          <li key={i} className="flex items-start gap-2 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-2 py-1.5">
+                            <span aria-hidden className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${dot}`} />
+                            <span className="min-w-0 flex-1 text-[10px] leading-snug text-[var(--text-secondary)]">{a.text}</span>
+                            <span className="slayer-num shrink-0 text-[8px] text-[var(--text-tertiary)]">{a.time}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   ) : (
-                    <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">No chain streamed yet.</p>
+                    <div className="flex h-[120px] items-center justify-center text-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">No signals — awaiting stream</div>
                   )}
-                </div>
+                </GridCell>
               </div>
+            </>
+          )}
 
-              {optionChain.length >= 4 && spotPrice > 0 && (
-                <div id="quant-suite-greek-exposure" className="min-w-0">
-                  <LabLabel>Per-Strike Exposure Profile</LabLabel>
-                  <GreekExposurePanel
-                    chain={optionChain}
-                    spot={spotPrice}
-                    decimals={activeAsset.decimals}
-                    ticker={activeTicker}
-                    live={isLiveData}
-                    callWall={gexProfile?.callWall}
-                    putWall={gexProfile?.putWall}
-                    gammaFlip={gexProfile?.gammaFlip}
-                  />
-                </div>
-              )}
-            </SheetSection>
-
-            {/* ── 06 · MODEL NOTES & ASSUMPTIONS (real metadata only) ── */}
-            <SheetSection
-              id="sheet-notes"
-              num="06"
-              title="Model Notes & Assumptions"
-              subtitle="Structure and assumptions of every model on this sheet — nothing here is a fitted-quality claim"
-              contentClassName="grid grid-cols-1 gap-[6px] p-3 sm:grid-cols-2 xl:grid-cols-3"
-            >
-              <ModelNote label="Universe">
-                {activeTicker} · front expiry · {optionChain.length} contracts · near-the-money
-              </ModelNote>
-              <ModelNote label="Calibrated">
-                {calibratedAt.toLocaleTimeString('en-US', { hour12: false })} local · recomputed on every server tick or manual refresh
-              </ModelNote>
-              <ModelNote label="Risk-Neutral Density">
-                Breeden–Litzenberger ∂²C/∂K² on a quadratic smile fit IV(K) = a + b·ln(K/S) + c·ln²(K/S) · horizon {dteD}D · r = 5.1%
-              </ModelNote>
-              <ModelNote label="Realized Volatility">
-                Parkinson / Garman–Klass / Yang–Zhang over the last 20 bars
-              </ModelNote>
-              <ModelNote label="IV Surface">
-                Deterministic smile + term model anchored on the 1σ expected move (σ ≈ EM·√252). Tenor axis is a documented 0→1y model.
-              </ModelNote>
-              <ModelNote label="Monte Carlo">
-                Deterministically seeded paths under GBM / jump-diffusion / Heston on real spot & ATM vol inputs · r = 5.0%
-              </ModelNote>
-            </SheetSection>
+          {(activeView === 'research' || activeView === 'simulate') && (
+            <div className="min-w-0 space-y-[var(--gap)]">
 
             {/* ── 07 · ADVANCED LABS — the original chip-switched deep-dive sub-views ── */}
             <SheetSection
@@ -1435,14 +1548,15 @@ export default function QuantSuiteView() {
                 )}
               </div>
             </SheetSection>
-
-            {/* ── SHEET FOOTER — real metadata only ── */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1">
-              <span className="text-[8px] uppercase tracking-[0.18em] text-[var(--text-faint)]">End of sheet</span>
-              <span className="slayer-num text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-                {activeTicker} · {isLiveData ? 'live chain' : 'model chain'} · calibrated {calibratedAt.toLocaleTimeString('en-US', { hour12: false })}
-              </span>
             </div>
+          )}
+
+          {/* ── FOOTER — real metadata only ── */}
+          <div className="mt-[var(--gap)] flex flex-wrap items-center justify-between gap-2 px-1 pt-1">
+            <span className="text-[8px] uppercase tracking-[0.18em] text-[var(--text-faint)]">Quant Lab · {activeView.toUpperCase()}</span>
+            <span className="slayer-num text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+              {activeTicker} · {isLiveData ? 'live chain' : 'model chain'} · calibrated {calibratedAt.toLocaleTimeString('en-US', { hour12: false })}
+            </span>
           </div>
         </div>
       </div>
