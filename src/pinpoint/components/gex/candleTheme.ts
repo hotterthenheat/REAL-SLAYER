@@ -14,14 +14,14 @@ export interface CandleTheme {
 }
 
 export const CANDLE_THEMES = {
-  // Neutral, premium — glacier ice up / cool slate down
+  // Neutral, premium — cool ivory/steel up / muted slate down, thin cool wicks
   mono: {
-    up: '#D6E4F0',
-    down: '#4A5866',
-    wickUp: '#D6E4F0',
-    wickDown: '#4A5866',
-    volUp: 'rgba(214,228,240,0.20)',
-    volDown: 'rgba(74,88,102,0.30)',
+    up: '#DCE7F2',
+    down: '#46545F',
+    wickUp: '#A7B8C7',
+    wickDown: '#5A6874',
+    volUp: 'rgba(220,231,242,0.16)',
+    volDown: 'rgba(70,85,99,0.26)',
   },
   // Classic emerald / rose
   classic: {
