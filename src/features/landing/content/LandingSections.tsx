@@ -41,12 +41,12 @@ export const PALETTE = {
   panelSoft: 'var(--surface-2)', // nested / softer surface
   text: 'var(--text-primary)', // strong body text
   ghost: 'var(--text-primary)', // brightest heading text
-  steel: '#6A93B5', // calls / SkyVision (matches the Dealer Positioning Map)
-  amber: '#C79350', // dealer flow / GEX / walls / pins (Pinpoint)
-  red: '#B23B3B',   // puts / bearish
-  green: '#3F9C79', // calls / bullish
-  // ordinal accent quartet for numbered/step decoration — neutral, no purple.
-  accent: ['#6A93B5', '#C79350', '#3F9C79', '#B23B3B'] as const,
+  steel: '#5BA8DC', // calls / SkyVision (matches the Dealer Positioning Map)
+  amber: '#E8A33D', // dealer flow / GEX / walls / pins (Pinpoint)
+  red: '#E8564F',   // puts / bearish
+  green: '#2FBF83', // calls / bullish
+  // ordinal accent quartet for numbered/step decoration — Glacier data hues.
+  accent: ['#5BA8DC', '#E8A33D', '#2FBF83', '#E8564F'] as const,
 };
 
 // Accent fill (buttons) + its readable text — themeable, mirrors the terminal.

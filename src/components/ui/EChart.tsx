@@ -33,42 +33,43 @@ function registerSlayerTheme(echarts: EChartsModule) {
   // Data font is a neutral system mono (tabular digits, clean axes) — the brand
   // face (JetBrains Mono) is reserved for the wordmark, never chart data.
   const dataFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  // Cool-tinted axis furniture for the Glacier canvas.
   const axis = {
-    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
-    axisTick: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
-    axisLabel: { color: '#8A8A92', fontFamily: dataFont, fontSize: 10 },
-    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
-    splitArea: { areaStyle: { color: ['rgba(255,255,255,0.012)', 'transparent'] } },
+    axisLine: { lineStyle: { color: 'rgba(163,196,224,0.16)' } },
+    axisTick: { lineStyle: { color: 'rgba(163,196,224,0.16)' } },
+    axisLabel: { color: '#8FA0B0', fontFamily: dataFont, fontSize: 10 },
+    splitLine: { lineStyle: { color: 'rgba(163,196,224,0.05)' } },
+    splitArea: { areaStyle: { color: ['rgba(163,196,224,0.012)', 'transparent'] } },
   };
-  // Series palette = the terminal's semantic data accents (steel/amber/green/red
-  // + muted greek/dealer tones), not generic bright chart hues.
+  // Series palette = the Glacier semantic data accents (steel/amber/green/red +
+  // muted greek/dealer tones) with the ice accent in reach for emphasis series.
   echarts.registerTheme('slayer-dark', {
-    color: ['#6A93B5', '#C79350', '#3F9C79', '#B23B3B', '#7C6DA8', '#5E8C8C', '#8A8A92', '#A66FA0'],
+    color: ['#5BA8DC', '#E8A33D', '#2FBF83', '#E8564F', '#8F6FB8', '#46AECE', '#3FC1FF', '#93A7B8'],
     backgroundColor: 'transparent',
-    textStyle: { fontFamily: dataFont, color: '#A3A3A3' },
-    title: { textStyle: { color: '#E5E5E5', fontWeight: 700 }, subtextStyle: { color: '#71717A' } },
-    legend: { textStyle: { color: '#A3A3A3', fontFamily: dataFont }, inactiveColor: '#3f3f46' },
+    textStyle: { fontFamily: dataFont, color: '#C3CFDA' },
+    title: { textStyle: { color: '#EAF1F7', fontWeight: 700 }, subtextStyle: { color: '#8FA0B0' } },
+    legend: { textStyle: { color: '#C3CFDA', fontFamily: dataFont }, inactiveColor: '#4A5866' },
     tooltip: {
-      backgroundColor: 'rgba(10,10,11,0.96)',
-      borderColor: 'rgba(255,255,255,0.10)',
+      backgroundColor: 'rgba(13,18,24,0.96)',
+      borderColor: 'rgba(163,196,224,0.14)',
       borderWidth: 1,
-      textStyle: { color: '#E5E5E5', fontFamily: dataFont, fontSize: 11 },
-      extraCssText: 'border-radius: 7px;',
+      textStyle: { color: '#EAF1F7', fontFamily: dataFont, fontSize: 11 },
+      extraCssText: 'border-radius: 8px; box-shadow: 0 10px 30px -12px rgba(0,0,0,0.75);',
     },
-    axisPointer: { lineStyle: { color: '#3f3f46' }, crossStyle: { color: '#3f3f46' }, label: { backgroundColor: '#1c1c1e' } },
+    axisPointer: { lineStyle: { color: '#4A5866' }, crossStyle: { color: '#4A5866' }, label: { backgroundColor: '#1B2531' } },
     categoryAxis: axis,
     valueAxis: axis,
     timeAxis: axis,
     logAxis: axis,
-    grid: { borderColor: 'rgba(255,255,255,0.06)' },
-    toolbox: { iconStyle: { borderColor: '#71717A' }, emphasis: { iconStyle: { borderColor: '#E5E5E5' } } },
+    grid: { borderColor: 'rgba(163,196,224,0.06)' },
+    toolbox: { iconStyle: { borderColor: '#8FA0B0' }, emphasis: { iconStyle: { borderColor: '#3FC1FF' } } },
     dataZoom: {
-      borderColor: 'rgba(255,255,255,0.08)',
-      fillerColor: 'rgba(106,147,181,0.12)',
-      handleStyle: { color: '#6A93B5' },
-      moveHandleStyle: { color: '#6A93B5' },
-      dataBackground: { lineStyle: { color: '#3f3f46' }, areaStyle: { color: 'rgba(255,255,255,0.04)' } },
-      textStyle: { color: '#71717A' },
+      borderColor: 'rgba(163,196,224,0.08)',
+      fillerColor: 'rgba(63,193,255,0.12)',
+      handleStyle: { color: '#3FC1FF' },
+      moveHandleStyle: { color: '#3FC1FF' },
+      dataBackground: { lineStyle: { color: '#4A5866' }, areaStyle: { color: 'rgba(163,196,224,0.04)' } },
+      textStyle: { color: '#8FA0B0' },
     },
   });
 }

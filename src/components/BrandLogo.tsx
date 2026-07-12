@@ -15,7 +15,8 @@ import React from 'react';
  */
 
 const PROMPT = 'var(--brand-prompt, #6B7177)'; // --dim  : the ">" terminal prompt
-const WHITE = 'var(--brand-ink, #F4F5F6)';     // --white : the S / wordmark / caret
+const WHITE = 'var(--brand-ink, #F4F5F6)';     // --white : the S / wordmark
+const CARET = 'var(--accent-color, #3FC1FF)';  // GLACIER: the blinking caret carries the ice accent
 
 export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
   const fontSize = expanded ? 18 : 24;
@@ -48,8 +49,8 @@ export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
           height: expanded ? '0.92em' : '0.88em',
           marginLeft: expanded ? '0.14em' : '0.125em',
           borderRadius: expanded ? 2 : 1,
-          background: WHITE,
-          boxShadow: `0 0 ${expanded ? 18 : 12}px color-mix(in srgb, ${WHITE} 50%, transparent)`,
+          background: CARET,
+          boxShadow: `0 0 ${expanded ? 18 : 12}px color-mix(in srgb, ${CARET} 60%, transparent)`,
         }}
       />
     </span>

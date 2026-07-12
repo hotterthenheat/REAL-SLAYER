@@ -311,7 +311,7 @@ function RailItem({ it }: { it: NavItemDef }) {
         aria-current={isActive ? 'page' : undefined}
         className={`relative flex w-full cursor-pointer flex-col items-center gap-1 rounded-[6px] py-2 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
           isActive
-            ? it.adminOnly ? 'text-rose-400' : 'text-[var(--text-primary)]'
+            ? it.adminOnly ? 'text-rose-400' : 'text-[var(--accent-color)]'
             : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
         }`}
       >
@@ -319,7 +319,10 @@ function RailItem({ it }: { it: NavItemDef }) {
         <span
           aria-hidden="true"
           className={`absolute left-0 top-1/2 h-8 w-[2.5px] -translate-y-1/2 rounded-r-full transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-0'}`}
-          style={{ background: it.adminOnly ? '#fb7185' : 'var(--accent-color)' }}
+          style={{
+            background: it.adminOnly ? '#fb7185' : 'var(--accent-color)',
+            boxShadow: isActive && !it.adminOnly ? '0 0 12px var(--accent-glow, rgba(63,193,255,0.35))' : 'none',
+          }}
         />
         <Icon className="h-[17px] w-[17px] shrink-0" />
         <span className="block w-full truncate px-0.5 text-center text-[8px] font-semibold uppercase leading-none tracking-[0.08em]">
@@ -497,7 +500,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
                     style={{ borderRadius: 'var(--radius-control)' }}
                     className={`cursor-pointer whitespace-nowrap border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
                       on
-                        ? 'border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--text-primary)]'
+                        ? 'border-[color-mix(in_srgb,var(--accent-color)_45%,transparent)] bg-[var(--accent-soft)] text-[var(--accent-color)]'
                         : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
                     }`}
                   >
@@ -539,7 +542,7 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
               <button
                 onClick={() => setShowAuthModal(true)}
                 style={{ borderRadius: 'var(--radius-control)' }}
-                className="cursor-pointer bg-[var(--text-primary)] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--background)] transition-opacity hover:opacity-90 focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                className="cursor-pointer bg-[var(--accent-color)] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--primary-contrast)] shadow-[0_6px_20px_-8px_var(--accent-glow)] transition-colors hover:bg-[var(--accent-strong)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
               >
                 Log in
               </button>

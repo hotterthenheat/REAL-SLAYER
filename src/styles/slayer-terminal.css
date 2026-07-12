@@ -1,82 +1,75 @@
 /**
- * REAL-SLAYER global terminal design system
+ * REAL-SLAYER — GLACIER terminal design system.
  * Single source of truth for shell, panels, grid, tables, chart tags, and status tones.
- * The palette is intentionally restrained: color encodes data, not decoration.
  *
- * Ink rule: --positive/--negative are the deep brand anchors (#0D4715/#980404) used for
- * fills, borders, bars and soft washes; --positive-ink/--negative-ink are the readable
- * text variants used when a number itself carries the sign. Never decorate with either.
+ * The Glacier voice: cold graphite-blue surfaces with a quiet top sheen and real
+ * depth, sharper corners (8px panels / 5px controls), an electric ice accent that
+ * marks every active state, and cool-tinted hairlines. Color still encodes data,
+ * never decoration — the single brand hue is the ice accent.
+ *
+ * Ink rule: --positive/--negative are deep anchors (fills, borders, bars, washes);
+ * --positive-ink/--negative-ink are the readable text variants used when a number
+ * itself carries the sign. Never decorate with either.
  */
 :root {
   /* Core brand */
-  --slayer-white: #F5F5F5;
-  --slayer-coffee: #100C08;
-  --slayer-ghost: #F8F8FF;
-  --slayer-black: #000000;
+  --slayer-white: #EAF1F7;
+  --slayer-coffee: #0D1218;
+  --slayer-ghost: #F4F8FC;
+  --slayer-black: #05070A;
 
   /* Semantic site colors */
-  --slayer-red: #980404;
-  --slayer-green: #0D4715;
+  --slayer-red: #E8564F;
+  --slayer-green: #1C6B4A;
 
-  /* Backgrounds */
-  --bg-app: #000000;
-  --bg-shell: #050505;
-  --bg-panel: #080706;
-  --bg-panel-soft: #0d0a08;
-  --bg-panel-raised: #100c08;
+  /* Backgrounds — cold graphite-blue (Glacier), matched to index.css :root */
+  --bg-app: #05070A;
+  --bg-shell: #090D12;
+  --bg-panel: #0D1218;
+  --bg-panel-soft: #10161E;
+  --bg-panel-raised: #141C25;
 
-  /* Border system. NOTE: --border-strong is owned by index.css :root (the shared
-     source of truth). It is intentionally NOT redefined here — this file loads after
-     index.css, so redefining it would silently override the app-wide value in dark
-     mode and leave light mode inconsistent. */
-  --border-subtle: rgba(248, 248, 255, 0.08);
-  --border-mid: rgba(248, 248, 255, 0.14);
+  /* Border system. --border-strong is owned by index.css :root. Cool-tinted. */
+  --border-subtle: rgba(163, 196, 224, 0.09);
+  --border-mid: rgba(163, 196, 224, 0.16);
 
-  /* Typography. NOTE: --text-primary and --text-secondary are owned by index.css :root
-     (source of truth) so the terminal reads the same neutrals as the rest of the app in
-     every theme. Only the terminal-specific muted/faint tones are declared here. */
-  --text-muted: rgba(248, 248, 255, 0.50);
-  --text-faint: rgba(248, 248, 255, 0.29);
+  /* Typography — terminal-specific muted/faint (primary/secondary owned by index.css) */
+  --text-muted: rgba(214, 228, 240, 0.52);
+  --text-faint: rgba(214, 228, 240, 0.30);
 
-  /* Data tones — deep anchors (fills/borders) + readable ink (text).
-     Brand-derived and kept in lock-step with index.css :root so the terminal
-     and the rest of the app read one palette. */
-  --negative: #980404;
-  --negative-ink: #C84848;
-  --negative-soft: rgba(152, 4, 4, 0.18);
-  --positive: #1E5430;
-  --positive-ink: #3A8A68;
-  --positive-soft: rgba(30, 84, 48, 0.22);
+  /* Data tones — deep anchors (fills/borders) + readable ink (text). Glacier-tuned. */
+  --negative: #8E2B27;
+  --negative-ink: #E8564F;
+  --negative-soft: rgba(232, 86, 79, 0.15);
+  --positive: #1C6B4A;
+  --positive-ink: #2FBF83;
+  --positive-soft: rgba(47, 191, 131, 0.18);
 
   /* Market-specific accents */
-  --call: #6A93B5;
-  --pin: #C79350;
-  --warning: #B5862A;
-  --warning-ink: #C79350;
-  --warning-soft: rgba(181, 134, 42, 0.20);
-  --info: #5580A4;
-  --info-ink: #6A93B5;
-  --neutral: rgba(248, 248, 255, 0.55);
+  --call: #5BA8DC;
+  --pin: #E8A33D;
+  --warning: #C98A2E;
+  --warning-ink: #E8A33D;
+  --warning-soft: rgba(232, 163, 61, 0.16);
+  --info: #4587B4;
+  --info-ink: #5BA8DC;
+  --neutral: rgba(214, 228, 240, 0.55);
 
-  /* GEX palette — brand-routed (steel navy → steel → signal green → danger) so the
-     ramp reads in the same language as the IV surface and the rest of the app. */
-  --gex-1: #1E4870;
-  --gex-2: #2A6890;
-  --gex-3: #4A8A60;
-  --gex-4: #A84020;
+  /* GEX palette — brand-routed cool ramp (deep steel → steel → signal → heat). */
+  --gex-1: #1E4E78;
+  --gex-2: #2E7FB0;
+  --gex-3: #2FBF83;
+  --gex-4: #C05A2E;
 
-  /* Geometry */
-  --radius-panel: 10px;
-  --radius-control: 7px;
+  /* Geometry — sharper than the old 10/7 system */
+  --radius-panel: 8px;
+  --radius-control: 5px;
   --gap: 10px;
   --gap-tight: 6px;
   --panel-pad: 14px;
 
-  /* Named type scale — the one layer of the system that was never tokenized, and
-     the root of the size drift the audit flagged (ad-hoc 8/9/10/11/12/13/15px
-     literals). 10px is a HARD floor: nothing below --text-3xs. Consumed by name
-     (var(--text-xs)) so a single edit re-scales the terminal proportionally. */
-  --text-3xs: 10px;  /* caption / label floor */
+  /* Named type scale — 10px hard floor, nothing below --text-3xs. */
+  --text-3xs: 10px;
   --text-2xs: 11px;
   --text-xs: 12px;
   --text-sm: 13px;
@@ -84,30 +77,31 @@
   --text-lg: 18px;
   --text-xl: 22px;
 
-  /* Recessed well — the fill that makes a PASSIVE readout sit visibly below an
-     interactive control instead of matching it. .slayer-readout references this
-     (it was undefined, so readouts silently equalled controls). */
-  --bg-well: #030303;
+  /* Recessed well — passive readouts sit visibly below interactive controls. */
+  --bg-well: #070B10;
 
-  /* Overlay shadow — the single shadow token, reserved for things that truly
-     float (modals, popovers, flyouts). Panels stay flat, so this is no longer
-     applied to .slayer-panel. Mirrors NavFlyout's overlay elevation. */
-  --shadow-panel: 0 16px 44px -12px rgba(0, 0, 0, 0.8);
+  /* Elevation — panels now carry quiet depth; overlays float harder. */
+  --shadow-panel: 0 16px 44px -12px rgba(0, 0, 0, 0.85);
+  --shadow-card: 0 8px 26px -14px rgba(0, 0, 0, 0.75);
+  --edge-sheen: inset 0 1px 0 rgba(214, 232, 248, 0.045);
 }
 
 .slayer-terminal {
   min-height: 100vh;
-  /* Flat shell. The radial "hero wash" at 20% 0% was pure ornament — removed. */
-  background: var(--bg-shell);
+  /* The shell carries the glacier crown-glow — the atmosphere behind every page. */
+  background:
+    radial-gradient(48% 36% at 50% -6%, rgba(63, 193, 255, 0.05), transparent 62%),
+    var(--bg-shell);
   color: var(--text-primary);
 }
 
+/* GLACIER panel — a cold slab with a quiet top sheen and real depth. Sharper
+   corner (8px), cool hairline; it sits forward of the canvas, not flat in it. */
 .slayer-panel {
-  /* Flat fill + 1px hairline, no top-sheen gradient, no drop shadow. A data
-     panel sits in the page; it does not glow or lift off it. */
-  background: var(--bg-panel);
+  background: linear-gradient(180deg, rgba(214, 232, 248, 0.022) 0%, transparent 42%), var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-panel);
+  box-shadow: var(--edge-sheen), var(--shadow-card);
 }
 
 .slayer-panel-header {
@@ -115,9 +109,8 @@
   border-bottom: 1px solid var(--border-subtle);
   padding: 12px 14px;
 }
-/* Command-deck signature: a short bright segment on the header rule, under the
-   title — every panel carries the same quiet mark, so the page reads as one
-   instrument. Monochrome (follows --accent-color, white by default). */
+/* Glacier signature: a short ice segment on the header rule under the title —
+   every panel carries the same mark, so the page reads as one instrument. */
 .slayer-panel-header::after {
   content: "";
   position: absolute;
@@ -126,12 +119,10 @@
   width: 26px;
   height: 2px;
   background: var(--accent-color);
+  box-shadow: 0 0 10px var(--accent-glow, rgba(63, 193, 255, 0.35));
 }
 
-/* Three heading tiers so structural depth reads by WEIGHT, not just position.
-   Before this, one .slayer-title class served page + panel + section, so a reader
-   couldn't tell the view title from a panel title from an in-panel section head.
-   One clear step between each: page (brightest/largest) → panel → section (dim). */
+/* Three heading tiers — structural depth reads by WEIGHT: page → panel → section. */
 .slayer-title-page {
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -172,19 +163,23 @@
   transition:
     border-color 120ms ease,
     color 120ms ease,
-    background-color 120ms ease;
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
-.slayer-control:hover,
-.slayer-control:focus-visible {
+.slayer-control:hover {
   border-color: var(--border-mid);
   color: var(--text-primary);
   outline: none;
 }
+.slayer-control:focus-visible {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(63, 193, 255, 0.13));
+  outline: none;
+}
 
-/* Passive readout chip: same footprint as .slayer-control but no hover/focus
-   affordance and a recessed fill, so a static value (current expiry, model,
-   calibrated-at) never reads as an interactive control sitting next to real ones. */
+/* Passive readout chip — recessed fill, no hover/focus affordance. */
 .slayer-readout {
   appearance: none;
   background: var(--bg-well, var(--bg-shell));
@@ -216,12 +211,13 @@
 .slayer-table td {
   color: var(--text-secondary);
   padding: 9px 10px;
-  border-bottom: 1px solid rgba(248, 248, 255, 0.045);
+  border-bottom: 1px solid rgba(214, 228, 240, 0.045);
   vertical-align: middle;
 }
 
+/* Rows cool toward the ice accent on hover — the live-instrument feel. */
 .slayer-table tr:hover td {
-  background: rgba(248, 248, 255, 0.025);
+  background: rgba(63, 193, 255, 0.045);
 }
 
 .slayer-num {
@@ -237,15 +233,15 @@
 
 .slayer-grid-lines {
   background-image:
-    linear-gradient(rgba(248, 248, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(248, 248, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(163, 196, 224, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(163, 196, 224, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 .slayer-level-tag {
   border: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.88);
-  border-radius: 7px;
+  background: rgba(7, 10, 14, 0.9);
+  border-radius: 5px;
   padding: 5px 8px;
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -254,12 +250,15 @@
 
 .slayer-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(248, 248, 255, 0.15) transparent;
+  scrollbar-color: rgba(63, 193, 255, 0.22) transparent;
 }
 .slayer-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .slayer-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(248, 248, 255, 0.12);
+  background: rgba(63, 193, 255, 0.16);
   border-radius: 999px;
+}
+.slayer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(63, 193, 255, 0.3);
 }
 .slayer-scrollbar::-webkit-scrollbar-track { background: transparent; }
 
