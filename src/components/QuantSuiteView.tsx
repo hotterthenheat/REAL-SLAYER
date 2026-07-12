@@ -1068,22 +1068,9 @@ export default function QuantSuiteView() {
                 <span className="slayer-num text-[20px] font-bold leading-none text-[var(--text-primary)]">
                   {spotPrice.toLocaleString('en-US', { minimumFractionDigits: activeAsset.decimals, maximumFractionDigits: activeAsset.decimals })}
                 </span>
-                {(() => {
-                  // Session change — spot vs the oldest streamed candle, matching the
-                  // command bar's method so the two Δ reads never contradict each other.
-                  const n = candles.length;
-                  const ref = n >= 1 ? (candles[0].open ?? candles[0].close) : null;
-                  const cur = spotPrice ?? (n >= 1 ? candles[n - 1].close : null);
-                  const chg = ref != null && cur != null ? cur - ref : null;
-                  const prev = ref ?? 0;
-                  const pct = chg != null && prev ? (chg / prev) * 100 : null;
-                  const tone = chg == null ? 'text-[var(--text-tertiary)]' : chg >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]';
-                  return (
-                    <span className={`slayer-num text-[12px] font-semibold ${tone}`}>
-                      {chg == null ? '—' : `${chg >= 0 ? '+' : ''}${chg.toFixed(activeAsset.decimals)}${pct != null ? ` (${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%)` : ''}`}
-                    </span>
-                  );
-                })()}
+                {/* The global command bar carries the authoritative session Δ; a second
+                    Δ here (from this view's longer candle history) would both duplicate
+                    and contradict it, so the page header shows the focal price alone. */}
               </div>
             </div>
 
