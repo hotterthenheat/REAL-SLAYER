@@ -330,107 +330,84 @@ const MODULES: Mod[] = [
   { id: 'auditor', tab: 'auditor', name: 'Trade History', tag: 'Tracked outcomes', accent: GREEN, quote: 'Every setup tracked to its outcome. Accountable.', desc: 'The blotter of every tracked setup and its realized result, with win rate and PnL — receipts, not alerts.', chips: ['ENTRIES', 'OUTCOMES', 'REALIZED', 'WIN RATE'], Preview: TradeHistoryPreview },
 ];
 
-export function ProductGridScene({ onEnter }: { onEnter: (tab?: string) => void }) {
+/* One engine, thrown in from its side as it scrolls into view. The whole block
+   translates from the left/right edge (alternating) with a smooth expo settle;
+   the preview mounts only once its row is first seen (keeps the 6 minis + the 3D
+   surface off the CPU/GPU until they're needed, so the scroll stays buttery). */
+function FeatureRow({ m, index, onEnter }: { m: Mod; index: number; onEnter: (tab?: string) => void }) {
   const { reduced } = useLandingMotion();
-  const [active, setActive] = useState('skyvision');
-  const railRef = useRef<HTMLDivElement | null>(null);
-  const mod = MODULES.find((m) => m.id === active)!;
-  const Preview = mod.Preview;
+  const [seen, setSeen] = useState(reduced);
+  const previewLeft = index % 2 === 0; // even → arrives from the left, odd → from the right
+  const fromX = previewLeft ? -170 : 170;
+  const Preview = m.Preview;
+
+  const previewPanel = (
+    <div
+      className={`relative h-[300px] overflow-hidden rounded-[12px] sm:h-[360px] ${previewLeft ? '' : 'lg:order-2'}`}
+      style={{ border: `1px solid ${line}`, background: panel }}
+    >
+      {seen ? <Preview /> : <div className="h-full w-full" style={{ background: panel }} />}
+    </div>
+  );
+
+  const textBlock = (
+    <div className={`flex flex-col justify-center ${previewLeft ? '' : 'lg:order-1'}`}>
+      <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: faint }}>
+        <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: m.accent }} />
+        {m.name}
+        <span style={{ color: lineStrong }}>·</span>
+        <span style={{ color: m.accent }}>{m.tag}</span>
+      </div>
+      <h3 className="mt-3 text-[23px] font-semibold leading-[1.12] sm:text-[29px]" style={{ color: ghost, letterSpacing: '-0.02em' }}>{m.quote}</h3>
+      <p className="mt-3 max-w-md text-[14px] leading-relaxed" style={{ color: muted }}>{m.desc}</p>
+      <div className="mt-5 flex flex-wrap gap-1.5">
+        {m.chips.map((c) => (
+          <span key={c} className="rounded-[5px] px-2 py-1 text-[9px] font-semibold uppercase" style={chip(m.accent)}>{c}</span>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={() => onEnter(m.tab)}
+        className="mt-6 inline-flex w-fit cursor-pointer items-center gap-1.5 text-[11.5px] font-semibold uppercase tracking-[0.14em] transition-transform hover:translate-x-0.5"
+        style={{ color: m.accent }}
+      >
+        Open {m.name} →
+      </button>
+    </div>
+  );
 
   return (
-    <section id="product" className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }} data-scene="product-grid" aria-label="Product showcase">
-      <Reveal className="mx-auto mb-10 max-w-2xl text-center">
+    <motion.div
+      className="grid grid-cols-1 items-center gap-6 lg:grid-cols-2 lg:gap-14"
+      initial={reduced ? false : { opacity: 0, x: fromX, scale: 0.97 }}
+      whileInView={{ opacity: 1, x: 0, scale: 1 }}
+      viewport={{ once: false, amount: 0.4 }}
+      onViewportEnter={() => setSeen(true)}
+      transition={{ duration: 0.85, ease: EASE_PRIMARY }}
+      style={{ willChange: 'transform' }}
+    >
+      {/* source order = preview first so it's always on top on mobile; lg:order flips
+          the pair for odd rows so the throw-in side matches the layout side. */}
+      {previewPanel}
+      {textBlock}
+    </motion.div>
+  );
+}
+
+export function ProductGridScene({ onEnter }: { onEnter: (tab?: string) => void }) {
+  return (
+    <section id="product" className="overflow-x-clip px-5 py-20 sm:py-24" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }} data-scene="product-grid" aria-label="Product showcase">
+      <Reveal className="mx-auto mb-14 max-w-2xl text-center sm:mb-20">
         <div className="text-[10px] font-semibold uppercase" style={{ letterSpacing: '0.28em', color: faint }}>The Terminal</div>
         <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>Six engines. One desk.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>Pick an engine and put your cursor inside the real read.</p>
+        <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>Keep scrolling — each engine arrives on its own, live and hands-on.</p>
       </Reveal>
 
-      <Reveal className="mx-auto max-w-6xl">
-        {/* items-stretch (grid default) + the rail's own flex-1 tabs make BOTH columns
-            exactly the same height — the rail never leaves an empty grey gap. */}
-        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[14px] lg:grid-cols-[236px_1fr]" style={{ border: `1px solid ${line}`, background: line }}>
-          {/* engine rail — the tabs (each stretches to fill the column height) */}
-          <div ref={railRef} className="flex gap-px overflow-x-auto lg:flex-col" style={{ background: line }} role="tablist" aria-label="Engines">
-            {MODULES.map((m) => {
-              const on = m.id === active;
-              return (
-                <button
-                  key={m.id}
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => setActive(m.id)}
-                  onMouseEnter={() => setActive(m.id)}
-                  className="flex min-w-[160px] shrink-0 cursor-pointer flex-col justify-center gap-0.5 px-4 py-3 text-left transition-colors lg:min-w-0 lg:flex-1"
-                  style={{ background: on ? panel : panelSoft, borderLeft: `2px solid ${on ? m.accent : 'transparent'}` }}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="h-2.5 w-[3px] shrink-0 rounded-full transition-all" style={{ background: m.accent, opacity: on ? 1 : 0.4 }} />
-                    <span className="block truncate text-[13px] font-semibold transition-colors" style={{ color: on ? ghost : muted }}>{m.name}</span>
-                  </span>
-                  <span className="truncate pl-[11px] text-[10.5px] transition-colors" style={{ color: on ? muted : faint }}>{m.tag}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* visual + footer */}
-          <div className="flex min-w-0 flex-col" style={{ background: panel }}>
-            {/* header — the product quote */}
-            <div className="px-5 pb-4 pt-5" style={{ borderBottom: `1px solid ${line}` }}>
-              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>
-                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: mod.accent }} />
-                {mod.name}
-              </div>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={mod.id}
-                  initial={reduced ? false : { opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduced ? undefined : { opacity: 0, y: -6 }}
-                  transition={{ duration: 0.3, ease: EASE_PRIMARY }}
-                >
-                  <p className="mt-2 max-w-xl text-[17px] font-semibold leading-snug sm:text-[19px]" style={{ color: ghost, letterSpacing: '-0.01em' }}>{mod.quote}</p>
-                  <p className="mt-1.5 max-w-xl text-[12.5px] leading-relaxed" style={{ color: muted }}>{mod.desc}</p>
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* the designed interactive preview — fills the frame edge-to-edge, no
-                window chrome, no dead space. Crossfades on engine switch. */}
-            <div className="relative h-[330px] overflow-hidden sm:h-[360px]" style={{ background: panel }}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={mod.id}
-                  className="absolute inset-0"
-                  initial={reduced ? false : { opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={reduced ? undefined : { opacity: 0 }}
-                  transition={{ duration: 0.3, ease: EASE_PRIMARY }}
-                >
-                  <Preview />
-                </motion.div>
-              </AnimatePresence>
-            </div>
-
-            {/* footer — chips + open */}
-            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderTop: `1px solid ${line}` }}>
-              <div className="flex flex-wrap gap-1.5">
-                {mod.chips.map((c) => (
-                  <span key={c} className="rounded-[5px] px-2 py-1 text-[9px] font-semibold uppercase" style={chip(mod.accent)}>{c}</span>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={() => onEnter(mod.tab)}
-                className="shrink-0 cursor-pointer whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.14em] transition-transform hover:translate-x-0.5"
-                style={{ color: mod.accent }}
-              >
-                Open {mod.name} →
-              </button>
-            </div>
-          </div>
-        </div>
-      </Reveal>
+      <div className="mx-auto flex max-w-6xl flex-col gap-24 sm:gap-32">
+        {MODULES.map((m, i) => (
+          <FeatureRow key={m.id} m={m} index={i} onEnter={onEnter} />
+        ))}
+      </div>
     </section>
   );
 }
