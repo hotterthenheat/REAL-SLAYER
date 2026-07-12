@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
-import { EASE_PRIMARY } from '../motion/motionTokens';
+import { EASE_PRIMARY, EASE_PRIMARY_CSS, DUR } from '../motion/motionTokens';
 import { Reveal } from '../components/Reveal';
+import { CountUp } from '../components/CountUp';
 import { PALETTE } from '../content/LandingSections';
 
 // The Quant engine uses the ACTUAL 3D IV surface the terminal renders — lazy so
@@ -43,7 +44,15 @@ const SKY_ROWS = [
   { r: 5, sym: 'NDX 18500C', setup: 'Momentum', conf: 91, rr: '1.5 : 1', em: '±75%', target: '$41 → $92' },
 ];
 function SkyVisionPreview() {
+  const { reduced } = useLandingMotion();
   const [sel, setSel] = useState(0);
+  // On mount (= on reveal, since the preview only mounts once its row is seen) the
+  // confidence bars grow and the scores count into place — the panel populating.
+  const [ready, setReady] = useState(reduced);
+  useEffect(() => {
+    const r = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(r);
+  }, []);
   const s = SKY_ROWS[sel];
   return (
     <div className="grid h-full grid-cols-1 gap-px sm:grid-cols-[1.5fr_1fr]" style={{ background: line }}>
@@ -67,9 +76,9 @@ function SkyVisionPreview() {
                 <span className="w-[74px] shrink-0 text-[11px] font-semibold" style={{ color: ghost }}>{row.sym}</span>
                 <span className="hidden w-[74px] shrink-0 text-[9px] uppercase tracking-[0.1em] sm:block" style={{ color: muted }}>{row.setup}</span>
                 <span className="relative h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                  <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${row.conf}%`, background: on ? STEEL : 'rgba(106,147,181,0.55)' }} />
+                  <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${ready ? row.conf : 0}%`, background: on ? STEEL : 'rgba(106,147,181,0.55)', transition: `width ${DUR.count}s ${EASE_PRIMARY_CSS}` }} />
                 </span>
-                <span className="w-7 text-right text-[10px] tabular-nums" style={{ color: ghost }}>{row.conf}</span>
+                <CountUp value={row.conf} className="w-7 text-right text-[10px]" style={{ color: ghost }} />
               </button>
             );
           })}
@@ -287,14 +296,21 @@ const TRADES = [
   { sym: 'QQQ 448C', out: 'Target 1', pnl: 61 }, { sym: 'SPX 5500P', out: 'Stopped', pnl: -22 },
 ];
 function TradeHistoryPreview() {
+  const { reduced } = useLandingMotion();
   const [hi, setHi] = useState(0);
+  const [ready, setReady] = useState(reduced);
+  useEffect(() => {
+    const r = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(r);
+  }, []);
   const wins = TRADES.filter((t) => t.pnl >= 0).length;
+  const winRate = Math.round((wins / TRADES.length) * 100);
   const maxAbs = 214;
   return (
     <div className="flex h-full flex-col" style={{ background: panel }}>
       <div className="flex items-center justify-between px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint, borderBottom: `1px solid ${line}` }}>
         <span>Trade Ledger · realized</span>
-        <span className="tabular-nums"><span style={{ color: GREEN }}>{Math.round((wins / TRADES.length) * 100)}%</span> <span style={{ color: faint }}>win rate</span></span>
+        <span className="tabular-nums"><CountUp value={winRate} suffix="%" style={{ color: GREEN }} /> <span style={{ color: faint }}>win rate</span></span>
       </div>
       <div className="flex min-h-0 flex-1 flex-col">
         {TRADES.map((t, i) => {
@@ -304,10 +320,10 @@ function TradeHistoryPreview() {
               <span className="w-[74px] shrink-0 text-[11px] font-semibold" style={{ color: ghost }}>{t.sym}</span>
               <span className="hidden w-14 shrink-0 text-[8px] uppercase tracking-[0.1em] sm:block" style={{ color: up ? GREEN : RED }}>{t.out}</span>
               <span className="relative flex h-2 flex-1 items-center">
-                <span className="absolute left-1/2 h-full -translate-x-full rounded-l-[2px]" style={{ width: up ? 0 : `${w}%`, background: RED, opacity: on ? 1 : 0.65 }} />
-                <span className="absolute left-1/2 h-full rounded-r-[2px]" style={{ width: up ? `${w}%` : 0, background: GREEN, opacity: on ? 1 : 0.65 }} />
+                <span className="absolute left-1/2 h-full -translate-x-full rounded-l-[2px]" style={{ width: up || !ready ? 0 : `${w}%`, background: RED, opacity: on ? 1 : 0.65, transition: `width ${DUR.count}s ${EASE_PRIMARY_CSS}` }} />
+                <span className="absolute left-1/2 h-full rounded-r-[2px]" style={{ width: up && ready ? `${w}%` : 0, background: GREEN, opacity: on ? 1 : 0.65, transition: `width ${DUR.count}s ${EASE_PRIMARY_CSS}` }} />
               </span>
-              <span className="w-10 text-right text-[10px] font-semibold tabular-nums" style={{ color: up ? GREEN : RED }}>{up ? '+' : ''}{t.pnl}%</span>
+              <CountUp value={t.pnl} prefix={up ? '+' : ''} suffix="%" className="w-10 text-right text-[10px] font-semibold" style={{ color: up ? GREEN : RED }} />
             </button>
           );
         })}
@@ -383,7 +399,7 @@ function FeatureRow({ m, index, onEnter }: { m: Mod; index: number; onEnter: (ta
       whileInView={{ opacity: 1, x: 0, scale: 1 }}
       viewport={{ once: false, amount: 0.4 }}
       onViewportEnter={() => setSeen(true)}
-      transition={{ duration: 0.85, ease: EASE_PRIMARY }}
+      transition={{ duration: DUR.hero, ease: EASE_PRIMARY }}
       style={{ willChange: 'transform' }}
     >
       {/* source order = preview first so it's always on top on mobile; lg:order flips

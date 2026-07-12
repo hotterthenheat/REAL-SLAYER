@@ -14,7 +14,9 @@ export const DUR = {
   fast: 0.22,
   normal: 0.45,
   reveal: 0.75,
+  hero: 0.85, // the hero assembly / headline / feature throw-in — the page's signature entrance beat
   cinematic: 1.1,
+  count: 1.15, // data count-up on reveal — numbers settling into place
 } as const;
 
 /** Primary + secondary easings as cubic-bezier tuples (Motion) and CSS strings. */

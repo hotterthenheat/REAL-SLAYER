@@ -4,7 +4,7 @@ import { CursorSpotlight } from '../components/CursorSpotlight';
 import { LayeredTerminalAssembly } from '../components/LayeredTerminalAssembly';
 import { usePointerParallax } from '../hooks/usePointerParallax';
 import { useLandingMotion } from '../motion/LandingMotionProvider';
-import { EASE_PRIMARY, DUR } from '../motion/motionTokens';
+import { EASE_PRIMARY, DUR, STAGGER } from '../motion/motionTokens';
 import { MarqueeTicker } from '../content/LandingSections';
 import { DrawnAccent } from '../components/DrawnAccent';
 
@@ -57,7 +57,7 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
         <motion.div
           initial={reduced ? false : 'hidden'}
           animate="show"
-          variants={{ show: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } } }}
+          variants={{ show: { transition: { staggerChildren: STAGGER.layer, delayChildren: 0.05 } } }}
         >
           <motion.div
             variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { duration: DUR.reveal, ease: EASE_PRIMARY } } }}
@@ -74,7 +74,7 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
                   className="block will-change-transform"
                   initial={reduced ? false : { y: '110%' }}
                   animate={{ y: '0%' }}
-                  transition={{ duration: 0.9, delay: 0.1 + i * 0.12, ease: EASE_PRIMARY }}
+                  transition={{ duration: DUR.hero, delay: 0.1 + i * STAGGER.loose, ease: EASE_PRIMARY }}
                 >
                   {ln.node}
                 </motion.span>
