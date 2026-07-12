@@ -2,23 +2,39 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * PINPOINT GEX — the consolidated dealer-positioning workspace. It hosts, under
- * one set of sub-tabs, the exposure/positioning view and the full dealer-hedging
- * analytics that previously lived on their own "Dealer Flow" tab (net-gamma map,
- * pressure matrix, order flow, key levels, options chain, real-time flow, notes)
- * plus the ranked intraday targets. The Live Terminal is a separate standalone
- * tab and is intentionally not embedded here.
+ * PINPOINT GEX — the consolidated dealer-positioning workspace, recomposed as a
+ * single command deck. One command bar carries the page identity and the
+ * Exposure & Walls / Hedging Profile / Ranked Targets sub-switch. The exposure
+ * deck itself now composes directly here:
+ *
+ *   1. KPI strip — the six aggregate reads (Net GEX/DEX/VEX, spot, EM, control)
+ *   2. HERO — the Dealer Positioning Map, full-width and tall, flanked by a slim
+ *      right rail of wall/pin level callouts, dealer-bias context and the
+ *      positioning-insight bullets
+ *   3. EXPOSURE MATRIX — a full-width dense data sheet whose column toggles
+ *      (GEX/DEX/VEX), expiry readout and CSV export are merged into one toolbar
+ *      row on the panel header
+ *   4. A hairline status footer
+ *
+ * Every figure is computed from the live server GEX profile
+ * (serverState.gex_profile) — the exact feed DealerFlowView consumes. Nothing is
+ * fabricated: a missing profile renders the honest pending deck, and any absent
+ * level shows "—". The Live Terminal remains a separate standalone tab.
  */
 
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useContractStore } from '../lib/store';
 import { ToggleGroup } from './ui/ToggleGroup';
 import { DealerFlowView } from './DealerFlowView';
-import { PanelSkeleton } from './PanelSkeleton';
+import { TerminalPanel } from './ui/terminal/TerminalPanel';
+import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
+import { InsightPanel } from './ui/terminal/InsightPanel';
+import { DealerPositioningMap } from './pinpoint/DealerPositioningMap';
+import { Download } from 'lucide-react';
 
-// Exposure view is a heavier surface (matrix + positioning map) — lazy-load it so
-// switching sub-tabs stays snappy.
-const PinpointExposureView = lazy(() => import('./PinpointExposureView'));
+// ────────────────────────────────────────────────────────────────────────────
+// Sub-view switching (unchanged wiring — pinpoint:<sub> deep-link intents)
+// ────────────────────────────────────────────────────────────────────────────
 
 type PinpointSub = 'exposure' | 'profile' | 'targets';
 
@@ -27,6 +43,12 @@ const SUB_OPTIONS: { value: PinpointSub; label: string }[] = [
   { value: 'profile', label: 'Hedging Profile' },
   { value: 'targets', label: 'Ranked Targets' },
 ];
+
+const SUB_DESCRIPTOR: Record<PinpointSub, string> = {
+  exposure: 'Dealer positioning map · exposure matrix · walls & pin',
+  profile: 'Net-gamma map · pressure matrix · order flow · key levels',
+  targets: 'Ranked intraday targets from the live dealer profile',
+};
 
 export default function PinpointGexView() {
   const [sub, setSub] = useState<PinpointSub>('exposure');
@@ -42,22 +64,799 @@ export default function PinpointGexView() {
   }, [subTabIntent, setSubTabIntent]);
 
   return (
-    <div className="space-y-[var(--gap)]">
-      <ToggleGroup<PinpointSub>
-        ariaLabel="Pinpoint view"
-        size="sm"
-        value={sub}
-        onChange={setSub}
-        options={SUB_OPTIONS}
-      />
+    <div className="w-full min-w-0 space-y-[var(--gap)] font-mono text-[var(--text-primary)]">
+      {/* ── COMMAND BAR — page identity + sub-view switch in one hairline row ── */}
+      <div className="slayer-panel flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-3 py-2">
+        <div className="min-w-0">
+          <div className="slayer-title">Pinpoint GEX</div>
+          <div className="truncate text-[10px] tracking-wide text-[var(--text-muted)]">
+            {SUB_DESCRIPTOR[sub]}
+          </div>
+        </div>
+        <ToggleGroup<PinpointSub>
+          ariaLabel="Pinpoint view"
+          size="sm"
+          value={sub}
+          onChange={setSub}
+          options={SUB_OPTIONS}
+        />
+      </div>
 
-      {sub === 'exposure' && (
-        <Suspense fallback={<PanelSkeleton />}>
-          <PinpointExposureView />
-        </Suspense>
-      )}
+      {sub === 'exposure' && <ExposureDeck />}
       {sub === 'profile' && <DealerFlowView forcedView="profile" showToggle={false} />}
       {sub === 'targets' && <DealerFlowView forcedView="targets" showToggle={false} />}
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Formatting helpers (compact $ magnitudes, tabular-friendly)
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Compact magnitude: 1.3B, 212M, 4.1K, +70. `signed` forces a leading + on positives. */
+function fmtCompact(v: number | null | undefined, signed = false): string {
+  if (v == null || !isFinite(v)) return '—';
+  const sign = v < 0 ? '-' : signed ? '+' : '';
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${sign}${(a / 1e9).toFixed(a / 1e9 >= 100 ? 0 : 2)}B`;
+  if (a >= 1e6) return `${sign}${(a / 1e6).toFixed(a / 1e6 >= 100 ? 0 : 1)}M`;
+  if (a >= 1e3) return `${sign}${(a / 1e3).toFixed(a / 1e3 >= 100 ? 0 : 1)}K`;
+  return `${sign}${a.toFixed(0)}`;
+}
+
+/** Bare magnitude (no sign — colour encodes direction): 1.3B, 212M, 4K, 70. */
+function fmtMag(v: number | null | undefined): string {
+  if (v == null || !isFinite(v)) return '—';
+  const a = Math.abs(v);
+  if (a >= 1e9) return `${(a / 1e9).toFixed(a / 1e9 >= 100 ? 0 : 1)}B`;
+  if (a >= 1e6) return `${(a / 1e6).toFixed(0)}M`;
+  if (a >= 1e3) return `${(a / 1e3).toFixed(0)}K`;
+  return `${a.toFixed(0)}`;
+}
+
+/** Signed big-number in billions: "-12.86B" / "+3.40B". */
+function fmtBnSigned(v: number | null | undefined): string {
+  if (v == null || !isFinite(v)) return '—';
+  const a = Math.abs(v);
+  const sign = v < 0 ? '-' : '+';
+  if (a >= 1e9) return `${sign}${(a / 1e9).toFixed(2)}B`;
+  if (a >= 1e6) return `${sign}${(a / 1e6).toFixed(1)}M`;
+  return `${sign}${a.toFixed(0)}`;
+}
+
+/** Level price with thousands separators, no decimals. */
+function fmtLevel(v: number | null | undefined): string {
+  if (v == null || !isFinite(v)) return '—';
+  return v.toLocaleString('en-US', { maximumFractionDigits: 0 });
+}
+
+/** Signed percent, one decimal. */
+function fmtPct(v: number | null | undefined, signed = true): string {
+  if (v == null || !isFinite(v)) return '—';
+  const sign = signed && v > 0 ? '+' : '';
+  return `${sign}${v.toFixed(2)}%`;
+}
+
+// Brand colours used for inline styles (matrix cells / rail markers). Color = data.
+const SLAYER_RED = 'var(--slayer-red)'; // #980404 — deepest put/risk red (bars)
+const CALL_STEEL = 'var(--call)'; // steel — calls
+const NEG_INK = 'var(--negative-ink)';
+const POS_INK = 'var(--positive-ink)';
+
+const TONE_TEXT: Record<MetricTone, string> = {
+  neutral: 'text-[var(--text-primary)]',
+  positive: 'text-[var(--positive-ink)]',
+  negative: 'text-[var(--negative-ink)]',
+  warning: 'text-[var(--warning)]',
+  call: 'text-[var(--call)]',
+  pin: 'text-[var(--pin)]',
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Small presentational atoms
+// ────────────────────────────────────────────────────────────────────────────
+
+/** A single greek cell of the data sheet: right-aligned tabular number over a
+ *  subtle magnitude-scaled heat wash of the sign colour. */
+function MatrixCell({
+  value,
+  max,
+  side,
+}: {
+  value: number | null | undefined;
+  max: number;
+  side: 'put' | 'call' | 'net';
+}) {
+  const has = value != null && isFinite(value);
+  const v = has ? (value as number) : 0;
+  const pct = max > 0 ? Math.min(100, (Math.abs(v) / max) * 100) : 0;
+  // Numbers: puts readable red, calls steel, net by sign. Wash: puts deep brand
+  // red, calls steel, net by sign.
+  const numColor = side === 'put' ? NEG_INK : side === 'call' ? CALL_STEEL : v < 0 ? NEG_INK : POS_INK;
+  const washColor = side === 'put' ? SLAYER_RED : side === 'call' ? CALL_STEEL : v < 0 ? NEG_INK : POS_INK;
+  const tint = has && pct > 0 ? `color-mix(in srgb, ${washColor} ${Math.round(pct * 0.18)}%, transparent)` : undefined;
+  return (
+    <div className="relative flex h-5 items-center justify-end overflow-hidden px-1" style={{ background: tint }}>
+      <span className="slayer-num relative z-10 text-[9.5px] font-semibold" style={{ color: has ? numColor : 'var(--text-faint)' }}>
+        {fmtMag(has ? v : null)}
+      </span>
+    </div>
+  );
+}
+
+/** One rung of the right-rail level ladder: tone tick + label left, level right. */
+function RailLevel({
+  label,
+  value,
+  sub,
+  tone = 'neutral',
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: MetricTone;
+}) {
+  const tick: Record<MetricTone, string> = {
+    neutral: 'var(--border-strong)',
+    positive: 'var(--positive-ink)',
+    negative: 'var(--negative-ink)',
+    warning: 'var(--warning)',
+    call: 'var(--call)',
+    pin: 'var(--pin)',
+  };
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-[var(--panel-pad)] py-2 last:border-b-0">
+      <span className="flex min-w-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+        <span aria-hidden="true" className="h-[3px] w-3 shrink-0 rounded-full" style={{ background: tick[tone] }} />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="min-w-0 shrink-0 text-right">
+        <span className={`slayer-num block text-[13px] font-semibold leading-tight ${TONE_TEXT[tone]}`}>{value}</span>
+        {sub != null && <span className="slayer-num block text-[9.5px] leading-tight text-[var(--text-tertiary)]">{sub}</span>}
+      </span>
+    </div>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// EXPOSURE DECK — the recomposed Exposure & Walls surface
+// ────────────────────────────────────────────────────────────────────────────
+
+function ExposureDeck() {
+  const selectedAsset = useContractStore((s) => s.selectedAsset);
+
+  // Gate the streamed server state to the asset currently in view so switching
+  // tickers can't briefly paint the previous ticker's dealer data — the exact
+  // pattern DealerFlowView uses.
+  const rawServerState = useContractStore((s) => s.serverState);
+  const serverState = useMemo(() => {
+    if (!rawServerState) return null;
+    const ticker = rawServerState.contract?.replace('-', ' ').split(' ')[0];
+    if (ticker !== selectedAsset.ticker) return null;
+    return rawServerState;
+  }, [rawServerState, selectedAsset.ticker]);
+
+  const profile: any = serverState?.gex_profile;
+  const gauge: any = serverState?.dealer_flow;
+
+  // Real values (guarded — any absent level renders "—").
+  const spot: number | undefined = profile?.spot;
+  const netGex: number | undefined = profile?.netGex;
+  const netDex: number | undefined = profile?.netDex;
+  const netVex: number | undefined = profile?.netVex;
+  const callWall: number | undefined = profile?.callWall;
+  const putWall: number | undefined = profile?.putWall;
+  const magnet: number | undefined = profile?.magnet; // pin level
+  const emPct: number | undefined = profile?.expectedMovePct; // fraction
+
+  // Live frame-over-frame trend of the net-gamma figure (a real trend of the
+  // streamed number, not a fabricated label). Updates only past a 1% threshold
+  // so it doesn't flicker on tick noise.
+  const prevNetGexRef = useRef<number | null>(null);
+  const [netGexTrend, setNetGexTrend] = useState<string>('—');
+
+  // Exposure-matrix column-group visibility — real toggles living on the sheet's
+  // header toolbar so a trader can focus on a single greek. At least one group
+  // always stays on.
+  const MATRIX_GROUPS = [
+    // Three distinct hues so the greeks never collide: gamma = steel, delta =
+    // dealer-cyan, vega = greek-purple.
+    { key: 'gex' as const, label: 'GEX 1%', color: 'var(--call)' },
+    { key: 'dex' as const, label: 'DEX 1σ', color: 'var(--dealer)' },
+    { key: 'vex' as const, label: 'VEX 1%v', color: 'var(--greek)' },
+  ];
+  const [matrixGroups, setMatrixGroups] = useState<Set<'gex' | 'dex' | 'vex'>>(() => new Set(['gex', 'dex', 'vex']));
+  const toggleMatrixGroup = (k: 'gex' | 'dex' | 'vex') =>
+    setMatrixGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(k)) { if (next.size > 1) next.delete(k); } else next.add(k);
+      return next;
+    });
+  const shownGroups = MATRIX_GROUPS.filter((g) => matrixGroups.has(g.key));
+  const matrixGridStyle = { gridTemplateColumns: `64px repeat(${shownGroups.length * 3}, minmax(0, 1fr))` };
+  useEffect(() => {
+    if (netGex == null || !isFinite(netGex)) return;
+    const prev = prevNetGexRef.current;
+    if (prev != null) {
+      const prevMag = Math.abs(prev);
+      const curMag = Math.abs(netGex);
+      const thresh = Math.max(1e7, prevMag * 0.01);
+      if (curMag - prevMag > thresh) setNetGexTrend('Strengthening');
+      else if (prevMag - curMag > thresh) setNetGexTrend('Weakening');
+      else setNetGexTrend('Stable');
+    }
+    prevNetGexRef.current = netGex;
+  }, [netGex]);
+
+  // Spot session change, referenced to the oldest candle in the streamed window.
+  const spotChange = useMemo(() => {
+    if (spot == null) return null;
+    const candles = serverState?.candles;
+    if (!candles || candles.length === 0) return null;
+    const ref = candles[0]?.open ?? candles[0]?.close;
+    if (ref == null || !isFinite(ref) || ref === 0) return null;
+    const abs = spot - ref;
+    return { abs, pct: (abs / ref) * 100 };
+  }, [spot, serverState?.candles]);
+
+  // Market-control score + gamma regime, derived exactly like DealerFlowView's
+  // headerAnalytics (net-gamma sign, pin tightness, expected-move calmness).
+  const control = useMemo(() => {
+    if (!profile || spot == null || netGex == null) return null;
+    const positiveGamma = netGex >= 0;
+    const pin = magnet ?? profile.gammaFlip;
+    const em = (emPct ?? 0) || 0.01;
+    let pinRiskPct: number | null = null;
+    if (pin != null && spot) {
+      const distFrac = Math.abs(spot - pin) / spot;
+      pinRiskPct = Math.max(5, Math.min(95, Math.round(95 - (distFrac / em) * 65)));
+    }
+    const gammaPts = positiveGamma ? 55 : 25;
+    const pinPts = pinRiskPct != null ? (pinRiskPct / 100) * 30 : 15;
+    const calmPts = Math.max(0, 15 - Math.min(15, em * 100 * 3));
+    const score = Math.max(0, Math.min(100, Math.round(gammaPts + pinPts + calmPts)));
+    const word = score >= 66 ? 'Dealer-controlled' : score >= 45 ? 'Neutral' : 'Volatile';
+    return { score, word, positiveGamma };
+  }, [profile, spot, netGex, magnet, emPct]);
+
+  // Dealer bias (real: LONG GAMMA / SHORT GAMMA) + a descriptor derived from the
+  // real signed dealer-pressure index.
+  const biasInfo = useMemo(() => {
+    const bias: string | undefined = gauge?.bias;
+    const pressure: number | undefined = gauge?.pressure;
+    let tone: MetricTone = 'neutral';
+    if (bias?.includes('SHORT')) tone = 'negative';
+    else if (bias?.includes('LONG')) tone = 'positive';
+    let sub = '—';
+    if (pressure != null && isFinite(pressure)) {
+      const mag = Math.abs(pressure);
+      const word = mag > 60 ? 'Strongly' : mag > 25 ? 'Moderately' : 'Slightly';
+      const dir = pressure > 0 ? 'positive' : pressure < 0 ? 'negative' : 'neutral';
+      sub = `${word} ${dir}`;
+    }
+    return { label: bias ?? '—', tone, sub };
+  }, [gauge]);
+
+  // ── Strike windowing / interval ────────────────────────────────────────────
+  const asc = useMemo(() => {
+    const s: any[] = profile?.strikes ? [...profile.strikes] : [];
+    return s.sort((a, b) => a.strike - b.strike);
+  }, [profile]);
+
+  const interval = useMemo(() => {
+    if (asc.length < 2) return 0;
+    let min = Infinity;
+    for (let i = 1; i < asc.length; i++) {
+      const d = asc[i].strike - asc[i - 1].strike;
+      if (d > 0 && d < min) min = d;
+    }
+    return isFinite(min) ? min : 0;
+  }, [asc]);
+
+  // Net DEX / VEX aggregates — summed from the real per-strike values exactly the
+  // way netGex aggregates (prefer the per-strike net field; fall back to call+put).
+  // Returns null only when NO strike carries a finite value, so an empty/absent
+  // metric honestly shows "—" rather than a fabricated 0.
+  const netAgg = useMemo(() => {
+    const sumBase = (base: 'Dex' | 'Vex') => {
+      if (asc.length === 0) return null;
+      let any = false;
+      let sum = 0;
+      for (const s of asc) {
+        const nd = s[`net${base}`];
+        let v: number | null = null;
+        if (nd != null && isFinite(nd)) v = nd;
+        else {
+          const c = s[`call${base}`];
+          const p = s[`put${base}`];
+          if ((c != null && isFinite(c)) || (p != null && isFinite(p))) v = (c || 0) + (p || 0);
+        }
+        if (v != null) {
+          any = true;
+          sum += v;
+        }
+      }
+      return any ? sum : null;
+    };
+    return { dex: sumBase('Dex'), vex: sumBase('Vex') };
+  }, [asc]);
+  // Prefer the server's top-level aggregate when present; else the per-strike sum.
+  const netDexAgg = netDex != null && isFinite(netDex) ? netDex : netAgg.dex;
+  const netVexAgg = netVex != null && isFinite(netVex) ? netVex : netAgg.vex;
+
+  const centerIdx = useMemo(() => {
+    if (asc.length === 0 || spot == null) return 0;
+    let best = 0;
+    let bd = Infinity;
+    asc.forEach((r, i) => {
+      const d = Math.abs(r.strike - spot);
+      if (d < bd) {
+        bd = d;
+        best = i;
+      }
+    });
+    return best;
+  }, [asc, spot]);
+
+  // Matrix window: ±10 strikes around spot.
+  const matrixRows = useMemo(() => {
+    if (asc.length === 0) return [];
+    const lo = Math.max(0, centerIdx - 10);
+    const hi = Math.min(asc.length - 1, centerIdx + 10);
+    return asc.slice(lo, hi + 1);
+  }, [asc, centerIdx]);
+
+  // Per-metric max magnitude across the visible matrix (heat scaling).
+  const matrixMax = useMemo(() => {
+    const g = (rows: any[], keys: string[]) =>
+      Math.max(1, ...rows.flatMap((r) => keys.map((k) => Math.abs(r[k] ?? 0))));
+    return {
+      gex: g(matrixRows, ['putGex', 'callGex', 'netGex']),
+      dex: g(matrixRows, ['putDex', 'callDex', 'netDex']),
+      vex: g(matrixRows, ['putVex', 'callVex', 'netVex']),
+    };
+  }, [matrixRows]);
+
+  // Descending render order (highest strike at top) + a SPOT divider inserted at
+  // the spot position.
+  const matrixDesc = useMemo(() => [...matrixRows].sort((a, b) => b.strike - a.strike), [matrixRows]);
+
+  // ── Positioning insight bullets (only when their inputs are real) ───────────
+  const insights = useMemo(() => {
+    const out: string[] = [];
+    if (netGex != null) {
+      if (netGex < 0) {
+        out.push(
+          putWall != null && callWall != null
+            ? `Net GEX is negative (${fmtBnSigned(netGex)}) — dealers are long gamma below ${fmtLevel(putWall)} and short above ${fmtLevel(callWall)}, so moves get amplified.`
+            : `Net GEX is negative (${fmtBnSigned(netGex)}) — dealers are short gamma, so intraday moves get amplified.`
+        );
+      } else {
+        out.push(
+          `Net GEX is positive (${fmtBnSigned(netGex)}) — dealers are long gamma, so hedging dampens intraday moves.`
+        );
+      }
+    }
+    if (spot != null && putWall != null && callWall != null && spot > putWall && spot < callWall) {
+      out.push(`Price sits between ${fmtLevel(putWall)} and ${fmtLevel(callWall)} — inside the friction zone.`);
+    }
+    if (magnet != null) {
+      out.push(`Strongest dealer support at ${fmtLevel(magnet)} (pin level).`);
+    }
+    if (putWall != null) {
+      out.push(`A break under ${fmtLevel(putWall)} shifts dealer pressure lower.`);
+    }
+    if (callWall != null) {
+      // Next strike above the call wall (real chain), if present.
+      const above = asc.find((r) => r.strike > callWall);
+      out.push(
+        above
+          ? `A break above ${fmtLevel(callWall)} opens quick supply toward ${fmtLevel(above.strike)}.`
+          : `A break above ${fmtLevel(callWall)} opens quick supply higher.`
+      );
+    }
+    return out;
+  }, [netGex, spot, putWall, callWall, magnet, asc]);
+
+  // ── CSV export of the visible matrix (real download) ────────────────────────
+  const exportCsv = () => {
+    const header = [
+      'strike',
+      'putGex',
+      'callGex',
+      'netGex',
+      'putDex',
+      'callDex',
+      'netDex',
+      'putVex',
+      'callVex',
+      'netVex',
+    ];
+    const num = (v: any) => (v == null || !isFinite(v) ? '' : String(v));
+    const lines = [header.join(',')];
+    for (const r of matrixDesc) {
+      lines.push(
+        [
+          r.strike,
+          num(r.putGex),
+          num(r.callGex),
+          num(r.netGex),
+          num(r.putDex),
+          num(r.callDex),
+          num(r.netDex),
+          num(r.putVex),
+          num(r.callVex),
+          num(r.netVex),
+        ].join(',')
+      );
+    }
+    const blob = new Blob([lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedAsset.ticker}_exposure_matrix.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const nowLabel = useMemo(
+    () => new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [serverState]
+  );
+
+  // The server ships ONE aggregated chain across all dates — there is nothing to
+  // select, so render the expiry as an honest read-only label instead of a
+  // dropdown that implies per-expiry filtering it can't perform.
+  const expiry = useMemo(() => {
+    if (profile?.expiryDate) {
+      return profile.expiryLabel ? `${profile.expiryDate} · ${profile.expiryLabel}` : String(profile.expiryDate);
+    }
+    return `${selectedAsset.ticker} PIPELINE`;
+  }, [selectedAsset.ticker, profile?.expiryDate, profile?.expiryLabel]);
+
+  // Shared read-only chain descriptor — rendered on the hero header and inside
+  // the matrix toolbar.
+  const expiryReadout = (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Expiry</span>
+      <span className="slayer-readout slayer-num cursor-default select-none">{expiry} · All Dates</span>
+    </div>
+  );
+
+  // ── Honest pending state (mirrors DealerFlowView) — hero-first skeleton ─────
+  if (!serverState || !profile || !profile.strikes || profile.strikes.length === 0) {
+    return (
+      <div
+        className="w-full min-w-0 space-y-[var(--gap)]"
+        id="pinpoint-data-pending"
+        role="status"
+        aria-busy="true"
+        aria-label="Loading pinpoint exposure data"
+      >
+        {/* KPI strip skeleton — one hairline strip, mirrors the live MetricStrip. */}
+        <div className="slayer-panel grid grid-cols-2 overflow-hidden md:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className={`px-4 py-3 ${i !== 0 ? 'border-l border-[var(--border-subtle)]' : ''}`}>
+              <div className="h-4 w-16 animate-pulse bg-[var(--bg-panel-soft)]" style={{ opacity: i === 0 ? 1 : 0.6 }} />
+              <div className="mt-2 h-[7px] w-10 bg-[var(--bg-panel-soft)]" />
+            </div>
+          ))}
+        </div>
+
+        {/* HERO placeholder — the tall positioning map slot with the honest status line */}
+        <div className="slayer-panel flex min-h-[320px] flex-col md:min-h-[420px]">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2">
+            <div className="min-w-0">
+              <div className="slayer-title">Dealer Positioning Map</div>
+              <div className="text-[10px] tracking-wide text-[var(--text-muted)]">Net gamma by strike</div>
+            </div>
+            <span className="flex shrink-0 items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
+              <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--warning)]" />
+              Awaiting feed
+            </span>
+          </div>
+          <div className="flex flex-1 items-center px-4 py-6">
+            <p className="max-w-md text-[11px] leading-relaxed text-[var(--text-muted)]">
+              No dealer profile — waiting on {selectedAsset.ticker} feed. Select any strike or option type to start the
+              stream.
+            </p>
+          </div>
+        </div>
+
+        {/* Matrix sheet placeholder */}
+        <div className="slayer-panel flex flex-col">
+          <div className="border-b border-[var(--border-subtle)] px-3 py-2">
+            <div className="slayer-title">Exposure Matrix</div>
+            <div className="text-[10px] tracking-wide text-[var(--text-muted)]">Inventory &amp; sensitivity by strike</div>
+          </div>
+          <div className="flex flex-1 flex-col gap-px p-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-5 animate-pulse bg-[var(--bg-panel-soft)]"
+                style={{ opacity: Math.max(0.2, 0.9 - i * 0.09) }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const loStrike = matrixRows[0]?.strike;
+  const hiStrike = matrixRows[matrixRows.length - 1]?.strike;
+  const callWallPct = spot != null && callWall != null ? ((callWall - spot) / spot) * 100 : null;
+  const putWallPct = spot != null && putWall != null ? ((putWall - spot) / spot) * 100 : null;
+  const pinPct = spot != null && magnet != null ? ((magnet - spot) / spot) * 100 : null;
+  const emAbs = spot != null && emPct != null ? spot * emPct : null;
+
+  // Friction-zone bounds (pin ↔ spot) — only when they differ.
+  const frictionLo = spot != null && magnet != null ? Math.min(spot, magnet) : null;
+  const frictionHi = spot != null && magnet != null ? Math.max(spot, magnet) : null;
+  const hasFriction = frictionLo != null && frictionHi != null && Math.round(frictionLo) !== Math.round(frictionHi);
+
+  // KPI strip — the six aggregate reads. Wall/pin levels moved to the hero's
+  // right-rail ladder; the net DEX/VEX aggregates absorbed the old standalone
+  // "Aggregate Net Exposure" panel.
+  const topMetrics: Metric[] = [
+    {
+      label: 'Net GEX',
+      value: fmtBnSigned(netGex),
+      sub: netGexTrend,
+      tone: netGex == null ? 'neutral' : netGex < 0 ? 'negative' : 'positive',
+      primary: true,
+    },
+    {
+      label: 'Spot',
+      value: fmtLevel(spot),
+      sub: spotChange ? `${spotChange.abs >= 0 ? '+' : ''}${spotChange.abs.toFixed(2)} (${fmtPct(spotChange.pct)})` : '—',
+      tone: spotChange ? (spotChange.abs >= 0 ? 'positive' : 'negative') : 'neutral',
+      primary: true,
+    },
+    {
+      label: 'Net DEX',
+      value: fmtCompact(netDexAgg, true),
+      sub: netDexAgg == null ? '—' : netDexAgg < 0 ? 'Downside tilt' : 'Upside tilt',
+      tone: netDexAgg == null ? 'neutral' : netDexAgg < 0 ? 'negative' : 'positive',
+    },
+    {
+      label: 'Net VEX',
+      value: fmtCompact(netVexAgg, true),
+      sub: netVexAgg == null ? '—' : netVexAgg < 0 ? 'Short vega' : 'Long vega',
+      tone: netVexAgg == null ? 'neutral' : netVexAgg < 0 ? 'negative' : 'positive',
+    },
+    {
+      label: 'Expected Move (1D)',
+      value: emAbs != null ? `±${emAbs.toFixed(2)}` : '—',
+      sub: emPct != null ? `±${(emPct * 100).toFixed(1)}%` : '—',
+      tone: 'warning',
+    },
+    { label: 'Market Control', value: control ? `${control.score}/100` : '—', sub: control?.word ?? '—', tone: 'neutral' },
+  ];
+
+  const rowTint = (isPin: boolean, isCall: boolean, isPut: boolean): string | undefined =>
+    isPin ? 'rgba(44,104,123,0.16)' : isCall ? 'rgba(121,44,162,0.14)' : isPut ? 'rgba(152,4,4,0.16)' : undefined;
+
+  return (
+    <div className="w-full min-w-0 space-y-[var(--gap)]" id="pinpoint-exposure-view">
+      {/* ─────────────── 1. KPI STRIP ─────────────── */}
+      <MetricStrip metrics={topMetrics} columns={6} />
+
+      {/* ─────────────── 2. HERO — POSITIONING MAP + SLIM RIGHT RAIL ─────────────── */}
+      <div className="grid min-w-0 grid-cols-1 items-stretch gap-[var(--gap)] xl:grid-cols-[minmax(0,1fr)_300px]">
+        {/* The page's most visual asset gets the full stage: tall, edge-to-edge. */}
+        <div className="min-w-0 h-[420px] md:h-[500px] xl:h-auto xl:min-h-[560px] [&>section]:h-full">
+          <DealerPositioningMap
+            rows={matrixDesc.map((r) => ({ strike: r.strike, value: r.netGex ?? 0 }))}
+            spot={spot ?? undefined}
+            callWall={callWall ?? undefined}
+            putWall={putWall ?? undefined}
+            pinLevel={magnet ?? undefined}
+            actions={expiryReadout}
+            footer={
+              hasFriction ? (
+                <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
+                  Friction Zone {fmtLevel(frictionLo)}–{fmtLevel(frictionHi)}
+                </span>
+              ) : undefined
+            }
+          />
+        </div>
+
+        {/* Right rail — walls/pin ladder, dealer-bias context, insight bullets. */}
+        <div className="flex min-w-0 flex-col gap-[var(--gap)]">
+          <TerminalPanel title="Walls & Pin" subtitle="Key dealer levels vs spot" padded={false}>
+            <RailLevel
+              label="Call Wall"
+              value={fmtLevel(callWall)}
+              sub={callWallPct != null ? `${callWallPct >= 0 ? '+' : ''}${callWallPct.toFixed(2)}% above` : '—'}
+              tone="call"
+            />
+            <RailLevel label="Pin Level" value={fmtLevel(magnet)} sub={pinPct != null ? fmtPct(pinPct) : '—'} tone="pin" />
+            <RailLevel
+              label="Put Wall"
+              value={fmtLevel(putWall)}
+              sub={putWallPct != null ? `${putWallPct.toFixed(2)}% below` : '—'}
+              tone="negative"
+            />
+            <RailLevel
+              label="Dealer Bias"
+              value={biasInfo.label}
+              sub={biasInfo.sub}
+              tone={biasInfo.tone}
+            />
+            {control != null && (
+              <RailLevel
+                label="Gamma Regime"
+                value={control.positiveGamma ? 'LONG γ' : 'SHORT γ'}
+                sub={control.positiveGamma ? 'Hedging dampens moves' : 'Hedging amplifies moves'}
+                tone={control.positiveGamma ? 'positive' : 'negative'}
+              />
+            )}
+          </TerminalPanel>
+
+          <InsightPanel className="min-h-0 flex-1" title="Positioning Insight" insights={insights} />
+        </div>
+      </div>
+
+      {/* ─────────────── 3. EXPOSURE MATRIX — FULL-WIDTH DATA SHEET ─────────────── */}
+      <TerminalPanel
+        title="Exposure Matrix"
+        subtitle="Inventory & sensitivity by strike"
+        bodyClassName="flex flex-col gap-2"
+        actions={
+          /* One toolbar row: greek column toggles · expiry readout · CSV export. */
+          <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Columns</span>
+              {MATRIX_GROUPS.map((g) => {
+                const on = matrixGroups.has(g.key);
+                return (
+                  <button
+                    key={g.key}
+                    type="button"
+                    onClick={() => toggleMatrixGroup(g.key)}
+                    aria-pressed={on}
+                    title={on ? `Hide ${g.label} columns` : `Show ${g.label} columns`}
+                    className={`rounded-[var(--radius-control)] border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] ${
+                      on
+                        ? 'border-[var(--border-mid)] bg-[var(--surface-2)]'
+                        : 'border-[var(--border-subtle)] text-[var(--text-faint)] line-through decoration-[var(--text-faint)]/60'
+                    }`}
+                    style={on ? { color: g.color } : undefined}
+                  >
+                    {g.label}
+                  </button>
+                );
+              })}
+            </div>
+            <span aria-hidden="true" className="hidden h-4 w-px bg-[var(--border-subtle)] sm:block" />
+            {expiryReadout}
+            <button
+              type="button"
+              onClick={exportCsv}
+              aria-label="Export matrix as CSV"
+              className="flex shrink-0 cursor-pointer items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[#050505] p-1.5 text-[var(--text-secondary)] transition-colors hover:border-[var(--border-mid)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        }
+      >
+        {/* SHEET — full-width; scrolls inside the panel below ~md widths. */}
+        <div className="overflow-x-auto border border-[var(--border-subtle)]">
+          <div className="min-w-[560px] lg:min-w-0">
+            {/* Group header */}
+            <div
+              className="grid items-end border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]"
+              style={matrixGridStyle}
+            >
+              <div className="px-1.5 py-1.5">Strike</div>
+              {shownGroups.map((g) => (
+                <div key={g.key} className="col-span-3 border-l border-[var(--border-subtle)] py-1.5 text-center" style={{ color: g.color }}>
+                  {g.label}
+                </div>
+              ))}
+            </div>
+            {/* Sub header */}
+            <div
+              className="grid border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text-faint)]"
+              style={matrixGridStyle}
+            >
+              <div className="px-1.5 py-1" />
+              {shownGroups.map((g) => (
+                <div key={g.key} className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
+                  <div className="px-1 py-1 text-right text-[var(--negative-ink)]/80">Put</div>
+                  <div className="px-1 py-1 text-right text-[var(--call)]/90">Call</div>
+                  <div className="px-1 py-1 text-right">Net</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Rows (descending) with SPOT divider inserted */}
+            {matrixDesc.map((r, i) => {
+              const prev = matrixDesc[i - 1];
+              // Insert the SPOT divider when we cross spot going down.
+              const showSpotDivider =
+                spot != null &&
+                ((i === 0 && r.strike < spot) ||
+                  (prev != null && prev.strike >= spot && r.strike < spot));
+              const isPin = magnet != null && Math.abs(r.strike - magnet) < 1e-6;
+              const isCallWall = callWall != null && Math.abs(r.strike - callWall) < 1e-6;
+              const isPutWall = putWall != null && Math.abs(r.strike - putWall) < 1e-6;
+
+              return (
+                <div key={r.strike}>
+                  {showSpotDivider && (
+                    <div
+                      className="grid border-y border-[var(--border-mid)]"
+                      style={{ ...matrixGridStyle, background: 'rgba(248,248,255,0.06)' }}
+                    >
+                      <div className="px-1.5 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">
+                        Spot
+                      </div>
+                      <div
+                        className="slayer-num flex items-center px-1.5 py-1 text-[10px] font-bold text-[var(--text-primary)]"
+                        style={{ gridColumn: `span ${shownGroups.length * 3}` }}
+                      >
+                        {fmtLevel(spot)}
+                      </div>
+                    </div>
+                  )}
+                  <div
+                    className="grid items-center border-b border-[var(--border-subtle)]"
+                    style={{ ...matrixGridStyle, background: rowTint(isPin, isCallWall, isPutWall) }}
+                  >
+                    <div className="flex min-w-0 items-center gap-1 overflow-hidden px-1.5 py-0.5">
+                      <span className="slayer-num text-[9.5px] font-bold text-[var(--text-secondary)]">
+                        {fmtLevel(r.strike)}
+                      </span>
+                      {isPin && <span className="text-[6.5px] font-bold tracking-wide text-[var(--pin)]">PIN</span>}
+                      {isCallWall && <span className="text-[6.5px] font-bold tracking-wide text-[var(--call)]">CW</span>}
+                      {isPutWall && <span className="text-[6.5px] font-bold tracking-wide text-[var(--negative-ink)]">PW</span>}
+                    </div>
+                    {shownGroups.map((g) => {
+                      const cells =
+                        g.key === 'gex' ? ([r.putGex, r.callGex, r.netGex, matrixMax.gex] as const)
+                        : g.key === 'dex' ? ([r.putDex, r.callDex, r.netDex, matrixMax.dex] as const)
+                        : ([r.putVex, r.callVex, r.netVex, matrixMax.vex] as const);
+                      return (
+                        <div key={g.key} className="col-span-3 grid grid-cols-3 border-l border-[var(--border-subtle)]">
+                          <MatrixCell value={cells[0]} max={cells[3]} side="put" />
+                          <MatrixCell value={cells[1]} max={cells[3]} side="call" />
+                          <MatrixCell value={cells[2]} max={cells[3]} side="net" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Sheet footer — window + unit legend in one quiet line */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-1 text-[9px] tracking-wide text-[var(--text-muted)]">
+          <span className="slayer-num truncate">
+            Strikes {fmtLevel(loStrike)}–{fmtLevel(hiStrike)} · Interval {interval || '—'} · Expiry {expiry} · All Dates
+          </span>
+          <span className="flex flex-wrap gap-x-3">
+            <span>GEX: $ per 1% move</span>
+            <span>DEX: $ per 1σ spot move</span>
+            <span>VEX: $ per 1% vol shift</span>
+          </span>
+        </div>
+      </TerminalPanel>
+
+      {/* ─────────────── 4. STATUS FOOTER ─────────────── */}
+      <div className="slayer-panel flex flex-col items-center justify-between gap-1 px-3 py-2 text-[9px] tracking-wide text-[var(--text-muted)] sm:flex-row">
+        <span>Disclaimer: For informational purposes only. Not investment advice.</span>
+        <span className="slayer-num">Data as of {nowLabel}</span>
+        <span className="font-bold tracking-[0.16em] text-[var(--text-secondary)]">REAL-SLAYER</span>
+      </div>
     </div>
   );
 }
