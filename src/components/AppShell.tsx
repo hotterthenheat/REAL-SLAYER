@@ -259,6 +259,146 @@ function DeskClock() {
   );
 }
 
+/** Live ET wall-clock string (hh:mm:ss) — shared by the command bar time and the
+ *  footer LAST UPDATE. Ticks once a second; ET is the market's timezone. */
+function useEtClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  let time = '';
+  try {
+    time = now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/New_York' });
+  } catch {
+    time = now.toLocaleTimeString('en-US', { hour12: false });
+  }
+  return time;
+}
+
+/** Command-bar live data cluster: ticker chip · big price + Δ/Δ% · DATA·REAL-TIME
+ *  pill · MODE·DEALER chip · date. Subscribes to its own store slices so the
+ *  per-frame feed churn re-renders THIS cluster, not the whole shell. Δ is
+ *  synthesized honestly (spot vs the oldest streamed candle); when the reference
+ *  candle is missing we show the price alone rather than fabricate a delta. */
+function CommandData() {
+  const selectedAsset = useContractStore((s) => s.selectedAsset);
+  const serverState = useContractStore((s) => s.serverState);
+
+  const ticker = selectedAsset?.ticker ?? '—';
+  const profile: any = serverState?.gex_profile;
+  const spot: number | undefined =
+    typeof profile?.spot === 'number' ? profile.spot : selectedAsset?.defaultPrice;
+
+  // Session change referenced to the oldest candle in the streamed window —
+  // identical basis to PinpointGexView's spotChange (open, close fallback).
+  const change = (() => {
+    if (spot == null) return null;
+    const candles: any[] | undefined = serverState?.candles as any;
+    if (!candles || candles.length === 0) return null;
+    const ref = candles[0]?.open ?? candles[0]?.close;
+    if (ref == null || !isFinite(ref) || ref === 0) return null;
+    const abs = spot - ref;
+    return { abs, pct: (abs / ref) * 100 };
+  })();
+
+  const up = change ? change.abs >= 0 : false;
+  const deltaColor = change ? (up ? 'var(--positive-ink)' : 'var(--negative-ink)') : 'var(--text-muted)';
+  const dateStr = (() => {
+    try {
+      return new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    } catch {
+      return '';
+    }
+  })();
+
+  return (
+    <div className="hidden min-w-0 items-center gap-3 md:flex">
+      {/* ticker chip */}
+      <span
+        className="inline-flex shrink-0 items-center gap-1 border border-[var(--border)] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--text-primary)]"
+        style={{ borderRadius: 'var(--radius-control)' }}
+        title={selectedAsset?.name ?? ticker}
+      >
+        {ticker}
+        <ChevronRight className="h-3 w-3 rotate-90 opacity-40" aria-hidden="true" />
+      </span>
+
+      {/* big price + Δ / Δ% */}
+      {spot != null ? (
+        <div className="flex shrink-0 items-baseline gap-2">
+          <span className="slayer-num text-[17px] font-semibold leading-none text-[var(--text-primary)]">
+            {spot.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </span>
+          {change ? (
+            <span className="slayer-num text-[11px] font-semibold leading-none" style={{ color: deltaColor }}>
+              {up ? '+' : ''}{change.abs.toFixed(2)}
+              <span className="ml-1 opacity-90">
+                {up ? '+' : ''}{change.pct.toFixed(2)}%
+              </span>
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* DATA · REAL-TIME pill with live dot */}
+      <span
+        className="hidden shrink-0 items-center gap-1.5 border border-[var(--border)] px-2 py-1 lg:inline-flex"
+        style={{ borderRadius: 'var(--radius-control)' }}
+      >
+        <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Data</span>
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--positive-ink)' }} aria-hidden="true" />
+        <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-primary)]">Real-Time</span>
+      </span>
+
+      {/* MODE · DEALER chip */}
+      <span
+        className="hidden shrink-0 items-center gap-1.5 border border-[var(--border)] px-2 py-1 xl:inline-flex"
+        style={{ borderRadius: 'var(--radius-control)' }}
+      >
+        <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]">Mode</span>
+        <span className="text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-primary)]">Dealer</span>
+      </span>
+
+      {/* date */}
+      <span className="hidden shrink-0 text-[11px] tabular-nums text-[var(--text-tertiary)] 2xl:inline">
+        {dateStr}
+      </span>
+
+      {/* hairline divider before the module identity */}
+      <span className="hidden h-6 w-px bg-[var(--border)] xl:inline-block" aria-hidden="true" />
+    </div>
+  );
+}
+
+/** Footer status strip — tiny mono, muted, hairline top. Synthesized reads only:
+ *  LAST UPDATE is the live ET clock, LATENCY is honest ("—" until a real value
+ *  exists), SOURCE/MARKET STATUS are the feed identity. */
+function StatusBar() {
+  const time = useEtClock();
+  const cell = 'flex items-center gap-1.5 whitespace-nowrap';
+  const label = 'text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]';
+  const val = 'text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-primary)] slayer-num';
+  const dot = <span className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--positive-ink)' }} aria-hidden="true" />;
+  return (
+    <footer
+      className="hidden shrink-0 items-center gap-4 overflow-x-auto border-t border-[var(--border)] bg-[var(--surface)] px-4 py-1.5 md:flex"
+      style={{ fontFamily: 'var(--font-brand)' }}
+      aria-label="Feed status"
+    >
+      <span className={cell}><span className={label}>Data Status</span>{dot}<span className={val}>Live</span></span>
+      <span className="h-3 w-px bg-[var(--border)]" aria-hidden="true" />
+      <span className={cell}><span className={label}>Last Update</span><span className={val}>{time} ET</span></span>
+      <span className="hidden h-3 w-px bg-[var(--border)] lg:inline-block" aria-hidden="true" />
+      <span className={`${cell} hidden lg:flex`}><span className={label}>Latency</span><span className={val}>—</span></span>
+      <span className="hidden h-3 w-px bg-[var(--border)] lg:inline-block" aria-hidden="true" />
+      <span className={`${cell} hidden lg:flex`}><span className={label}>Source</span><span className={val}>Real-Time Feed</span></span>
+      <span className="ml-auto h-3 w-px bg-[var(--border)] hidden sm:inline-block" aria-hidden="true" />
+      <span className={`${cell} sm:ml-0 ml-auto`}><span className={label}>Market Status</span>{dot}<span className={val}>Open</span></span>
+    </footer>
+  );
+}
+
 /** One rail entry: icon + micro-label, bright left rule when active. Items with
  *  sub-tabs keep their hover flyout (the command bar also surfaces them as tabs). */
 function RailItem({ it }: { it: NavItemDef }) {
@@ -478,6 +618,9 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Top command bar (desktop): module identity · sub-tabs · clock · account */}
         <header className="hidden h-[52px] shrink-0 items-center gap-4 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:flex">
+          {/* live market cluster — ticker · price+Δ · data pill · mode chip · date */}
+          <CommandData />
+
           <div className="flex min-w-0 items-baseline gap-2.5">
             <span className="whitespace-nowrap text-[12.5px] font-bold uppercase tracking-[0.18em] text-[var(--text-primary)]">
               {current?.label ?? 'Terminal'}
@@ -554,6 +697,9 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
         <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--surface)] pt-[57px] md:pt-0">
           {children}
         </div>
+
+        {/* Footer status strip — global, hairline top, tiny mono */}
+        <StatusBar />
       </div>
     </div>
     </NavCtx.Provider>

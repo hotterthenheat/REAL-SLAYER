@@ -142,12 +142,26 @@ const CALL_STEEL = 'var(--call)'; // steel — calls
 const NEG_INK = 'var(--negative-ink)';
 const POS_INK = 'var(--positive-ink)';
 
+// Insight bullet marker colour by tone — the data hue, used only as a 4px dot so
+// the chrome stays neutral.
+const toneDot: Record<MetricTone, string> = {
+  neutral: 'var(--text-muted)',
+  positive: 'var(--positive-ink)',
+  negative: 'var(--negative-ink)',
+  warning: 'var(--warning)',
+  call: 'var(--call)',
+  pin: 'var(--pin)',
+};
+
 // ────────────────────────────────────────────────────────────────────────────
 // Small presentational atoms
 // ────────────────────────────────────────────────────────────────────────────
 
 /** A single greek cell of the data sheet: right-aligned tabular number over a
- *  subtle magnitude-scaled heat wash of the sign colour. */
+ *  faint magnitude-scaled heat wash, with a thin 2px inline magnitude bar beneath
+ *  the number whose width encodes |value| as a share of the column max — the
+ *  per-cell mini-bar treatment from the reference sheet. Bar colour is the data
+ *  hue: put → red, call → blue, net → green/red by sign. */
 function MatrixCell({
   value,
   max,
@@ -161,15 +175,27 @@ function MatrixCell({
   const v = has ? (value as number) : 0;
   const pct = max > 0 ? Math.min(100, (Math.abs(v) / max) * 100) : 0;
   // Numbers: puts readable red, calls steel, net by sign. Wash: puts deep brand
-  // red, calls steel, net by sign.
+  // red, calls steel, net by sign. Bar: solid data hue (put=red, call=blue, net
+  // green≥0 / red<0), flat fill — no gradient/glow.
   const numColor = side === 'put' ? NEG_INK : side === 'call' ? CALL_STEEL : v < 0 ? NEG_INK : POS_INK;
   const washColor = side === 'put' ? SLAYER_RED : side === 'call' ? CALL_STEEL : v < 0 ? NEG_INK : POS_INK;
-  const tint = has && pct > 0 ? `color-mix(in srgb, ${washColor} ${Math.round(pct * 0.18)}%, transparent)` : undefined;
+  const barColor = side === 'put' ? NEG_INK : side === 'call' ? CALL_STEEL : v >= 0 ? POS_INK : NEG_INK;
+  const tint = has && pct > 0 ? `color-mix(in srgb, ${washColor} ${Math.round(pct * 0.14)}%, transparent)` : undefined;
   return (
-    <div className="relative flex h-5 items-center justify-end overflow-hidden px-1" style={{ background: tint }}>
-      <span className="slayer-num relative z-10 text-[9.5px] font-semibold" style={{ color: has ? numColor : 'var(--text-faint)' }}>
+    <div className="relative flex h-[19px] flex-col justify-center overflow-hidden px-1" style={{ background: tint }}>
+      <span
+        className="slayer-num relative z-10 block text-right text-[9.5px] font-semibold leading-none"
+        style={{ color: has ? numColor : 'var(--text-faint)' }}
+      >
         {fmtMag(has ? v : null)}
       </span>
+      {has && pct > 0 ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-[1.5px] right-1 h-[2px]"
+          style={{ width: `calc(${Math.max(6, pct)}% - 0px)`, maxWidth: 'calc(100% - 0.5rem)', background: barColor, opacity: 0.85 }}
+        />
+      ) : null}
     </div>
   );
 }
@@ -514,6 +540,95 @@ function ExposureDeck() {
   const frictionHi = spot != null && magnet != null ? Math.max(spot, magnet) : null;
   const hasFriction = frictionLo != null && frictionHi != null && Math.round(frictionLo) !== Math.round(frictionHi);
 
+  // ── Synthesized reads for the Positioning Insight panel ─────────────────────
+  // Strongest dealer-support strike: the heaviest |net-gamma| strike at/below
+  // spot in the visible window — where dealers hold the most inventory to defend.
+  let supportStrike: number | null = null;
+  {
+    let bestMag = 0;
+    for (const r of matrixRows) {
+      const ng = r.netGex;
+      if (ng == null || !isFinite(ng)) continue;
+      if (spot != null && r.strike > spot) continue;
+      const mag = Math.abs(ng);
+      if (mag > bestMag) { bestMag = mag; supportStrike = r.strike; }
+    }
+  }
+  // Nearest listed strike beyond a level (fallback: one interval step).
+  const nextAbove = (lvl: number | null | undefined): number | null => {
+    if (lvl == null || !isFinite(lvl)) return null;
+    const up = asc.filter((r) => r.strike > lvl).map((r) => r.strike);
+    if (up.length) return Math.min(...up);
+    return interval ? lvl + interval : null;
+  };
+  const nextBelow = (lvl: number | null | undefined): number | null => {
+    if (lvl == null || !isFinite(lvl)) return null;
+    const dn = asc.filter((r) => r.strike < lvl).map((r) => r.strike);
+    if (dn.length) return Math.max(...dn);
+    return interval ? lvl - interval : null;
+  };
+  const downTarget = putWall != null ? (magnet != null && magnet < putWall ? magnet : nextBelow(putWall)) : null;
+  const upTarget = nextAbove(callWall);
+  const frictionSpan = frictionLo != null && frictionHi != null ? Math.round(frictionHi - frictionLo) : null;
+
+  // 4–5 SYNTHESIZED bullets: sign→behavior, friction-band state, deepest support,
+  // and two directional what-ifs. Each interprets the levels — none merely echoes
+  // a KPI figure — and any missing level degrades to a graceful sentence.
+  const insights: { key: string; tone: MetricTone; text: string }[] = [
+    {
+      key: 'gamma',
+      tone: control ? (control.positiveGamma ? 'positive' : 'negative') : 'neutral',
+      text: control
+        ? control.positiveGamma
+          ? `Dealers are long gamma — they fade extensions, so dips get bought and rallies sold; ${netGexTrend.toLowerCase()} grip favors a compressing range.`
+          : `Dealers are short gamma — hedging chases price, so momentum self-reinforces; ${netGexTrend.toLowerCase()} exposure argues trend over mean-reversion.`
+        : 'Net-gamma regime indeterminate until the profile prints.',
+    },
+    {
+      key: 'friction',
+      tone: 'warning',
+      text: hasFriction
+        ? `Spot ${fmtLevel(spot)} sits ${spot != null && magnet != null && spot > magnet ? 'above' : 'below'} pin ${fmtLevel(magnet)} — a ${frictionSpan ?? '—'}-pt friction band that magnetizes drift back toward the pin on light momentum.`
+        : magnet != null
+          ? `Spot is pinned to the ${fmtLevel(magnet)} magnet — directional drift is neutralized until a wall gives way.`
+          : 'No pin level resolved, so no friction band to lean on.',
+    },
+    {
+      key: 'support',
+      tone: 'neutral',
+      text: supportStrike != null
+        ? `Deepest dealer inventory builds at ${fmtLevel(supportStrike)} — the heaviest net-gamma strike at/below spot and the first real catch on a flush.`
+        : 'No dominant inventory strike below spot in the visible window.',
+    },
+    {
+      key: 'break-down',
+      tone: 'negative',
+      text: putWall != null
+        ? `Break under ${fmtLevel(putWall)} (put wall) and support thins fast — next magnet lower is ${fmtLevel(downTarget)}.`
+        : 'Put wall unresolved — downside pivot indeterminate.',
+    },
+    {
+      key: 'break-up',
+      tone: 'call',
+      text: callWall != null
+        ? `Break above ${fmtLevel(callWall)} (call wall) and short-gamma supply gives way — quick air pocket toward ${fmtLevel(upTarget)}.`
+        : 'Call wall unresolved — upside pivot indeterminate.',
+    },
+  ];
+
+  // Bottom summary — the level ladder the top strip omits (walls + pin) plus the
+  // net aggregates, in the reference's compact 8-cell order.
+  const summaryMetrics: Metric[] = [
+    { label: 'Net GEX', value: fmtBnSigned(netGex), tone: netGex == null ? 'neutral' : netGex < 0 ? 'negative' : 'positive' },
+    { label: 'Net DEX', value: fmtCompact(netDexAgg, true), tone: netDexAgg == null ? 'neutral' : netDexAgg < 0 ? 'negative' : 'positive' },
+    { label: 'Net VEX', value: fmtCompact(netVexAgg, true), tone: netVexAgg == null ? 'neutral' : netVexAgg < 0 ? 'negative' : 'positive' },
+    { label: 'Spot', value: fmtLevel(spot), tone: 'neutral' },
+    { label: 'Put Wall', value: fmtLevel(putWall), tone: 'negative' },
+    { label: 'Pin Level', value: fmtLevel(magnet), tone: 'pin' },
+    { label: 'Call Wall', value: fmtLevel(callWall), tone: 'call' },
+    { label: 'Dealer Bias', value: biasInfo.label, tone: biasInfo.tone },
+  ];
+
   // KPI strip — the six aggregate reads. Wall/pin levels moved to the hero's
   // right-rail ladder; the net DEX/VEX aggregates absorbed the old standalone
   // "Aggregate Net Exposure" panel.
@@ -571,33 +686,18 @@ function ExposureDeck() {
       {/* ─────────────── 1. KPI STRIP ─────────────── */}
       <MetricStrip metrics={topMetrics} columns={8} />
 
-      {/* ─────────────── 2. HERO — POSITIONING MAP, FULL-WIDTH ─────────────── */}
-      {/* The map now labels every wall/pin ON the chart and the KPI strip carries
-          the scalar reads, so no side rail or insight-bullet narration is needed —
-          the product stands on its own, edge-to-edge and tall. */}
-      <div className="min-w-0 h-[460px] md:h-[560px] xl:h-[calc(100vh-260px)] xl:min-h-[560px] [&>section]:h-full">
-        <DealerPositioningMap
-          rows={matrixDesc.map((r) => ({ strike: r.strike, value: r.netGex ?? 0 }))}
-          spot={spot ?? undefined}
-          callWall={callWall ?? undefined}
-          putWall={putWall ?? undefined}
-          pinLevel={magnet ?? undefined}
-          actions={expiryReadout}
-          footer={
-            hasFriction ? (
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
-                Friction Zone {fmtLevel(frictionLo)}–{fmtLevel(frictionHi)}
-              </span>
-            ) : undefined
-          }
-        />
-      </div>
-
-      {/* ─────────────── 3. EXPOSURE MATRIX — FULL-WIDTH DATA SHEET ─────────────── */}
+      {/* ─────────────── 2. TWO-PANEL GRID — MATRIX (L) · MAP (R) ─────────────── */}
+      {/* Reference composition: a dense Exposure Matrix on the left (~48%) beside
+          the Dealer Positioning Map on the right (~52%). On xl the row takes a
+          fixed tall height and each panel scrolls internally; below xl it stacks
+          to a single column and each panel takes its natural height. */}
+      <div className="grid min-w-0 grid-cols-1 gap-[var(--gap)] xl:h-[calc(100vh-320px)] xl:min-h-[520px] xl:grid-cols-[minmax(0,48fr)_minmax(0,52fr)]">
+      {/* ── EXPOSURE MATRIX — dense data sheet, scrolls inside its own panel ── */}
       <TerminalPanel
         title="Exposure Matrix"
         subtitle="Inventory & sensitivity by strike"
-        bodyClassName="flex flex-col gap-2"
+        className="min-w-0 xl:h-full"
+        bodyClassName="flex min-h-0 flex-col gap-2"
         actions={
           /* One toolbar row: greek column toggles · expiry readout · CSV export. */
           <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1.5">
@@ -637,9 +737,10 @@ function ExposureDeck() {
           </div>
         }
       >
-        {/* SHEET — full-width; scrolls inside the panel below ~md widths. */}
-        <div className="overflow-x-auto border border-[var(--border-subtle)]">
-          <div className="min-w-[560px] lg:min-w-0">
+        {/* SHEET — scrolls vertically inside the panel (dense ladder) and
+            horizontally on narrow widths so the page body never scrolls. */}
+        <div className="slayer-scrollbar min-h-0 flex-1 overflow-x-auto overflow-y-auto border border-[var(--border-subtle)]">
+          <div className="min-w-[520px] xl:min-w-0">
             {/* Group header */}
             <div
               className="grid items-end border-b border-[var(--border-subtle)] text-[9px] font-semibold uppercase tracking-[0.13em] text-[var(--text-muted)]"
@@ -741,6 +842,50 @@ function ExposureDeck() {
           </span>
         </div>
       </TerminalPanel>
+
+      {/* ── DEALER POSITIONING MAP — same component + props, right column ── */}
+      <div className="min-w-0 xl:h-full [&>section]:h-full">
+        <DealerPositioningMap
+          rows={matrixDesc.map((r) => ({ strike: r.strike, value: r.netGex ?? 0 }))}
+          spot={spot ?? undefined}
+          callWall={callWall ?? undefined}
+          putWall={putWall ?? undefined}
+          pinLevel={magnet ?? undefined}
+          actions={expiryReadout}
+          footer={
+            hasFriction ? (
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--warning)]">
+                Friction Zone {fmtLevel(frictionLo)}–{fmtLevel(frictionHi)}
+              </span>
+            ) : undefined
+          }
+        />
+      </div>
+      </div>
+
+      {/* ─────────────── 3. BOTTOM SUMMARY STRIP + POSITIONING INSIGHT ─────────────── */}
+      <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-[minmax(0,1fr)_minmax(300px,380px)]">
+        <MetricStrip metrics={summaryMetrics} columns={8} className="self-start" />
+        <TerminalPanel
+          title="Positioning Insight"
+          subtitle="Synthesized dealer read"
+          className="min-w-0"
+          bodyClassName="flex flex-col gap-1.5"
+        >
+          <ul className="flex flex-col gap-1.5">
+            {insights.map((it) => (
+              <li key={it.key} className="flex items-start gap-2">
+                <span
+                  aria-hidden="true"
+                  className="mt-[5px] h-1 w-1 shrink-0 rounded-full"
+                  style={{ background: toneDot[it.tone] }}
+                />
+                <span className="text-[10.5px] leading-snug text-[var(--text-secondary)]">{it.text}</span>
+              </li>
+            ))}
+          </ul>
+        </TerminalPanel>
+      </div>
 
       {/* ─────────────── 4. STATUS FOOTER ─────────────── */}
       <div className="slayer-panel flex flex-col items-center justify-between gap-1 px-3 py-2 text-[9px] tracking-wide text-[var(--text-muted)] sm:flex-row">
