@@ -91,8 +91,8 @@ html, body, #root {
   --amber: #E5B94E;              /* premium / pins / walls — gold */
   --signal: #26C281;             /* bullish / call wall / positive — emerald */
 
-  --primary: #26C281;            /* brand accent — EMERALD (live/active) */
-  --primary-contrast: #04120C;   /* text on a primary fill */
+  --primary: #C4CBD7;            /* brand accent — SILVER (brand/active, not data) */
+  --primary-contrast: #0A0B0D;   /* dark text on a silver primary fill */
   --secondary: #5B9DF0;          /* secondary accent (steel-blue) */
   --background: var(--bg-base);  /* app background */
   --surface: #0E1013;            /* panel surface — near-black, flat */
@@ -119,13 +119,28 @@ html, body, #root {
   --info-soft: rgba(91, 157, 240, 0.15);
   --greek: #9B7BE0;             /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
   --dealer: #5B9DF0;            /* §9 — dealer / market-maker tracking */
-  /* Brand accent — EMERALD (live/active). Active nav, focus rings, primary CTAs,
-     live markers, the wordmark caret. Data colors above stay semantic: green =
-     bullish, red = bearish, blue = calls/price, gold = premium, purple = greeks. */
-  --accent-color: #26C281;
-  --accent-strong: #34D399;      /* hover/pressed accent */
-  --accent-soft: rgba(38, 194, 129, 0.13);  /* accent wash for tinted fills */
-  --accent-glow: rgba(38, 194, 129, 0.32);  /* glow for active/hover states */
+  /* ── HOLOGRAPHIC NEON SILVER — the Slayer brand accent ──────────────────────
+     A restrained metallic silver with subtle spectral (cyan↔violet) edges. Used
+     ONLY for brand identity, active-nav indicators, keyboard focus, selected
+     outlines, primary outline buttons, and rare premium moments — NEVER for
+     market data. Solid silver is used far more often than the holographic
+     gradient. The data palette above stays fully semantic. */
+  --slayer-silver-high: #EAEEF4;   /* bright highlight edge */
+  --slayer-silver-mid:  #C4CBD7;   /* core silver — the solid accent */
+  --slayer-silver-low:  #868D9C;   /* shadow silver */
+  --slayer-spectral-cyan:   #82E9FF;  /* spectral edge — holographic gradient only */
+  --slayer-spectral-violet: #B79CFF;  /* spectral edge — holographic gradient only */
+  --slayer-focus: #C4CBD7;
+  --slayer-selection: rgba(196, 203, 215, 0.16);
+  /* Holographic gradient — reserved for the wordmark + a single hero moment. */
+  --slayer-holo: linear-gradient(100deg, #82E9FF 0%, #EAEEF4 42%, #C4CBD7 58%, #B79CFF 100%);
+
+  /* Brand accent → solid silver. Active nav, focus rings, selected outlines, the
+     wordmark caret. NOT a data color. */
+  --accent-color: var(--slayer-silver-mid);
+  --accent-strong: var(--slayer-silver-high);   /* hover/pressed accent */
+  --accent-soft: var(--slayer-selection);        /* accent wash for tinted fills */
+  --accent-glow: rgba(196, 203, 215, 0.26);      /* restrained — no constant glow */
 
   /* ── TERMINAL DESIGN-SYSTEM ALIASES (mirror of src/styles/slayer-terminal.css) ──
      The Slayer Terminal pages (QuantSuite / QuantAudit / Pinpoint) and many shared
@@ -421,7 +436,7 @@ body {
   /* Borders — neutral hairline */
   --color-borderSubtle: #1A1D23;
   --color-borderMuted: #262A31;
-  --color-borderFocus: #26C281;
+  --color-borderFocus: #C4CBD7;
   /* Text — neutral off-white ramp */
   --color-textPrimary: #E6E9EF;
   --color-textSecondary: #9BA3AF;
@@ -729,7 +744,7 @@ body.light-theme {
   background-color: #F2F6FA !important;   /* cool neutral paper */
   color: #16202A !important;
   background-image:
-    radial-gradient(52% 40% at 50% -8%, rgba(20, 130, 84, 0.05), transparent 64%),
+    radial-gradient(52% 40% at 50% -8%, rgba(91, 100, 114, 0.05), transparent 64%),
     radial-gradient(rgba(20, 40, 60, 0.03) 1px, transparent 1px) !important;
 }
 
@@ -756,7 +771,7 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --text-primary: #16202A;     /* cool near-black on white ≈ 15:1 */
   --text-secondary: #3B4A59;   /* ≈ 9:1 */
   --text-tertiary: #56687A;    /* ≈ 6:1 (AA) */
-  --primary: #148254;          /* deep emerald — brand accent, readable on paper */
+  --primary: #5B6472;          /* graphite-silver — brand accent, readable on paper */
   --primary-contrast: #FFFFFF;
   --secondary: #2570A8;
   --success: #148254;
@@ -765,10 +780,10 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --info: #2570A8;
   --greek: #7C4EA8;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
   --dealer: #2570A8;             /* §9 — dealer / market-maker tracking */
-  --accent-color: #148254;     /* brand accent — deep emerald on paper */
-  --accent-strong: #0F6B44;
-  --accent-soft: rgba(20, 130, 84, 0.11);
-  --accent-glow: rgba(20, 130, 84, 0.22);
+  --accent-color: #5B6472;     /* brand accent — graphite-silver on paper */
+  --accent-strong: #454B57;
+  --accent-soft: rgba(91, 100, 114, 0.12);
+  --accent-glow: rgba(91, 100, 114, 0.20);
 
   /* Terminal design-system aliases — light-mode values. Without these, panels/tables
      that reference --bg-panel / --text-muted / --text-faint / --border-subtle stayed on
@@ -1229,12 +1244,12 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
 /* Accessible keyboard focus ring — keyboard navigation only, never on
    mouse click, so it adds a11y without changing the click aesthetic. */
 :where(button, a, summary, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid rgba(74, 222, 128, 0.75);
+  outline: 2px solid rgba(196, 203, 215, 0.85);
   outline-offset: 2px;
 }
 :where(button, a, [role="button"]):focus:not(:focus-visible) { outline: none; }
 .light-theme :where(button, a, summary, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline-color: rgba(20, 130, 84, 0.85);
+  outline-color: rgba(91, 100, 114, 0.85);
 }
 
 /* Consistent disabled treatment everywhere. */
@@ -1245,7 +1260,7 @@ button:disabled, [aria-disabled="true"] { opacity: 0.5; cursor: not-allowed !imp
    popovers, flyouts). Hover only brightens the border (defined once above). */
 
 /* On-brand text selection + crisp rendering. */
-::selection { background: rgba(74, 222, 128, 0.25); color: #ffffff; }
+::selection { background: rgba(196, 203, 215, 0.28); color: #ffffff; }
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 
 /* ──────────────────────────────────────────────────────────────────────────

@@ -41,8 +41,8 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
         minHeight: '100vh',
         // Institutional atmosphere — a faint emerald bloom at the crown over pure black.
         background:
-          'radial-gradient(56% 44% at 50% -8%, rgba(38,194,129,0.08), transparent 64%),' +
-          'radial-gradient(44% 38% at 100% 110%, rgba(38,194,129,0.03), transparent 70%),' +
+          'radial-gradient(56% 44% at 50% -8%, rgba(196,203,215,0.06), transparent 64%),' +
+          'radial-gradient(44% 38% at 100% 110%, rgba(130,233,255,0.03), transparent 70%),' +
           '#0A0B0D',
       }}
       data-scene="hero"
@@ -106,7 +106,7 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
               style={{
                 background: 'var(--accent-color)',
                 color: 'var(--primary-contrast)',
-                boxShadow: '0 8px 28px -10px var(--accent-glow, rgba(38,194,129,0.35))',
+                boxShadow: '0 8px 28px -10px var(--accent-glow, rgba(196,203,215,0.30))',
               }}
             >
               Launch Terminal

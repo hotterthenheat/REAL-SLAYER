@@ -16,7 +16,7 @@ import React from 'react';
 
 const PROMPT = 'var(--brand-prompt, #6B7177)'; // --dim  : the ">" terminal prompt
 const WHITE = 'var(--brand-ink, #F4F5F6)';     // --white : the S / wordmark
-const CARET = 'var(--accent-color, #26C281)';  // the blinking caret carries the emerald brand accent
+const CARET = 'var(--accent-color, #C4CBD7)';  // the blinking caret carries the silver brand accent
 
 export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
   const fontSize = expanded ? 18 : 24;

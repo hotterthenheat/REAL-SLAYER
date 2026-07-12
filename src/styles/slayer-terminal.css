@@ -172,7 +172,7 @@
 .slayer-control:focus-visible {
   border-color: var(--accent-color);
   color: var(--text-primary);
-  box-shadow: 0 0 0 3px var(--accent-soft, rgba(38, 194, 129, 0.13));
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(196, 203, 215, 0.16));
   outline: none;
 }
 
@@ -212,9 +212,9 @@
   vertical-align: middle;
 }
 
-/* Rows warm toward the emerald accent on hover — the live-instrument feel. */
+/* Rows lift toward a neutral silver on hover — the live-instrument feel, no hue. */
 .slayer-table tr:hover td {
-  background: rgba(38, 194, 129, 0.05);
+  background: rgba(196, 203, 215, 0.05);
 }
 
 .slayer-num {
@@ -247,15 +247,15 @@
 
 .slayer-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(38, 194, 129, 0.22) transparent;
+  scrollbar-color: rgba(196, 203, 215, 0.22) transparent;
 }
 .slayer-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .slayer-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(38, 194, 129, 0.16);
+  background: rgba(196, 203, 215, 0.16);
   border-radius: 999px;
 }
 .slayer-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(38, 194, 129, 0.3);
+  background: rgba(196, 203, 215, 0.3);
 }
 .slayer-scrollbar::-webkit-scrollbar-track { background: transparent; }
 
