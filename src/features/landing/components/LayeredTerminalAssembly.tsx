@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
-import { GSAP_EASE_PRIMARY, STAGGER } from '../motion/motionTokens';
+import { GSAP_EASE_PRIMARY, STAGGER, DUR } from '../motion/motionTokens';
 import { useFitScale } from '../hooks/useFitScale';
 
 /**
@@ -279,11 +279,26 @@ export function LayeredTerminalAssembly({ reduced }: { reduced: boolean }) {
       // simply stays alive: a slow breath plus per-layer micro-drift at different
       // periods (never opacity — the card is always fully present).
       LAYERS.forEach((l, i) => gsap.set(nodes[i], { x: l.from.x, y: l.from.y, rotation: l.from.rot, scale: l.from.scale, autoAlpha: l.id === 'grid' ? 0.5 : 0 }));
-      const tl = gsap.timeline({ defaults: { force3D: true } });
-      tl.to(nodes, {
-        x: 0, y: 0, rotation: 0, scale: 1, autoAlpha: 1,
-        duration: 0.8, ease: GSAP_EASE_PRIMARY, stagger: STAGGER.layer,
-      }, 0.1);
+
+      // Choreographed in three directed beats instead of one uniform cascade, so the
+      // desk reads as ASSEMBLED, not merely faded in: (1) the foundation — grid +
+      // frame — settles first and gives the pieces a surface to land on; (2) the
+      // working panels sweep in from their own sides, overlapping the tail of beat 1;
+      // (3) the accent chips (SkyVision, live feed) lock in last, a beat behind, so
+      // the eye finishes on the signal. All transform+opacity only (GPU-cheap), all
+      // on the shared expo-out hand from the motion tokens.
+      const byId: Record<string, HTMLElement> = {};
+      LAYERS.forEach((l, i) => { if (nodes[i]) byId[l.id] = nodes[i]; });
+      const pick = (ids: string[]) => ids.map((id) => byId[id]).filter(Boolean) as HTMLElement[];
+      const foundation = pick(['grid', 'frame']);
+      const structure = pick(['nav', 'metrics', 'chart', 'gex', 'levels']);
+      const accents = pick(['skyvision', 'feed']);
+      const home = { x: 0, y: 0, rotation: 0, scale: 1, autoAlpha: 1 };
+
+      const tl = gsap.timeline({ defaults: { force3D: true, ease: GSAP_EASE_PRIMARY } });
+      tl.to(foundation, { ...home, duration: DUR.hero, stagger: STAGGER.tight }, 0.1);
+      tl.to(structure, { ...home, duration: DUR.hero, stagger: STAGGER.layer }, 0.4);
+      tl.to(accents, { ...home, duration: DUR.reveal, stagger: STAGGER.tight }, 0.98);
       // idle life, started after lock-in: a barely-there breath on the whole desk…
       tl.add(() => {
         gsap.to(breatheRef.current, { scale: 1.008, duration: 3.2, ease: 'sine.inOut', yoyo: true, repeat: -1 });
