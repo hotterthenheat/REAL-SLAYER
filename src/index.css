@@ -51,29 +51,31 @@ html, body, #root {
 
 :root {
   /* ════════════════════════════════════════════════════════════════════
-     GLACIER — the full-redesign system. Cold graphite-blue canvas, electric
-     ice-cyan brand accent, sharper geometry, glowing active states. Every
-     token NAME is preserved so ~100 token-driven files re-skin automatically.
+     SLAYER TERMINAL — institutional Bloomberg-grade system. Pure black canvas,
+     a multi-hue DATA palette (emerald=bullish, rose=bearish, gold=premium/walls,
+     steel=calls/price, purple=greeks) with EMERALD as the brand/active accent,
+     max-density geometry, flat hairline panels. Every token NAME is preserved so
+     ~100 token-driven files re-skin automatically.
      ════════════════════════════════════════════════════════════════════ */
 
-  /* BACKGROUND FOUNDATION — cool near-black, never pure #000000 */
-  --bg-base: #070A0E;          /* deep glacier ink */
-  --bg-surface: rgba(13, 18, 24, 0.8);
+  /* BACKGROUND FOUNDATION — pure institutional black (Bloomberg terminal) */
+  --bg-base: #0A0B0D;          /* near-black canvas, flat */
+  --bg-surface: rgba(16, 18, 22, 0.8);
 
-  /* MIRROR-GREY SCALE (cool-tinted) */
-  --grey-100: #EAF1F7;         /* Primary Text (never pure #FFFFFF) */
-  --grey-300: #8FA0B0;         /* Secondary Text / Labels */
-  --grey-500: #4A5866;         /* Functional Dividers */
-  --grey-700: #17202A;         /* Panel Borders */
-  --grey-900: #0F151C;         /* Hover States */
+  /* NEUTRAL GREY SCALE */
+  --grey-100: #E6E9EF;         /* Primary Text */
+  --grey-300: #9BA3AF;         /* Secondary Text / Labels */
+  --grey-500: #4B535E;         /* Functional Dividers */
+  --grey-700: #171A1F;         /* Panel Borders */
+  --grey-900: #101216;         /* Hover States */
 
   /* INSTITUTIONAL STATUS COLORS (Desaturated/Matte, brand-derived) */
-  --status-holding: #2FBF83;
-  --status-holding-bg: rgba(47, 191, 131, 0.12);
-  --status-failing: #E8564F;
-  --status-failing-bg: rgba(232, 86, 79, 0.12);
-  --status-testing: #8FA0B0;
-  --status-testing-bg: rgba(143, 160, 176, 0.1);
+  --status-holding: #34D399;
+  --status-holding-bg: rgba(38, 194, 129, 0.12);
+  --status-failing: #F86A6F;
+  --status-failing-bg: rgba(214, 72, 77, 0.12);
+  --status-testing: #9BA3AF;
+  --status-testing-bg: rgba(155, 163, 175, 0.1);
 
   /* ====================================================================
      SEMANTIC DESIGN TOKENS — single source of truth for theming.
@@ -85,45 +87,45 @@ html, body, #root {
   /* BRAND ANCHORS — the three colors that are genuinely ours. Every semantic
      tone below is derived from one of these, so nothing resolves to a framework
      default: success ← signal, warning ← amber, info ← steel. */
-  --steel: #5BA8DC;              /* SkyVision · calls · positioning · info origin */
-  --amber: #E8A33D;              /* Pinpoint · pins · dealer flow · warning origin */
-  --signal: #2FBF83;             /* call wall · bullish · success origin */
+  --steel: #5B9DF0;              /* calls / price / info — steel blue */
+  --amber: #E5B94E;              /* premium / pins / walls — gold */
+  --signal: #26C281;             /* bullish / call wall / positive — emerald */
 
-  --primary: #3FC1FF;            /* brand accent — ELECTRIC ICE (Glacier) */
-  --primary-contrast: #04121C;   /* text on a primary fill */
-  --secondary: #5BA8DC;          /* secondary accent (steel info) */
+  --primary: #26C281;            /* brand accent — EMERALD (live/active) */
+  --primary-contrast: #04120C;   /* text on a primary fill */
+  --secondary: #5B9DF0;          /* secondary accent (steel-blue) */
   --background: var(--bg-base);  /* app background */
-  --surface: #0D1218;            /* card / panel surface — cold graphite-blue */
-  --surface-2: #131A22;          /* nested surface */
-  --surface-3: #1B2531;          /* hover / raised */
-  --border: rgba(163, 196, 224, 0.11);
-  --border-strong: rgba(163, 196, 224, 0.22);
-  --text-primary: #EAF1F7;       /* cool off-white, ~14:1 on surface */
-  --text-secondary: #C3CFDA;     /* AAA */
-  --text-tertiary: #8FA0B0;      /* AA cool grey */
+  --surface: #0E1013;            /* panel surface — near-black, flat */
+  --surface-2: #14171C;          /* nested surface */
+  --surface-3: #1D2129;          /* hover / raised */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text-primary: #E6E9EF;       /* off-white */
+  --text-secondary: #9BA3AF;     /* labels */
+  --text-tertiary: #626B78;      /* muted */
   /* Semantic state — brand-derived. The base token fills; the -ink variant is the
      brighter text tone used when a number itself carries the sign; -soft is a wash. */
-  --success: #279C6C;
-  --success-ink: #2FBF83;
-  --success-soft: rgba(47, 191, 131, 0.16);
-  --warning: #C98A2E;
-  --warning-ink: #E8A33D;
-  --warning-soft: rgba(232, 163, 61, 0.16);
-  --danger: #C24540;
-  --danger-ink: #E8564F;
-  --danger-soft: rgba(232, 86, 79, 0.15);
-  --info: #4587B4;
-  --info-ink: #5BA8DC;
-  --info-soft: rgba(91, 168, 220, 0.16);
-  --greek: #8F6FB8;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
-  --dealer: #46AECE;             /* §9 — dealer / market-maker tracking */
-  /* GLACIER brand accent — electric ice. The single brand hue: active nav, focus
-     rings, primary CTAs, live markers, the wordmark caret. Data colors above stay
-     semantic (up/down clarity); this is the identity. Theme presets still override. */
-  --accent-color: #3FC1FF;
-  --accent-strong: #6FD3FF;      /* hover/pressed accent */
-  --accent-soft: rgba(63, 193, 255, 0.13);  /* accent wash for tinted fills */
-  --accent-glow: rgba(63, 193, 255, 0.35);  /* glow for active/hover states */
+  --success: #1F9E68;
+  --success-ink: #34D399;
+  --success-soft: rgba(38, 194, 129, 0.15);
+  --warning: #C99A34;
+  --warning-ink: #E5B94E;
+  --warning-soft: rgba(229, 185, 78, 0.15);
+  --danger: #D6484D;
+  --danger-ink: #F86A6F;
+  --danger-soft: rgba(248, 106, 111, 0.15);
+  --info: #4E86D6;
+  --info-ink: #6AA9F0;
+  --info-soft: rgba(91, 157, 240, 0.15);
+  --greek: #9B7BE0;             /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
+  --dealer: #5B9DF0;            /* §9 — dealer / market-maker tracking */
+  /* Brand accent — EMERALD (live/active). Active nav, focus rings, primary CTAs,
+     live markers, the wordmark caret. Data colors above stay semantic: green =
+     bullish, red = bearish, blue = calls/price, gold = premium, purple = greeks. */
+  --accent-color: #26C281;
+  --accent-strong: #34D399;      /* hover/pressed accent */
+  --accent-soft: rgba(38, 194, 129, 0.13);  /* accent wash for tinted fills */
+  --accent-glow: rgba(38, 194, 129, 0.32);  /* glow for active/hover states */
 
   /* ── TERMINAL DESIGN-SYSTEM ALIASES (mirror of src/styles/slayer-terminal.css) ──
      The Slayer Terminal pages (QuantSuite / QuantAudit / Pinpoint) and many shared
@@ -132,23 +134,23 @@ html, body, #root {
      block below a place to supply light-mode values — without which terminal panels
      rendered near-black text on near-black surfaces in light mode. Dark values match
      slayer-terminal.css exactly, so the dark UI is unchanged. */
-  --bg-app: #05070A;
-  --bg-shell: #090D12;
-  --bg-panel: #0D1218;
-  --bg-panel-soft: #10161E;
-  --bg-panel-raised: #141C25;
-  --border-subtle: rgba(163, 196, 224, 0.09);
-  --border-mid: rgba(163, 196, 224, 0.16);
-  --text-muted: rgba(214, 228, 240, 0.52);
-  --text-faint: rgba(214, 228, 240, 0.30);
-  --positive: #1C6B4A;
-  --positive-ink: #2FBF83;
-  --positive-soft: rgba(47, 191, 131, 0.18);
-  --negative: #8E2B27;
-  --negative-ink: #E8564F;
-  --negative-soft: rgba(232, 86, 79, 0.15);
-  --call: #5BA8DC;
-  --pin: #E8A33D;
+  --bg-app: #0A0B0D;
+  --bg-shell: #0C0E11;
+  --bg-panel: #0E1013;
+  --bg-panel-soft: #121418;
+  --bg-panel-raised: #1A1D23;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-mid: rgba(255, 255, 255, 0.12);
+  --text-muted: rgba(230, 233, 239, 0.52);
+  --text-faint: rgba(230, 233, 239, 0.30);
+  --positive: #177A4E;
+  --positive-ink: #34D399;
+  --positive-soft: rgba(38, 194, 129, 0.16);
+  --negative: #7E2A2E;
+  --negative-ink: #F86A6F;
+  --negative-soft: rgba(214, 72, 77, 0.16);
+  --call: #5B9DF0;
+  --pin: #E5B94E;
 
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
@@ -247,11 +249,9 @@ html, body, #root {
 
 body {
   background-color: var(--bg-base);
-  /* GLACIER atmosphere — a cold ice bloom at the crown and a faint steel wash
-     at the base. Fixed, no animation; depth without decoration. */
-  background-image:
-    radial-gradient(52% 40% at 50% -8%, rgba(63, 193, 255, 0.07), transparent 64%),
-    radial-gradient(44% 36% at 100% 108%, rgba(91, 168, 220, 0.045), transparent 70%);
+  /* Pure institutional black — flat, no atmospheric bloom. A Bloomberg-grade
+     terminal canvas is a dead-flat void so the data carries all the light. */
+  background-image: none;
   background-attachment: fixed;
   background-repeat: no-repeat;
   font-family: var(--font-sans);
@@ -344,13 +344,13 @@ body {
 
   /* High Density Theme Custom Color Mappings — dark greys collapse to the deep-ink base
      (#0A0A0A), never pure #000000, so bg-black / bg-zinc-* utilities honor the theme rule. */
-  --color-black: #070A0E;
-  --color-zinc-950: #070A0E;
-  --color-zinc-900: #070A0E;
-  --color-zinc-850: #070A0E;
-  --color-zinc-800: #070A0E;
-  --color-zinc-750: #070A0E;
-  --color-zinc-700: #070A0E;
+  --color-black: #0A0B0D;
+  --color-zinc-950: #0A0B0D;
+  --color-zinc-900: #0C0E11;
+  --color-zinc-850: #0E1013;
+  --color-zinc-800: #121418;
+  --color-zinc-750: #14171C;
+  --color-zinc-700: #1A1D23;
   /* Muted label greys lifted for readability (were #52525B / #71717A — too low
      contrast on black at small sizes, then #8A8A92 / #A3A3A3 — still a squint on
      glass panels). Now a clear 3-step ramp: dim → label → bright, all comfortably
@@ -380,14 +380,14 @@ body {
   --color-rose-950: #2c0806;
   --color-rose-900: #af1f18;
 
-  --color-amber-500: #ff9500;
-  --color-amber-450: #ff9f0a;
-  --color-amber-400: #ff9f0a;
-  --color-amber-950: #321c00;
-  --color-amber-900: #b26500;
+  --color-amber-500: #E5B94E;
+  --color-amber-450: #EAC66A;
+  --color-amber-400: #EAC66A;
+  --color-amber-950: #2A2005;
+  --color-amber-900: #9C7C2C;
 
-  /* Radial dotted grid — cool glacier tint */
-  --color-grid-dot: #121A23;
+  /* Radial dotted grid — neutral dark, barely-there on flat black */
+  --color-grid-dot: #16181D;
 
   /* MAX-DENSITY RADIUS — a pro terminal has near-square corners. The whole
      Tailwind rounded-* ramp collapses to 2px (controls) / 3px (panels) so
@@ -412,25 +412,25 @@ body {
    renders independently of these tokens.
    ==================================================================== */
 @theme {
-  /* Surfaces — cold graphite-blue (Glacier) */
-  --color-canvas: #090D12;
-  --color-panel: #0D1218;
-  --color-panelHover: #141C25;
-  --color-inset: #0A0F15;
-  --color-inputBg: #090D12;
-  /* Borders — cool-tinted */
-  --color-borderSubtle: #1B2530;
-  --color-borderMuted: #28374A;
-  --color-borderFocus: #3FC1FF;
-  /* Text — cool off-white ramp */
-  --color-textPrimary: #EAF1F7;
-  --color-textSecondary: #8FA0B0;
-  --color-textMuted: #4A5866;
-  /* Directional / status accents — harmonized to the Glacier data palette. */
-  --color-bull: #2FBF83;   /* green — bullish / call-side positive */
-  --color-bear: #E8564F;   /* red — bearish / put-side negative */
-  --color-warn: #E8A33D;   /* amber — dealer flow / walls / pins */
-  --color-select: #5BA8DC; /* steel — selection / calls */
+  /* Surfaces — pure institutional black */
+  --color-canvas: #0A0B0D;
+  --color-panel: #0E1013;
+  --color-panelHover: #1A1D23;
+  --color-inset: #08090B;
+  --color-inputBg: #0C0E11;
+  /* Borders — neutral hairline */
+  --color-borderSubtle: #1A1D23;
+  --color-borderMuted: #262A31;
+  --color-borderFocus: #26C281;
+  /* Text — neutral off-white ramp */
+  --color-textPrimary: #E6E9EF;
+  --color-textSecondary: #9BA3AF;
+  --color-textMuted: #4B535E;
+  /* Directional / status accents — reference data palette. */
+  --color-bull: #34D399;   /* emerald — bullish / call-side positive */
+  --color-bear: #F86A6F;   /* rose — bearish / put-side negative */
+  --color-warn: #E5B94E;   /* gold — dealer flow / walls / pins */
+  --color-select: #5B9DF0; /* steel — selection / calls */
 }
 
 /* Tabular figures for the Flow Map's numeric tables, ladders, and panes. */
@@ -726,10 +726,10 @@ body {
    LIGHT THEME OVERRIDES
    ============================================================ */
 body.light-theme {
-  background-color: #F2F6FA !important;   /* cool glacier paper */
+  background-color: #F2F6FA !important;   /* cool neutral paper */
   color: #16202A !important;
   background-image:
-    radial-gradient(52% 40% at 50% -8%, rgba(11, 135, 201, 0.06), transparent 64%),
+    radial-gradient(52% 40% at 50% -8%, rgba(20, 130, 84, 0.05), transparent 64%),
     radial-gradient(rgba(20, 40, 60, 0.03) 1px, transparent 1px) !important;
 }
 
@@ -756,7 +756,7 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --text-primary: #16202A;     /* cool near-black on white ≈ 15:1 */
   --text-secondary: #3B4A59;   /* ≈ 9:1 */
   --text-tertiary: #56687A;    /* ≈ 6:1 (AA) */
-  --primary: #0B87C9;          /* deep ice — brand accent, readable on paper */
+  --primary: #148254;          /* deep emerald — brand accent, readable on paper */
   --primary-contrast: #FFFFFF;
   --secondary: #2570A8;
   --success: #148254;
@@ -764,11 +764,11 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --danger: #C63530;
   --info: #2570A8;
   --greek: #7C4EA8;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
-  --dealer: #0E7FA8;             /* §9 — dealer / market-maker tracking */
-  --accent-color: #0B87C9;     /* Glacier brand accent — deep ice on paper */
-  --accent-strong: #096FA6;
-  --accent-soft: rgba(11, 135, 201, 0.11);
-  --accent-glow: rgba(11, 135, 201, 0.22);
+  --dealer: #2570A8;             /* §9 — dealer / market-maker tracking */
+  --accent-color: #148254;     /* brand accent — deep emerald on paper */
+  --accent-strong: #0F6B44;
+  --accent-soft: rgba(20, 130, 84, 0.11);
+  --accent-glow: rgba(20, 130, 84, 0.22);
 
   /* Terminal design-system aliases — light-mode values. Without these, panels/tables
      that reference --bg-panel / --text-muted / --text-faint / --border-subtle stayed on
@@ -1234,7 +1234,7 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
 }
 :where(button, a, [role="button"]):focus:not(:focus-visible) { outline: none; }
 .light-theme :where(button, a, summary, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline-color: rgba(2, 132, 199, 0.85);
+  outline-color: rgba(20, 130, 84, 0.85);
 }
 
 /* Consistent disabled treatment everywhere. */

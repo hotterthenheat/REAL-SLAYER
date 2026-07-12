@@ -1,11 +1,12 @@
 /**
- * REAL-SLAYER — GLACIER terminal design system.
+ * REAL-SLAYER — institutional Bloomberg-grade terminal design system.
  * Single source of truth for shell, panels, grid, tables, chart tags, and status tones.
  *
- * The Glacier voice: cold graphite-blue surfaces with a quiet top sheen and real
- * depth, sharper corners (8px panels / 5px controls), an electric ice accent that
- * marks every active state, and cool-tinted hairlines. Color still encodes data,
- * never decoration — the single brand hue is the ice accent.
+ * The voice: a pure institutional-black canvas (no atmospheric bloom), flat hairline
+ * panels, near-square corners (3px panels / 2px controls), and a multi-hue DATA
+ * palette — emerald=bullish, rose=bearish, gold=premium/walls, steel=calls/price,
+ * purple=greeks — with EMERALD as the single brand/active accent. Color encodes
+ * data, never decoration.
  *
  * Ink rule: --positive/--negative are deep anchors (fills, borders, bars, washes);
  * --positive-ink/--negative-ink are the readable text variants used when a number
@@ -13,53 +14,53 @@
  */
 :root {
   /* Core brand */
-  --slayer-white: #EAF1F7;
-  --slayer-coffee: #0D1218;
+  --slayer-white: #E6E9EF;
+  --slayer-coffee: #0E1013;
   --slayer-ghost: #F4F8FC;
-  --slayer-black: #05070A;
+  --slayer-black: #0A0B0D;
 
   /* Semantic site colors */
-  --slayer-red: #E8564F;
-  --slayer-green: #1C6B4A;
+  --slayer-red: #F86A6F;
+  --slayer-green: #177A4E;
 
-  /* Backgrounds — cold graphite-blue (Glacier), matched to index.css :root */
-  --bg-app: #05070A;
-  --bg-shell: #090D12;
-  --bg-panel: #0D1218;
-  --bg-panel-soft: #10161E;
-  --bg-panel-raised: #141C25;
+  /* Backgrounds — pure institutional black, matched to index.css :root */
+  --bg-app: #0A0B0D;
+  --bg-shell: #0C0E11;
+  --bg-panel: #0E1013;
+  --bg-panel-soft: #121418;
+  --bg-panel-raised: #1A1D23;
 
-  /* Border system. --border-strong is owned by index.css :root. Cool-tinted. */
-  --border-subtle: rgba(163, 196, 224, 0.09);
-  --border-mid: rgba(163, 196, 224, 0.16);
+  /* Border system. --border-strong is owned by index.css :root. Neutral hairline. */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-mid: rgba(255, 255, 255, 0.12);
 
   /* Typography — terminal-specific muted/faint (primary/secondary owned by index.css) */
-  --text-muted: rgba(214, 228, 240, 0.52);
-  --text-faint: rgba(214, 228, 240, 0.30);
+  --text-muted: rgba(230, 233, 239, 0.52);
+  --text-faint: rgba(230, 233, 239, 0.30);
 
-  /* Data tones — deep anchors (fills/borders) + readable ink (text). Glacier-tuned. */
-  --negative: #8E2B27;
-  --negative-ink: #E8564F;
-  --negative-soft: rgba(232, 86, 79, 0.15);
-  --positive: #1C6B4A;
-  --positive-ink: #2FBF83;
-  --positive-soft: rgba(47, 191, 131, 0.18);
+  /* Data tones — deep anchors (fills/borders) + readable ink (text). */
+  --negative: #7E2A2E;
+  --negative-ink: #F86A6F;
+  --negative-soft: rgba(214, 72, 77, 0.16);
+  --positive: #177A4E;
+  --positive-ink: #34D399;
+  --positive-soft: rgba(38, 194, 129, 0.18);
 
   /* Market-specific accents */
-  --call: #5BA8DC;
-  --pin: #E8A33D;
-  --warning: #C98A2E;
-  --warning-ink: #E8A33D;
-  --warning-soft: rgba(232, 163, 61, 0.16);
-  --info: #4587B4;
-  --info-ink: #5BA8DC;
-  --neutral: rgba(214, 228, 240, 0.55);
+  --call: #5B9DF0;
+  --pin: #E5B94E;
+  --warning: #C99A34;
+  --warning-ink: #E5B94E;
+  --warning-soft: rgba(229, 185, 78, 0.16);
+  --info: #4E86D6;
+  --info-ink: #6AA9F0;
+  --neutral: rgba(230, 233, 239, 0.55);
 
-  /* GEX palette — brand-routed cool ramp (deep steel → steel → signal → heat). */
+  /* GEX palette — deep steel → steel → emerald → gold heat. */
   --gex-1: #1E4E78;
-  --gex-2: #2E7FB0;
-  --gex-3: #2FBF83;
-  --gex-4: #C05A2E;
+  --gex-2: #4E86D6;
+  --gex-3: #34D399;
+  --gex-4: #E5B94E;
 
   /* MAX-DENSITY geometry — near-square, tight. Every cell earns its pixels. */
   --radius-panel: 3px;
@@ -89,10 +90,8 @@
 
 .slayer-terminal {
   min-height: 100vh;
-  /* The shell carries the glacier crown-glow — the atmosphere behind every page. */
-  background:
-    radial-gradient(48% 36% at 50% -6%, rgba(63, 193, 255, 0.05), transparent 62%),
-    var(--bg-shell);
+  /* Flat institutional black — no atmospheric glow behind the grid. */
+  background: var(--bg-shell);
   color: var(--text-primary);
 }
 
@@ -173,7 +172,7 @@
 .slayer-control:focus-visible {
   border-color: var(--accent-color);
   color: var(--text-primary);
-  box-shadow: 0 0 0 3px var(--accent-soft, rgba(63, 193, 255, 0.13));
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(38, 194, 129, 0.13));
   outline: none;
 }
 
@@ -209,13 +208,13 @@
 .slayer-table td {
   color: var(--text-secondary);
   padding: 4px 8px;
-  border-bottom: 1px solid rgba(214, 228, 240, 0.045);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
 }
 
-/* Rows cool toward the ice accent on hover — the live-instrument feel. */
+/* Rows warm toward the emerald accent on hover — the live-instrument feel. */
 .slayer-table tr:hover td {
-  background: rgba(63, 193, 255, 0.045);
+  background: rgba(38, 194, 129, 0.05);
 }
 
 .slayer-num {
@@ -231,14 +230,14 @@
 
 .slayer-grid-lines {
   background-image:
-    linear-gradient(rgba(163, 196, 224, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(163, 196, 224, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 .slayer-level-tag {
   border: 1px solid var(--border-subtle);
-  background: rgba(7, 10, 14, 0.9);
+  background: rgba(10, 11, 13, 0.92);
   border-radius: 5px;
   padding: 5px 8px;
   font-size: 10px;
@@ -248,15 +247,15 @@
 
 .slayer-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(63, 193, 255, 0.22) transparent;
+  scrollbar-color: rgba(38, 194, 129, 0.22) transparent;
 }
 .slayer-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .slayer-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(63, 193, 255, 0.16);
+  background: rgba(38, 194, 129, 0.16);
   border-radius: 999px;
 }
 .slayer-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(63, 193, 255, 0.3);
+  background: rgba(38, 194, 129, 0.3);
 }
 .slayer-scrollbar::-webkit-scrollbar-track { background: transparent; }
 

@@ -35,12 +35,12 @@ interface StrikeChartProps {
 }
 
 // Wall / flip / king overlay colors (independent of candle theme).
-// Premium dealer-structure palette: steel call, muted red put, amber pin (king),
-// #3fc1ff accent flip — tuned to read clearly over the cool candles.
-const CALL_WALL = '#78A5B8'; // var(--call) steel
-const PUT_WALL = '#E0576A'; // var(--negative-ink) red
-const PIN = '#E6A93C'; // var(--pin) amber
-const FLIP = '#3FC1FF'; // var(--accent-color) accent
+// Institutional dealer-structure palette: steel call, rose put, gold pin (king),
+// emerald accent flip — tuned to read clearly over the green/red candles.
+const CALL_WALL = '#5B9DF0'; // var(--call) steel
+const PUT_WALL = '#F86A6F'; // var(--negative-ink) rose
+const PIN = '#E5B94E'; // var(--pin) gold
+const FLIP = '#26C281'; // var(--accent-color) emerald
 
 const toCandle = (b: Candle) => ({
   time: b.time as UTCTimestamp,

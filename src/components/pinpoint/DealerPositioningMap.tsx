@@ -29,14 +29,14 @@ type DealerPositioningMapProps = {
   footer?: React.ReactNode;
 };
 
-// Render palette (GLACIER): cold steel-ice for CALL pressure, ember-red for PUT
-// pressure, amber for the PIN, electric-ice accent reserved for active/hover.
-const CALL = 'var(--call)'; // #5BA8DC
-const PUT = 'var(--negative-ink)'; // #E8564F
-const PIN = 'var(--pin)'; // #E8A33D
-const ACCENT = 'var(--accent-color)'; // #3FC1FF
-const CALL_HEX = '#5BA8DC';
-const PUT_HEX = '#E8564F';
+// Render palette: steel-blue for CALL pressure, rose-red for PUT pressure, gold
+// for the PIN, emerald brand accent reserved for active/hover.
+const CALL = 'var(--call)'; // #5B9DF0
+const PUT = 'var(--negative-ink)'; // #F86A6F
+const PIN = 'var(--pin)'; // #E5B94E
+const ACCENT = 'var(--accent-color)'; // #26C281
+const CALL_HEX = '#5B9DF0';
+const PUT_HEX = '#F86A6F';
 
 // Back-compat aliases so the existing classification/legend/tone code reads clean.
 const STEEL = CALL;
@@ -307,7 +307,7 @@ export function DealerPositioningMap({
                   x2={x}
                   y1={headH - 4}
                   y2={bottom}
-                  stroke={zero ? 'rgba(234,241,247,0.34)' : 'rgba(163,196,224,0.07)'}
+                  stroke={zero ? 'rgba(230,233,239,0.34)' : 'rgba(255,255,255,0.06)'}
                   strokeWidth={zero ? 1 : 1}
                   strokeDasharray={zero ? undefined : '2 5'}
                   shapeRendering="crispEdges"
@@ -329,7 +329,7 @@ export function DealerPositioningMap({
 
           {/* friction-zone tinted bands (subtle, behind bars) */}
           {zones.map((z, i) => {
-            const tint = z.cls === 'callwall' ? CALL_HEX : z.cls === 'putwall' ? PUT_HEX : '#8FA0B0';
+            const tint = z.cls === 'callwall' ? CALL_HEX : z.cls === 'putwall' ? PUT_HEX : '#9BA3AF';
             const yA = top + z.i0 * rowHeight;
             const yB = top + (z.i1 + 1) * rowHeight;
             return (
@@ -451,7 +451,7 @@ export function DealerPositioningMap({
                     x2={isPos ? bx + bw : bx + bw - 1}
                     y1={by + 0.75}
                     y2={by + 0.75}
-                    stroke="#EAF1F7"
+                    stroke="#E6E9EF"
                     strokeOpacity="0.14"
                     strokeWidth="0.75"
                   />
@@ -474,11 +474,11 @@ export function DealerPositioningMap({
               const flagY = ys - 8;
               return (
                 <g>
-                  <line x1={plotL} x2={plotR} y1={ys} y2={ys} stroke="#EAF1F7" strokeOpacity="0.22" strokeWidth="2.5" filter="url(#dpm-glow)" />
-                  <line x1={plotL} x2={plotR} y1={ys} y2={ys} stroke="#EAF1F7" strokeOpacity="0.8" strokeWidth="1" shapeRendering="crispEdges" />
-                  <rect x={centerX - 1.5} y={ys - markerH / 2} width={3} height={markerH} rx="0.5" fill="#EAF1F7" />
+                  <line x1={plotL} x2={plotR} y1={ys} y2={ys} stroke="#E6E9EF" strokeOpacity="0.22" strokeWidth="2.5" filter="url(#dpm-glow)" />
+                  <line x1={plotL} x2={plotR} y1={ys} y2={ys} stroke="#E6E9EF" strokeOpacity="0.8" strokeWidth="1" shapeRendering="crispEdges" />
+                  <rect x={centerX - 1.5} y={ys - markerH / 2} width={3} height={markerH} rx="0.5" fill="#E6E9EF" />
                   {/* price flag chip at the right end of the spot line */}
-                  <rect x={flagX} y={flagY} width={flagW} height={16} rx="2" fill="var(--surface-3)" stroke="#EAF1F7" strokeOpacity="0.5" strokeWidth="1" />
+                  <rect x={flagX} y={flagY} width={flagW} height={16} rx="2" fill="var(--surface-3)" stroke="#E6E9EF" strokeOpacity="0.5" strokeWidth="1" />
                   <text x={flagX + flagW / 2} y={ys + 3.5} fontSize="9.5" fontWeight={700} fill="var(--text-primary)" textAnchor="middle" style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '0.01em' }}>
                     {label}
                   </text>

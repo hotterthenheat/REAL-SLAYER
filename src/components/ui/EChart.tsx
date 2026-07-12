@@ -33,43 +33,43 @@ function registerSlayerTheme(echarts: EChartsModule) {
   // Data font is a neutral system mono (tabular digits, clean axes) — the brand
   // face (JetBrains Mono) is reserved for the wordmark, never chart data.
   const dataFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
-  // Cool-tinted axis furniture for the Glacier canvas.
+  // Neutral axis furniture for the pure-black institutional canvas.
   const axis = {
-    axisLine: { lineStyle: { color: 'rgba(163,196,224,0.16)' } },
-    axisTick: { lineStyle: { color: 'rgba(163,196,224,0.16)' } },
-    axisLabel: { color: '#8FA0B0', fontFamily: dataFont, fontSize: 10 },
-    splitLine: { lineStyle: { color: 'rgba(163,196,224,0.05)' } },
-    splitArea: { areaStyle: { color: ['rgba(163,196,224,0.012)', 'transparent'] } },
+    axisLine: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
+    axisTick: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
+    axisLabel: { color: '#9BA3AF', fontFamily: dataFont, fontSize: 10 },
+    splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+    splitArea: { areaStyle: { color: ['rgba(255,255,255,0.012)', 'transparent'] } },
   };
-  // Series palette = the Glacier semantic data accents (steel/amber/green/red +
-  // muted greek/dealer tones) with the ice accent in reach for emphasis series.
+  // Series palette = the reference data accents (steel/gold/emerald/rose +
+  // greek/dealer tones) with the emerald brand accent in reach for emphasis series.
   echarts.registerTheme('slayer-dark', {
-    color: ['#5BA8DC', '#E8A33D', '#2FBF83', '#E8564F', '#8F6FB8', '#46AECE', '#3FC1FF', '#93A7B8'],
+    color: ['#5B9DF0', '#E5B94E', '#34D399', '#F86A6F', '#9B7BE0', '#4E86D6', '#26C281', '#93A7B8'],
     backgroundColor: 'transparent',
-    textStyle: { fontFamily: dataFont, color: '#C3CFDA' },
-    title: { textStyle: { color: '#EAF1F7', fontWeight: 700 }, subtextStyle: { color: '#8FA0B0' } },
-    legend: { textStyle: { color: '#C3CFDA', fontFamily: dataFont }, inactiveColor: '#4A5866' },
+    textStyle: { fontFamily: dataFont, color: '#C3C9D2' },
+    title: { textStyle: { color: '#E6E9EF', fontWeight: 700 }, subtextStyle: { color: '#9BA3AF' } },
+    legend: { textStyle: { color: '#C3C9D2', fontFamily: dataFont }, inactiveColor: '#4B535E' },
     tooltip: {
-      backgroundColor: 'rgba(13,18,24,0.96)',
-      borderColor: 'rgba(163,196,224,0.14)',
+      backgroundColor: 'rgba(14,16,19,0.96)',
+      borderColor: 'rgba(255,255,255,0.12)',
       borderWidth: 1,
-      textStyle: { color: '#EAF1F7', fontFamily: dataFont, fontSize: 11 },
-      extraCssText: 'border-radius: 8px; box-shadow: 0 10px 30px -12px rgba(0,0,0,0.75);',
+      textStyle: { color: '#E6E9EF', fontFamily: dataFont, fontSize: 11 },
+      extraCssText: 'border-radius: 4px; box-shadow: 0 10px 30px -12px rgba(0,0,0,0.75);',
     },
-    axisPointer: { lineStyle: { color: '#4A5866' }, crossStyle: { color: '#4A5866' }, label: { backgroundColor: '#1B2531' } },
+    axisPointer: { lineStyle: { color: '#4B535E' }, crossStyle: { color: '#4B535E' }, label: { backgroundColor: '#1A1D23' } },
     categoryAxis: axis,
     valueAxis: axis,
     timeAxis: axis,
     logAxis: axis,
-    grid: { borderColor: 'rgba(163,196,224,0.06)' },
-    toolbox: { iconStyle: { borderColor: '#8FA0B0' }, emphasis: { iconStyle: { borderColor: '#3FC1FF' } } },
+    grid: { borderColor: 'rgba(255,255,255,0.06)' },
+    toolbox: { iconStyle: { borderColor: '#9BA3AF' }, emphasis: { iconStyle: { borderColor: '#26C281' } } },
     dataZoom: {
-      borderColor: 'rgba(163,196,224,0.08)',
-      fillerColor: 'rgba(63,193,255,0.12)',
-      handleStyle: { color: '#3FC1FF' },
-      moveHandleStyle: { color: '#3FC1FF' },
-      dataBackground: { lineStyle: { color: '#4A5866' }, areaStyle: { color: 'rgba(163,196,224,0.04)' } },
-      textStyle: { color: '#8FA0B0' },
+      borderColor: 'rgba(255,255,255,0.08)',
+      fillerColor: 'rgba(38,194,129,0.12)',
+      handleStyle: { color: '#26C281' },
+      moveHandleStyle: { color: '#26C281' },
+      dataBackground: { lineStyle: { color: '#4B535E' }, areaStyle: { color: 'rgba(255,255,255,0.04)' } },
+      textStyle: { color: '#9BA3AF' },
     },
   });
 }

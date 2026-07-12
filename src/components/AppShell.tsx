@@ -321,7 +321,7 @@ function RailItem({ it }: { it: NavItemDef }) {
           className={`absolute left-0 top-1/2 h-8 w-[2.5px] -translate-y-1/2 rounded-r-full transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-0'}`}
           style={{
             background: it.adminOnly ? '#fb7185' : 'var(--accent-color)',
-            boxShadow: isActive && !it.adminOnly ? '0 0 12px var(--accent-glow, rgba(63,193,255,0.35))' : 'none',
+            boxShadow: isActive && !it.adminOnly ? '0 0 12px var(--accent-glow, rgba(38,194,129,0.35))' : 'none',
           }}
         />
         <Icon className="h-[17px] w-[17px] shrink-0" />

@@ -7,13 +7,13 @@
  * `bull`/`bear` follow Slayer's convention (up = green, down = red).
  */
 
-// Glacier data accents — bullish green / bearish red (re-tuned for the cool canvas).
-const BULL = '#2FBF83';
-const BEAR = '#E8564F';
-const BULL_SOFT = 'rgba(47,191,131,0.16)';
-const BEAR_SOFT = 'rgba(232,86,79,0.16)';
-const STEEL = '#5BA8DC'; // calls / fast MA
-const AMBER = '#E8A33D'; // dealer flow / slow MA
+// Institutional data accents — bullish emerald / bearish rose (reference palette).
+const BULL = '#34D399';
+const BEAR = '#F86A6F';
+const BULL_SOFT = 'rgba(38,194,129,0.16)';
+const BEAR_SOFT = 'rgba(214,72,77,0.16)';
+const STEEL = '#5B9DF0'; // calls / fast MA
+const AMBER = '#E5B94E'; // dealer flow / slow MA
 
 // ── Intraday candlestick + moving averages + volume ─────────────────────────
 // Adapted from the ECharts "candlestick + MA + volume" example.

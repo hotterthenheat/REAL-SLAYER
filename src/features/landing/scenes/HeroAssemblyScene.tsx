@@ -39,11 +39,11 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
       className="relative flex flex-col overflow-hidden"
       style={{
         minHeight: '100vh',
-        // GLACIER atmosphere — an ice bloom at the crown over the deep cold canvas.
+        // Institutional atmosphere — a faint emerald bloom at the crown over pure black.
         background:
-          'radial-gradient(56% 44% at 50% -8%, rgba(63,193,255,0.10), transparent 64%),' +
-          'radial-gradient(44% 38% at 100% 110%, rgba(91,168,220,0.05), transparent 70%),' +
-          '#070A0E',
+          'radial-gradient(56% 44% at 50% -8%, rgba(38,194,129,0.08), transparent 64%),' +
+          'radial-gradient(44% 38% at 100% 110%, rgba(38,194,129,0.03), transparent 70%),' +
+          '#0A0B0D',
       }}
       data-scene="hero"
     >
@@ -106,14 +106,14 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
               style={{
                 background: 'var(--accent-color)',
                 color: 'var(--primary-contrast)',
-                boxShadow: '0 8px 28px -10px var(--accent-glow, rgba(63,193,255,0.35))',
+                boxShadow: '0 8px 28px -10px var(--accent-glow, rgba(38,194,129,0.35))',
               }}
             >
               Launch Terminal
             </button>
             <button
               onClick={() => onEnter('pinpoint')}
-              className="rounded-[5px] border border-white/15 px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#EAF1F7] transition-colors hover:border-white/30 cursor-pointer"
+              className="rounded-[5px] border border-white/15 px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#E6E9EF] transition-colors hover:border-white/30 cursor-pointer"
             >
               View Terminal Preview
             </button>

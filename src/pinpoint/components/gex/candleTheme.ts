@@ -1,7 +1,7 @@
 /*
-  Candlestick color themes. The heatmap/nodes carry the page's color, so the
-  default keeps price structure neutral (monochrome) to complement the minimal
-  dark UI without competing with the analytics. Flip CANDLE_THEME to switch.
+  Candlestick color themes. Institutional default: emerald up / rose down, matching
+  the reference terminals (Flowseeker) — price direction reads instantly by color.
+  Flip CANDLE_THEME_KEY to switch.
 */
 
 export interface CandleTheme {
@@ -14,14 +14,14 @@ export interface CandleTheme {
 }
 
 export const CANDLE_THEMES = {
-  // Neutral, premium — cool ivory/steel up / muted slate down, thin cool wicks
+  // Institutional emerald / rose — green up, red down (Flowseeker reference).
   mono: {
-    up: '#DCE7F2',
-    down: '#46545F',
-    wickUp: '#A7B8C7',
-    wickDown: '#5A6874',
-    volUp: 'rgba(220,231,242,0.16)',
-    volDown: 'rgba(70,85,99,0.26)',
+    up: '#34D399',
+    down: '#F86A6F',
+    wickUp: '#26C281',
+    wickDown: '#D6484D',
+    volUp: 'rgba(38,194,129,0.22)',
+    volDown: 'rgba(214,72,77,0.24)',
   },
   // Classic emerald / rose
   classic: {
