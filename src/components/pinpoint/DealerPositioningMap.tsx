@@ -29,10 +29,29 @@ type DealerPositioningMapProps = {
   footer?: React.ReactNode;
 };
 
-// Render palette: steel = call pressure, red = put pressure, amber = pin.
-const STEEL = '#6A93B5';
-const RED = '#B23B3B';
-const AMBER = 'var(--warning)';
+// Render palette (GLACIER): cold steel-ice for CALL pressure, ember-red for PUT
+// pressure, amber for the PIN, electric-ice accent reserved for active/hover.
+const CALL = 'var(--call)'; // #5BA8DC
+const PUT = 'var(--negative-ink)'; // #E8564F
+const PIN = 'var(--pin)'; // #E8A33D
+const ACCENT = 'var(--accent-color)'; // #3FC1FF
+const CALL_HEX = '#5BA8DC';
+const PUT_HEX = '#E8564F';
+
+// Back-compat aliases so the existing classification/legend/tone code reads clean.
+const STEEL = CALL;
+const RED = PUT;
+const AMBER = PIN;
+
+/** Horizontal bar as a path with only its OUTER end rounded (axis end stays square). */
+function barPath(x: number, y: number, w: number, h: number, r: number, roundRight: boolean): string {
+  const rr = Math.max(0, Math.min(r, w, h / 2));
+  if (rr <= 0.01) return `M${x},${y} H${x + w} V${y + h} H${x} Z`;
+  if (roundRight) {
+    return `M${x},${y} H${x + w - rr} A${rr},${rr} 0 0 1 ${x + w},${y + rr} V${y + h - rr} A${rr},${rr} 0 0 1 ${x + w - rr},${y + h} H${x} Z`;
+  }
+  return `M${x + w},${y} H${x + rr} A${rr},${rr} 0 0 0 ${x},${y + rr} V${y + h - rr} A${rr},${rr} 0 0 0 ${x + rr},${y + h} H${x + w} Z`;
+}
 
 export function DealerPositioningMap({
   rows,
@@ -99,6 +118,12 @@ export function DealerPositioningMap({
   const ticks = [-niceMax, -niceMax / 2, 0, niceMax / 2, niceMax];
   const xOf = (v: number) => centerX + (v / niceMax) * barMax;
 
+  // Round-strike emphasis for the strike axis: every 5th step reads brighter.
+  const strikeStep = rows.length > 1 ? Math.abs(rows[1].strike - rows[0].strike) : 0;
+  const roundStep = strikeStep > 0 ? strikeStep * 5 : 0;
+  const isRoundStrike = (s: number) =>
+    roundStep > 0 && Math.abs(s / roundStep - Math.round(s / roundStep)) < 1e-6;
+
   const nearestRowIndex = (level?: number): number | null => {
     if (level == null || !isFinite(level) || rows.length === 0) return null;
     let best = 0;
@@ -134,14 +159,14 @@ export function DealerPositioningMap({
   };
 
   // ── level rules (dashed) + spot (solid) ──────────────────────────────────
-  const levelRules: { idx: number; color: string; dashed: boolean }[] = [];
-  const pushRule = (level: number | undefined, color: string, dashed: boolean) => {
+  const levelRules: { idx: number; color: string; dashed: boolean; label: string }[] = [];
+  const pushRule = (level: number | undefined, color: string, dashed: boolean, label: string) => {
     const idx = nearestRowIndex(level);
-    if (idx != null) levelRules.push({ idx, color, dashed });
+    if (idx != null) levelRules.push({ idx, color, dashed, label });
   };
-  pushRule(pinLevel, AMBER, true);
-  pushRule(putWall, RED, true);
-  pushRule(callWall, STEEL, true);
+  pushRule(pinLevel, AMBER, true, 'PIN');
+  pushRule(putWall, RED, true, 'PUT WALL');
+  pushRule(callWall, STEEL, true, 'CALL WALL');
   const spotIdx = nearestRowIndex(spot);
 
   const fmtStrike = (v: number) => v.toLocaleString('en-US', { maximumFractionDigits: 0 });
@@ -245,10 +270,30 @@ export function DealerPositioningMap({
           viewBox={`0 0 ${width} ${height}`}
           preserveAspectRatio="xMidYMid meet"
           className="absolute inset-0 h-full w-full"
-          style={{ fontVariantNumeric: 'tabular-nums' }}
+          style={{ fontVariantNumeric: 'tabular-nums', fontFamily: 'var(--font-brand)' }}
         >
+          <defs>
+            {/* Bars: subtle horizontal gradient, DENSER toward the zero axis. */}
+            <linearGradient id="dpm-call" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor={CALL_HEX} stopOpacity="0.98" />
+              <stop offset="1" stopColor={CALL_HEX} stopOpacity="0.40" />
+            </linearGradient>
+            <linearGradient id="dpm-put" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stopColor={PUT_HEX} stopOpacity="0.40" />
+              <stop offset="1" stopColor={PUT_HEX} stopOpacity="0.98" />
+            </linearGradient>
+            {/* Accent glow for the hovered bar + spot sheen. */}
+            <filter id="dpm-glow" x="-60%" y="-60%" width="220%" height="220%">
+              <feGaussianBlur stdDeviation="2.4" result="b" />
+              <feMerge>
+                <feMergeNode in="b" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+          </defs>
+
           {/* axis title */}
-          <text x={centerX} y={14} fontSize="9.5" fill="var(--text-muted)" textAnchor="middle" style={{ letterSpacing: '0.12em' }}>
+          <text x={centerX} y={13} fontSize="9" fill="var(--text-faint)" textAnchor="middle" style={{ letterSpacing: '0.18em' }}>
             NET DEALER PRESSURE (NOTIONAL)
           </text>
           {/* scale ticks + vertical gridlines */}
@@ -262,14 +307,41 @@ export function DealerPositioningMap({
                   x2={x}
                   y1={headH - 4}
                   y2={bottom}
-                  stroke={zero ? 'rgba(248,248,255,0.28)' : 'rgba(248,248,255,0.09)'}
-                  strokeWidth="1"
-                  strokeDasharray={zero ? undefined : '3 4'}
+                  stroke={zero ? 'rgba(234,241,247,0.34)' : 'rgba(163,196,224,0.07)'}
+                  strokeWidth={zero ? 1 : 1}
+                  strokeDasharray={zero ? undefined : '2 5'}
+                  shapeRendering="crispEdges"
                 />
-                <text x={x} y={headH - 10} fontSize="9.5" fill="var(--text-muted)" textAnchor="middle">
+                <text
+                  x={x}
+                  y={headH - 10}
+                  fontSize="9"
+                  fill={zero ? 'var(--text-tertiary)' : 'var(--text-faint)'}
+                  fontWeight={zero ? 600 : 400}
+                  textAnchor="middle"
+                  style={{ letterSpacing: '0.02em' }}
+                >
                   {t === 0 ? '0' : `${t > 0 ? '+' : '−'}${formatAxis(Math.abs(t))}`}
                 </text>
               </g>
+            );
+          })}
+
+          {/* friction-zone tinted bands (subtle, behind bars) */}
+          {zones.map((z, i) => {
+            const tint = z.cls === 'callwall' ? CALL_HEX : z.cls === 'putwall' ? PUT_HEX : '#8FA0B0';
+            const yA = top + z.i0 * rowHeight;
+            const yB = top + (z.i1 + 1) * rowHeight;
+            return (
+              <rect
+                key={`band-${i}`}
+                x={plotL}
+                y={yA}
+                width={plotR - plotL}
+                height={yB - yA}
+                fill={tint}
+                fillOpacity={z.cls === 'moderate' ? 0.035 : 0.06}
+              />
             );
           })}
 
@@ -280,17 +352,58 @@ export function DealerPositioningMap({
               y={top + hoveredIndex * rowHeight}
               width={plotR - plotL}
               height={rowHeight}
-              fill="var(--text-primary)"
-              fillOpacity="0.06"
+              fill="var(--accent-color)"
+              fillOpacity="0.07"
               style={{ transition: 'y 120ms ease' }}
             />
           ) : null}
 
-          {/* level rules (pin / put wall / call wall) */}
+          {/* level rules (pin / put wall / call wall) — dashed leader + tag chip */}
           {levelRules.map((r, i) => {
             const y = yOfIndex(r.idx);
+            const active = hoveredIndex === r.idx;
+            const stroke = active ? ACCENT : r.color;
+            const label = r.label;
+            const chipW = label.length * 5.4 + 12;
+            const chipX = plotL + 3;
+            const chipY = y - 7.5;
             return (
-              <line key={`rule-${i}`} x1={plotL} x2={plotR} y1={y} y2={y} stroke={r.color} strokeOpacity="0.4" strokeWidth="1" strokeDasharray="4 4" />
+              <g key={`rule-${i}`}>
+                <line
+                  x1={plotL}
+                  x2={plotR}
+                  y1={y}
+                  y2={y}
+                  stroke={stroke}
+                  strokeOpacity={active ? 0.85 : 0.38}
+                  strokeWidth="1"
+                  strokeDasharray="3 4"
+                  shapeRendering="crispEdges"
+                />
+                <rect
+                  x={chipX}
+                  y={chipY}
+                  width={chipW}
+                  height={15}
+                  rx="2"
+                  fill="var(--surface)"
+                  stroke={stroke}
+                  strokeOpacity={active ? 0.9 : 0.55}
+                  strokeWidth="1"
+                  filter={active ? 'url(#dpm-glow)' : undefined}
+                />
+                <text
+                  x={chipX + chipW / 2}
+                  y={y + 3}
+                  fontSize="8"
+                  fontWeight={600}
+                  fill={active ? ACCENT : r.color}
+                  textAnchor="middle"
+                  style={{ letterSpacing: '0.07em' }}
+                >
+                  {label}
+                </text>
+              </g>
             );
           })}
 
@@ -298,40 +411,80 @@ export function DealerPositioningMap({
           {rows.map((row, index) => {
             const y = yOfIndex(index);
             const isPos = row.value >= 0;
-            const mag = (Math.abs(row.value) / niceMax) * barMax;
+            const mag = Math.max(0.6, (Math.abs(row.value) / niceMax) * barMax);
             const isSpotRow = index === spotIdx;
+            const isHovered = index === hoveredIndex;
+            const round = isRoundStrike(row.strike);
+            // 1px separation from the zero axis; outer end rounded.
+            const gap = 0.75;
+            const bx = isPos ? centerX + gap : centerX - mag;
+            const bw = Math.max(0.6, mag - gap);
+            const by = y - barH / 2;
+            const d = barPath(bx, by, bw, barH, 2, isPos);
             return (
               <g key={row.strike}>
                 <text
                   x={plotL - 12}
                   y={y + 3.5}
                   fontSize={isSpotRow ? 11 : 10}
-                  fontWeight={isSpotRow ? 700 : 400}
-                  fill={isSpotRow ? 'var(--text-primary)' : 'var(--text-muted)'}
+                  fontWeight={isSpotRow ? 700 : round ? 600 : 400}
+                  fill={
+                    isSpotRow
+                      ? 'var(--text-primary)'
+                      : round
+                        ? 'var(--text-secondary)'
+                        : 'var(--text-tertiary)'
+                  }
                   textAnchor="end"
+                  style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
                   {isSpotRow && spot != null ? fmtSpot(spot) : fmtStrike(row.strike)}
                 </text>
-                <rect
-                  x={isPos ? centerX : centerX - mag}
-                  y={y - barH / 2}
-                  width={Math.max(0.6, mag)}
-                  height={barH}
-                  rx={1.5}
-                  fill={isPos ? STEEL : RED}
-                >
+                {/* body */}
+                <path d={d} fill={isPos ? 'url(#dpm-call)' : 'url(#dpm-put)'} stroke={isPos ? CALL_HEX : PUT_HEX} strokeOpacity="0.28" strokeWidth="0.5">
                   <title>{`${fmtStrike(row.strike)}: ${formatAxis(Math.abs(row.value))} ${isPos ? 'call pressure' : 'put pressure'}`}</title>
-                </rect>
+                </path>
+                {/* faint inner top highlight */}
+                {barH >= 5 ? (
+                  <line
+                    x1={isPos ? bx + 1 : bx}
+                    x2={isPos ? bx + bw : bx + bw - 1}
+                    y1={by + 0.75}
+                    y2={by + 0.75}
+                    stroke="#EAF1F7"
+                    strokeOpacity="0.14"
+                    strokeWidth="0.75"
+                  />
+                ) : null}
+                {/* hovered bar: accent outline + glow */}
+                {isHovered ? (
+                  <path d={d} fill="none" stroke={ACCENT} strokeOpacity="0.9" strokeWidth="1.1" filter="url(#dpm-glow)" />
+                ) : null}
               </g>
             );
           })}
 
-          {/* spot solid rule + marker */}
+          {/* spot solid rule + marker + price flag chip */}
           {spotIdx != null ? (
-            <g>
-              <line x1={plotL} x2={plotR} y1={yOfIndex(spotIdx)} y2={yOfIndex(spotIdx)} stroke="var(--text-primary)" strokeOpacity="0.55" strokeWidth="1" />
-              <rect x={centerX - 1.5} y={yOfIndex(spotIdx) - markerH / 2} width={3} height={markerH} fill="var(--text-primary)" />
-            </g>
+            (() => {
+              const ys = yOfIndex(spotIdx);
+              const label = spot != null ? fmtSpot(spot) : fmtStrike(rows[spotIdx].strike);
+              const flagW = label.length * 5.6 + 14;
+              const flagX = plotR - flagW;
+              const flagY = ys - 8;
+              return (
+                <g>
+                  <line x1={plotL} x2={plotR} y1={ys} y2={ys} stroke="#EAF1F7" strokeOpacity="0.22" strokeWidth="2.5" filter="url(#dpm-glow)" />
+                  <line x1={plotL} x2={plotR} y1={ys} y2={ys} stroke="#EAF1F7" strokeOpacity="0.8" strokeWidth="1" shapeRendering="crispEdges" />
+                  <rect x={centerX - 1.5} y={ys - markerH / 2} width={3} height={markerH} rx="0.5" fill="#EAF1F7" />
+                  {/* price flag chip at the right end of the spot line */}
+                  <rect x={flagX} y={flagY} width={flagW} height={16} rx="2" fill="var(--surface-3)" stroke="#EAF1F7" strokeOpacity="0.5" strokeWidth="1" />
+                  <text x={flagX + flagW / 2} y={ys + 3.5} fontSize="9.5" fontWeight={700} fill="var(--text-primary)" textAnchor="middle" style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '0.01em' }}>
+                    {label}
+                  </text>
+                </g>
+              );
+            })()
           ) : null}
 
           {/* right-edge pressure-zone annotations */}
@@ -346,16 +499,17 @@ export function DealerPositioningMap({
             return (
               <g key={`zone-${i}`}>
                 <path
-                  d={`M ${bracketX} ${yA} L ${bracketX + 5} ${yA} L ${bracketX + 5} ${yB} L ${bracketX} ${yB}`}
+                  d={`M ${bracketX} ${yA} L ${bracketX + 4} ${yA} L ${bracketX + 4} ${yB} L ${bracketX} ${yB}`}
                   fill="none"
                   stroke={meta.color}
-                  strokeOpacity="0.5"
+                  strokeOpacity="0.42"
                   strokeWidth="1"
+                  shapeRendering="crispEdges"
                 />
-                <text x={bracketX + 12} y={yMid - 2} fontSize="9.5" fontWeight={600} fill={meta.color} style={{ letterSpacing: '0.06em' }}>
+                <text x={bracketX + 12} y={yMid - 2} fontSize="9" fontWeight={600} fill={meta.color} fillOpacity="0.92" style={{ letterSpacing: '0.09em' }}>
                   {meta.label}
                 </text>
-                <text x={bracketX + 12} y={yMid + 9} fontSize="9" fill="var(--text-muted)">
+                <text x={bracketX + 12} y={yMid + 9} fontSize="8.5" fill="var(--text-faint)" style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {z.i0 === z.i1 ? hiStrike : `${hiStrike} – ${loStrike}`}
                 </text>
               </g>
@@ -387,9 +541,18 @@ export function DealerPositioningMap({
         {/* ── floating HOVER INSPECTOR (HTML overlay, crisp text) ───────────── */}
         {hover && insight && hoveredRow && box ? (
           <div
-            className="pointer-events-none absolute z-20 w-[240px] rounded-[10px] border border-[var(--border-strong)] bg-[var(--surface-2)] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.45)]"
-            style={{ left: cardX, top: cardY, maxHeight: box.h - 12, overflow: 'hidden' }}
+            className="pointer-events-none absolute z-20 w-[240px] rounded-[4px] border border-[var(--border-strong)] bg-[var(--surface-2)] p-3 shadow-[0_10px_30px_-4px_rgba(0,0,0,0.6)]"
+            style={{
+              left: cardX,
+              top: cardY,
+              maxHeight: box.h - 12,
+              overflow: 'hidden',
+              fontFamily: 'var(--font-brand)',
+              boxShadow: '0 10px 30px -4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(234,241,247,0.05)',
+            }}
           >
+            {/* accent hairline seam */}
+            <div className="absolute inset-x-0 top-0 h-[1.5px]" style={{ background: 'linear-gradient(90deg, transparent, var(--accent-color), transparent)', opacity: 0.5 }} />
             {/* header */}
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="slayer-num text-[13px] font-semibold text-[var(--text-primary)]">Strike {fmtStrike(hoveredRow.strike)}</span>
