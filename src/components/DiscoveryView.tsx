@@ -906,7 +906,7 @@ function FilterSelect({ label, value, onChange, options }: {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="slayer-control slayer-num cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
+        className="slayer-control slayer-num w-full cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
       >
         {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -1350,25 +1350,54 @@ export function DiscoveryView({
     setMinConfidence('0'); setMinExpMove('0'); setOptionTypeFilter('all'); setSearchQuery('');
   };
 
-  return (
-    <div className="w-full flex flex-col gap-4 font-mono text-[var(--text-secondary)] antialiased pb-10">
+  // Count of non-default filters — shown as a badge on the rail header.
+  const activeFilterCount = [
+    universe !== 'All',
+    activeShelf !== 'all',
+    expiryFilter !== 'All',
+    optionTypeFilter !== 'all',
+    minConfidence !== '0',
+    minExpMove !== '0',
+    searchQuery.trim().length > 0,
+  ].filter(Boolean).length;
 
-      {/* HEADER — title · context · data-state · method · refresh */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <Target className="w-4 h-4 text-[var(--positive-ink)] shrink-0" />
+  return (
+    <div className="w-full flex min-w-0 flex-col gap-3 font-mono text-[var(--text-secondary)] antialiased pb-10">
+
+      {/* ══ COMMAND TOOLBAR — identity · scan state · feed · clock · auto-refresh · method · refresh ══ */}
+      <div className="slayer-panel flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2 px-3.5 py-2.5">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Target className="h-4 w-4 shrink-0 text-[var(--accent-color)]" />
           <div className="min-w-0">
             <h1 className="slayer-title truncate">SkyVision <span className="text-[var(--text-muted)]">· Options Scanner</span></h1>
-            <p className="mt-0.5 truncate text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-              {activeTicker} · 0DTE / 1D / 3D · Updated {formatTime(new Date(metricsAsOf))}
-            </p>
+            <p className="mt-0.5 truncate text-[9px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{activeTicker} · 0DTE / 1D / 3D</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
           {/* Scan-activity state — connection/scan status, not a data-provenance label. */}
           <StatusBadge tone={feedError ? 'warning' : 'neutral'} dot>
             {isMockScanning ? 'Scanning' : feedError ? 'Reconnecting' : 'Idle'}
           </StatusBadge>
+          <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <Signal className="h-3 w-3" aria-hidden="true" />
+            <span className={feedError ? 'text-[var(--warning)]' : 'text-[var(--positive-ink)]'}>{feedError ? 'Reconnecting' : 'Streaming'}</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5 text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+            <Clock className="h-3 w-3" aria-hidden="true" />
+            <span className="slayer-num normal-case text-[var(--text-secondary)]">{formatTime(new Date(metricsAsOf))}</span>
+          </span>
+          <span className="flex items-center gap-1.5 text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Auto
+            <button
+              onClick={() => setAutoRefresh((v) => !v)}
+              role="switch"
+              aria-checked={autoRefresh}
+              aria-label="Toggle auto-refresh"
+              className={`relative h-4 w-7 rounded-full transition-colors ${autoRefresh ? 'bg-[var(--accent-color)]' : 'bg-[var(--border-mid)]'}`}
+            >
+              <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-[var(--text-primary)] transition-all ${autoRefresh ? 'left-3.5' : 'left-0.5'}`} />
+            </button>
+          </span>
+          <span className="hidden h-4 w-px bg-[var(--border-subtle)] sm:block" aria-hidden="true" />
           <button
             onClick={() => setIsStrategyExpanded(true)}
             aria-label="How this scan works"
@@ -1382,47 +1411,76 @@ export function DiscoveryView({
             aria-label="Refresh scan"
             className="slayer-control inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.12em] text-[var(--text-primary)] hover:border-[var(--border-strong)] disabled:opacity-60"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${isMockScanning ? 'animate-spin text-[var(--positive-ink)]' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${isMockScanning ? 'animate-spin text-[var(--accent-color)]' : ''}`} />
             {isMockScanning ? 'Scanning…' : 'Refresh'}
           </button>
         </div>
       </div>
 
-      {/* TOP FILTER BAR */}
-      <section className="slayer-panel p-3">
-        <div className="flex flex-wrap items-end gap-2.5">
-          <FilterSelect label="Universe" value={universe} onChange={setUniverse} options={UNIVERSE_OPTS.map(u => ({ value: u, label: u === 'All' ? 'All indices' : u }))} />
-          <FilterSelect label="Strategy" value={activeShelf} onChange={setActiveShelf} options={STRATEGY_OPTS} />
-          <FilterSelect label="Expiry" value={expiryFilter} onChange={setExpiryFilter} options={EXPIRY_OPTS.map(e => ({ value: e, label: e === 'All' ? 'All expiries' : e }))} />
-          <FilterSelect label="Bias" value={optionTypeFilter} onChange={(v) => setOptionTypeFilter(v as 'all' | 'calls' | 'puts')} options={[{ value: 'all', label: 'All' }, { value: 'calls', label: 'Calls' }, { value: 'puts', label: 'Puts' }]} />
-          <FilterSelect label="Min Confidence" value={minConfidence} onChange={setMinConfidence} options={CONF_OPTS} />
-          <FilterSelect label="Min Exp Move" value={minExpMove} onChange={setMinExpMove} options={MOVE_OPTS} />
-          <label className="flex flex-1 min-w-[150px] flex-col gap-1">
-            <span className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Symbol</span>
-            <span className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-faint)]" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Ticker or strike…"
-                aria-label="Filter by ticker or strike"
-                className="slayer-control slayer-num w-full !pl-8 uppercase placeholder:text-[var(--text-faint)]"
-              />
+      {/* ══ COCKPIT — filter rail · ranked ledger · setup dossier ══ */}
+      <div className="grid min-w-0 grid-cols-1 items-start gap-3 lg:grid-cols-[200px_minmax(0,1fr)_340px] xl:grid-cols-[216px_minmax(0,1fr)_376px]">
+
+        {/* ZONE 1 · FILTER RAIL — stacked groups on desktop, wrapping chip row on mobile */}
+        <aside className="slayer-panel flex min-w-0 flex-col lg:sticky lg:top-2 lg:max-h-[calc(100vh-16px)] lg:self-start lg:overflow-y-auto">
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-3 py-2.5">
+            <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="slayer-num ml-1.5 rounded-full bg-[var(--accent-soft)] px-1.5 py-0.5 text-[var(--accent-color)]">{activeFilterCount}</span>
+              )}
             </span>
-          </label>
-          <button
-            onClick={saveView}
-            className="slayer-control inline-flex items-center gap-1.5 self-end font-semibold uppercase tracking-[0.12em] text-[var(--text-primary)] hover:border-[var(--border-strong)]"
-          >
-            <Save className="h-3.5 w-3.5" />Save View
-          </button>
-        </div>
-      </section>
+            <button
+              onClick={clearFilters}
+              className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)]"
+            >Reset</button>
+          </div>
+          <div className="flex min-w-0 flex-row flex-wrap gap-2.5 p-3 lg:flex-col lg:flex-nowrap">
+            <div className="min-w-[130px] flex-1 lg:flex-none">
+              <FilterSelect label="Universe" value={universe} onChange={setUniverse} options={UNIVERSE_OPTS.map(u => ({ value: u, label: u === 'All' ? 'All indices' : u }))} />
+            </div>
+            <div className="min-w-[130px] flex-1 lg:flex-none">
+              <FilterSelect label="Strategy" value={activeShelf} onChange={setActiveShelf} options={STRATEGY_OPTS} />
+            </div>
+            <div className="min-w-[130px] flex-1 lg:flex-none">
+              <FilterSelect label="Expiry" value={expiryFilter} onChange={setExpiryFilter} options={EXPIRY_OPTS.map(e => ({ value: e, label: e === 'All' ? 'All expiries' : e }))} />
+            </div>
+            <div className="min-w-[130px] flex-1 lg:flex-none">
+              <FilterSelect label="Bias" value={optionTypeFilter} onChange={(v) => setOptionTypeFilter(v as 'all' | 'calls' | 'puts')} options={[{ value: 'all', label: 'All' }, { value: 'calls', label: 'Calls' }, { value: 'puts', label: 'Puts' }]} />
+            </div>
+            <div className="min-w-[130px] flex-1 lg:flex-none">
+              <FilterSelect label="Min Confidence" value={minConfidence} onChange={setMinConfidence} options={CONF_OPTS} />
+            </div>
+            <div className="min-w-[130px] flex-1 lg:flex-none">
+              <FilterSelect label="Min Exp Move" value={minExpMove} onChange={setMinExpMove} options={MOVE_OPTS} />
+            </div>
+            <label className="flex min-w-[150px] flex-1 flex-col gap-1 lg:flex-none">
+              <span className="text-[8px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Symbol</span>
+              <span className="relative">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-faint)]" />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Ticker or strike…"
+                  aria-label="Filter by ticker or strike"
+                  className="slayer-control slayer-num w-full !pl-8 uppercase placeholder:text-[var(--text-faint)]"
+                />
+              </span>
+            </label>
+          </div>
+          <div className="mt-auto border-t border-[var(--border-subtle)] p-3">
+            <button
+              onClick={saveView}
+              className="slayer-control inline-flex w-full items-center justify-center gap-1.5 font-semibold uppercase tracking-[0.12em] text-[var(--text-primary)] hover:border-[var(--border-strong)]"
+            >
+              <Save className="h-3.5 w-3.5" />Save View
+            </button>
+          </div>
+        </aside>
 
-      {/* MAIN — opportunities table + selected-setup inspector */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[1fr_360px]">
+        {/* ZONE 2 · LEDGER — ranked opportunities, intel band, footprint strip */}
+        <section className="flex min-w-0 flex-col gap-3">
 
-        {/* LEFT: OPPORTUNITIES */}
+        {/* RANKED OPPORTUNITIES LEDGER */}
         <TerminalPanel
           title={`Opportunities (${rankedSetups.length})`}
           subtitle="Ranked setups · strongest first"
@@ -1468,7 +1526,7 @@ export function DiscoveryView({
               const isSelected = selectedSetup?.c.id === s.c.id;
               return [
                 isSelected
-                  ? '[&>td]:bg-[var(--bg-panel-raised)] [&>td:first-child]:shadow-[inset_3px_0_0_0_var(--pin)] [&>td:first-child]:!text-[var(--text-primary)]'
+                  ? '[&>td]:bg-[var(--bg-panel-raised)] [&>td:first-child]:shadow-[inset_3px_0_0_0_var(--accent-color)] [&>td:first-child]:!text-[var(--text-primary)]'
                   : '',
                 !isSelected && lastFlashingId === s.c.id ? '[&>td]:bg-[rgba(248,248,255,0.05)]' : '',
               ].filter(Boolean).join(' ');
@@ -1516,146 +1574,8 @@ export function DiscoveryView({
           />
         </TerminalPanel>
 
-        {/* RIGHT: SELECTED SETUP */}
-        <div className="lg:sticky lg:top-2">
-          {((s: DerivedSetup | null) => {
-            if (!s) {
-              return (
-                <TerminalPanel title="Selected Setup">
-                  <div className="flex flex-col items-center gap-2 py-8 text-center">
-                    <Crosshair className="h-5 w-5 text-[var(--text-faint)]" aria-hidden="true" />
-                    <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Select a setup</span>
-                    <p className="text-[10px] text-[var(--text-faint)]">Pick a row to see its idea, rationale, risk, and trade plan.</p>
-                  </div>
-                </TerminalPanel>
-              );
-            }
-            const rank = rankedSetups.findIndex((x) => x.c.id === s.c.id) + 1;
-            const rr = computeRR(s);
-            const prob = Math.min(99, Math.max(1, Math.abs(s.c.delta ?? 0) * 100));
-            const target1 = typeof s.c.t1 === 'number' && s.c.t1 > 0 ? s.c.t1 : null;
-            const stopPremium = s.premium * (1 - WORKING_STOP_PCT / 100);
-            const dirColor = s.direction === 'BULLISH' ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]';
-            const asset = ASSET_LIST.find((a) => a.ticker === s.c.ticker);
-            const expiry = SHELF_EXPIRY[s.c.shelf] ?? '0DTE';
-            const horizon = (SHELF_EXPLANATIONS[s.c.shelf as keyof typeof SHELF_EXPLANATIONS] ?? SHELF_EXPLANATIONS.all).horizon;
-            const st = statusMeta(s.c.health);
-            const DirIcon = s.direction === 'BULLISH' ? TrendingUp : TrendingDown;
-            return (
-              <TerminalPanel
-                title="Selected Setup"
-                bodyClassName="!p-3.5 space-y-3"
-              >
-                {/* identity */}
-                <div className="flex items-start justify-between gap-2 border-b border-[var(--border-subtle)] pb-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <DirIcon className={`h-5 w-5 shrink-0 ${dirColor}`} />
-                    <div className="min-w-0">
-                      <span className="block text-[18px] font-bold leading-none text-[var(--text-primary)] slayer-num truncate">#{rank} · {s.label}</span>
-                      <span className="mt-1 block text-[10px] uppercase tracking-[0.1em] text-[var(--text-muted)] truncate">{asset?.name ?? s.c.ticker}</span>
-                    </div>
-                  </div>
-                  <StatusBadge tone={st.tone} className="shrink-0">{s.direction === 'BULLISH' ? 'Bull' : 'Bear'}</StatusBadge>
-                </div>
-
-                {/* contract idea / strike / expiry */}
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { l: 'Contract Idea', v: `Long ${s.side === 'C' ? 'Call' : 'Put'}` },
-                    { l: 'Strike', v: fmtNum(s.c.strike) },
-                    { l: 'Expiry', v: expiry },
-                  ].map((x) => (
-                    <div key={x.l} className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
-                      <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{x.l}</span>
-                      <span className="block slayer-num text-[12px] font-semibold text-[var(--text-primary)]">{x.v}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* rationale */}
-                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
-                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><ShieldCheck className="h-3 w-3 text-[var(--positive-ink)]" />Setup Rationale</span>
-                  <p className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">{s.c.narrative}</p>
-                  <p className="mt-1.5 text-[9px] uppercase tracking-[0.1em] text-[var(--text-faint)]">{s.dealerSupport}</p>
-                </div>
-
-                {/* probability & confidence */}
-                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5 space-y-2.5">
-                  <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Probability &amp; Confidence</span>
-                  <LabeledMeter label="Probability (Δ-implied ITM)" pct={prob} tone="var(--pin)" />
-                  <LabeledMeter label="Model confidence" pct={s.c.health} tone={confColor(s.c.health)} />
-                </div>
-
-                {/* expected move + target range */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
-                    <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Expected Move</span>
-                    <span className="block slayer-num text-[13px] font-semibold text-[var(--pin)]">±{s.expectedMovePct.toFixed(0)}%</span>
-                  </div>
-                  <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-1.5">
-                    <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Target Range</span>
-                    <span className="block slayer-num text-[13px] font-semibold text-[var(--text-primary)]">${s.premium.toFixed(2)} → ${(target1 ?? s.fairValue).toFixed(2)}</span>
-                  </div>
-                </div>
-
-                {/* risk parameters */}
-                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
-                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><AlertTriangle className="h-3 w-3 text-[var(--negative-ink)]" />Risk Parameters</span>
-                  <div className="mt-1.5 space-y-1 text-[11px]">
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Max Risk</span><span className="slayer-num text-[var(--text-primary)]">${(s.premium * 100).toFixed(0)} / contract</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop / Invalidation</span><span className="slayer-num text-[var(--negative-ink)]">{s.side === 'C' ? 'Below' : 'Above'} {s.invalidation.toLocaleString()}</span></div>
-                    <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">Invalidation Reason</span><span className="text-right text-[var(--text-secondary)]">{s.dealerSupport} fails</span></div>
-                  </div>
-                </div>
-
-                {/* trade plan */}
-                <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-2.5">
-                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><Droplet className="h-3 w-3 text-[var(--pin)]" />Trade Plan</span>
-                  <div className="mt-1.5 space-y-1 text-[11px]">
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Entry</span><span className="slayer-num text-[var(--text-primary)]">${s.premium.toFixed(2)} <span className="text-[9px] text-[var(--text-faint)]">(${(s.c.bid ?? s.premium).toFixed(2)}–${(s.c.ask ?? s.premium).toFixed(2)})</span></span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className={`slayer-num ${target1 != null && target1 < s.premium ? 'text-[var(--negative-ink)]' : 'text-[var(--positive-ink)]'}`}>{target1 == null ? '—' : `$${target1.toFixed(2)} (${target1 >= s.premium ? '+' : '−'}${Math.abs(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className={`slayer-num ${s.fairGapPct < 0 ? 'text-[var(--negative-ink)]' : 'text-[var(--positive-ink)]'}`}>${s.fairValue.toFixed(2)} ({s.fairGapPct >= 0 ? '+' : '−'}{Math.abs(s.fairGapPct * 100).toFixed(0)}%)</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop</span><span className="slayer-num text-[var(--negative-ink)]">${stopPremium.toFixed(2)} (−{WORKING_STOP_PCT}%)</span></div>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Time Stop</span><span className="text-[var(--text-secondary)]">{horizon}</span></div>
-                    <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">R / R</span><span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)} : 1`}</span></div>
-                  </div>
-                  <p className="mt-2 border-t border-[var(--border-subtle)] pt-2 text-[10px] leading-relaxed text-[var(--text-secondary)]">
-                    Take partial at Target 1; trail the stop to entry after +{WORKING_STOP_PCT}% and hold the balance toward Target 2 (model fair value). Working stop is −{WORKING_STOP_PCT}% of premium.
-                  </p>
-                </div>
-
-                {/* actions */}
-                <div className="grid grid-cols-2 gap-2 pt-0.5">
-                  {selectedTracked ? (
-                    <button
-                      onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--positive-ink)]/50 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--positive-ink)] transition-colors hover:border-[var(--positive-ink)]"
-                    >
-                      <CheckCircle2 className="h-3.5 w-3.5" />In Queue
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => addToQueue(s)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--border-mid)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)]"
-                    >
-                      <Plus className="h-3.5 w-3.5" />Add to Queue
-                    </button>
-                  )}
-                  <button
-                    onClick={() => reviewSetup(s)}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--positive-ink)]/40 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--positive-ink)] transition-colors hover:border-[var(--positive-ink)]"
-                  >
-                    Trade This Setup<ArrowUpRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </TerminalPanel>
-            );
-          })(selectedSetup)}
-        </div>
-      </div>
-
-      {/* BOTTOM — market regime · setup distribution · watchlist/queue */}
-      <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-3">
+        {/* CENTER · INTEL BAND — market regime, distribution, watchlist/queue under the ledger */}
+        <div className="grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2 2xl:grid-cols-3">
 
         {/* MARKET REGIME */}
         <TerminalPanel title="Market Regime" subtitle="Derived from ranked setups + tape">
@@ -1722,6 +1642,7 @@ export function DiscoveryView({
         {/* WATCHLIST / QUEUE */}
         <TerminalPanel
           title="Watchlist / Queue"
+          className="md:col-span-2 2xl:col-span-1"
           bodyClassName="!p-0"
           actions={(
             <div className="flex items-center gap-0.5 rounded-md border border-[var(--border-subtle)] p-0.5">
@@ -1779,26 +1700,154 @@ export function DiscoveryView({
             </button>
           )}
         </TerminalPanel>
-      </div>
+        </div>
 
-      {/* STATUS BAR */}
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-4 py-2.5 text-[10px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
-        <span className="flex items-center gap-1.5"><Clock className="h-3 w-3" />Last scan <span className="slayer-num normal-case text-[var(--text-secondary)]">{formatTime(new Date(metricsAsOf))}</span></span>
-        <span className="flex items-center gap-1.5 min-w-0"><RefreshCw className={`h-3 w-3 ${isMockScanning ? 'animate-spin text-[var(--positive-ink)]' : ''}`} /><span className="normal-case text-[var(--text-secondary)] truncate">{lastScanMessage}</span></span>
-        <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" />Source <span className="text-[var(--text-secondary)]">Stream</span></span>
-        <span className="flex items-center gap-1.5"><Signal className="h-3 w-3" />Feed <span className={feedError ? 'text-[var(--warning)]' : 'text-[var(--positive-ink)]'}>{feedError ? 'Reconnecting' : 'Streaming'}</span></span>
-        <span className="flex items-center gap-1.5"><Activity className="h-3 w-3" />Scanned <span className="slayer-num text-[var(--text-secondary)]">{contracts.length}</span> · Universe <span className="slayer-num text-[var(--text-secondary)]">{UNIVERSE_OPTS.length - 1}</span> · Scans <span className="slayer-num text-[var(--text-secondary)]">{scanHistoryCount}</span></span>
-        <span className="flex items-center gap-2">Auto-refresh
-          <button
-            onClick={() => setAutoRefresh((v) => !v)}
-            role="switch"
-            aria-checked={autoRefresh}
-            aria-label="Toggle auto-refresh"
-            className={`relative h-4 w-7 rounded-full transition-colors ${autoRefresh ? 'bg-[var(--positive)]' : 'bg-[var(--border-mid)]'}`}
-          >
-            <span className={`absolute top-0.5 h-3 w-3 rounded-full bg-[var(--text-primary)] transition-all ${autoRefresh ? 'left-3.5' : 'left-0.5'}`} />
-          </button>
-        </span>
+        {/* CENTER · FOOTPRINT STRIP — scan telemetry */}
+        <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-1.5 rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3.5 py-2 text-[9px] uppercase tracking-[0.12em] text-[var(--text-muted)]">
+          <span className="flex items-center gap-1.5"><Layers className="h-3 w-3" aria-hidden="true" />Source <span className="text-[var(--text-secondary)]">Stream</span></span>
+          <span className="flex min-w-0 items-center gap-1.5"><RefreshCw className={`h-3 w-3 ${isMockScanning ? 'animate-spin text-[var(--accent-color)]' : ''}`} aria-hidden="true" /><span className="truncate normal-case text-[var(--text-secondary)]">{lastScanMessage}</span></span>
+          <span className="flex items-center gap-1.5"><Activity className="h-3 w-3" aria-hidden="true" />Scanned <span className="slayer-num text-[var(--text-secondary)]">{contracts.length}</span> · Universe <span className="slayer-num text-[var(--text-secondary)]">{UNIVERSE_OPTS.length - 1}</span> · Scans <span className="slayer-num text-[var(--text-secondary)]">{scanHistoryCount}</span></span>
+        </div>
+        </section>
+
+        {/* ZONE 3 · DOSSIER — sticky, hairline-sectioned brief for the selected setup */}
+        <aside className="min-w-0 lg:sticky lg:top-2 lg:max-h-[calc(100vh-16px)] lg:self-start lg:overflow-y-auto">
+          {((s: DerivedSetup | null) => {
+            if (!s) {
+              return (
+                <TerminalPanel title="Setup Dossier">
+                  <div className="flex flex-col items-center gap-2 py-8 text-center">
+                    <Crosshair className="h-5 w-5 text-[var(--text-faint)]" aria-hidden="true" />
+                    <span className="text-[11px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Select a setup</span>
+                    <p className="text-[10px] text-[var(--text-faint)]">Pick a row in the ledger to see its thesis, odds, risk, and trade plan.</p>
+                  </div>
+                </TerminalPanel>
+              );
+            }
+            const rank = rankedSetups.findIndex((x) => x.c.id === s.c.id) + 1;
+            const rr = computeRR(s);
+            const prob = Math.min(99, Math.max(1, Math.abs(s.c.delta ?? 0) * 100));
+            const target1 = typeof s.c.t1 === 'number' && s.c.t1 > 0 ? s.c.t1 : null;
+            const stopPremium = s.premium * (1 - WORKING_STOP_PCT / 100);
+            const dirColor = s.direction === 'BULLISH' ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]';
+            const asset = ASSET_LIST.find((a) => a.ticker === s.c.ticker);
+            const expiry = SHELF_EXPIRY[s.c.shelf] ?? '0DTE';
+            const horizon = (SHELF_EXPLANATIONS[s.c.shelf as keyof typeof SHELF_EXPLANATIONS] ?? SHELF_EXPLANATIONS.all).horizon;
+            const st = statusMeta(s.c.health);
+            const DirIcon = s.direction === 'BULLISH' ? TrendingUp : TrendingDown;
+            return (
+              <TerminalPanel
+                title="Setup Dossier"
+                subtitle={`${SETUP_LABEL[s.c.shelf] ?? s.c.shelf} · Rank #${rank}`}
+                actions={<StatusBadge tone={st.tone}>{st.label}</StatusBadge>}
+                bodyClassName="!p-0 divide-y divide-[var(--border-subtle)]"
+              >
+                {/* identity */}
+                <div className="px-3.5 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <DirIcon className={`h-5 w-5 shrink-0 ${dirColor}`} />
+                      <div className="min-w-0">
+                        <span className="slayer-num block truncate text-[17px] font-bold leading-none text-[var(--text-primary)]">{s.label}</span>
+                        <span className="mt-1 block truncate text-[9px] uppercase tracking-[0.1em] text-[var(--text-muted)]">{asset?.name ?? s.c.ticker}</span>
+                      </div>
+                    </div>
+                    <span className={`inline-flex shrink-0 items-center gap-1 text-[10px] font-bold uppercase tracking-[0.1em] ${dirColor}`}>
+                      {s.direction === 'BULLISH' ? 'Bull' : 'Bear'}
+                    </span>
+                  </div>
+                  <div className="mt-2.5 grid grid-cols-3 gap-x-3 text-[11px]">
+                    {[
+                      { l: 'Idea', v: `Long ${s.side === 'C' ? 'Call' : 'Put'}` },
+                      { l: 'Strike', v: fmtNum(s.c.strike) },
+                      { l: 'Expiry', v: expiry },
+                    ].map((x) => (
+                      <div key={x.l} className="min-w-0">
+                        <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{x.l}</span>
+                        <span className="slayer-num block truncate font-semibold text-[var(--text-primary)]">{x.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* thesis / rationale */}
+                <div className="px-3.5 py-3">
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><ShieldCheck className="h-3 w-3 text-[var(--positive-ink)]" />Thesis &amp; Rationale</span>
+                  <p className="mt-1.5 text-[11px] leading-relaxed text-[var(--text-secondary)]">{s.c.narrative}</p>
+                  <p className="mt-1.5 text-[9px] uppercase tracking-[0.1em] text-[var(--text-faint)]">{s.dealerSupport}</p>
+                </div>
+
+                {/* probability & confidence */}
+                <div className="space-y-2.5 px-3.5 py-3">
+                  <span className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">Probability &amp; Confidence</span>
+                  <LabeledMeter label="Probability (Δ-implied ITM)" pct={prob} tone="var(--accent-color)" />
+                  <LabeledMeter label="Model confidence" pct={s.c.health} tone={confColor(s.c.health)} />
+                  <div className="grid grid-cols-2 gap-x-3 pt-0.5 text-[11px]">
+                    <div className="min-w-0">
+                      <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Expected Move</span>
+                      <span className="slayer-num block font-semibold text-[var(--pin)]">±{s.expectedMovePct.toFixed(0)}%</span>
+                    </div>
+                    <div className="min-w-0">
+                      <span className="block text-[8px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Target Range</span>
+                      <span className="slayer-num block truncate font-semibold text-[var(--text-primary)]">${s.premium.toFixed(2)} → ${(target1 ?? s.fairValue).toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* risk parameters */}
+                <div className="px-3.5 py-3">
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><AlertTriangle className="h-3 w-3 text-[var(--negative-ink)]" />Risk Parameters</span>
+                  <div className="mt-1.5 space-y-1 text-[11px]">
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Max Risk</span><span className="slayer-num text-[var(--text-primary)]">${(s.premium * 100).toFixed(0)} / contract</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop / Invalidation</span><span className="slayer-num text-[var(--negative-ink)]">{s.side === 'C' ? 'Below' : 'Above'} {s.invalidation.toLocaleString()}</span></div>
+                    <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">Invalidation Reason</span><span className="text-right text-[var(--text-secondary)]">{s.dealerSupport} fails</span></div>
+                  </div>
+                </div>
+
+                {/* trade plan */}
+                <div className="px-3.5 py-3">
+                  <span className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]"><Droplet className="h-3 w-3 text-[var(--accent-color)]" />Trade Plan</span>
+                  <div className="mt-1.5 space-y-1 text-[11px]">
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Entry</span><span className="slayer-num text-[var(--text-primary)]">${s.premium.toFixed(2)} <span className="text-[9px] text-[var(--text-faint)]">(${(s.c.bid ?? s.premium).toFixed(2)}–${(s.c.ask ?? s.premium).toFixed(2)})</span></span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 1</span><span className={`slayer-num ${target1 != null && target1 < s.premium ? 'text-[var(--negative-ink)]' : 'text-[var(--positive-ink)]'}`}>{target1 == null ? '—' : `$${target1.toFixed(2)} (${target1 >= s.premium ? '+' : '−'}${Math.abs(((target1 - s.premium) / s.premium) * 100).toFixed(0)}%)`}</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Target 2 (fair value)</span><span className={`slayer-num ${s.fairGapPct < 0 ? 'text-[var(--negative-ink)]' : 'text-[var(--positive-ink)]'}`}>${s.fairValue.toFixed(2)} ({s.fairGapPct >= 0 ? '+' : '−'}{Math.abs(s.fairGapPct * 100).toFixed(0)}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Stop</span><span className="slayer-num text-[var(--negative-ink)]">${stopPremium.toFixed(2)} (−{WORKING_STOP_PCT}%)</span></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[var(--text-muted)]">Time Stop</span><span className="text-[var(--text-secondary)]">{horizon}</span></div>
+                    <div className="flex items-start justify-between gap-2"><span className="text-[var(--text-muted)]">R / R</span><span className="slayer-num text-[var(--text-primary)]">{rr == null ? '—' : `${rr.toFixed(1)} : 1`}</span></div>
+                  </div>
+                  <p className="mt-2 text-[10px] leading-relaxed text-[var(--text-secondary)]">
+                    Take partial at Target 1; trail the stop to entry after +{WORKING_STOP_PCT}% and hold the balance toward Target 2 (model fair value). Working stop is −{WORKING_STOP_PCT}% of premium.
+                  </p>
+                </div>
+
+                {/* actions */}
+                <div className="grid grid-cols-2 gap-2 px-3.5 py-3">
+                  {selectedTracked ? (
+                    <button
+                      onClick={() => useContractStore.getState().setActiveTab('auditor', true)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--positive-ink)]/50 bg-[var(--positive-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--positive-ink)] transition-colors hover:border-[var(--positive-ink)]"
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" />In Queue
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => addToQueue(s)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--border-mid)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] transition-colors hover:border-[var(--border-strong)]"
+                    >
+                      <Plus className="h-3.5 w-3.5" />Add to Queue
+                    </button>
+                  )}
+                  <button
+                    onClick={() => reviewSetup(s)}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-md border border-[var(--accent-color)]/40 bg-[var(--accent-soft)] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--accent-color)] transition-colors hover:border-[var(--accent-color)] hover:shadow-[0_0_0_3px_var(--accent-soft)] focus-visible:shadow-[0_0_10px_var(--accent-glow)]"
+                  >
+                    Trade This Setup<ArrowUpRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </TerminalPanel>
+            );
+          })(selectedSetup)}
+        </aside>
       </div>
 
       {/* METHOD MODAL — education on demand */}
