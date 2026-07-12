@@ -71,7 +71,7 @@ export function MetricStrip({ metrics, columns, className }: MetricStripProps) {
   const cols = (count <= 6 ? Math.max(2, count) : 4) as 2 | 3 | 4 | 5 | 6;
   // Denser strips get a smaller value type so multi-digit prices fit a cell
   // intact — otherwise a tabular value like "5,453.11" breaks mid-number.
-  const valueSize = cols >= 6 ? 'text-[20px]' : cols >= 5 ? 'text-[22px]' : 'text-[24px]';
+  const valueSize = cols >= 6 ? 'text-[15px]' : cols >= 5 ? 'text-[16px]' : 'text-[18px]';
   return (
     // COMMAND-DECK FORMAT — the strip reads value-first, like a quote board:
     // the big tabular numeral leads the cell, a short tone tick + label sit
@@ -90,37 +90,32 @@ export function MetricStrip({ metrics, columns, className }: MetricStripProps) {
         return (
           <div
             key={`${metric.label}-${index}`}
-            className="min-w-0 bg-[var(--surface)] px-4 py-3"
+            className="relative min-w-0 bg-[var(--surface)] px-2.5 py-1.5"
           >
+            {/* dense: label-over-value, a 1px tone rule on the left edge */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-y-0 left-0 w-px"
+              style={{ background: lit ? toneTick[tone] : 'transparent' }}
+            />
+            <div
+              title={typeof metric.label === 'string' ? metric.label : undefined}
+              className="truncate text-[8.5px] font-semibold uppercase leading-none tracking-[0.13em] text-[var(--text-muted)]"
+            >
+              {metric.label}
+            </div>
             <div
               className={cx(
-                // nowrap so a two-word value ("SHORT GAMMA") can't wrap and stretch
-                // the whole row taller than its neighbours; truncate keeps it inside
-                // its cell.
-                'leading-[1.05] slayer-num truncate [overflow-wrap:normal] [word-break:keep-all]',
+                'mt-1 leading-none slayer-num truncate [overflow-wrap:normal] [word-break:keep-all]',
                 metric.primary ? 'font-bold' : 'font-semibold',
                 valueSize,
-                metric.primary && 'text-[1.08em]',
                 toneClass[tone],
               )}
             >
               {metric.value}
             </div>
-            <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="h-[3px] w-3.5 shrink-0 rounded-full"
-                style={{ background: lit ? toneTick[tone] : 'var(--border-strong)', opacity: lit ? 1 : 0.9 }}
-              />
-              <span
-                title={typeof metric.label === 'string' ? metric.label : undefined}
-                className="truncate text-[9.5px] font-semibold uppercase leading-tight tracking-[0.15em] text-[var(--text-muted)]"
-              >
-                {metric.label}
-              </span>
-            </div>
             {metric.sub ? (
-              <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--text-tertiary)] truncate">
+              <div className="mt-0.5 text-[9px] leading-tight text-[var(--text-tertiary)] truncate">
                 {metric.sub}
               </div>
             ) : null}

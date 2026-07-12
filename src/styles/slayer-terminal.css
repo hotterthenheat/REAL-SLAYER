@@ -61,29 +61,30 @@
   --gex-3: #2FBF83;
   --gex-4: #C05A2E;
 
-  /* Geometry — sharper than the old 10/7 system */
-  --radius-panel: 8px;
-  --radius-control: 5px;
-  --gap: 10px;
-  --gap-tight: 6px;
-  --panel-pad: 14px;
+  /* MAX-DENSITY geometry — near-square, tight. Every cell earns its pixels. */
+  --radius-panel: 3px;
+  --radius-control: 2px;
+  --gap: 8px;
+  --gap-tight: 5px;
+  --panel-pad: 10px;
 
-  /* Named type scale — 10px hard floor, nothing below --text-3xs. */
-  --text-3xs: 10px;
-  --text-2xs: 11px;
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-md: 15px;
-  --text-lg: 18px;
-  --text-xl: 22px;
+  /* Named type scale — dense: 9px floor, everything a notch smaller so more
+     data fits one screen (the point of a pro terminal). */
+  --text-3xs: 9px;
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
 
   /* Recessed well — passive readouts sit visibly below interactive controls. */
   --bg-well: #070B10;
 
-  /* Elevation — panels now carry quiet depth; overlays float harder. */
+  /* Flat by design — a data panel does NOT lift. Overlays still float. */
   --shadow-panel: 0 16px 44px -12px rgba(0, 0, 0, 0.85);
-  --shadow-card: 0 8px 26px -14px rgba(0, 0, 0, 0.75);
-  --edge-sheen: inset 0 1px 0 rgba(214, 232, 248, 0.045);
+  --shadow-card: none;
+  --edge-sheen: none;
 }
 
 .slayer-terminal {
@@ -95,31 +96,28 @@
   color: var(--text-primary);
 }
 
-/* GLACIER panel — a cold slab with a quiet top sheen and real depth. Sharper
-   corner (8px), cool hairline; it sits forward of the canvas, not flat in it. */
+/* MAX-DENSITY panel — a flat instrument cell. No gradient, no shadow; a hairline
+   frame and a near-square corner. It sits IN the grid, not forward of it. */
 .slayer-panel {
-  background: linear-gradient(180deg, rgba(214, 232, 248, 0.022) 0%, transparent 42%), var(--bg-panel);
+  background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-panel);
-  box-shadow: var(--edge-sheen), var(--shadow-card);
 }
 
 .slayer-panel-header {
   position: relative;
   border-bottom: 1px solid var(--border-subtle);
-  padding: 12px 14px;
+  padding: 7px 10px;
 }
-/* Glacier signature: a short ice segment on the header rule under the title —
-   every panel carries the same mark, so the page reads as one instrument. */
+/* Dense signature: a 1px accent tick on the header rule under the title. */
 .slayer-panel-header::after {
   content: "";
   position: absolute;
-  left: 14px;
+  left: 10px;
   bottom: -1px;
-  width: 26px;
-  height: 2px;
+  width: 20px;
+  height: 1px;
   background: var(--accent-color);
-  box-shadow: 0 0 10px var(--accent-glow, rgba(63, 193, 255, 0.35));
 }
 
 /* Three heading tiers — structural depth reads by WEIGHT: page → panel → section. */
@@ -158,8 +156,8 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   color: var(--text-secondary);
-  font-size: 11px;
-  padding: 7px 10px;
+  font-size: 10px;
+  padding: 4px 7px;
   transition:
     border-color 120ms ease,
     color 120ms ease,
@@ -193,24 +191,24 @@
 .slayer-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .slayer-table th {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 9px 10px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-panel);
 }
 
 .slayer-table td {
   color: var(--text-secondary);
-  padding: 9px 10px;
+  padding: 4px 8px;
   border-bottom: 1px solid rgba(214, 228, 240, 0.045);
   vertical-align: middle;
 }

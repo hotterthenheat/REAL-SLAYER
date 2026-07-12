@@ -389,16 +389,16 @@ body {
   /* Radial dotted grid — cool glacier tint */
   --color-grid-dot: #121A23;
 
-  /* GLACIER RADIUS POLICY — sharper than the old 7/10 system: 5px controls,
-     8px panels. The whole Tailwind rounded-* ramp collapses to those two so
-     nothing over-rounds; the sharper corner is part of the new identity. */
-  --radius-xs: 4px;
-  --radius-sm: 5px;
-  --radius-md: 5px;
-  --radius-lg: 8px;
-  --radius-xl: 8px;
-  --radius-2xl: 8px;
-  --radius-3xl: 8px;
+  /* MAX-DENSITY RADIUS — a pro terminal has near-square corners. The whole
+     Tailwind rounded-* ramp collapses to 2px (controls) / 3px (panels) so
+     nothing reads as a soft "card"; everything reads as an instrument cell. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 3px;
+  --radius-3xl: 3px;
   --radius-full: 9999px;
 }
 
