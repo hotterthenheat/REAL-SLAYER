@@ -36,20 +36,22 @@ export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
       >
         {'>'}
       </span>
-      <span style={{ color: WHITE, letterSpacing: expanded ? '-0.02em' : '-0.5px' }}>
+      <span
+        className="slayer-logo-sweep"
+        style={{ color: WHITE, letterSpacing: expanded ? '-0.02em' : '-0.5px' }}
+      >
         {expanded ? 'slayer_terminal' : 'S'}
       </span>
       <span
         aria-hidden="true"
-        className="slayer-caret"
+        className="slayer-caret slayer-caret-accent"
         style={{
           display: 'inline-block',
           width: expanded ? '0.5em' : '0.42em',
           height: expanded ? '0.92em' : '0.88em',
           marginLeft: expanded ? '0.14em' : '0.125em',
           borderRadius: expanded ? 2 : 1,
-          background: WHITE,
-          boxShadow: `0 0 ${expanded ? 18 : 12}px color-mix(in srgb, ${WHITE} 50%, transparent)`,
+          background: 'var(--accent-ink, #D06A8C)',
         }}
       />
     </span>
