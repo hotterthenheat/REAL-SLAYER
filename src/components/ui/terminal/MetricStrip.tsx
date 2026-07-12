@@ -55,17 +55,28 @@ const desktopColClass: Record<2 | 3 | 4 | 5 | 6, string> = {
   6: 'xl:grid-cols-6',
 };
 
+// Tick color under the numeral — how a cell's tone reads in the value-first format.
+const toneTick: Record<MetricTone, string> = {
+  neutral: 'var(--accent-color)',
+  positive: 'var(--positive-ink)',
+  negative: 'var(--negative-ink)',
+  warning: 'var(--warning)',
+  call: 'var(--call)',
+  pin: 'var(--pin)',
+};
+
 export function MetricStrip({ metrics, columns, className }: MetricStripProps) {
   const count = columns ?? metrics.length;
   // ≤6 metrics keep their own single row; 7+ wrap to rows of 4.
   const cols = (count <= 6 ? Math.max(2, count) : 4) as 2 | 3 | 4 | 5 | 6;
   // Denser strips get a smaller value type so multi-digit prices fit a cell
   // intact — otherwise a tabular value like "5,453.11" breaks mid-number.
-  const valueSize = cols >= 6 ? 'text-[18px]' : cols >= 5 ? 'text-[19px]' : 'text-[21px]';
+  const valueSize = cols >= 6 ? 'text-[20px]' : cols >= 5 ? 'text-[22px]' : 'text-[24px]';
   return (
-    // gap-px over a hairline background draws clean 1px rules between every cell in
-    // BOTH directions, so a wrapped second row reads correctly (per-cell left
-    // borders would leave a dangling edge and no row divider when wrapping).
+    // COMMAND-DECK FORMAT — the strip reads value-first, like a quote board:
+    // the big tabular numeral leads the cell, a short tone tick + label sit
+    // under it. (Was label-over-value.) The gap-px hairline-grid mechanics are
+    // kept — clean 1px rules in both directions even when rows wrap.
     <div
       className={cx(
         'slayer-panel grid grid-cols-2 gap-px overflow-hidden bg-[var(--border-subtle)] md:grid-cols-4',
@@ -73,38 +84,49 @@ export function MetricStrip({ metrics, columns, className }: MetricStripProps) {
         className,
       )}
     >
-      {metrics.map((metric, index) => (
-        <div
-          key={`${metric.label}-${index}`}
-          className="min-w-0 bg-[var(--surface)] px-4 py-3"
-        >
+      {metrics.map((metric, index) => {
+        const tone = metric.tone || 'neutral';
+        const lit = metric.primary || tone !== 'neutral';
+        return (
           <div
-            title={typeof metric.label === 'string' ? metric.label : undefined}
-            className="min-h-[2.3em] text-[var(--text-3xs)] font-semibold uppercase leading-[1.15] tracking-[0.16em] text-[var(--text-muted)] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden"
+            key={`${metric.label}-${index}`}
+            className="min-w-0 bg-[var(--surface)] px-4 py-3"
           >
-            {metric.label}
-          </div>
-          <div
-            className={cx(
-              // nowrap so a two-word value ("SHORT GAMMA") can't wrap and stretch
-              // the whole row taller than its neighbours; truncate keeps it inside
-              // its cell (cells are now wide enough that this rarely triggers).
-              'mt-1.5 leading-[1.1] slayer-num truncate [overflow-wrap:normal] [word-break:keep-all]',
-              metric.primary ? 'font-bold' : 'font-semibold',
-              valueSize,
-              metric.primary && 'text-[1.08em]',
-              toneClass[metric.tone || 'neutral'],
-            )}
-          >
-            {metric.value}
-          </div>
-          {metric.sub ? (
-            <div className="mt-1 text-[11px] leading-tight text-[var(--text-secondary)] truncate">
-              {metric.sub}
+            <div
+              className={cx(
+                // nowrap so a two-word value ("SHORT GAMMA") can't wrap and stretch
+                // the whole row taller than its neighbours; truncate keeps it inside
+                // its cell.
+                'leading-[1.05] slayer-num truncate [overflow-wrap:normal] [word-break:keep-all]',
+                metric.primary ? 'font-bold' : 'font-semibold',
+                valueSize,
+                metric.primary && 'text-[1.08em]',
+                toneClass[tone],
+              )}
+            >
+              {metric.value}
             </div>
-          ) : null}
-        </div>
-      ))}
+            <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="h-[3px] w-3.5 shrink-0 rounded-full"
+                style={{ background: lit ? toneTick[tone] : 'var(--border-strong)', opacity: lit ? 1 : 0.9 }}
+              />
+              <span
+                title={typeof metric.label === 'string' ? metric.label : undefined}
+                className="truncate text-[9.5px] font-semibold uppercase leading-tight tracking-[0.15em] text-[var(--text-muted)]"
+              >
+                {metric.label}
+              </span>
+            </div>
+            {metric.sub ? (
+              <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--text-tertiary)] truncate">
+                {metric.sub}
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

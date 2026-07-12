@@ -227,21 +227,125 @@ export const renderNavItem = (it: NavItemDef, isMobile = false) => (
   />
 );
 
+/* ════════════════════════════════════════════════════════════════════════════
+   COMMAND DECK — the redesigned shell format.
+   The wide labeled sidebar is replaced by (1) a slim ICON RAIL (icon + micro-
+   label, active = bright left rule) and (2) a TOP COMMAND BAR that carries what
+   the sidebar used to hide: the active module's name + description, its sub-
+   sections surfaced as REAL TABS (previously buried in hover flyouts), a live
+   ET clock, the plan chip and identity. Same information, different format.
+   NavItem/renderNavItem stay exported unchanged — the landing sidebar and the
+   mobile drawer still use them.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/** Live desk clock (ET) for the command bar — the market's timezone. */
+function DeskClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  let time = '';
+  try {
+    time = now.toLocaleTimeString('en-US', { hour12: false, timeZone: 'America/New_York' });
+  } catch {
+    time = now.toLocaleTimeString('en-US', { hour12: false });
+  }
+  return (
+    <span className="hidden lg:inline-flex items-baseline gap-1.5 text-[11px] tabular-nums text-[var(--text-tertiary)]" style={{ fontFamily: 'var(--font-brand)' }}>
+      {time}
+      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-faint)]">ET</span>
+    </span>
+  );
+}
+
+/** One rail entry: icon + micro-label, bright left rule when active. Items with
+ *  sub-tabs keep their hover flyout (the command bar also surfaces them as tabs). */
+function RailItem({ it }: { it: NavItemDef }) {
+  const { activeTab, setActiveTab, session } = React.useContext(NavCtx);
+  const setSubTabIntent = useContractStore((s) => s.setSubTabIntent);
+  const subTabIntent = useContractStore((s) => s.subTabIntent);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [anchor, setAnchor] = useState<DOMRect | null>(null);
+  const closeTimer = useRef<number | undefined>(undefined);
+
+  if (it.adminOnly && !(session?.is_super_admin || ['super_admin', 'owner', 'admin'].includes(session?.admin_role || ''))) {
+    return null;
+  }
+
+  const isActive = activeTab === it.id;
+  const subTabs = NAV_SUBTABS[it.id];
+  const activeSub = isActive && subTabIntent && subTabIntent.startsWith(`${it.id}:`) ? subTabIntent.split(':')[1] : null;
+  const Icon = it.icon;
+  // Micro-label: first word only — the rail is 68px wide; full names live in the
+  // command bar + tooltip.
+  const micro = it.label.split(' ')[0];
+
+  const open = () => {
+    if (!subTabs) return;
+    if (closeTimer.current) window.clearTimeout(closeTimer.current);
+    if (btnRef.current) setAnchor(btnRef.current.getBoundingClientRect());
+  };
+  const scheduleClose = () => {
+    if (!subTabs) return;
+    closeTimer.current = window.setTimeout(() => setAnchor(null), 130);
+  };
+  const pick = (subId: string) => {
+    setActiveTab(it.id);
+    setSubTabIntent(`${it.id}:${subId}`);
+    setAnchor(null);
+  };
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={() => setActiveTab(it.id)}
+        onMouseEnter={open}
+        onMouseLeave={scheduleClose}
+        onFocus={open}
+        onBlur={scheduleClose}
+        title={it.desc ? `${it.label} — ${it.desc}` : it.label}
+        aria-label={it.label}
+        aria-haspopup={subTabs ? 'menu' : undefined}
+        aria-current={isActive ? 'page' : undefined}
+        className={`relative flex w-full cursor-pointer flex-col items-center gap-1 rounded-[6px] py-2 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
+          isActive
+            ? it.adminOnly ? 'text-rose-400' : 'text-[var(--text-primary)]'
+            : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+        }`}
+      >
+        {/* active marker — a bright rule on the rail's edge */}
+        <span
+          aria-hidden="true"
+          className={`absolute left-0 top-1/2 h-8 w-[2.5px] -translate-y-1/2 rounded-r-full transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-0'}`}
+          style={{ background: it.adminOnly ? '#fb7185' : 'var(--accent-color)' }}
+        />
+        <Icon className="h-[17px] w-[17px] shrink-0" />
+        <span className="block w-full truncate px-0.5 text-center text-[8px] font-semibold uppercase leading-none tracking-[0.08em]">
+          {micro}
+        </span>
+      </button>
+      {subTabs && anchor && (
+        <NavFlyout anchor={anchor} subTabs={subTabs} pageId={it.id} activeSub={activeSub} onPick={pick} onEnter={open} onLeave={scheduleClose} onEscape={() => setAnchor(null)} />
+      )}
+    </>
+  );
+}
+
 export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick, setShowAuthModal }: AppShellProps) {
   const activeTab = useContractStore(s => s.activeTab);
   const setActiveTab = useContractStore(s => s.setActiveTab);
+  const setSubTabIntent = useContractStore(s => s.setSubTabIntent);
+  const subTabIntent = useContractStore(s => s.subTabIntent);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(() => {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) !== 'true';
-  });
-
+  // The command-deck rail is fixed-width; the old expand/collapse state remains
+  // only for the mobile drawer's NavCtx contract (labels always show there).
+  const isSidebarExpanded = false;
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(!isSidebarExpanded));
-    }
-  }, [isSidebarExpanded]);
+    if (typeof window !== 'undefined') localStorage.setItem(SIDEBAR_COLLAPSED_KEY, 'true');
+  }, []);
 
   const navCtxValue = React.useMemo<NavCtxValue>(() => ({
     activeTab,
@@ -249,108 +353,68 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
     isSidebarExpanded,
     closeMobile: () => setIsMobileMenuOpen(false),
     session,
-  }), [activeTab, setActiveTab, isSidebarExpanded, session]);
+  }), [activeTab, setActiveTab, session]);
+
+  // Command-bar context: the active module + its sub-tabs surfaced as real tabs.
+  const ALL_NAV: NavItemDef[] = [...NAV_MAIN_VIEWS, ...NAV_TOOLS, NAV_SETTINGS, NAV_ADMIN];
+  const current = ALL_NAV.find((n) => n.id === activeTab);
+  const currentSubTabs = NAV_SUBTABS[activeTab];
+  const activeSub = subTabIntent && subTabIntent.startsWith(`${activeTab}:`) ? subTabIntent.split(':')[1] : null;
 
   return (
     <NavCtx.Provider value={navCtxValue}>
     <div className="flex w-full h-full min-h-screen font-sans text-[var(--text-primary)] bg-[var(--background)] overflow-hidden antialiased">
-      {/* Desktop Sidebar */}
-      <aside 
-        className={`bg-[var(--surface)] border-r border-[var(--border)] flex-col hidden md:flex shrink-0 z-[100] h-full relative transition-[width] duration-200 ease-out ${isSidebarExpanded ? 'w-64' : 'w-16'}`}
-      >
-        <div className="p-3 border-b border-[var(--border)] h-[73px] flex items-center gap-2 overflow-hidden">
+      {/* ── Icon rail (desktop) ─────────────────────────────────────────── */}
+      <aside className="relative z-[100] hidden h-full w-[68px] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)] md:flex">
+        {/* brand glyph */}
+        <div className="flex h-[52px] shrink-0 items-center justify-center border-b border-[var(--border)]">
           <button
             type="button"
-            className="origin-left cursor-pointer rounded-md focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
-            style={{ transform: isSidebarExpanded ? 'scale(0.9)' : 'scale(0.9) translateX(-4px)' }}
+            className="cursor-pointer rounded-md p-1 focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+            style={{ transform: 'scale(0.78)' }}
             onClick={() => setActiveTab('home')}
             aria-label="Go to home"
+            title="Home"
           >
-             <BrandHeader expanded={isSidebarExpanded} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsSidebarExpanded(v => !v)}
-            className="ml-auto p-2 rounded-md border border-[var(--border)] text-[var(--text-tertiary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
-            aria-label={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-            aria-expanded={isSidebarExpanded}
-            title={isSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
-          >
-            <Menu className="w-4 h-4" />
+            <BrandHeader />
           </button>
         </div>
-        
-        <div 
-          className="flex-1 overflow-y-auto px-2 py-3 flex flex-col gap-1 scrollbar-none scroll-smooth touch-pan-y overflow-x-hidden"
-          style={{ WebkitOverflowScrolling: 'touch' }}
-        >
-          <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 pointer-events-none'}`}>
-            Main Views
-          </div>
 
-          {NAV_MAIN_VIEWS.map((it) => renderNavItem(it))}
-
-          <div className={`text-[10px] text-[var(--text-muted)] font-semibold uppercase tracking-[0.16em] px-2 py-1 mt-3 mb-1 whitespace-nowrap overflow-hidden transition-all duration-300 ${isSidebarExpanded ? 'opacity-100' : 'opacity-0 h-0 py-0 mb-0 mt-0 pointer-events-none'}`}>
-            Tools
-          </div>
-
-          {NAV_TOOLS.map((it) => renderNavItem(it))}
+        <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto overflow-x-hidden px-1.5 py-2 scrollbar-none" style={{ WebkitOverflowScrolling: 'touch' }}>
+          {NAV_MAIN_VIEWS.map((it) => <RailItem key={it.id} it={it} />)}
+          <div className="mx-2 my-1.5 h-px shrink-0 bg-[var(--border)]" aria-hidden="true" />
+          {NAV_TOOLS.map((it) => <RailItem key={it.id} it={it} />)}
         </div>
 
-        {/* Settings + Admin are pinned directly below the scroll so they are always
-            visible. Previously they sat at the bottom of the scroll area and clipped
-            under the footer whenever the nav list overflowed (e.g. shorter viewports). */}
-        <div className="shrink-0 px-2 pt-2 pb-1 flex flex-col gap-1.5 border-t border-[var(--border)]">
-          {renderNavItem(NAV_SETTINGS)}
-          {renderNavItem(NAV_ADMIN)}
-        </div>
-
-        <div className={`p-4 border-t border-[var(--border)] bg-[var(--surface)] overflow-hidden whitespace-nowrap transition-[padding] duration-300 ${isSidebarExpanded ? 'px-4' : 'px-2'}`}>
-           {/* Tier Info — only for signed-in users. A guest must never see an owned plan
-               ("Lifetime access") next to a "Log in" CTA; that read as fake/contradictory. */}
-           {session?.authenticated && (
-           <div
-             role="button"
-             tabIndex={0}
-             onClick={onUpgradeClick}
-             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onUpgradeClick(); } }}
-             aria-label={`${tierInfo?.label ?? 'Plan'} — manage plan`}
-             style={{ borderRadius: 'var(--radius-control)' }}
-             className={`flex items-center gap-2.5 px-3 py-2 mb-3 bg-[var(--surface-2)] border border-[var(--border)] cursor-pointer hover:border-[var(--border-strong)] transition-colors font-sans mx-auto focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? 'w-full justify-start' : 'w-max justify-center'}`}
-             title={!isSidebarExpanded ? tierInfo?.label : undefined}
-           >
-              <span className="relative flex h-2 w-2 shrink-0">
-                <span className={`relative inline-flex rounded-full h-2 w-2 ${tierInfo?.dotColor}`}></span>
-              </span>
-              <div className={`flex flex-col text-left transition-all duration-300 ${isSidebarExpanded ? 'opacity-100 max-w-[200px]' : 'opacity-0 max-w-0 overflow-hidden'}`}>
-                <span className="text-[12px] font-semibold tracking-wide text-[var(--text-primary)] truncate">{tierInfo?.label}</span>
-                <span className="text-[12px] text-[var(--text-tertiary)] font-medium tracking-normal truncate">{tierInfo?.desc}</span>
-              </div>
-           </div>
-           )}
-
-           {session?.authenticated ? (
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 overflow-hidden flex-1">
-                   <IdentityAvatar name={session.name} avatar={session.avatar} />
-                   <span className={`text-[12px] font-semibold truncate text-[var(--text-tertiary)] transition-all duration-300 ${isSidebarExpanded ? 'opacity-100 max-w-[120px]' : 'opacity-0 max-w-0'}`}>{session.name}</span>
-                </div>
-                {isSidebarExpanded && (
-                  <button onClick={onLogout} className="text-[var(--text-tertiary)] hover:text-[var(--warning)] transition-colors p-2 rounded focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none" title="Logout">
-                    <LogOut className="w-4 h-4 shrink-0" />
-                  </button>
-                )}
-             </div>
-           ) : (
+        {/* pinned bottom cluster: settings · admin · plan · identity */}
+        <div className="shrink-0 border-t border-[var(--border)] px-1.5 pb-3 pt-1.5">
+          <RailItem it={NAV_SETTINGS} />
+          <RailItem it={NAV_ADMIN} />
+          <div className="mt-2 flex flex-col items-center gap-2">
+            {session?.authenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onUpgradeClick}
+                  title={`${tierInfo?.label ?? 'Plan'} — manage plan`}
+                  aria-label={`${tierInfo?.label ?? 'Plan'} — manage plan`}
+                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] transition-colors hover:border-[var(--border-strong)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                >
+                  <span className={`inline-flex h-2 w-2 rounded-full ${tierInfo?.dotColor}`} />
+                </button>
+                <span title={session?.name}><IdentityAvatar name={session?.name} avatar={session?.avatar} /></span>
+              </>
+            ) : (
               <button
                 onClick={() => setShowAuthModal(true)}
-                style={{ borderRadius: 'var(--radius-control)' }}
-                className={`w-full px-3 py-2 border border-[var(--border)] hover:border-[var(--border-strong)] bg-[var(--surface)] text-[var(--success)] hover:text-[var(--text-primary)] font-semibold transition-colors flex items-center justify-center gap-1.5 text-[13px] cursor-pointer focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${isSidebarExpanded ? '' : 'px-0'}`}
-                title="LOGIN"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-[var(--border)] text-[var(--text-tertiary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                title="Log in / create account"
+                aria-label="Log in / create account"
               >
-                {isSidebarExpanded ? 'Log in / create account' : <Lock className="w-4 h-4" />}
+                <Lock className="h-3.5 w-3.5" />
               </button>
-           )}
+            )}
+          </div>
         </div>
       </aside>
 
@@ -407,9 +471,86 @@ export function AppShell({ children, session, onLogout, tierInfo, onUpgradeClick
         </div>
       )}
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative bg-[var(--surface)] md:pt-0 pt-[57px]">
-        {children}
+      {/* ── Command bar + content column ─────────────────────────────────── */}
+      <div className="flex h-full min-w-0 flex-1 flex-col">
+        {/* Top command bar (desktop): module identity · sub-tabs · clock · account */}
+        <header className="hidden h-[52px] shrink-0 items-center gap-4 border-b border-[var(--border)] bg-[var(--surface)] px-4 md:flex">
+          <div className="flex min-w-0 items-baseline gap-2.5">
+            <span className="whitespace-nowrap text-[12.5px] font-bold uppercase tracking-[0.18em] text-[var(--text-primary)]">
+              {current?.label ?? 'Terminal'}
+            </span>
+            {current?.desc ? (
+              <span className="hidden max-w-[260px] truncate text-[11px] text-[var(--text-tertiary)] lg:block">{current.desc}</span>
+            ) : null}
+          </div>
+
+          {/* the module's sections as REAL tabs (were hidden inside hover flyouts) */}
+          {currentSubTabs ? (
+            <nav aria-label={`${current?.label ?? 'Module'} sections`} className="hidden min-w-0 items-center gap-1 overflow-x-auto xl:flex">
+              {currentSubTabs.map((s) => {
+                const on = activeSub === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => setSubTabIntent(`${activeTab}:${s.id}`)}
+                    aria-current={on ? 'true' : undefined}
+                    style={{ borderRadius: 'var(--radius-control)' }}
+                    className={`cursor-pointer whitespace-nowrap border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none ${
+                      on
+                        ? 'border-[var(--border-strong)] bg-[var(--surface-2)] text-[var(--text-primary)]'
+                        : 'border-transparent text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                );
+              })}
+            </nav>
+          ) : null}
+
+          <div className="ml-auto flex shrink-0 items-center gap-3">
+            <DeskClock />
+            {session?.authenticated ? (
+              <>
+                <button
+                  type="button"
+                  onClick={onUpgradeClick}
+                  style={{ borderRadius: 'var(--radius-control)' }}
+                  className="hidden cursor-pointer items-center gap-2 border border-[var(--border)] px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-[var(--text-secondary)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--text-primary)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none sm:inline-flex"
+                  title={tierInfo?.desc}
+                >
+                  <span className={`inline-flex h-1.5 w-1.5 rounded-full ${tierInfo?.dotColor}`} />
+                  {tierInfo?.label}
+                </button>
+                <div className="flex items-center gap-2">
+                  <IdentityAvatar name={session?.name} avatar={session?.avatar} />
+                  <span className="hidden max-w-[130px] truncate text-[11.5px] font-semibold text-[var(--text-secondary)] lg:block">{session?.name}</span>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="cursor-pointer rounded p-1.5 text-[var(--text-tertiary)] transition-colors hover:text-[var(--warning)] focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+                  title="Logout"
+                  aria-label="Logout"
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => setShowAuthModal(true)}
+                style={{ borderRadius: 'var(--radius-control)' }}
+                className="cursor-pointer bg-[var(--text-primary)] px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--background)] transition-opacity hover:opacity-90 focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] focus:outline-none"
+              >
+                Log in
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <div className="relative flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--surface)] pt-[57px] md:pt-0">
+          {children}
+        </div>
       </div>
     </div>
     </NavCtx.Provider>

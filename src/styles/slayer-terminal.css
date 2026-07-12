@@ -111,8 +111,21 @@
 }
 
 .slayer-panel-header {
+  position: relative;
   border-bottom: 1px solid var(--border-subtle);
   padding: 12px 14px;
+}
+/* Command-deck signature: a short bright segment on the header rule, under the
+   title — every panel carries the same quiet mark, so the page reads as one
+   instrument. Monochrome (follows --accent-color, white by default). */
+.slayer-panel-header::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  bottom: -1px;
+  width: 26px;
+  height: 2px;
+  background: var(--accent-color);
 }
 
 /* Three heading tiers so structural depth reads by WEIGHT, not just position.
