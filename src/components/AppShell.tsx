@@ -455,12 +455,12 @@ function RailItem({ it }: { it: NavItemDef }) {
             : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
         }`}
       >
-        {/* active marker — a bright rule on the rail's edge */}
+        {/* active marker — a 1px spectral (holographic silver) rule on the rail's edge */}
         <span
           aria-hidden="true"
           className={`absolute left-0 top-1/2 h-8 w-[2.5px] -translate-y-1/2 rounded-r-full transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-0'}`}
           style={{
-            background: it.adminOnly ? '#fb7185' : 'var(--accent-color)',
+            background: it.adminOnly ? '#fb7185' : 'var(--slayer-holo, var(--accent-color))',
             boxShadow: isActive && !it.adminOnly ? '0 0 10px var(--accent-glow, rgba(196,203,215,0.26))' : 'none',
           }}
         />
