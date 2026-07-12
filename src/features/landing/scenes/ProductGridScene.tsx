@@ -47,48 +47,50 @@ function SkyVisionPreview() {
   const s = SKY_ROWS[sel];
   return (
     <div className="grid h-full grid-cols-1 gap-px sm:grid-cols-[1.5fr_1fr]" style={{ background: line }}>
-      <div className="min-w-0 overflow-hidden" style={{ background: panel }}>
-        <div className="flex items-center justify-between px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint, borderBottom: `1px solid ${line}` }}>
+      <div className="flex min-w-0 flex-col overflow-hidden" style={{ background: panel }}>
+        <div className="flex shrink-0 items-center justify-between px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint, borderBottom: `1px solid ${line}` }}>
           <span>Opportunities · 30 ranked</span><span>Confidence ▾</span>
         </div>
-        {SKY_ROWS.map((row, i) => {
-          const on = i === sel;
-          return (
-            <button
-              key={row.r}
-              onMouseEnter={() => setSel(i)}
-              onFocus={() => setSel(i)}
-              onClick={() => setSel(i)}
-              className="flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-left transition-colors"
-              style={{ background: on ? panelSoft : 'transparent', borderLeft: `2px solid ${on ? STEEL : 'transparent'}` }}
-            >
-              <span className="w-3 text-[10px] tabular-nums" style={{ color: faint }}>{row.r}</span>
-              <span className="w-[74px] shrink-0 text-[11px] font-semibold" style={{ color: ghost }}>{row.sym}</span>
-              <span className="hidden w-[74px] shrink-0 text-[9px] uppercase tracking-[0.1em] sm:block" style={{ color: muted }}>{row.setup}</span>
-              <span className="relative h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
-                <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${row.conf}%`, background: on ? STEEL : 'rgba(106,147,181,0.55)' }} />
-              </span>
-              <span className="w-7 text-right text-[10px] tabular-nums" style={{ color: ghost }}>{row.conf}</span>
-            </button>
-          );
-        })}
+        <div className="flex min-h-0 flex-1 flex-col">
+          {SKY_ROWS.map((row, i) => {
+            const on = i === sel;
+            return (
+              <button
+                key={row.r}
+                onMouseEnter={() => setSel(i)}
+                onFocus={() => setSel(i)}
+                onClick={() => setSel(i)}
+                className="flex w-full flex-1 cursor-pointer items-center gap-2.5 px-3 text-left transition-colors"
+                style={{ background: on ? panelSoft : 'transparent', borderLeft: `2px solid ${on ? STEEL : 'transparent'}`, borderTop: i ? `1px solid ${line}` : undefined }}
+              >
+                <span className="w-3 text-[10px] tabular-nums" style={{ color: faint }}>{row.r}</span>
+                <span className="w-[74px] shrink-0 text-[11px] font-semibold" style={{ color: ghost }}>{row.sym}</span>
+                <span className="hidden w-[74px] shrink-0 text-[9px] uppercase tracking-[0.1em] sm:block" style={{ color: muted }}>{row.setup}</span>
+                <span className="relative h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.07)' }}>
+                  <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${row.conf}%`, background: on ? STEEL : 'rgba(106,147,181,0.55)' }} />
+                </span>
+                <span className="w-7 text-right text-[10px] tabular-nums" style={{ color: ghost }}>{row.conf}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
       {/* selected-setup rail */}
-      <div className="min-w-0 p-3" style={{ background: panel }}>
-        <div className="text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Selected setup</div>
-        <div className="mt-1.5 flex items-center justify-between gap-2">
+      <div className="flex min-w-0 flex-col p-3" style={{ background: panel }}>
+        <div className="shrink-0 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>Selected setup</div>
+        <div className="mt-1.5 flex shrink-0 items-center justify-between gap-2">
           <span className="text-[15px] font-bold" style={{ color: ghost }}>{s.sym}</span>
           <span className="rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.1em]" style={{ color: GREEN, background: 'color-mix(in srgb, #3F9C79 12%, transparent)' }}>Bull</span>
         </div>
-        <div className="mt-3 space-y-2 text-[10px]">
+        <div className="mt-3 flex min-h-0 flex-1 flex-col justify-between text-[10.5px]">
           {[['Confidence', `${s.conf}%`], ['R / R', s.rr], ['Exp. move', s.em], ['Target', s.target]].map(([k, v]) => (
-            <div key={k} className="flex items-center justify-between gap-2">
+            <div key={k} className="flex items-center justify-between gap-2 border-b py-1" style={{ borderColor: line }}>
               <span style={{ color: faint }}>{k}</span>
               <span className="tabular-nums" style={{ color: ghost }}>{v}</span>
             </div>
           ))}
         </div>
-        <div className="mt-3 inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ color: STEEL }}>Open setup →</div>
+        <div className="mt-3 inline-flex shrink-0 items-center gap-1 text-[9px] font-semibold uppercase tracking-[0.14em]" style={{ color: STEEL }}>Open setup →</div>
       </div>
     </div>
   );
@@ -178,11 +180,11 @@ function DealerFlowPreview() {
         <span className="flex items-center gap-1.5"><span className="inline-block h-1 w-1 rounded-full" style={{ background: GREEN }} />Options Flow · unusual prints</span>
         <span>Sweep · Block · Dark</span>
       </div>
-      <div className="flex-1 overflow-hidden">
-        {rows.map((r) => {
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {rows.map((r, i) => {
           const dir = r.bull == null ? faint : r.bull ? GREEN : RED;
           return (
-            <div key={r.id} className="flex items-center gap-2 px-3 py-[7px] text-[11px]" style={{ background: r.fresh ? 'color-mix(in srgb, var(--text-primary) 5%, transparent)' : 'transparent', borderLeft: `2px solid ${r.fresh ? r.tint : 'transparent'}`, transition: 'background 600ms ease' }}>
+            <div key={r.id} className="flex flex-1 items-center gap-2 px-3 text-[11px]" style={{ background: r.fresh ? 'color-mix(in srgb, var(--text-primary) 5%, transparent)' : 'transparent', borderLeft: `2px solid ${r.fresh ? r.tint : 'transparent'}`, borderTop: i ? `1px solid ${line}` : undefined, transition: 'background 600ms ease' }}>
               <span className="w-10 shrink-0 font-semibold" style={{ color: ghost }}>{r.tk}</span>
               <span className="hidden w-[92px] shrink-0 truncate sm:block" style={{ color: muted }}>{r.label}</span>
               <span className="shrink-0 rounded px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.08em]" style={{ color: r.tint, background: `color-mix(in srgb, ${r.tint} 14%, transparent)` }}>{r.type}</span>
@@ -294,11 +296,11 @@ function TradeHistoryPreview() {
         <span>Trade Ledger · realized</span>
         <span className="tabular-nums"><span style={{ color: GREEN }}>{Math.round((wins / TRADES.length) * 100)}%</span> <span style={{ color: faint }}>win rate</span></span>
       </div>
-      <div className="flex-1">
+      <div className="flex min-h-0 flex-1 flex-col">
         {TRADES.map((t, i) => {
           const on = i === hi, up = t.pnl >= 0, w = (Math.abs(t.pnl) / maxAbs) * 42;
           return (
-            <button key={t.sym} onMouseEnter={() => setHi(i)} onFocus={() => setHi(i)} className="flex w-full cursor-pointer items-center gap-2 px-3 py-[7px] text-left transition-colors" style={{ background: on ? panelSoft : 'transparent' }}>
+            <button key={t.sym} onMouseEnter={() => setHi(i)} onFocus={() => setHi(i)} className="flex w-full flex-1 cursor-pointer items-center gap-2 px-3 text-left transition-colors" style={{ background: on ? panelSoft : 'transparent', borderTop: i ? `1px solid ${line}` : undefined }}>
               <span className="w-[74px] shrink-0 text-[11px] font-semibold" style={{ color: ghost }}>{t.sym}</span>
               <span className="hidden w-14 shrink-0 text-[8px] uppercase tracking-[0.1em] sm:block" style={{ color: up ? GREEN : RED }}>{t.out}</span>
               <span className="relative flex h-2 flex-1 items-center">
@@ -315,14 +317,17 @@ function TradeHistoryPreview() {
 }
 
 /* ───────────────────────────── the showcase ───────────────────────────── */
-interface Mod { id: string; tab: string; name: string; accent: string; desc: string; chips: string[]; Preview: () => ReactNode; }
+// Each engine is a DESIGNED, interactive mini modelled on its real page (not a
+// screenshot) that fills its frame edge-to-edge, plus a punchy one-line product
+// quote. `tag` is the short rail subtitle.
+interface Mod { id: string; tab: string; name: string; tag: string; accent: string; quote: string; desc: string; chips: string[]; Preview: () => ReactNode; }
 const MODULES: Mod[] = [
-  { id: 'skyvision', tab: 'skyvision', name: 'SkyVision', accent: STEEL, desc: 'Ranks every setup by structure, momentum and risk — hover a row to inspect it.', chips: ['RANKED', 'CONFIDENCE', 'R / R', 'INVALIDATION'], Preview: SkyVisionPreview },
-  { id: 'pinpoint', tab: 'pinpoint', name: 'Pinpoint GEX', accent: AMBER, desc: 'Dealer positioning by strike — call walls, put walls and the pin. Brush a strike.', chips: ['CALL WALL', 'PUT WALL', 'PIN', 'GAMMA FLIP'], Preview: PinpointPreview },
-  { id: 'dealerflow', tab: 'dealerflow', name: 'Dealer Flow', accent: GREEN, desc: 'Unusual options flow — sweeps, blocks and dark-pool prints as they hit the tape.', chips: ['SWEEPS', 'DARK POOL', 'BLOCKS', 'SENTIMENT'], Preview: DealerFlowPreview },
-  { id: 'liveterminal', tab: 'liveterminal', name: 'Live Terminal', accent: STEEL, desc: 'Price against the dealer walls — one clean chart from read to execution.', chips: ['PRICE', 'KEY LEVELS', 'GEX NODES'], Preview: LiveTerminalPreview },
-  { id: 'quant', tab: 'quant', name: 'Quant Lab', accent: AMBER, desc: 'The implied-vol surface in 3D — orbit the smile × term structure quants actually trade.', chips: ['IV SURFACE', 'GREEKS', 'REGIME', 'EXP MOVE'], Preview: QuantPreview },
-  { id: 'auditor', tab: 'auditor', name: 'Trade History', accent: GREEN, desc: 'Every tracked setup and its realized outcome — accountable, not alerted.', chips: ['ENTRIES', 'OUTCOMES', 'REALIZED', 'WIN RATE'], Preview: TradeHistoryPreview },
+  { id: 'skyvision', tab: 'skyvision', name: 'SkyVision', tag: 'Ranked setups', accent: STEEL, quote: 'Thirty setups, ranked. You read one.', desc: 'Every setup scored by structure, momentum and risk — the strongest float to the top with its full rationale.', chips: ['RANKED', 'CONFIDENCE', 'R / R', 'INVALIDATION'], Preview: SkyVisionPreview },
+  { id: 'pinpoint', tab: 'pinpoint', name: 'Pinpoint GEX', tag: 'Dealer positioning', accent: AMBER, quote: 'See the walls dealers defend — before price tests them.', desc: 'Dealer positioning by strike: call walls, put walls, the pin and the gamma flip, mapped across every expiry.', chips: ['CALL WALL', 'PUT WALL', 'PIN', 'GAMMA FLIP'], Preview: PinpointPreview },
+  { id: 'dealerflow', tab: 'dealerflow', name: 'Dealer Flow', tag: 'Unusual flow', accent: GREEN, quote: 'Sweeps, blocks, dark pool — the tape, live.', desc: 'Unusual options flow as it prints: aggressive sweeps, negotiated blocks and off-exchange dark-pool crosses.', chips: ['SWEEPS', 'DARK POOL', 'BLOCKS', 'SENTIMENT'], Preview: DealerFlowPreview },
+  { id: 'liveterminal', tab: 'liveterminal', name: 'Live Terminal', tag: 'Chart + levels', accent: STEEL, quote: 'Price against every dealer level. One clean chart.', desc: 'The chart with the walls, pin and flip drawn on it, plus the strike × expiry GEX matrix — read to execution.', chips: ['PRICE', 'KEY LEVELS', 'GEX NODES'], Preview: LiveTerminalPreview },
+  { id: 'quant', tab: 'quant', name: 'Quant Lab', tag: 'Vol surface', accent: AMBER, quote: 'The vol surface quants trade — in your browser.', desc: 'The implied-vol surface, term structure, risk-neutral distribution and regime read — the desk quants actually use.', chips: ['IV SURFACE', 'GREEKS', 'REGIME', 'EXP MOVE'], Preview: QuantPreview },
+  { id: 'auditor', tab: 'auditor', name: 'Trade History', tag: 'Tracked outcomes', accent: GREEN, quote: 'Every setup tracked to its outcome. Accountable.', desc: 'The blotter of every tracked setup and its realized result, with win rate and PnL — receipts, not alerts.', chips: ['ENTRIES', 'OUTCOMES', 'REALIZED', 'WIN RATE'], Preview: TradeHistoryPreview },
 ];
 
 export function ProductGridScene({ onEnter }: { onEnter: (tab?: string) => void }) {
@@ -333,16 +338,18 @@ export function ProductGridScene({ onEnter }: { onEnter: (tab?: string) => void 
   const Preview = mod.Preview;
 
   return (
-    <section id="product" className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }} data-scene="product-grid" aria-label="Interactive product showcase">
+    <section id="product" className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }} data-scene="product-grid" aria-label="Product showcase">
       <Reveal className="mx-auto mb-10 max-w-2xl text-center">
         <div className="text-[10px] font-semibold uppercase" style={{ letterSpacing: '0.28em', color: faint }}>The Terminal</div>
-        <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>Six engines. Try each one.</h2>
-        <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>Not screenshots — the real reads, running. Pick an engine and put your cursor in it.</p>
+        <h2 className="mt-3 text-[26px] font-semibold leading-tight sm:text-[32px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.01em' }}>Six engines. One desk.</h2>
+        <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed" style={{ color: muted }}>Pick an engine and put your cursor inside the real read.</p>
       </Reveal>
 
       <Reveal className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[12px] lg:grid-cols-[220px_1fr]" style={{ border: `1px solid ${line}`, background: line }}>
-          {/* engine rail */}
+        {/* items-stretch (grid default) + the rail's own flex-1 tabs make BOTH columns
+            exactly the same height — the rail never leaves an empty grey gap. */}
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-[14px] lg:grid-cols-[236px_1fr]" style={{ border: `1px solid ${line}`, background: line }}>
+          {/* engine rail — the tabs (each stretches to fill the column height) */}
           <div ref={railRef} className="flex gap-px overflow-x-auto lg:flex-col" style={{ background: line }} role="tablist" aria-label="Engines">
             {MODULES.map((m) => {
               const on = m.id === active;
@@ -353,51 +360,73 @@ export function ProductGridScene({ onEnter }: { onEnter: (tab?: string) => void 
                   aria-selected={on}
                   onClick={() => setActive(m.id)}
                   onMouseEnter={() => setActive(m.id)}
-                  className="flex min-w-[150px] shrink-0 cursor-pointer items-center gap-2.5 px-4 py-3 text-left transition-colors lg:min-w-0"
+                  className="flex min-w-[160px] shrink-0 cursor-pointer flex-col justify-center gap-0.5 px-4 py-3 text-left transition-colors lg:min-w-0 lg:flex-1"
                   style={{ background: on ? panel : panelSoft, borderLeft: `2px solid ${on ? m.accent : 'transparent'}` }}
                 >
-                  <span className="h-2.5 w-[3px] shrink-0 rounded-full" style={{ background: m.accent, opacity: on ? 1 : 0.5 }} />
-                  <span className="min-w-0">
-                    <span className="block truncate text-[12.5px] font-semibold" style={{ color: on ? ghost : muted }}>{m.name}</span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-2.5 w-[3px] shrink-0 rounded-full transition-all" style={{ background: m.accent, opacity: on ? 1 : 0.4 }} />
+                    <span className="block truncate text-[13px] font-semibold transition-colors" style={{ color: on ? ghost : muted }}>{m.name}</span>
                   </span>
+                  <span className="truncate pl-[11px] text-[10.5px] transition-colors" style={{ color: on ? muted : faint }}>{m.tag}</span>
                 </button>
               );
             })}
           </div>
 
-          {/* live preview + footer */}
+          {/* visual + footer */}
           <div className="flex min-w-0 flex-col" style={{ background: panel }}>
-            <div className="relative min-h-[300px] flex-1 overflow-hidden">
+            {/* header — the product quote */}
+            <div className="px-5 pb-4 pt-5" style={{ borderBottom: `1px solid ${line}` }}>
+              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em]" style={{ color: faint }}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ background: mod.accent }} />
+                {mod.name}
+              </div>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={mod.id}
+                  initial={reduced ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduced ? undefined : { opacity: 0, y: -6 }}
+                  transition={{ duration: 0.3, ease: EASE_PRIMARY }}
+                >
+                  <p className="mt-2 max-w-xl text-[17px] font-semibold leading-snug sm:text-[19px]" style={{ color: ghost, letterSpacing: '-0.01em' }}>{mod.quote}</p>
+                  <p className="mt-1.5 max-w-xl text-[12.5px] leading-relaxed" style={{ color: muted }}>{mod.desc}</p>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+
+            {/* the designed interactive preview — fills the frame edge-to-edge, no
+                window chrome, no dead space. Crossfades on engine switch. */}
+            <div className="relative h-[330px] overflow-hidden sm:h-[360px]" style={{ background: panel }}>
               <AnimatePresence mode="wait">
                 <motion.div
                   key={mod.id}
                   className="absolute inset-0"
-                  initial={reduced ? false : { opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduced ? undefined : { opacity: 0, y: -8 }}
-                  transition={{ duration: 0.28, ease: EASE_PRIMARY }}
+                  initial={reduced ? false : { opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={reduced ? undefined : { opacity: 0 }}
+                  transition={{ duration: 0.3, ease: EASE_PRIMARY }}
                 >
                   <Preview />
                 </motion.div>
               </AnimatePresence>
             </div>
-            <div className="flex flex-col gap-3 px-4 py-4" style={{ borderTop: `1px solid ${line}` }}>
-              <div className="flex items-start justify-between gap-4">
-                <p className="max-w-lg text-[12.5px] leading-relaxed" style={{ color: muted }}>{mod.desc}</p>
-                <button
-                  type="button"
-                  onClick={() => onEnter(mod.tab)}
-                  className="shrink-0 cursor-pointer whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.14em] transition-transform hover:translate-x-0.5"
-                  style={{ color: mod.accent }}
-                >
-                  Open {mod.name} →
-                </button>
-              </div>
+
+            {/* footer — chips + open */}
+            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between" style={{ borderTop: `1px solid ${line}` }}>
               <div className="flex flex-wrap gap-1.5">
                 {mod.chips.map((c) => (
                   <span key={c} className="rounded-[5px] px-2 py-1 text-[9px] font-semibold uppercase" style={chip(mod.accent)}>{c}</span>
                 ))}
               </div>
+              <button
+                type="button"
+                onClick={() => onEnter(mod.tab)}
+                className="shrink-0 cursor-pointer whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.14em] transition-transform hover:translate-x-0.5"
+                style={{ color: mod.accent }}
+              >
+                Open {mod.name} →
+              </button>
             </div>
           </div>
         </div>
