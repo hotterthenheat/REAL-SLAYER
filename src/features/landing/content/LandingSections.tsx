@@ -55,6 +55,10 @@ const accentText = 'var(--primary-contrast)';
 // Subtle hover wash / brighten built from the accent so it works in every theme.
 const hoverWash = 'color-mix(in srgb, var(--accent-color) 8%, transparent)';
 const accentBright = 'color-mix(in srgb, var(--accent-color), #ffffff 15%)';
+// Soft accent tint + outer glow (theme tokens with a color-mix fallback) — used
+// to frame the "recommended" panels (Slayer face-off card, flagship plan).
+const accentSoft = 'var(--accent-soft, color-mix(in srgb, var(--accent-color) 14%, transparent))';
+const accentGlow = 'var(--accent-glow, color-mix(in srgb, var(--accent-color) 22%, transparent))';
 
 const line = 'var(--border)';
 const lineStrong = 'var(--border-strong)';
@@ -811,59 +815,97 @@ export function HowItWorks() {
     <section className="px-5 py-16" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
       <div className="mx-auto max-w-6xl">
         <SectionHead eyebrow="Workflow" title="How a trade comes together" sub="Pick a ticker, read where dealers are positioned, take the ranked setup — with levels and an invalidation, not a signal." />
-        {/* a numbered rule-list, not a row of boxes: the sequence IS the design */}
-        <div className="mt-10 grid grid-cols-1 border-t sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-[color:var(--border)]" style={{ borderColor: line }}>
+        {/* a horizontal 4-step flow: numbered nodes joined by a thin rule on
+            desktop, the same sequence running vertically down a rule on mobile */}
+        <ol className="mt-12 flex flex-col gap-9 lg:flex-row lg:gap-6">
           {steps.map((s, i) => (
-            <Reveal key={i} delay={i * 0.08} className="flex flex-col gap-3 py-6 max-lg:border-b max-lg:border-[color:var(--border)] lg:px-6 lg:first:pl-0 lg:last:pr-0">
-              <span className="font-mono text-[12px] font-semibold tabular-nums" style={{ color: PALETTE.accent[i] }}>{`0${i + 1}`}</span>
-              <div className="text-[14.5px] font-medium leading-snug" style={{ color: PALETTE.ghost }}>{s}</div>
-            </Reveal>
+            <li key={i} className="relative flex-1">
+              {/* connectors sit OUTSIDE the Reveal so the rule never animates */}
+              {i < steps.length - 1 ? (
+                <>
+                  <span aria-hidden="true" className="absolute -right-6 left-[46px] top-[17px] hidden h-px lg:block" style={{ background: line }} />
+                  <span aria-hidden="true" className="absolute -bottom-9 left-[17px] top-[42px] w-px lg:hidden" style={{ background: line }} />
+                </>
+              ) : null}
+              <Reveal delay={i * 0.08} className="flex items-start gap-4 lg:flex-col">
+                <span
+                  className="relative z-10 flex h-[35px] w-[35px] shrink-0 items-center justify-center rounded-full font-mono text-[12px] font-semibold tabular-nums"
+                  style={{ background: PALETTE.panel, border: `1px solid ${lineStrong}`, color: accentFill }}
+                >
+                  {`0${i + 1}`}
+                </span>
+                <div className="pt-[8px] text-[14.5px] font-medium leading-snug lg:max-w-[200px] lg:pt-0" style={{ color: PALETTE.ghost }}>
+                  {s}
+                </div>
+              </Reveal>
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );
 }
 
 export function ComparisonSection() {
+  // The same capability rows rendered as a two-panel face-off: what a signal
+  // group gives you vs what the terminal gives you, row i aligned across both.
   const rows = [
-    ['Dealer levels', false, false, true],
-    ['Contract selection', false, 'signals', true],
-    ['Risk context', false, false, true],
-    ['Market structure', false, false, true],
-    ['Live updates', false, true, true],
-    ['Explanation quality', false, 'thin', true],
-  ] as [string, any, any, any][];
+    ['Dealer levels', false, true],
+    ['Contract selection', 'signals', true],
+    ['Risk context', false, true],
+    ['Market structure', false, true],
+    ['Live updates', true, true],
+    ['Explanation quality', 'thin', true],
+  ] as [string, any, any][];
   const cell = (v: any, strong = false) => {
-    if (v === true) return <span style={{ color: strong ? '#6fae7d' : PALETTE.text }}>{strong ? '● Full' : '●'}</span>;
-    if (v === false) return <span style={{ color: faint }}>—</span>;
-    return <span style={{ color: muted }}>{v}</span>;
+    if (v === true) return <span className="shrink-0" style={{ color: strong ? '#6fae7d' : PALETTE.text }}>{strong ? '● Full' : '●'}</span>;
+    if (v === false) return <span className="shrink-0" style={{ color: faint }}>—</span>;
+    return <span className="shrink-0" style={{ color: muted }}>{v}</span>;
   };
+  const rowList = (side: 1 | 2) => (
+    <ul className="mt-1 flex-1">
+      {rows.map((r, i) => (
+        <li
+          key={i}
+          className="flex min-h-[48px] items-center justify-between gap-4 text-[12.5px]"
+          style={{ borderTop: i === 0 ? 'none' : `1px solid ${line}` }}
+        >
+          <span style={{ color: PALETTE.text }}>{r[0]}</span>
+          {cell(r[side], side === 2)}
+        </li>
+      ))}
+    </ul>
+  );
   return (
-    <section className="mx-auto max-w-6xl px-5 py-16">
+    <section className="mx-auto max-w-5xl px-5 py-16">
       <SectionHead eyebrow="Comparison" title="Why Slayer, not a signal group" sub="Signal groups tell you what to buy. Slayer shows you the dealer levels, risk context and market structure behind the trade — so you know why." />
-      <Reveal delay={0.05} className="mt-10 overflow-x-auto">
-        <table className="w-full min-w-[560px] text-[12.5px]">
-          <thead>
-            <tr style={{ color: faint }}>
-              <th className="py-2 text-left font-medium uppercase tracking-[0.1em]"> </th>
-              <th className="py-2 text-center font-medium uppercase tracking-[0.1em]">Manual Trading</th>
-              <th className="py-2 text-center font-medium uppercase tracking-[0.1em]">Signal Groups</th>
-              <th className="py-2 text-center font-semibold uppercase tracking-[0.1em]" style={{ color: PALETTE.ghost }}>Slayer Terminal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} style={{ borderTop: `1px solid ${line}` }}>
-                <td className="py-2.5 pr-4" style={{ color: PALETTE.text }}>{r[0]}</td>
-                <td className="py-2.5 text-center tabular-nums">{cell(r[1])}</td>
-                <td className="py-2.5 text-center tabular-nums">{cell(r[2])}</td>
-                <td className="py-2.5 text-center tabular-nums" style={{ background: 'rgba(106,147,181,0.07)' }}>{cell(r[3], true)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Reveal>
+      <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-2 md:items-stretch">
+        <Reveal delay={0.05} className="h-full">
+          <div className="flex h-full flex-col rounded-[8px] p-6" style={{ background: PALETTE.panelSoft, border: `1px solid ${line}` }}>
+            <div className="border-b pb-4" style={{ borderColor: line }}>
+              <div className="text-[10px] font-medium uppercase tracking-[0.18em]" style={{ color: faint }}>Signal Groups</div>
+              <div className="mt-1 text-[16px] font-semibold" style={{ color: muted }}>A call to buy</div>
+            </div>
+            {rowList(1)}
+          </div>
+        </Reveal>
+        <Reveal delay={0.12} className="h-full">
+          <div
+            className="flex h-full flex-col rounded-[8px] p-6"
+            style={{
+              background: PALETTE.panel,
+              border: `1px solid ${accentFill}`,
+              boxShadow: `0 0 0 1px ${accentSoft}, 0 0 40px ${accentGlow}`,
+            }}
+          >
+            <div className="border-b pb-4" style={{ borderColor: line }}>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: accentFill }}>Slayer Terminal</div>
+              <div className="mt-1 text-[16px] font-semibold" style={{ color: PALETTE.ghost }}>The why behind the trade</div>
+            </div>
+            {rowList(2)}
+          </div>
+        </Reveal>
+      </div>
     </section>
   );
 }
@@ -910,27 +952,34 @@ const PLANS: { key: string; name: string; tag: string; price: string; note: stri
 function PlanCard({ p, index, onSelect }: { p: (typeof PLANS)[number]; index: number; onSelect: (p: (typeof PLANS)[number]) => void }) {
   return (
     <div
-      className="group relative flex h-full w-full flex-col overflow-hidden rounded-[10px] p-6 transition-colors duration-150"
-      style={{
-        background: p.featured ? PALETTE.panel : PALETTE.panelSoft,
-        border: `1px solid ${p.featured ? lineStrong : line}`,
-      }}
+      className={`group relative flex h-full w-full flex-col rounded-[8px] transition-colors duration-150 ${p.featured ? 'p-7' : 'p-6'}`}
+      style={
+        p.featured
+          ? {
+              background: PALETTE.panel,
+              border: `1px solid ${accentFill}`,
+              boxShadow: `0 0 0 1px ${accentSoft}, 0 0 44px ${accentGlow}`,
+            }
+          : { background: PALETTE.panelSoft, border: `1px solid ${line}` }
+      }
     >
-      {/* featured accent hairline — a single semantic bar marks the recommended
-          tier (theme accent), not a decorative three-colour rainbow */}
+      {/* flagship badge — a pill riding the accent frame, centred on the top edge */}
       {p.featured ? (
-        <div aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px]" style={{ background: accentFill }} />
-      ) : null}
-      {p.featured ? (
-        <span className="absolute -top-0 left-6 translate-y-[10px] rounded-b-[7px] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em]" style={{ background: PALETTE.steel, color: '#0A0806' }}>
+        <span
+          className="absolute -top-[11px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full px-3 py-[4px] text-[9px] font-semibold uppercase tracking-[0.16em]"
+          style={{ background: accentFill, color: accentText }}
+        >
           Most Popular
         </span>
       ) : null}
-      <div className={`border-b pb-5 ${p.featured ? 'pt-6' : ''}`} style={{ borderColor: line }}>
+      <div className={`border-b pb-5 ${p.featured ? 'pt-2' : ''}`} style={{ borderColor: line }}>
         <div className="text-[14px] font-semibold" style={{ color: PALETTE.ghost }}>{p.name}</div>
         <div className="mt-0.5 text-[11px] uppercase tracking-[0.14em]" style={{ color: faint }}>{p.tag}</div>
         <div className="mt-4 flex items-baseline gap-1.5">
-          <span className="text-[34px] font-semibold leading-none tabular-nums" style={{ color: PALETTE.text, letterSpacing: '-0.02em' }}>
+          <span
+            className={`${p.featured ? 'text-[40px]' : 'text-[32px]'} font-semibold leading-none tabular-nums`}
+            style={{ color: p.featured ? PALETTE.ghost : PALETTE.text, letterSpacing: '-0.02em' }}
+          >
             {p.price}
           </span>
           <span className="text-[11px]" style={{ color: faint }}>{p.note}</span>
@@ -969,8 +1018,32 @@ export function PricingSection({ onLaunch, onEnter }: { onLaunch: () => void; on
   return (
     <section id="pricing" className="px-5 py-20" style={{ borderTop: `1px solid ${line}`, background: PALETTE.bg }}>
       <div className="mx-auto max-w-5xl">
-        <SectionHead eyebrow="Pricing" title="Plans & Access" sub="Slayer Terminal is live — no waitlist. Pick a plan and open the full terminal. Annual billing saves up to 18%." />
-        <div className="mt-12 grid grid-cols-1 gap-5 md:grid-cols-3 md:items-stretch">
+        <SectionHead eyebrow="Pricing" title="Plans & Access" sub="Slayer Terminal is live — no waitlist. Pick a plan and open the full terminal." />
+        {/* billing toggle docked in the section head — monthly prices are shown
+            here; annual (save up to 18%) checks out on the live Pricing page */}
+        <Reveal delay={0.05} className="mt-7 flex justify-center">
+          <div className="inline-flex items-center gap-1 rounded-[8px] p-1" style={{ background: PALETTE.panelSoft, border: `1px solid ${line}` }} role="group" aria-label="Billing period">
+            <span
+              aria-current="true"
+              className="rounded-[6px] px-3.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em]"
+              style={{ background: PALETTE.panel, color: PALETTE.ghost, border: `1px solid ${lineStrong}` }}
+            >
+              Monthly
+            </span>
+            <button
+              type="button"
+              onClick={() => onEnter('subscription')}
+              title="Annual billing is available on the full pricing page"
+              className="cursor-pointer rounded-[6px] px-3.5 py-1.5 text-[10.5px] font-semibold uppercase tracking-[0.08em] transition-colors"
+              style={{ color: muted }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = PALETTE.ghost; e.currentTarget.style.background = hoverWash; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = muted; e.currentTarget.style.background = 'transparent'; }}
+            >
+              Annual · save up to 18%
+            </button>
+          </div>
+        </Reveal>
+        <div className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3 md:items-stretch">
           {PLANS.map((p, i) => (
             <Reveal key={p.key} delay={i * 0.1} className="h-full">
               <PlanCard p={p} index={i} onSelect={select} />
@@ -998,25 +1071,35 @@ export function FaqSection() {
   ];
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="faq" className="mx-auto max-w-3xl px-5 py-16" style={{ borderTop: `1px solid ${line}` }}>
+    <section id="faq" className="mx-auto max-w-5xl px-5 py-16" style={{ borderTop: `1px solid ${line}` }}>
       <SectionHead eyebrow="FAQ" title="Direct Answers" />
-      <Reveal delay={0.05} amount={0.1} className="mt-8 divide-y divide-[color:var(--border)]">
+      {/* two-column masonry of accordion cards on desktop (CSS columns — items
+          flow down then across), a single column on mobile */}
+      <Reveal delay={0.05} amount={0.1} className="mt-10 md:columns-2 md:gap-5">
         {faqs.map(([q, a], i) => {
           const isOpen = open === i;
           return (
-            <div key={i} style={{ borderTop: i === 0 ? 'none' : `1px solid ${line}` }}>
+            <div
+              key={i}
+              className="mb-4 break-inside-avoid overflow-hidden rounded-[8px]"
+              style={{
+                background: PALETTE.panel,
+                border: `1px solid ${isOpen ? lineStrong : line}`,
+                boxShadow: isOpen ? `0 0 0 1px ${accentSoft}` : 'none',
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setOpen(isOpen ? null : i)}
                 aria-expanded={isOpen}
-                className="flex w-full cursor-pointer items-center justify-between gap-4 rounded-[7px] px-2 py-4 text-left transition-colors"
+                className="flex w-full cursor-pointer items-center justify-between gap-4 px-4 py-4 text-left transition-colors"
                 onMouseEnter={(e) => (e.currentTarget.style.background = hoverWash)}
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <span className="text-[14px] font-medium" style={{ color: PALETTE.ghost }}>{q}</span>
-                <span className="text-[16px] leading-none transition-transform" style={{ color: isOpen ? PALETTE.steel : muted, transform: isOpen ? 'rotate(0deg)' : 'none' }}>{isOpen ? '−' : '+'}</span>
+                <span className="text-[16px] leading-none" style={{ color: isOpen ? accentFill : muted }}>{isOpen ? '−' : '+'}</span>
               </button>
-              {isOpen ? <p className="pb-4 text-[13px] leading-relaxed" style={{ color: muted }}>{a}</p> : null}
+              {isOpen ? <p className="px-4 pb-4 text-[13px] leading-relaxed" style={{ color: muted }}>{a}</p> : null}
             </div>
           );
         })}
@@ -1027,20 +1110,31 @@ export function FaqSection() {
 
 export function FinalCta({ onLaunch }: { onLaunch: () => void }) {
   return (
-    <section className="relative overflow-hidden px-5 py-20" style={{ borderTop: `1px solid ${line}` }}>
-      <Reveal className="relative mx-auto max-w-2xl text-center">
-        <div className="mb-4 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: faint }}>
-          <span className="inline-block h-1 w-1 rounded-full" style={{ background: PALETTE.green }} />
-          Slayer Terminal
-        </div>
-        <h2 className="text-[30px] font-semibold leading-tight sm:text-[40px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
-          From Traders. For Traders.
-        </h2>
-        <p className="mx-auto mt-4 max-w-md text-[14px] leading-relaxed" style={{ color: muted }}>
-          The dealer structure, ranked contracts and live flow — one desk. Open it and read the market the way it actually moves.
-        </p>
-        <div className="mt-8 flex justify-center"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
-      </Reveal>
+    <section className="relative overflow-hidden" style={{ borderTop: `1px solid ${line}` }}>
+      {/* full-width statement band: a faint accent wash rises toward the base,
+          statement left / accent CTA right on desktop, stacked on mobile */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{ background: `linear-gradient(180deg, transparent 0%, ${accentSoft} 160%)` }}
+      />
+      <div className="relative px-5 py-20 sm:py-24">
+        <Reveal className="mx-auto flex max-w-6xl flex-col items-start gap-10 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-2xl">
+            <div className="mb-5 inline-flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.28em]" style={{ color: faint }}>
+              <span className="inline-block h-1 w-1 rounded-full" style={{ background: PALETTE.green }} />
+              Slayer Terminal
+            </div>
+            <h2 className="text-[32px] font-semibold leading-[1.05] sm:text-[48px]" style={{ color: PALETTE.ghost, letterSpacing: '-0.02em' }}>
+              From Traders. For Traders.
+            </h2>
+            <p className="mt-5 max-w-md text-[14px] leading-relaxed" style={{ color: muted }}>
+              The dealer structure, ranked contracts and live flow — one desk. Open it and read the market the way it actually moves.
+            </p>
+          </div>
+          <div className="shrink-0 lg:pb-2"><PrimaryButton onClick={onLaunch}>Launch Terminal</PrimaryButton></div>
+        </Reveal>
+      </div>
     </section>
   );
 }

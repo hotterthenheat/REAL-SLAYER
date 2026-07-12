@@ -16,8 +16,18 @@
  * isn't derivable. The equity curve is a cumulative of real realized outcomes in
  * resolution order, with an awaiting state when nothing has closed.
  *
- * Styling is the shared Slayer Terminal design system (src/styles/slayer-terminal.css
- * + src/components/ui/terminal/*). Color is a data encoding, never decoration.
+ * LAYOUT — LEDGER-FIRST (GLACIER tokens):
+ *   I.   Command row — one compact header line (identity · clock · reset).
+ *   II.  Stat band — the eight KPIs as a slim value-first strip with hairline
+ *        vertical rules (2 → 4 → 8 columns; never overflows).
+ *   III. Ledger deck — the blotter is the dominant surface; the Selected Trade
+ *        inspector docks sticky on the right, with the Live/Model tracked stat
+ *        cards stacked beneath it in the same rail.
+ *   IV.  Performance dock — full-width at the bottom, mode toggles in its own
+ *        panel header.
+ * Panels: var(--surface) + 1px var(--border), radius 8. Controls: radius 5.
+ * Color is a data encoding (var(--positive-ink)/var(--negative-ink)), never
+ * decoration. Numbers are tabular.
  */
 
 import { useState, useMemo, useEffect } from 'react';
@@ -27,8 +37,7 @@ import {
 } from 'lucide-react';
 import { useContractStore } from '../lib/store';
 import EChart from './ui/EChart';
-import { TerminalPanel } from './ui/terminal/TerminalPanel';
-import { MetricStrip, type Metric, type MetricTone } from './ui/terminal/MetricStrip';
+import type { Metric, MetricTone } from './ui/terminal/MetricStrip';
 import { DataTable, type Column } from './ui/terminal/DataTable';
 import { StatusBadge } from './ui/terminal/StatusBadge';
 import {
@@ -244,6 +253,47 @@ const COLUMN_DEFS: { key: ColKey; label: string; locked?: boolean }[] = [
   { key: 'pnl', label: 'PnL' },
   { key: 'notes', label: 'Notes' },
 ];
+
+// ── GLACIER shared class fragments (tokens only — no inline colors) ────────────
+const GL_PANEL = 'min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface)]';
+const GL_BTN = 'rounded-[5px] border border-[var(--border)] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-glow)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--accent-color)] focus-visible:shadow-[0_0_0_3px_var(--accent-soft)]';
+const GL_SEG = 'px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] rounded-[4px] transition-colors cursor-pointer focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-soft)]';
+const GL_SEG_ON = 'bg-[var(--accent-soft)] text-[var(--text-primary)]';
+const GL_SEG_OFF = 'text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]';
+
+const TONE_TEXT: Record<MetricTone, string> = {
+  neutral: 'text-[var(--text-primary)]',
+  positive: 'text-[var(--positive-ink)]',
+  negative: 'text-[var(--negative-ink)]',
+  warning: 'text-[var(--warning)]',
+  call: 'text-[var(--call)]',
+  pin: 'text-[var(--pin)]',
+};
+
+// Panel shell with the GLACIER header rule — title + optional meta on the left,
+// actions on the right, hairline rule between header and body.
+function GlacierDock({ title, meta, actions, children, bodyClassName, className }: {
+  title: string;
+  meta?: React.ReactNode;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+  bodyClassName?: string;
+  className?: string;
+}) {
+  return (
+    <section className={`${GL_PANEL} ${className ?? ''}`}>
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[var(--border)] px-3.5 py-2">
+        <h2 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-secondary)] whitespace-nowrap">
+          <span aria-hidden="true" className="h-[3px] w-4 shrink-0 rounded-full bg-[var(--accent-color)]" />
+          {title}
+        </h2>
+        {meta && <span className="min-w-0 truncate text-[9px] tracking-wide text-[var(--text-tertiary)]">{meta}</span>}
+        {actions && <div className="ml-auto flex flex-wrap items-center gap-1.5">{actions}</div>}
+      </header>
+      <div className={bodyClassName ?? 'p-3'}>{children}</div>
+    </section>
+  );
+}
 
 export function QuantAuditView({
   // selectedAsset, isCall, systemScore and optionPremium are part of the public
@@ -536,58 +586,70 @@ export function QuantAuditView({
   );
 
   return (
-    <div className="slayer-terminal w-full font-mono select-none antialiased space-y-3 p-0.5" id="quant-audit-view">
-      {/* ─────────────── HEADER ─────────────── */}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <div className="flex items-baseline gap-2 min-w-0">
-          <h1 className="text-[13px] font-semibold uppercase tracking-[0.08em] text-[var(--text-tertiary)] whitespace-nowrap">Auditor</h1>
-          <span className="text-[var(--border-strong)]" aria-hidden="true">/</span>
-          <span className="text-[11px] text-[var(--text-muted)] tracking-wide truncate">Unified trade record · archive + tracked</span>
+    <div className="slayer-terminal w-full min-w-0 font-mono select-none antialiased flex flex-col gap-3 p-0.5" id="quant-audit-view">
+
+      {/* ═══ I. COMMAND ROW — single compact header line ═══ */}
+      <header className={`${GL_PANEL} flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <span aria-hidden="true" className="h-[3px] w-4 shrink-0 rounded-full bg-[var(--accent-color)]" />
+          <h1 className="text-[12px] font-bold uppercase tracking-[0.12em] text-[var(--text-primary)] whitespace-nowrap">Trade History</h1>
+          <span className="hidden sm:inline text-[10px] text-[var(--text-tertiary)] tracking-wide truncate min-w-0">
+            Auditor · unified record — archive + tracked
+          </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2">
           <StatusBadge tone="neutral" dot>{nowLabel}</StatusBadge>
           <button
             onClick={handleReset}
-            className={`flex items-center gap-1.5 rounded-[var(--radius-control)] border px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)] ${
+            className={`flex items-center gap-1.5 rounded-[5px] border px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.1em] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--accent-color)] focus-visible:shadow-[0_0_0_3px_var(--accent-soft)] ${
               confirmReset
-                ? 'border-[var(--slayer-red)]/60 bg-[var(--negative-soft)] text-[var(--negative-ink)]'
-                : 'border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-[var(--border-mid)] hover:text-[var(--text-primary)]'
+                ? 'border-[var(--negative-ink)] bg-[var(--negative-soft)] text-[var(--negative-ink)]'
+                : 'border-[var(--border)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-glow)]'
             }`}
           >
             {confirmReset ? <Check className="w-3 h-3" /> : <RotateCcw className="w-3 h-3" />}
             {confirmReset ? 'Confirm reset' : 'Reset session'}
           </button>
         </div>
-      </div>
+      </header>
 
-      {/* ─────────────── 1. TOP KPI STRIP ─────────────── */}
-      <MetricStrip metrics={topMetrics} />
-
-      {/* ─────────────── Tracked-setup performance (Live vs Model — never mixed) ─────────────── */}
-      {anyTracked && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <StatBlock title="Tracked setups" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
-          <StatBlock
-            title="Additional tracks" icon={<FlaskConical className="w-3 h-3" />} stats={modelStats} live={false}
-            action={liveStats.resolved + modelStats.resolved > 0 ? (
-              <button onClick={clearResolved} className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:underline rounded transition-colors">Clear resolved</button>
-            ) : undefined}
-          />
+      {/* ═══ II. STAT BAND — eight KPIs, value-first, hairline vertical rules ═══ */}
+      <section
+        aria-label="Session statistics"
+        className="min-w-0 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--border)]"
+      >
+        <div className="grid grid-cols-2 gap-px sm:grid-cols-4 xl:grid-cols-8">
+          {topMetrics.map((m) => (
+            <div key={m.label} className="min-w-0 bg-[var(--surface)] px-3 py-2">
+              <div className={`slayer-num truncate text-[16px] font-bold leading-tight ${TONE_TEXT[m.tone ?? 'neutral']}`}>
+                {m.value}
+              </div>
+              <div className="mt-0.5 truncate text-[8.5px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">
+                {m.label}
+              </div>
+              {m.sub != null && (
+                <div className="truncate text-[9px] leading-tight text-[var(--text-tertiary)]">{m.sub}</div>
+              )}
+            </div>
+          ))}
         </div>
-      )}
+      </section>
 
-      {/* ─────────────── 2. MAIN TWO-COLUMN GRID ─────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-3 items-start">
-        {/* LEFT — TRADES BLOTTER */}
-        <TerminalPanel
-          title="Trades"
-          subtitle={`${filteredRows.length} of ${allRows.length} · archive + tracked setups`}
+      {/* ═══ III. LEDGER DECK — dominant blotter + sticky right rail ═══ */}
+      <div className="grid grid-cols-1 gap-3 items-start lg:grid-cols-[minmax(0,1fr)_340px]">
+
+        {/* Blotter — the primary surface of the page */}
+        <GlacierDock
+          title="Trade Ledger"
+          meta={`${filteredRows.length} of ${allRows.length} · archive + tracked setups`}
+          className="lg:min-h-[420px]"
+          bodyClassName="p-0"
           actions={
             <div className="relative">
               <button
                 onClick={() => setColMenuOpen(o => !o)}
                 aria-label="Toggle columns"
-                className="flex items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
+                className={`flex items-center gap-1.5 ${GL_BTN} px-2 py-1.5 font-semibold`}
               >
                 <Columns3 className="w-3.5 h-3.5" /> Columns
               </button>
@@ -595,7 +657,7 @@ export function QuantAuditView({
                 <>
                   <div className="fixed inset-0 z-20" onClick={() => setColMenuOpen(false)} />
                   <div
-                    className="absolute right-0 z-30 mt-1 w-44 rounded-[var(--radius-panel)] border border-[var(--border-mid)] bg-[var(--bg-panel-raised)] p-1.5"
+                    className="absolute right-0 z-30 mt-1 w-44 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1.5"
                     style={{ boxShadow: '0 16px 44px -12px rgba(0,0,0,0.8)' }}
                   >
                     {COLUMN_DEFS.map(c => (
@@ -603,7 +665,7 @@ export function QuantAuditView({
                         key={c.key}
                         onClick={() => toggleCol(c.key)}
                         disabled={c.locked}
-                        className={`flex w-full items-center justify-between rounded-[var(--radius-control)] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors ${c.locked ? 'cursor-default text-[var(--text-faint)]' : 'cursor-pointer text-[var(--text-secondary)] hover:bg-[rgba(248,248,255,0.04)] hover:text-[var(--text-primary)]'}`}
+                        className={`flex w-full items-center justify-between rounded-[5px] px-2 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors focus:outline-none focus-visible:shadow-[0_0_0_2px_var(--accent-soft)] ${c.locked ? 'cursor-default text-[var(--text-faint)]' : 'cursor-pointer text-[var(--text-secondary)] hover:bg-[var(--accent-soft)] hover:text-[var(--text-primary)]'}`}
                       >
                         {c.label}
                         {visibleCols.has(c.key) && <Check className="w-3 h-3 text-[var(--positive-ink)]" />}
@@ -614,94 +676,113 @@ export function QuantAuditView({
               )}
             </div>
           }
-          bodyClassName="flex flex-col gap-2.5"
         >
-          {/* Controls: search + setup + status */}
-          <div className="flex flex-col sm:flex-row gap-2">
-            <label className="relative flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-muted)]" />
+          {/* Filter rail — its own ruled band under the panel header */}
+          <div className="flex flex-col gap-2 border-b border-[var(--border)] px-3 py-2.5 sm:flex-row">
+            <label className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[var(--text-tertiary)]" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search symbol, contract, setup…"
-                className="slayer-control w-full pl-8 pr-8 placeholder:text-[var(--text-faint)] focus:outline-none focus-visible:border-[var(--border-strong)]"
+                className="slayer-control w-full rounded-[5px] pl-8 pr-8 placeholder:text-[var(--text-faint)] focus:outline-none"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--negative-ink)] cursor-pointer">
+                <button onClick={() => setSearchQuery('')} aria-label="Clear search" className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)] hover:text-[var(--negative-ink)] cursor-pointer">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </label>
-            <select value={setupFilter} onChange={(e) => setSetupFilter(e.target.value)} className="slayer-control slayer-num cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)] max-w-[150px]">
-              <option value="ALL">All setups</option>
-              {setupOptions.map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="slayer-control slayer-num cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]">
-              <option value="ALL">All status</option>
-              <option value="OPEN">Open</option>
-              <option value="CLOSED">Closed</option>
-              <option value="WINS">Wins</option>
-              <option value="LOSSES">Losses</option>
-            </select>
+            <div className="flex min-w-0 gap-2">
+              <select value={setupFilter} onChange={(e) => setSetupFilter(e.target.value)} className="slayer-control slayer-num min-w-0 flex-1 rounded-[5px] cursor-pointer focus:outline-none sm:max-w-[150px]">
+                <option value="ALL">All setups</option>
+                {setupOptions.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)} className="slayer-control slayer-num min-w-0 rounded-[5px] cursor-pointer focus:outline-none">
+                <option value="ALL">All status</option>
+                <option value="OPEN">Open</option>
+                <option value="CLOSED">Closed</option>
+                <option value="WINS">Wins</option>
+                <option value="LOSSES">Losses</option>
+              </select>
+            </div>
           </div>
 
-          <DataTable<AuditRow>
-            columns={columns}
-            rows={filteredRows}
-            rowKey={(r) => r.id}
-            onRowClick={(r) => selectRow(r.id)}
-            rowClassName={(r) => (r.id === selectedId ? 'bg-[rgba(248,248,255,0.05)]' : undefined)}
-            empty={
-              allRows.length === 0
-                ? 'No trades yet — track a setup in SkyVision or Pinpoint, or wait for the archive to log a trade.'
-                : 'No trades match these filters.'
-            }
-          />
-          <div className="text-[9px] text-[var(--text-muted)] tracking-wide">
+          <div className="p-3">
+            <DataTable<AuditRow>
+              columns={columns}
+              rows={filteredRows}
+              rowKey={(r) => r.id}
+              onRowClick={(r) => selectRow(r.id)}
+              rowClassName={(r) => (r.id === selectedId ? 'bg-[var(--accent-soft)]' : undefined)}
+              empty={
+                allRows.length === 0
+                  ? 'No trades yet — track a setup in SkyVision or Pinpoint, or wait for the archive to log a trade.'
+                  : 'No trades match these filters.'
+              }
+            />
+          </div>
+
+          <div className="border-t border-[var(--border)] px-3 py-2 text-[9px] tracking-wide text-[var(--text-tertiary)]">
             PnL &amp; Best/Worst are stated per 1 contract (position size isn&apos;t recorded). Open-trade PnL is unrealized (marked <span className="text-[var(--text-faint)]">u</span>).
           </div>
-        </TerminalPanel>
+        </GlacierDock>
 
-        {/* RIGHT — SELECTED TRADE */}
-        <TerminalPanel
-          title="Selected Trade"
-          actions={
-            <div className="flex items-center gap-1">
-              <button onClick={() => stepSelection(-1)} disabled={filteredRows.length === 0} aria-label="Previous trade" className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"><ChevronLeft className="w-3.5 h-3.5" /></button>
-              <span className="text-[9px] text-[var(--text-muted)] slayer-num w-10 text-center">{selectedIdx >= 0 ? `${selectedIdx + 1}/${filteredRows.length}` : '—'}</span>
-              <button onClick={() => stepSelection(1)} disabled={filteredRows.length === 0} aria-label="Next trade" className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] p-1 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] disabled:opacity-40 cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"><ChevronRight className="w-3.5 h-3.5" /></button>
-            </div>
-          }
-          bodyClassName="p-0"
-        >
-          {selected ? (
-            <SelectedTradePanel row={selected} onCancel={cancelTracked} onLoad={loadContract} />
-          ) : (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-              <Activity className="w-6 h-6 text-[var(--text-faint)]" />
-              <p className="text-[11px] text-[var(--text-muted)] tracking-wide max-w-[220px]">Select a trade from the blotter to inspect its thesis, target ladder and result.</p>
-            </div>
+        {/* Right rail — sticky inspector + tracked Live/Model stat cards */}
+        <aside className="min-w-0 flex flex-col gap-3 lg:sticky lg:top-3 lg:max-h-[calc(100vh-24px)] lg:overflow-y-auto slayer-scrollbar">
+          <GlacierDock
+            title="Selected Trade"
+            bodyClassName="p-0"
+            actions={
+              <div className="flex items-center gap-1">
+                <button onClick={() => stepSelection(-1)} disabled={filteredRows.length === 0} aria-label="Previous trade" className={`${GL_BTN} p-1 disabled:opacity-40`}><ChevronLeft className="w-3.5 h-3.5" /></button>
+                <span className="text-[9px] text-[var(--text-tertiary)] slayer-num w-10 text-center">{selectedIdx >= 0 ? `${selectedIdx + 1}/${filteredRows.length}` : '—'}</span>
+                <button onClick={() => stepSelection(1)} disabled={filteredRows.length === 0} aria-label="Next trade" className={`${GL_BTN} p-1 disabled:opacity-40`}><ChevronRight className="w-3.5 h-3.5" /></button>
+              </div>
+            }
+          >
+            {selected ? (
+              <SelectedTradePanel row={selected} onCancel={cancelTracked} onLoad={loadContract} />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+                <Activity className="w-6 h-6 text-[var(--text-faint)]" />
+                <p className="text-[11px] text-[var(--text-tertiary)] tracking-wide max-w-[220px]">Select a trade from the ledger to inspect its thesis, target ladder and result.</p>
+              </div>
+            )}
+          </GlacierDock>
+
+          {/* Live vs Model tracked-setup performance — never mixed */}
+          {anyTracked && (
+            <>
+              <StatBlock title="Tracked setups" icon={<Radio className="w-3 h-3" />} stats={liveStats} live />
+              <StatBlock
+                title="Additional tracks" icon={<FlaskConical className="w-3 h-3" />} stats={modelStats} live={false}
+                action={liveStats.resolved + modelStats.resolved > 0 ? (
+                  <button onClick={clearResolved} className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-tertiary)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:underline rounded transition-colors cursor-pointer">Clear resolved</button>
+                ) : undefined}
+              />
+            </>
           )}
-        </TerminalPanel>
+        </aside>
       </div>
 
-      {/* ─────────────── 3. PERFORMANCE OVER TIME ─────────────── */}
-      <TerminalPanel
+      {/* ═══ IV. PERFORMANCE DOCK — full width, toggles live in the panel header ═══ */}
+      <GlacierDock
         title="Performance Over Time"
-        subtitle="Cumulative of real realized outcomes, in resolution order"
+        meta="Cumulative of real realized outcomes, in resolution order"
         actions={
-          <div className="flex items-center gap-1.5">
-            <div className="flex rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] p-0.5">
+          <>
+            <div className="flex rounded-[5px] border border-[var(--border)] p-0.5" role="group" aria-label="Performance unit">
               {([['pnl', 'Cumulative'], ['r', 'R Multiple']] as const).map(([k, label]) => (
-                <button key={k} onClick={() => setPerfMode(k)} className={`px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] rounded transition-colors cursor-pointer focus:outline-none ${perfMode === k ? 'bg-[rgba(248,248,255,0.08)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>{label}</button>
+                <button key={k} onClick={() => setPerfMode(k)} aria-pressed={perfMode === k} className={`${GL_SEG} ${perfMode === k ? GL_SEG_ON : GL_SEG_OFF}`}>{label}</button>
               ))}
             </div>
-            <div className="flex rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] p-0.5">
+            <div className="flex rounded-[5px] border border-[var(--border)] p-0.5" role="group" aria-label="Performance view">
               {([['equity', 'Equity'], ['daily', 'Daily'], ['monthly', 'Monthly']] as const).map(([k, label]) => (
-                <button key={k} onClick={() => setPerfTab(k)} className={`px-2 py-1 text-[9px] font-bold uppercase tracking-[0.1em] rounded transition-colors cursor-pointer focus:outline-none ${perfTab === k ? 'bg-[rgba(248,248,255,0.08)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'}`}>{label}</button>
+                <button key={k} onClick={() => setPerfTab(k)} aria-pressed={perfTab === k} className={`${GL_SEG} ${perfTab === k ? GL_SEG_ON : GL_SEG_OFF}`}>{label}</button>
               ))}
             </div>
-          </div>
+          </>
         }
       >
         {chartOption ? (
@@ -709,35 +790,33 @@ export function QuantAuditView({
             <div style={{ height: 300 }}>
               <EChart option={chartOption} notMerge style={{ width: '100%', height: '100%' }} />
             </div>
-            <div className="flex items-center justify-between gap-2 pt-2 text-[9px] text-[var(--text-muted)] tracking-wide">
-              <span>{closedOrdered.length} closed trade{closedOrdered.length === 1 ? '' : 's'} · unit: {unitLabel}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-[var(--border)] mt-2 pt-2 text-[9px] tracking-wide text-[var(--text-tertiary)]">
+              <span className="slayer-num">{closedOrdered.length} closed trade{closedOrdered.length === 1 ? '' : 's'} · unit: {unitLabel}</span>
               <span>{perfMode === 'r' ? 'R = return ÷ planned risk (1R)' : 'Per-contract $ = premium move × 100'}</span>
             </div>
           </>
         ) : (
-          <div className="flex items-start gap-3 py-3">
-            <span className="mt-1 w-1.5 h-1.5 shrink-0 rounded-full bg-[var(--warning)]" />
-            <div className="min-w-0">
-              <div className="text-[10px] slayer-num tracking-[0.16em] text-[var(--text-muted)] font-semibold uppercase">Awaiting closed trades</div>
-              <p className="text-[10px] text-[var(--text-faint)] tracking-wide mt-1 max-w-[520px] leading-relaxed">
-                The equity curve builds from real realized outcomes — close a tracked setup or log a resolved archive trade to populate it. No series is drawn from open positions.
-              </p>
-            </div>
+          <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+            <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-[var(--warning)]" />
+            <div className="text-[10px] slayer-num tracking-[0.16em] text-[var(--text-secondary)] font-semibold uppercase">Awaiting closed trades</div>
+            <p className="text-[10px] text-[var(--text-tertiary)] tracking-wide max-w-[520px] leading-relaxed">
+              The equity curve builds from real realized outcomes — close a tracked setup or log a resolved archive trade to populate it. No series is drawn from open positions.
+            </p>
           </div>
         )}
-      </TerminalPanel>
+      </GlacierDock>
 
-      {/* ─────────────── FOOTER ─────────────── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-1 pt-1 text-[9px] text-[var(--text-muted)] tracking-wide">
+      {/* ═══ Baseline ═══ */}
+      <footer className="flex flex-col sm:flex-row items-center justify-between gap-1 border-t border-[var(--border)] pt-2 text-[9px] tracking-wide text-[var(--text-tertiary)]">
         <span>Disclaimer: For informational purposes only. Not investment advice.</span>
-        <span>{kpis.total} logged</span>
+        <span className="slayer-num">{kpis.total} logged</span>
         <span className="font-bold tracking-[0.16em] text-[var(--text-secondary)]">REAL-SLAYER</span>
-      </div>
+      </footer>
     </div>
   );
 }
 
-// ── Live/Model stat block (terminal-styled, live-vs-model separation) ──────────
+// ── Live/Model stat card (right rail; live-vs-model separation preserved) ──────
 function StatBlock({ title, icon, stats, live, action }: { title: string; icon: React.ReactNode; stats: TrackStats; live: boolean; action?: React.ReactNode }) {
   const accent = live ? 'text-[var(--positive-ink)]' : 'text-[var(--pin)]';
   const cells: { label: string; value: string; cls?: string }[] = [
@@ -747,30 +826,30 @@ function StatBlock({ title, icon, stats, live, action }: { title: string; icon: 
     { label: 'Avg result', value: stats.avgReturnPct == null ? '—' : `${stats.avgReturnPct >= 0 ? '+' : ''}${stats.avgReturnPct.toFixed(1)}%`, cls: signClass(stats.avgReturnPct) },
   ];
   return (
-    <div className="slayer-panel p-3">
-      <div className="flex items-center justify-between">
+    <section className={GL_PANEL}>
+      <header className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-3 py-2">
         <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
           <span className={accent} aria-hidden="true">{icon}</span>{title}
         </span>
         {action ?? (!live && <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--pin)]">Not live performance</span>)}
-      </div>
-      <div className="mt-2.5 grid grid-cols-4 gap-2">
+      </header>
+      <div className="grid grid-cols-2 gap-px bg-[var(--border)]">
         {cells.map(c => (
-          <div key={c.label}>
-            <span className="block text-[8px] uppercase tracking-widest text-[var(--text-muted)]">{c.label}</span>
-            <span className={`block text-[16px] font-bold slayer-num ${c.cls ?? 'text-[var(--text-primary)]'}`}>{c.value}</span>
+          <div key={c.label} className="min-w-0 bg-[var(--surface)] px-3 py-2">
+            <span className={`block text-[15px] font-bold slayer-num leading-tight ${c.cls ?? 'text-[var(--text-primary)]'}`}>{c.value}</span>
+            <span className="block text-[8px] uppercase tracking-widest text-[var(--text-tertiary)] truncate">{c.label}</span>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 
-// ── Selected-trade rail ─────────────────────────────────────────────────────────
+// ── Selected-trade inspector (right rail, sticky) ───────────────────────────────
 function DetailStat({ label, value, cls, sub }: { label: string; value: React.ReactNode; cls?: string; sub?: string }) {
   return (
-    <div className="min-w-0 px-3 py-2 border-b border-r border-[var(--border-subtle)]">
-      <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--text-muted)] truncate">{label}</div>
+    <div className="min-w-0 bg-[var(--surface)] px-2.5 py-2">
+      <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--text-tertiary)] truncate">{label}</div>
       <div className={`mt-0.5 text-[13px] font-semibold slayer-num leading-tight ${cls ?? 'text-[var(--text-primary)]'}`}>{value}</div>
       {sub && <div className="text-[8px] text-[var(--text-faint)] tracking-wide truncate">{sub}</div>}
     </div>
@@ -778,11 +857,11 @@ function DetailStat({ label, value, cls, sub }: { label: string; value: React.Re
 }
 
 function LabelBadge({ children }: { children: React.ReactNode }) {
-  return <span className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{children}</span>;
+  return <span className="rounded-[5px] border border-[var(--border)] px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)]">{children}</span>;
 }
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1.5">{children}</div>;
+  return <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[var(--text-tertiary)] mb-1.5">{children}</div>;
 }
 
 function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel: (id: string) => void; onLoad: (c: string) => void }) {
@@ -857,38 +936,36 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
   const canCancel = !!s && !isTerminal(s.status);
 
   return (
-    <div className="divide-y divide-[var(--border-subtle)]">
-      {/* Identity + headline R / PnL */}
+    <div className="divide-y divide-[var(--border)]">
+      {/* Identity strip */}
       <div className="p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              {row.direction === 'BULLISH' ? <TrendingUp className="w-4 h-4 text-[var(--positive-ink)]" /> : <TrendingDown className="w-4 h-4 text-[var(--negative-ink)]" />}
-              <span className="text-[15px] font-bold text-[var(--text-primary)] truncate">{row.contract}</span>
-              <StatusBadge tone={open ? 'warning' : row.outcome === 'win' ? 'positive' : 'negative'} dot={open}>{open ? 'OPEN' : row.outcome === 'win' ? 'WIN' : 'LOSS'}</StatusBadge>
-            </div>
-            <div className="mt-0.5 text-[10px] text-[var(--text-muted)] tracking-wide truncate">{row.symbol} · {row.setup} · {row.time}</div>
-          </div>
+        <div className="flex items-center gap-2 min-w-0">
+          {row.direction === 'BULLISH' ? <TrendingUp className="w-4 h-4 shrink-0 text-[var(--positive-ink)]" /> : <TrendingDown className="w-4 h-4 shrink-0 text-[var(--negative-ink)]" />}
+          <span className="text-[15px] font-bold text-[var(--text-primary)] truncate">{row.contract}</span>
+          <StatusBadge tone={open ? 'warning' : row.outcome === 'win' ? 'positive' : 'negative'} dot={open}>{open ? 'OPEN' : row.outcome === 'win' ? 'WIN' : 'LOSS'}</StatusBadge>
         </div>
-        <div className="mt-2.5 grid grid-cols-2 gap-2">
-          <div className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-3 py-2">
-            <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{open ? 'Return (open)' : 'Return R'}</div>
+        <div className="mt-1 text-[10px] text-[var(--text-tertiary)] tracking-wide truncate">{row.symbol} · {row.setup} · {row.time}</div>
+
+        {/* Headline duo — Return R | PnL, split by a hairline rule */}
+        <div className="mt-2.5 grid grid-cols-2 gap-px overflow-hidden rounded-[5px] border border-[var(--border)] bg-[var(--border)]">
+          <div className="min-w-0 bg-[var(--surface)] px-3 py-2">
+            <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{open ? 'Return (open)' : 'Return R'}</div>
             <div className={`text-[20px] font-bold slayer-num leading-tight ${signClass(row.r)}`}>{fmtR(row.r)}</div>
             <div className={`text-[9px] slayer-num ${signClass(row.returnPct)}`}>{fmtPct(row.returnPct)}{open ? ' unrealized' : ''}</div>
           </div>
-          <div className="rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-3 py-2">
-            <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{open ? 'PnL (unreal.)' : 'PnL'}<span className="text-[var(--text-faint)]"> /contract</span></div>
+          <div className="min-w-0 bg-[var(--surface)] px-3 py-2">
+            <div className="text-[8px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{open ? 'PnL (unreal.)' : 'PnL'}<span className="text-[var(--text-faint)]"> /contract</span></div>
             <div className={`text-[20px] font-bold slayer-num leading-tight ${signClass(row.pnlPerContract)}`}>{fmtUsd(row.pnlPerContract)}</div>
             <div className="text-[9px] text-[var(--text-faint)] slayer-num">1 contract ×100</div>
           </div>
         </div>
-      </div>
 
-      {/* Entry / Current / Risk */}
-      <div className="grid grid-cols-3 border-t border-l border-[var(--border-subtle)]">
-        <DetailStat label="Entry" value={fmtPrem(row.entry)} />
-        <DetailStat label={open ? 'Current' : 'Exit'} value={fmtPrem(row.exitOrCurrent)} cls="text-[var(--text-secondary)]" />
-        <DetailStat label="Risk (1R)" value={row.riskPct == null ? '—' : `-${row.riskPct.toFixed(1)}%`} cls="text-[var(--negative-ink)]" sub={stop ? stop.label : undefined} />
+        {/* Tape row — Entry / Exit·Current / Risk */}
+        <div className="mt-2 grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-[var(--border)] bg-[var(--border)]">
+          <DetailStat label="Entry" value={fmtPrem(row.entry)} />
+          <DetailStat label={open ? 'Current' : 'Exit'} value={fmtPrem(row.exitOrCurrent)} cls="text-[var(--text-secondary)]" />
+          <DetailStat label="Risk (1R)" value={row.riskPct == null ? '—' : `-${row.riskPct.toFixed(1)}%`} cls="text-[var(--negative-ink)]" sub={stop ? stop.label : undefined} />
+        </div>
       </div>
 
       {/* Thesis */}
@@ -903,10 +980,10 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
       {ladder.length > 0 && (
         <div className="p-3">
           <SectionTitle>Target Ladder</SectionTitle>
-          <div className="border-t border-[var(--border-subtle)]">
+          <div className="divide-y divide-[var(--border)] overflow-hidden rounded-[5px] border border-[var(--border)]">
             {ladder.map((l) => (
-              <div key={l.label} className="flex items-center gap-2 border-b border-[var(--border-subtle)] px-2 py-1.5">
-                <span className="w-6 text-[9px] font-bold text-[var(--text-muted)]">{l.label}</span>
+              <div key={l.label} className="flex items-center gap-2 px-2.5 py-1.5">
+                <span className="w-6 text-[9px] font-bold text-[var(--text-tertiary)]">{l.label}</span>
                 <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">${l.price.toFixed(2)}</span>
                 <span className={`slayer-num text-[10px] ml-auto ${signClass(l.r)}`}>{fmtR(l.r)}</span>
                 {l.hit ? (
@@ -924,8 +1001,8 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
       {stop && (
         <div className="p-3">
           <SectionTitle>Stop</SectionTitle>
-          <div className="flex items-center gap-2 border-y border-[var(--border-subtle)] px-2 py-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-muted)]">{stop.label}</span>
+          <div className="flex items-center gap-2 rounded-[5px] border border-[var(--border)] px-2.5 py-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-[var(--text-tertiary)]">{stop.label}</span>
             <span className="slayer-num text-[11px] font-semibold text-[var(--text-primary)]">{stop.level}</span>
             <span className="slayer-num text-[10px] ml-auto text-[var(--negative-ink)]">-1.00R</span>
             {stop.breached
@@ -938,7 +1015,7 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
       {/* Result summary */}
       <div className="p-3">
         <SectionTitle>Result Summary</SectionTitle>
-        <div className="grid grid-cols-3 border-t border-l border-[var(--border-subtle)]">
+        <div className="grid grid-cols-3 gap-px overflow-hidden rounded-[5px] border border-[var(--border)] bg-[var(--border)]">
           <DetailStat label="Max R" value={fmtR(maxR)} cls={signClass(maxR)} />
           <DetailStat label="Max Adverse R" value={fmtR(maxAdverseR)} cls={signClass(maxAdverseR)} />
           <DetailStat label="Current R" value={fmtR(row.r)} cls={signClass(row.r)} />
@@ -970,14 +1047,14 @@ function SelectedTradePanel({ row, onCancel, onLoad }: { row: AuditRow; onCancel
       <div className="p-3 flex flex-col gap-2">
         <button
           onClick={() => onLoad(row.contract)}
-          className="flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--border-mid)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
+          className="flex items-center justify-center gap-1.5 rounded-[5px] border border-[var(--accent-glow)] py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--accent-color)] hover:bg-[var(--accent-soft)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--accent-color)] focus-visible:shadow-[0_0_0_3px_var(--accent-soft)]"
         >
           <ArrowUpRight className="w-3.5 h-3.5" /> Load contract in analyzer
         </button>
         {canCancel && (
           <button
             onClick={() => onCancel(row.id)}
-            className="flex items-center justify-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--slayer-red)]/40 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--negative-ink)] hover:bg-[var(--negative-soft)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--border-strong)]"
+            className="flex items-center justify-center gap-1.5 rounded-[5px] border border-[var(--negative-ink)]/40 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--negative-ink)] hover:bg-[var(--negative-soft)] transition-colors cursor-pointer focus:outline-none focus-visible:border-[var(--negative-ink)] focus-visible:shadow-[0_0_0_3px_var(--negative-soft)]"
           >
             <X className="w-3.5 h-3.5" /> Stop tracking
           </button>

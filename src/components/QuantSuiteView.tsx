@@ -4,9 +4,20 @@
  *
  * QUANT LAB / QUANT SUITE — research, model, and scenario analytics.
  *
+ * Hallmark · redesign (single-page, system-managed) · structure: research-sheet +
+ * side section rail · theme: GLACIER tokens (locked) · pre-emit critique: P4 H5 E4 S4 R5 V5
+ *
+ * LAYOUT — the page is a RESEARCH SHEET: a vertical sequence of full-width,
+ * numbered instrument sections (01 IV Surface hero → 02 Term Structure → 03
+ * Risk-Neutral Distribution → 04 Regime & Scenarios pair → 05 Greeks & Factors →
+ * 06 Model Notes → 07 Advanced Labs), indexed by a slim sticky section rail on
+ * the left (scroll-spy marks the active section with the accent). The symbol /
+ * expiry / model / calibrated toolbar is a sticky compact command row pinned to
+ * the top of the sheet. The rail hides on small screens; sections just stack.
+ *
  * Styled on the shared Slayer Terminal design system (src/styles/slayer-terminal.css
- * + src/components/ui/terminal/*). Color is a data encoding, never decoration, and
- * every figure is computed from real inputs:
+ * + GLACIER tokens in src/index.css). Color is a data encoding, never decoration,
+ * and every figure is computed from real inputs:
  *
  *   · IV SURFACE / TERM STRUCTURE — the deterministic smile+term vol model the page
  *     already computes (ivSurfaceGrid), anchored on the live 1σ expected move read
@@ -18,8 +29,9 @@
  *   · GREEKS & FACTORS — OI-weighted aggregates over the actual chain contracts.
  *
  * The original deep-dive labs (Volatility Geometry, Dealer Mechanics, Distribution
- * & Risk, Factor Lab) remain fully reachable below as chip-switched sections — the
- * 3D WebGL surfaces keep their ErrorBoundary/Suspense wrappers.
+ * & Risk, Factor Lab) remain fully reachable as chip-switched sub-views inside the
+ * final sheet section — the 3D WebGL surfaces keep their ErrorBoundary/Suspense
+ * wrappers.
  */
 
 import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
@@ -64,7 +76,6 @@ import { QuantEdgePanel } from './QuantEdgePanel';
 import { RegimeMatrixPanel } from './RegimeMatrixPanel';
 import { FactorLabPanel } from './FactorLabPanel';
 import EChart from './ui/EChart';
-import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { DataTable, type DataColumn } from './ui/terminal/DataTable';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -124,10 +135,26 @@ const IV_RAMP = ['#0F1E3A', '#2A5A8A', '#3A8A68', '#9A7830', '#A84020'];
 const MODEL_TENOR_MAX_DAYS = 365; // the surface's tenor axis is a documented 0→1y model
 
 // ────────────────────────────────────────────────────────────────────────────
+// Research-sheet index — the sticky left rail's anchor targets, in sheet order.
+// ────────────────────────────────────────────────────────────────────────────
+
+const SHEET_SECTIONS = [
+  { id: 'sheet-iv-surface', num: '01', label: 'IV Surface' },
+  { id: 'sheet-term-structure', num: '02', label: 'Term Structure' },
+  { id: 'sheet-rnd', num: '03', label: 'Risk-Neutral Dist.' },
+  { id: 'sheet-regime', num: '04', label: 'Regime & Scenarios' },
+  { id: 'sheet-greeks', num: '05', label: 'Greeks & Factors' },
+  { id: 'sheet-notes', num: '06', label: 'Model Notes' },
+  { id: 'quant-suite-sub-tabs', num: '07', label: 'Advanced Labs' },
+] as const;
+
+type SheetSectionId = (typeof SHEET_SECTIONS)[number]['id'];
+
+// ────────────────────────────────────────────────────────────────────────────
 // Presentational atoms (design-system primitives only — no glow, no decoration)
 // ────────────────────────────────────────────────────────────────────────────
 
-/** Dense stat cell used beneath the analytics charts. */
+/** Dense stat cell used beneath / beside the analytics charts. */
 function Cell({
   label,
   value,
@@ -148,8 +175,8 @@ function Cell({
           ? 'text-[var(--warning)]'
           : 'text-[var(--text-primary)]';
   return (
-    <div className="min-w-0 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-2.5 py-2">
-      <div className="truncate text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</div>
+    <div className="min-w-0 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-2.5 py-2">
+      <div className="truncate text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{label}</div>
       <div className={`mt-1 truncate text-[15px] font-semibold leading-none slayer-num ${color}`}>{value}</div>
       {sub ? (
         <div className="mt-1 truncate text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">{sub}</div>
@@ -172,7 +199,7 @@ function ControlSelect({
 }) {
   return (
     <label className="flex items-center gap-1.5">
-      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">{label}</span>
+      <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{label}</span>
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -188,21 +215,21 @@ function ControlSelect({
   );
 }
 
-/** Uppercase micro section label inside the advanced labs. */
+/** Uppercase micro label heading a sub-block inside a sheet section. */
 function LabLabel({ children, right }: { children: React.ReactNode; right?: React.ReactNode }) {
   return (
-    <div className="mb-2 flex items-center justify-between border-b border-[var(--border-subtle)] pb-1.5">
-      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{children}</span>
+    <div className="mb-2 flex items-center justify-between border-b border-[var(--border)] pb-1.5">
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{children}</span>
       {right}
     </div>
   );
 }
 
-/** One line of the Model Notes panel — real metadata only. */
+/** One line of the Model Notes section — real metadata only. */
 function ModelNote({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-3 py-2.5">
-      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</div>
+    <div className="min-w-0 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-3 py-2.5">
+      <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">{label}</div>
       <div className="mt-1 text-[11px] leading-relaxed text-[var(--text-secondary)]">{children}</div>
     </div>
   );
@@ -212,13 +239,60 @@ function ModelNote({ label, children }: { label: string; children: React.ReactNo
 function Surface3DLoading({ label }: { label: string }) {
   return (
     <div
-      className="flex h-[460px] w-full flex-col items-center justify-center gap-3 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)]"
+      className="flex h-[460px] w-full flex-col items-center justify-center gap-3 rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--bg-panel-soft)]"
       role="status"
       aria-live="polite"
     >
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--border-subtle)] border-t-[var(--text-secondary)]" />
-      <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-muted)]">{label}</span>
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--text-secondary)]" />
+      <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--text-tertiary)]">{label}</span>
     </div>
+  );
+}
+
+/**
+ * One full-width instrument section of the research sheet. Numbered header on the
+ * GLACIER panel chrome: var(--surface) fill, 1px var(--border), radius 8.
+ */
+function SheetSection({
+  id,
+  num,
+  title,
+  subtitle,
+  meta,
+  children,
+  contentClassName,
+  innerRef,
+}: {
+  id: string;
+  num: string;
+  title: string;
+  subtitle?: string;
+  meta?: React.ReactNode;
+  children: React.ReactNode;
+  contentClassName?: string;
+  innerRef?: React.Ref<HTMLElement>;
+}) {
+  return (
+    <section
+      id={id}
+      ref={innerRef}
+      data-sheet-section
+      className="min-w-0 scroll-mt-24 rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--surface)]"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-[var(--border)] px-4 py-3">
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-baseline gap-2.5">
+            <span aria-hidden className="slayer-num text-[10px] font-bold tracking-[0.1em] text-[var(--accent-color)]">{num}</span>
+            <h3 className="truncate text-[12px] font-bold uppercase tracking-[0.16em] text-[var(--text-primary)]">{title}</h3>
+          </div>
+          {subtitle ? (
+            <p className="mt-1 text-[10px] leading-snug text-[var(--text-tertiary)]">{subtitle}</p>
+          ) : null}
+        </div>
+        {meta}
+      </div>
+      <div className={contentClassName ?? 'p-3'}>{children}</div>
+    </section>
   );
 }
 
@@ -246,11 +320,37 @@ export default function QuantSuiteView() {
     const valid: LabTab[] = ['volgeo', 'mechanics', 'distrib', 'factor'];
     if (valid.includes(sub)) {
       setActiveSubTab(sub);
-      // The labs live below the suite summary now — bring the requested lab into view.
+      // The labs are the sheet's last section — bring the requested lab into view.
       requestAnimationFrame(() => labsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     }
     setSubTabIntent(null);
   }, [subTabIntent, setSubTabIntent]);
+
+  // Scroll-spy for the sticky section rail: the topmost section crossing the upper
+  // band of the viewport is the "active" one the rail marks with the accent.
+  const [activeSection, setActiveSection] = useState<SheetSectionId>(SHEET_SECTIONS[0].id);
+  useEffect(() => {
+    const els = SHEET_SECTIONS
+      .map((s) => document.getElementById(s.id))
+      .filter((el): el is HTMLElement => !!el);
+    if (!els.length || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (!visible.length) return;
+        const top = visible.reduce((a, b) => (a.boundingClientRect.top < b.boundingClientRect.top ? a : b));
+        setActiveSection(top.target.id as SheetSectionId);
+      },
+      { rootMargin: '-15% 0px -65% 0px', threshold: 0 },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  const scrollToSection = (id: SheetSectionId) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setActiveSection(id);
+  };
 
   // RND / Monte-Carlo model horizon (days). The chain is front-expiry only, so the
   // horizon is an explicit model parameter — user-selectable, never a fabricated expiry.
@@ -404,8 +504,8 @@ export default function QuantSuiteView() {
 
   // ── Model IV surface (moneyness × tenor × IV), anchored on the live expected move.
   // Never blanks — with no live chain it is a clean MODEL-MODE surface; with a live
-  // chain it is anchored on live dispersion. Feeds the 2D heatmap, the ATM term
-  // structure, and the 3D hero in the Volatility Geometry lab. ──
+  // chain it is anchored on live dispersion. Feeds the 2D heatmap hero, the ATM term
+  // structure, and the 3D surface in the Volatility Geometry lab. ──
   const ivHeroProfile: SurfaceProfile = useMemo(() => ({
     spot: spotPrice,
     expectedMovePct,
@@ -713,123 +813,201 @@ export default function QuantSuiteView() {
 
   return (
     <StrikeSyncProvider>
-      <div className="slayer-terminal p-3 sm:p-4 space-y-[var(--gap)] w-full font-mono" id="quant-suite-terminal-view">
+      <div className="slayer-terminal w-full font-mono" id="quant-suite-terminal-view">
 
-        {/* ───────────── 1. HEADER — identity + controls ───────────── */}
-        <header className="slayer-panel flex flex-wrap items-center justify-between gap-3 px-[var(--panel-pad)] py-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="slayer-title whitespace-nowrap">Quant Lab / Quant Suite</h2>
+        {/* ───────────── COMMAND ROW — sticky compact toolbar: identity + controls ───────────── */}
+        <div className="sticky top-0 z-40 border-b border-[var(--border)] bg-[var(--surface)]">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full bg-[var(--accent-color)] shadow-[0_0_8px_var(--accent-glow)]" />
+              <div className="min-w-0 leading-tight">
+                <h2 className="truncate text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--text-primary)]">Quant Lab</h2>
+                <p className="truncate text-[9px] uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Research Sheet · {activeTicker}</p>
+              </div>
+              <span
+                className={`slayer-num ml-1 shrink-0 rounded-[var(--radius-control,5px)] border px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] ${
+                  isLiveData
+                    ? 'border-[var(--accent-color)] bg-[var(--accent-soft)] text-[var(--accent-color)]'
+                    : 'border-[var(--border)] text-[var(--text-tertiary)]'
+                }`}
+              >
+                {isLiveData ? 'Live Chain' : 'Model Chain'}
+              </span>
             </div>
-            <p className="slayer-subtitle">Research, model, and scenario analytics</p>
-          </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <ControlSelect
-              label="Symbol"
-              value={activeTicker}
-              onChange={(v) => {
-                const asset = ASSET_LIST.find((a) => a.ticker === v);
-                if (asset) setSelectedAsset(asset);
-              }}
-              options={ASSET_LIST.map((a) => a.ticker)}
-            />
-            <ControlSelect
-              label="Expiry"
-              value={`${dteD}D`}
-              onChange={(v) => setDteD(parseInt(v, 10) || 14)}
-              options={['7D', '14D', '21D', '30D']}
-            />
-            <span className="slayer-readout inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em]">
-              <span className="text-[var(--text-muted)]">Model</span>
-              <span className="font-semibold text-[var(--text-primary)]">BSM · B-L RND</span>
-            </span>
-            <span className="slayer-readout slayer-num inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.14em]">
-              <span className="text-[var(--text-muted)]">Calibrated</span>
-              <span className="font-semibold text-[var(--text-primary)]">{calibratedAt.toLocaleTimeString('en-US', { hour12: false })}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setRefreshNonce((n) => n + 1)}
-              className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
-            >
-              <RefreshCw className="h-3 w-3" /> Refresh
-            </button>
-            <button
-              type="button"
-              onClick={exportCsv}
-              className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
-            >
-              <Download className="h-3 w-3" /> Export
-            </button>
-          </div>
-        </header>
-
-        {/* ───────────── 2. IV SURFACE + TERM STRUCTURE ───────────── */}
-        <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2">
-          <TerminalPanel
-            title="IV Surface (Mid)"
-            subtitle={`Smile × term model anchored on the 1σ expected move (±${expectedMovePct.toFixed(2)}%)`}
-            contentClassName="p-2"
-          >
-            {heatmapOption ? (
-              <div className="h-[300px]" id="quant-suite-iv-heatmap">
-                <EChart option={heatmapOption} notMerge />
-              </div>
-            ) : (
-              <div className="flex h-[300px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Surface unavailable
-              </div>
-            )}
-            <p className="px-2 pb-1 pt-2 text-[9px] leading-relaxed text-[var(--text-faint)]">
-              Put-side lift is skew; the U across moneyness is the smile. Tenor axis is a documented 0→1y model — the chain carries a single front expiry.
-            </p>
-          </TerminalPanel>
-
-          <TerminalPanel
-            title="Volatility Term Structure (ATM)"
-            subtitle="ATM column of the vol model vs DTE"
-            contentClassName="flex flex-col gap-2 p-2"
-          >
-            {termOption ? (
-              <div className="h-[240px]" id="quant-suite-term-structure">
-                <EChart option={termOption} notMerge />
-              </div>
-            ) : (
-              <div className="flex h-[240px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Term structure unavailable
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
-              <Cell label="ATM IV" value={fmtPct(defaultIv)} sub="front" />
-              <Cell label="IV 1M" value={termStats.m1 != null ? `${termStats.m1.toFixed(2)}%` : '—'} sub="term" />
-              <Cell label="IV 3M" value={termStats.m3 != null ? `${termStats.m3.toFixed(2)}%` : '—'} sub="term" />
-              <Cell label="IV 6M" value={termStats.m6 != null ? `${termStats.m6.toFixed(2)}%` : '—'} sub="term" />
-              <Cell label="IV 1Y" value={termStats.y1 != null ? `${termStats.y1.toFixed(2)}%` : '—'} sub="term" />
+            <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
+              <ControlSelect
+                label="Symbol"
+                value={activeTicker}
+                onChange={(v) => {
+                  const asset = ASSET_LIST.find((a) => a.ticker === v);
+                  if (asset) setSelectedAsset(asset);
+                }}
+                options={ASSET_LIST.map((a) => a.ticker)}
+              />
+              <ControlSelect
+                label="Expiry"
+                value={`${dteD}D`}
+                onChange={(v) => setDteD(parseInt(v, 10) || 14)}
+                options={['7D', '14D', '21D', '30D']}
+              />
+              <span className="slayer-readout hidden items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] sm:inline-flex">
+                <span className="text-[var(--text-tertiary)]">Model</span>
+                <span className="font-semibold text-[var(--text-primary)]">BSM · B-L RND</span>
+              </span>
+              <span className="slayer-readout slayer-num hidden items-center gap-1.5 text-[10px] uppercase tracking-[0.14em] md:inline-flex">
+                <span className="text-[var(--text-tertiary)]">Calibrated</span>
+                <span className="font-semibold text-[var(--text-primary)]">{calibratedAt.toLocaleTimeString('en-US', { hour12: false })}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setRefreshNonce((n) => n + 1)}
+                className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              >
+                <RefreshCw className="h-3 w-3" /> Refresh
+              </button>
+              <button
+                type="button"
+                onClick={exportCsv}
+                className="slayer-control inline-flex cursor-pointer items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em]"
+              >
+                <Download className="h-3 w-3" /> Export
+              </button>
             </div>
-          </TerminalPanel>
+          </div>
         </div>
 
-        {/* ───────────── 3. RND + MONTE CARLO (left) | REGIME DETECTION (right) ───────────── */}
-        {/* The Regime signal column is intrinsically tall (11 live signals + candle-series
-            classifier). Pairing a lone short chart beside it stretched that chart into a
-            ~800px black void. Instead the left column stacks the RND density over the
-            Monte-Carlo panel, whose sample-path cloud GROWS to fill the column height the
-            Regime panel sets — the void becomes a bigger, honest visualization. */}
-        <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2 xl:items-stretch">
-          {/* LEFT — RND (natural height) over Monte Carlo (fills the remaining column) */}
-          <div className="flex min-h-0 flex-col gap-[var(--gap)]">
-            <TerminalPanel
+        {/* ───────────── SHEET BODY — sticky section rail (left) + instrument sections ───────────── */}
+        <div className="flex w-full gap-[var(--gap)] px-3 pb-8 pt-[var(--gap)] sm:px-4">
+
+          {/* SECTION RAIL — anchor index of the sheet; hidden on mobile (sections just stack). */}
+          <nav aria-label="Sheet sections" className="hidden w-[176px] shrink-0 lg:block">
+            <div className="sticky top-[72px] flex flex-col gap-3">
+              <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-[var(--text-tertiary)]">Sheet Index</span>
+              <div className="flex flex-col gap-1">
+                {SHEET_SECTIONS.map((s) => {
+                  const active = activeSection === s.id;
+                  return (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => scrollToSection(s.id)}
+                      aria-current={active ? 'true' : undefined}
+                      className={`flex w-full cursor-pointer items-center gap-2.5 rounded-[var(--radius-control,5px)] border px-2 py-1.5 text-left transition-colors ${
+                        active
+                          ? 'border-[var(--border)] bg-[var(--accent-soft)]'
+                          : 'border-transparent hover:bg-[var(--surface)]'
+                      }`}
+                    >
+                      <span
+                        aria-hidden
+                        className={`h-6 w-[2px] shrink-0 rounded-full ${
+                          active ? 'bg-[var(--accent-color)] shadow-[0_0_6px_var(--accent-glow)]' : 'bg-[var(--border)]'
+                        }`}
+                      />
+                      <span className="flex min-w-0 flex-col">
+                        <span className={`slayer-num text-[8px] tracking-[0.14em] ${active ? 'text-[var(--accent-color)]' : 'text-[var(--text-tertiary)]'}`}>
+                          {s.num}
+                        </span>
+                        <span
+                          className={`truncate text-[10px] font-semibold uppercase tracking-[0.1em] ${
+                            active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'
+                          }`}
+                        >
+                          {s.label}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="border-t border-[var(--border)] px-1 pt-2">
+                <span className="slayer-num block text-[8px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+                  Calibrated {calibratedAt.toLocaleTimeString('en-US', { hour12: false })}
+                </span>
+              </div>
+            </div>
+          </nav>
+
+          {/* SHEET COLUMN — the full-width instrument sections, in reading order. */}
+          <div className="min-w-0 flex-1 space-y-[var(--gap)]">
+
+            {/* ── 01 · IV SURFACE — the sheet's hero, biggest instrument on the page ── */}
+            <SheetSection
+              id="sheet-iv-surface"
+              num="01"
+              title="IV Surface (Mid)"
+              subtitle={`Smile × term model anchored on the 1σ expected move (±${expectedMovePct.toFixed(2)}%)`}
+              meta={
+                <span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">moneyness × tenor × σ</span>
+              }
+              contentClassName="p-3"
+            >
+              <div className="grid min-w-0 grid-cols-1 gap-[var(--gap)] lg:grid-cols-[minmax(0,1fr)_200px]">
+                <div className="min-w-0">
+                  {heatmapOption ? (
+                    <div className="h-[320px] lg:h-[440px]" id="quant-suite-iv-heatmap">
+                      <EChart option={heatmapOption} notMerge />
+                    </div>
+                  ) : (
+                    <div className="flex h-[320px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)] lg:h-[440px]">
+                      Surface unavailable
+                    </div>
+                  )}
+                </div>
+                {/* Hero readout rail — real figures already computed on this page. */}
+                <div className="grid min-w-0 grid-cols-2 content-start gap-[6px] sm:grid-cols-4 lg:grid-cols-1">
+                  <Cell label="Exp Move" value={`±${expectedMovePct.toFixed(2)}%`} sub={`1σ · ${dteD}D`} />
+                  <Cell label="ATM IV" value={fmtPct(defaultIv)} sub="front" />
+                  <Cell label="Spot" value={spotPrice.toLocaleString('en-US', { maximumFractionDigits: activeAsset.decimals })} sub={activeTicker} />
+                  <Cell label="Contracts" value={optionChain.length} sub={isLiveData ? 'live chain' : 'model chain'} />
+                </div>
+              </div>
+              <p className="pt-2 text-[9px] leading-relaxed text-[var(--text-faint)]">
+                Put-side lift is skew; the U across moneyness is the smile. Tenor axis is a documented 0→1y model — the chain carries a single front expiry.
+              </p>
+            </SheetSection>
+
+            {/* ── 02 · TERM STRUCTURE ── */}
+            <SheetSection
+              id="sheet-term-structure"
+              num="02"
+              title="Volatility Term Structure (ATM)"
+              subtitle="ATM column of the vol model vs DTE"
+              contentClassName="flex flex-col gap-2 p-3"
+            >
+              {termOption ? (
+                <div className="h-[260px]" id="quant-suite-term-structure">
+                  <EChart option={termOption} notMerge />
+                </div>
+              ) : (
+                <div className="flex h-[260px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+                  Term structure unavailable
+                </div>
+              )}
+              <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-5">
+                <Cell label="ATM IV" value={fmtPct(defaultIv)} sub="front" />
+                <Cell label="IV 1M" value={termStats.m1 != null ? `${termStats.m1.toFixed(2)}%` : '—'} sub="term" />
+                <Cell label="IV 3M" value={termStats.m3 != null ? `${termStats.m3.toFixed(2)}%` : '—'} sub="term" />
+                <Cell label="IV 6M" value={termStats.m6 != null ? `${termStats.m6.toFixed(2)}%` : '—'} sub="term" />
+                <Cell label="IV 1Y" value={termStats.y1 != null ? `${termStats.y1.toFixed(2)}%` : '—'} sub="term" />
+              </div>
+            </SheetSection>
+
+            {/* ── 03 · RISK-NEUTRAL DISTRIBUTION ── */}
+            <SheetSection
+              id="sheet-rnd"
+              num="03"
               title="Risk-Neutral Distribution"
               subtitle={`Breeden–Litzenberger ∂²C/∂K² on the option chain · ${dteD}D horizon · r = 5.1%`}
-              contentClassName="flex flex-col gap-2 p-2"
+              contentClassName="flex flex-col gap-2 p-3"
             >
               {rndOption ? (
                 <div className="h-[300px]" id="quant-suite-rnd-chart">
                   <EChart option={rndOption} notMerge />
                 </div>
               ) : (
-                <div className="flex h-[300px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                <div className="flex h-[300px] items-center justify-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
                   Chain too sparse for a density solve
                 </div>
               )}
@@ -850,399 +1028,423 @@ export default function QuantSuiteView() {
                 <Cell label="P(>+2σ)" value={rndTails.pAbove2 != null ? fmtPct(rndTails.pAbove2) : '—'} sub="Upper tail" />
                 <Cell label="P(<-2σ)" value={rndTails.pBelow2 != null ? fmtPct(rndTails.pBelow2) : '—'} sub="Lower tail" />
               </div>
-            </TerminalPanel>
+            </SheetSection>
 
-            <TerminalPanel
-              title="Monte Carlo Scenario Summary"
-              subtitle={`Seeded GBM / jump-diffusion / Heston paths · σ = ${fmtPct(defaultIv)} · ${dteD}D horizon · r = 5.0%`}
-              contentClassName="p-2"
-              className="min-h-0 flex-1"
+            {/* ── 04 · REGIME & SCENARIOS — the sheet's one side-by-side pair. The Regime
+                signal column is intrinsically tall (11 live signals + candle classifier);
+                the Monte-Carlo sample-path cloud stretches to match it, so neither panel
+                pads out into dead space. ── */}
+            <SheetSection
+              id="sheet-regime"
+              num="04"
+              title="Regime & Scenario Engine"
+              subtitle="Streamed quant-edge signal grid + candle classifier, beside seeded GBM / jump-diffusion / Heston paths"
+              contentClassName="p-3"
             >
-              <div id="quant-suite-monte-carlo" className="h-full min-h-0">
-                <MonteCarloPanel
-                  spot={spotPrice}
-                  r={0.05}
-                  sigma={defaultIv}
-                  tYears={Math.max(1, dteD) / 365}
-                  ticker={activeTicker}
-                  decimals={activeAsset.decimals}
-                />
-              </div>
-            </TerminalPanel>
-          </div>
-
-          {/* RIGHT — Regime Detection (the tall signal column that anchors the row) */}
-          <TerminalPanel
-            title="Regime Detection"
-            subtitle="Streamed quant-edge signal grid + measurable-feature classifier over the candle series"
-            contentClassName="flex flex-col gap-[var(--gap)] p-2"
-          >
-            <RegimeMatrixPanel />
-            {candles.length >= 30 ? (
-              <RegimeDetectionPanel candles={candles} ticker={activeTicker} />
-            ) : (
-              <p className="px-1 text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
-                Candle-series classifier needs ≥30 live bars — awaiting stream.
-              </p>
-            )}
-          </TerminalPanel>
-        </div>
-
-        {/* ───────────── 4. GREEKS & FACTOR EXPOSURES (full width) ───────────── */}
-        {/* Full-width now that Monte Carlo joined the RND column above — the OI-weighted
-            aggregates, smile factors, per-expiry profile and per-strike exposure chart
-            all fill the wider row, so no panel is stretched past its content. */}
-        <TerminalPanel
-          title="Greeks & Factor Exposures"
-          subtitle="OI-weighted chain aggregates · smile factors · per-expiry profile"
-          contentClassName="flex flex-col gap-[var(--gap)] p-2"
-        >
-            <div>
-              <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Σ greek × OI × 100</span>}>
-                Aggregate Greeks
-              </LabLabel>
-              <DataTable columns={greekColumns} rows={greekRows} rowKey={(r) => r.greek} />
-            </div>
-
-            <div>
-              <LabLabel>Smile / Vol Factor Exposures</LabLabel>
-              <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-4">
-                <Cell
-                  label="25Δ RR"
-                  value={fmtPct(skewMetrics.riskReversal25D)}
-                  tone={skewMetrics.riskReversal25D < 0 ? 'neg' : 'pos'}
-                  sub="Call − put IV"
-                />
-                <Cell label="25Δ Fly" value={fmtPct(skewMetrics.butterfly25D)} sub="Wings − ATM" />
-                <Cell
-                  label="VRP"
-                  value={`${(volSuite.varianceRiskPremium * 100).toFixed(2)} pts`}
-                  tone={volSuite.varianceRiskPremium >= 0 ? 'pos' : 'neg'}
-                  sub="IV − RV (Y-Z)"
-                />
-                <Cell label="RV %ile" value={`${volSuite.rvPercentile}th`} sub="Own cone" />
-              </div>
-            </div>
-
-            <div>
-              <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Chain carries the front expiry only</span>}>
-                Per-Expiry Greek Profile
-              </LabLabel>
-              {expiryGex.length ? (
-                <div className="flex flex-col gap-1">
-                  {expiryGex.map((node) => (
-                    <div key={node.expiry} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px]">
-                      <span className="font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">{node.expiry}</span>
-                      <span className="slayer-num text-[var(--call)]">Call GEX {fmtCompact(node.callGex)}</span>
-                      <span className="slayer-num text-[var(--negative-ink)]">Put GEX {fmtCompact(node.putGex)}</span>
-                      <span className={`slayer-num font-semibold ${node.totalGex >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
-                        Net {fmtCompact(node.totalGex)}
-                      </span>
-                      <span className="slayer-num text-[var(--text-muted)]">Dominant K {node.dominantStrike.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">No chain streamed yet.</p>
-              )}
-            </div>
-
-            {optionChain.length >= 4 && spotPrice > 0 && (
-              <div id="quant-suite-greek-exposure">
-                <LabLabel>Per-Strike Exposure Profile</LabLabel>
-                <GreekExposurePanel
-                  chain={optionChain}
-                  spot={spotPrice}
-                  decimals={activeAsset.decimals}
-                  ticker={activeTicker}
-                  live={isLiveData}
-                  callWall={gexProfile?.callWall}
-                  putWall={gexProfile?.putWall}
-                  gammaFlip={gexProfile?.gammaFlip}
-                />
-              </div>
-            )}
-          </TerminalPanel>
-
-        {/* ───────────── 5. MODEL NOTES & ASSUMPTIONS (real metadata only) ───────────── */}
-        <TerminalPanel
-          title="Model Notes & Assumptions"
-          subtitle="Structure and assumptions of every model on this page — nothing here is a fitted-quality claim"
-          contentClassName="grid grid-cols-1 gap-[6px] sm:grid-cols-2 xl:grid-cols-3 p-2"
-        >
-          <ModelNote label="Universe">
-            {activeTicker} · front expiry · {optionChain.length} contracts · near-the-money
-          </ModelNote>
-          <ModelNote label="Calibrated">
-            {calibratedAt.toLocaleTimeString('en-US', { hour12: false })} local · recomputed on every server tick or manual refresh
-          </ModelNote>
-          <ModelNote label="Risk-Neutral Density">
-            Breeden–Litzenberger ∂²C/∂K² on a quadratic smile fit IV(K) = a + b·ln(K/S) + c·ln²(K/S) · horizon {dteD}D · r = 5.1%
-          </ModelNote>
-          <ModelNote label="Realized Volatility">
-            Parkinson / Garman–Klass / Yang–Zhang over the last 20 bars
-          </ModelNote>
-          <ModelNote label="IV Surface">
-            Deterministic smile + term model anchored on the 1σ expected move (σ ≈ EM·√252). Tenor axis is a documented 0→1y model.
-          </ModelNote>
-          <ModelNote label="Monte Carlo">
-            Deterministically seeded paths under GBM / jump-diffusion / Heston on real spot & ATM vol inputs · r = 5.0%
-          </ModelNote>
-        </TerminalPanel>
-
-        {/* ───────────── 6. ADVANCED LABS — the original deep-dive sections ───────────── */}
-        <section ref={labsRef} className="slayer-panel scroll-mt-4" id="quant-suite-sub-tabs">
-          <div className="slayer-panel-header flex flex-wrap items-center justify-between gap-2">
-            <div className="min-w-0">
-              <div className="slayer-title">Advanced Labs</div>
-              <div className="slayer-subtitle">Deep-dive surfaces & engines — 3D dealer mechanics, tail risk, factor structure</div>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {labTabs.map((t) => {
-                const active = activeSubTab === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => setActiveSubTab(t.id)}
-                    aria-pressed={active}
-                    className={`slayer-control cursor-pointer text-[10px] font-semibold uppercase tracking-[0.14em] ${
-                      active
-                        ? 'border-[var(--border-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-primary)]'
-                        : ''
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="space-y-[var(--gap)] p-[var(--panel-pad)]" id="quant-suite-view-canvas">
-            {/* §1 VOLATILITY GEOMETRY — 3D IV surface hero + RV estimators + VRP + cone + smile */}
-            {activeSubTab === 'volgeo' && (
-              <>
-                <div>
-                  <LabLabel
-                    right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">strike × expiry × σ · 3D WebGL</span>}
-                  >
-                    Implied Volatility Surface · {activeTicker}
+              <div className="grid grid-cols-1 gap-[var(--gap)] xl:grid-cols-2 xl:items-stretch">
+                <div className="flex min-w-0 flex-col gap-[var(--gap)]">
+                  <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">quant-edge stream</span>}>
+                    Regime Detection
                   </LabLabel>
-                  <div className="overflow-hidden rounded-md border border-[var(--border-subtle)] bg-[#0a0a0b]">
-                    <ErrorBoundary label="IV Surface (WebGL)">
-                      <Suspense fallback={<Surface3DLoading label="Loading volatility surface…" />}>
-                        <QuantSurface3D
-                          grid={ivHeroGrid}
-                          ramp="sequential"
-                          height={460}
-                          axisLabels={['strike', 'tenor', 'IV']}
-                          xDomain={ivHeroDomain}
-                          xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                          valueFormat={(v) => `${(v * 100).toFixed(1)}%`}
-                          markers={ivHeroMarkers}
-                          floorHeatmap
-                          wallProjections
-                          legend
-                          sliceCol={ivHeroSliceCol}
-                          sliceRow={0}
-                        />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </div>
-                  <p className="mt-2 rounded-md border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px] leading-relaxed text-[var(--text-muted)]">
-                    IV surface anchored on the 1σ expected move (±{expectedMovePct.toFixed(2)}%). X = strike, Z = tenor (near → far),
-                    Y/colour = implied vol. Put-side lift is skew; the U across strikes is the smile. The lit ridge is the ATM term structure.
-                    The per-strike front smile is charted below.
-                  </p>
+                  <RegimeMatrixPanel />
+                  {candles.length >= 30 ? (
+                    <RegimeDetectionPanel candles={candles} ticker={activeTicker} />
+                  ) : (
+                    <p className="px-1 text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+                      Candle-series classifier needs ≥30 live bars — awaiting stream.
+                    </p>
+                  )}
                 </div>
 
-                <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-3">
-                  <div className="flex flex-col gap-[var(--gap)] lg:col-span-2">
-                    <div>
-                      <LabLabel>Realized Volatility Estimators (20d)</LabLabel>
-                      <div className="grid grid-cols-1 gap-[6px] sm:grid-cols-3">
-                        <Cell label="Parkinson" value={fmtPct(volSuite.parkinson)} sub="High/low range · excludes overnight gaps" />
-                        <Cell label="Garman-Klass" value={fmtPct(volSuite.garmanKlass)} sub="OHLC · captures intraday range" />
-                        <Cell label="Yang-Zhang" value={fmtPct(volSuite.yangZhang)} sub="Min-variance · gaps + intraday drift" />
-                      </div>
-                    </div>
-                    <div>
-                      <LabLabel>Variance Risk Premium (IV − RV)</LabLabel>
-                      <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-4">
-                        <Cell label="ATM IV" value={fmtPct(defaultIv)} />
-                        <Cell label="Yang-Zhang RV" value={fmtPct(volSuite.yangZhang)} tone="warn" />
-                        <Cell
-                          label="VRP Spread"
-                          value={`${(volSuite.varianceRiskPremium * 100).toFixed(2)} pts`}
-                          tone={volSuite.varianceRiskPremium >= 0 ? 'pos' : 'neg'}
-                        />
-                        <Cell label="RV Percentile" value={`${volSuite.rvPercentile}th`} />
-                      </div>
-                    </div>
-                  </div>
-                  <div id="quant-suite-vol-cone">
-                    <VolConePanel cone={volCone} atmIv={defaultIv} realizedVol={volSuite.yangZhang} ticker={activeTicker} live={isLiveData} />
-                  </div>
-                </div>
-
-                {optionChain.length >= 4 && spotPrice > 0 && (
-                  <div id="quant-suite-iv-smile">
-                    <IvSmile chain={optionChain} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* §2 DEALER MECHANICS — real exposure surfaces (Gamma/Vanna/Charm) + edge + hedging */}
-            {activeSubTab === 'mechanics' && (
-              <>
-                <ErrorBoundary label="Dealer Mechanics (WebGL)">
-                  <Suspense fallback={<Surface3DLoading label="Loading dealer mechanics…" />}>
-                    <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} live={isLiveData} />
-                  </Suspense>
-                </ErrorBoundary>
-
-                {/* Quant edge — RND / VRP / skew / scenario / Kelly / dealer clock */}
-                <QuantEdgePanel />
-
-                {(gexProfile?.strikes?.length ?? 0) >= 2 && spotPrice > 0 && expectedMovePct > 0 && (
-                  <div id="quant-suite-hedging">
-                    <DealerHedgingPanel
-                      strikes={(gexProfile!.strikes as any[]).map((s) => ({ strike: s.strike, netGex: s.netGex }))}
+                <div className="flex min-w-0 flex-col">
+                  <LabLabel right={<span className="slayer-num text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">σ = {fmtPct(defaultIv)} · {dteD}D · r = 5.0%</span>}>
+                    Monte Carlo Scenarios
+                  </LabLabel>
+                  <div id="quant-suite-monte-carlo" className="min-h-0 flex-1">
+                    <MonteCarloPanel
                       spot={spotPrice}
-                      emPct={expectedMovePct / 100}
-                      decimals={activeAsset.decimals}
+                      r={0.05}
+                      sigma={defaultIv}
+                      tYears={Math.max(1, dteD) / 365}
                       ticker={activeTicker}
-                      live={isLiveData}
+                      decimals={activeAsset.decimals}
                     />
                   </div>
+                </div>
+              </div>
+            </SheetSection>
+
+            {/* ── 05 · GREEKS & FACTOR EXPOSURES ── */}
+            <SheetSection
+              id="sheet-greeks"
+              num="05"
+              title="Greeks & Factor Exposures"
+              subtitle="OI-weighted chain aggregates · smile factors · per-expiry profile · per-strike exposure"
+              contentClassName="flex flex-col gap-[var(--gap)] p-3"
+            >
+              <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-5">
+                <div className="flex min-w-0 flex-col gap-[var(--gap)] lg:col-span-2">
+                  <div>
+                    <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Σ greek × OI × 100</span>}>
+                      Aggregate Greeks
+                    </LabLabel>
+                    <DataTable columns={greekColumns} rows={greekRows} rowKey={(r) => r.greek} />
+                  </div>
+                  <div>
+                    <LabLabel>Smile / Vol Factor Exposures</LabLabel>
+                    <div className="grid grid-cols-2 gap-[6px]">
+                      <Cell
+                        label="25Δ RR"
+                        value={fmtPct(skewMetrics.riskReversal25D)}
+                        tone={skewMetrics.riskReversal25D < 0 ? 'neg' : 'pos'}
+                        sub="Call − put IV"
+                      />
+                      <Cell label="25Δ Fly" value={fmtPct(skewMetrics.butterfly25D)} sub="Wings − ATM" />
+                      <Cell
+                        label="VRP"
+                        value={`${(volSuite.varianceRiskPremium * 100).toFixed(2)} pts`}
+                        tone={volSuite.varianceRiskPremium >= 0 ? 'pos' : 'neg'}
+                        sub="IV − RV (Y-Z)"
+                      />
+                      <Cell label="RV %ile" value={`${volSuite.rvPercentile}th`} sub="Own cone" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-w-0 lg:col-span-3">
+                  <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Chain carries the front expiry only</span>}>
+                    Per-Expiry Greek Profile
+                  </LabLabel>
+                  {expiryGex.length ? (
+                    <div className="flex flex-col gap-1">
+                      {expiryGex.map((node) => (
+                        <div key={node.expiry} className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px]">
+                          <span className="font-semibold uppercase tracking-[0.14em] text-[var(--text-secondary)]">{node.expiry}</span>
+                          <span className="slayer-num text-[var(--call)]">Call GEX {fmtCompact(node.callGex)}</span>
+                          <span className="slayer-num text-[var(--negative-ink)]">Put GEX {fmtCompact(node.putGex)}</span>
+                          <span className={`slayer-num font-semibold ${node.totalGex >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]'}`}>
+                            Net {fmtCompact(node.totalGex)}
+                          </span>
+                          <span className="slayer-num text-[var(--text-tertiary)]">Dominant K {node.dominantStrike.toLocaleString('en-US', { maximumFractionDigits: 0 })}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--text-faint)]">No chain streamed yet.</p>
+                  )}
+                </div>
+              </div>
+
+              {optionChain.length >= 4 && spotPrice > 0 && (
+                <div id="quant-suite-greek-exposure" className="min-w-0">
+                  <LabLabel>Per-Strike Exposure Profile</LabLabel>
+                  <GreekExposurePanel
+                    chain={optionChain}
+                    spot={spotPrice}
+                    decimals={activeAsset.decimals}
+                    ticker={activeTicker}
+                    live={isLiveData}
+                    callWall={gexProfile?.callWall}
+                    putWall={gexProfile?.putWall}
+                    gammaFlip={gexProfile?.gammaFlip}
+                  />
+                </div>
+              )}
+            </SheetSection>
+
+            {/* ── 06 · MODEL NOTES & ASSUMPTIONS (real metadata only) ── */}
+            <SheetSection
+              id="sheet-notes"
+              num="06"
+              title="Model Notes & Assumptions"
+              subtitle="Structure and assumptions of every model on this sheet — nothing here is a fitted-quality claim"
+              contentClassName="grid grid-cols-1 gap-[6px] p-3 sm:grid-cols-2 xl:grid-cols-3"
+            >
+              <ModelNote label="Universe">
+                {activeTicker} · front expiry · {optionChain.length} contracts · near-the-money
+              </ModelNote>
+              <ModelNote label="Calibrated">
+                {calibratedAt.toLocaleTimeString('en-US', { hour12: false })} local · recomputed on every server tick or manual refresh
+              </ModelNote>
+              <ModelNote label="Risk-Neutral Density">
+                Breeden–Litzenberger ∂²C/∂K² on a quadratic smile fit IV(K) = a + b·ln(K/S) + c·ln²(K/S) · horizon {dteD}D · r = 5.1%
+              </ModelNote>
+              <ModelNote label="Realized Volatility">
+                Parkinson / Garman–Klass / Yang–Zhang over the last 20 bars
+              </ModelNote>
+              <ModelNote label="IV Surface">
+                Deterministic smile + term model anchored on the 1σ expected move (σ ≈ EM·√252). Tenor axis is a documented 0→1y model.
+              </ModelNote>
+              <ModelNote label="Monte Carlo">
+                Deterministically seeded paths under GBM / jump-diffusion / Heston on real spot & ATM vol inputs · r = 5.0%
+              </ModelNote>
+            </SheetSection>
+
+            {/* ── 07 · ADVANCED LABS — the original chip-switched deep-dive sub-views ── */}
+            <SheetSection
+              id="quant-suite-sub-tabs"
+              num="07"
+              title="Advanced Labs"
+              subtitle="Deep-dive surfaces & engines — 3D dealer mechanics, tail risk, factor structure"
+              innerRef={labsRef}
+              meta={
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                  {labTabs.map((t) => {
+                    const active = activeSubTab === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setActiveSubTab(t.id)}
+                        aria-pressed={active}
+                        className={`slayer-control cursor-pointer text-[10px] font-semibold uppercase tracking-[0.14em] ${
+                          active
+                            ? 'border-[var(--border-strong)] bg-[var(--bg-panel-raised)] text-[var(--text-primary)]'
+                            : ''
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              }
+              contentClassName="space-y-[var(--gap)] p-[var(--panel-pad)]"
+            >
+              <div className="space-y-[var(--gap)]" id="quant-suite-view-canvas">
+                {/* §1 VOLATILITY GEOMETRY — 3D IV surface hero + RV estimators + VRP + cone + smile */}
+                {activeSubTab === 'volgeo' && (
+                  <>
+                    <div>
+                      <LabLabel
+                        right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">strike × expiry × σ · 3D WebGL</span>}
+                      >
+                        Implied Volatility Surface · {activeTicker}
+                      </LabLabel>
+                      <div className="overflow-hidden rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[#0a0a0b]">
+                        <ErrorBoundary label="IV Surface (WebGL)">
+                          <Suspense fallback={<Surface3DLoading label="Loading volatility surface…" />}>
+                            <QuantSurface3D
+                              grid={ivHeroGrid}
+                              ramp="sequential"
+                              height={460}
+                              axisLabels={['strike', 'tenor', 'IV']}
+                              xDomain={ivHeroDomain}
+                              xFormat={(v) => v.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                              valueFormat={(v) => `${(v * 100).toFixed(1)}%`}
+                              markers={ivHeroMarkers}
+                              floorHeatmap
+                              wallProjections
+                              legend
+                              sliceCol={ivHeroSliceCol}
+                              sliceRow={0}
+                            />
+                          </Suspense>
+                        </ErrorBoundary>
+                      </div>
+                      <p className="mt-2 rounded-[var(--radius-control,5px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] px-3 py-2 text-[10px] leading-relaxed text-[var(--text-tertiary)]">
+                        IV surface anchored on the 1σ expected move (±{expectedMovePct.toFixed(2)}%). X = strike, Z = tenor (near → far),
+                        Y/colour = implied vol. Put-side lift is skew; the U across strikes is the smile. The lit ridge is the ATM term structure.
+                        The per-strike front smile is charted below.
+                      </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-3">
+                      <div className="flex flex-col gap-[var(--gap)] lg:col-span-2">
+                        <div>
+                          <LabLabel>Realized Volatility Estimators (20d)</LabLabel>
+                          <div className="grid grid-cols-1 gap-[6px] sm:grid-cols-3">
+                            <Cell label="Parkinson" value={fmtPct(volSuite.parkinson)} sub="High/low range · excludes overnight gaps" />
+                            <Cell label="Garman-Klass" value={fmtPct(volSuite.garmanKlass)} sub="OHLC · captures intraday range" />
+                            <Cell label="Yang-Zhang" value={fmtPct(volSuite.yangZhang)} sub="Min-variance · gaps + intraday drift" />
+                          </div>
+                        </div>
+                        <div>
+                          <LabLabel>Variance Risk Premium (IV − RV)</LabLabel>
+                          <div className="grid grid-cols-2 gap-[6px] sm:grid-cols-4">
+                            <Cell label="ATM IV" value={fmtPct(defaultIv)} />
+                            <Cell label="Yang-Zhang RV" value={fmtPct(volSuite.yangZhang)} tone="warn" />
+                            <Cell
+                              label="VRP Spread"
+                              value={`${(volSuite.varianceRiskPremium * 100).toFixed(2)} pts`}
+                              tone={volSuite.varianceRiskPremium >= 0 ? 'pos' : 'neg'}
+                            />
+                            <Cell label="RV Percentile" value={`${volSuite.rvPercentile}th`} />
+                          </div>
+                        </div>
+                      </div>
+                      <div id="quant-suite-vol-cone">
+                        <VolConePanel cone={volCone} atmIv={defaultIv} realizedVol={volSuite.yangZhang} ticker={activeTicker} live={isLiveData} />
+                      </div>
+                    </div>
+
+                    {optionChain.length >= 4 && spotPrice > 0 && (
+                      <div id="quant-suite-iv-smile">
+                        <IvSmile chain={optionChain} spot={spotPrice} decimals={activeAsset.decimals} ticker={activeTicker} live={isLiveData} />
+                      </div>
+                    )}
+                  </>
                 )}
 
-                {/* REAL dealer GEX (when streamed) + per-expiry GEX breakdown */}
-                <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-3" id="quant-suite-gex-footer">
-                  <div className="rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-3">
-                    <LabLabel>Dealer GEX Profile</LabLabel>
-                    {gexProfile ? (
-                      <div className="flex flex-col gap-2 text-[11px]">
-                        {([
-                          {
-                            l: 'Net GEX',
-                            v: typeof gexProfile.netGex === 'number' ? `${(gexProfile.netGex / 1e9).toFixed(2)}B` : '—',
-                            c: (gexProfile.netGex ?? 0) >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]',
-                          },
-                          {
-                            l: 'Gamma Flip',
-                            v: gexProfile.gammaFlip ? gexProfile.gammaFlip.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—',
-                            c: 'text-[var(--warning)]',
-                          },
-                          {
-                            l: 'Call Wall',
-                            v: gexProfile.callWall ? gexProfile.callWall.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—',
-                            c: 'text-[var(--call)]',
-                          },
-                          {
-                            l: 'Put Wall',
-                            v: gexProfile.putWall ? gexProfile.putWall.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—',
-                            c: 'text-[var(--negative-ink)]',
-                          },
-                        ]).map((row, i, arr) => (
-                          <div key={row.l} className={`flex justify-between ${i < arr.length - 1 ? 'border-b border-[var(--border-subtle)] pb-1.5' : ''}`}>
-                            <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{row.l}</span>
-                            <span className={`slayer-num font-semibold ${row.c}`}>{row.v}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="py-8 text-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                        No dealer GEX profile streamed yet.
+                {/* §2 DEALER MECHANICS — real exposure surfaces (Gamma/Vanna/Charm) + edge + hedging */}
+                {activeSubTab === 'mechanics' && (
+                  <>
+                    <ErrorBoundary label="Dealer Mechanics (WebGL)">
+                      <Suspense fallback={<Surface3DLoading label="Loading dealer mechanics…" />}>
+                        <DealerMechanicsDashboard profile={gexProfile as any} ticker={activeTicker} decimals={activeAsset.decimals} live={isLiveData} />
+                      </Suspense>
+                    </ErrorBoundary>
+
+                    {/* Quant edge — RND / VRP / skew / scenario / Kelly / dealer clock */}
+                    <QuantEdgePanel />
+
+                    {(gexProfile?.strikes?.length ?? 0) >= 2 && spotPrice > 0 && expectedMovePct > 0 && (
+                      <div id="quant-suite-hedging">
+                        <DealerHedgingPanel
+                          strikes={(gexProfile!.strikes as any[]).map((s) => ({ strike: s.strike, netGex: s.netGex }))}
+                          spot={spotPrice}
+                          emPct={expectedMovePct / 100}
+                          decimals={activeAsset.decimals}
+                          ticker={activeTicker}
+                          live={isLiveData}
+                        />
                       </div>
                     )}
-                  </div>
 
-                  <div className="rounded-[var(--radius-panel)] border border-[var(--border-subtle)] bg-[var(--bg-panel-soft)] p-3 lg:col-span-2">
-                    <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Per-expiry</span>}>
-                      GEX by Expiry
-                    </LabLabel>
-                    {expiryGex.length ? (
-                      <div className="flex flex-col gap-1.5">
-                        {(() => {
-                          const maxAbs = Math.max(1, ...expiryGex.map(n => Math.abs(n.totalGex)));
-                          return expiryGex.map((node, idx) => {
-                            const up = node.totalGex >= 0;
-                            const pct = Math.min(100, (Math.abs(node.totalGex) / maxAbs) * 100);
-                            const tok = up ? 'var(--positive-ink)' : 'var(--negative-ink)';
-                            return (
-                              <div key={idx} className="flex items-center gap-2.5">
-                                <span className="slayer-num w-14 shrink-0 text-[10px] font-semibold text-[var(--text-secondary)]">{node.expiry}</span>
-                                <div className="relative h-[22px] flex-1 overflow-hidden rounded-sm border border-[var(--border-subtle)] bg-[var(--bg-panel)]">
-                                  <div
-                                    className="absolute inset-y-0 left-0"
-                                    style={{
-                                      width: `${Math.max(3, pct)}%`,
-                                      background: `linear-gradient(to right, color-mix(in srgb, ${tok} 55%, transparent), color-mix(in srgb, ${tok} 22%, transparent))`,
-                                    }}
-                                  />
-                                  <span className="slayer-num absolute inset-0 flex items-center px-2 text-[10px] font-semibold" style={{ color: tok }}>
-                                    {up ? '+' : '-'}${(Math.abs(node.totalGex) / 1e6).toFixed(1)}M
-                                  </span>
-                                </div>
-                                <span className="slayer-num w-16 shrink-0 text-right text-[9px] text-[var(--text-muted)]">
-                                  K {node.dominantStrike.toLocaleString('en-US', { maximumFractionDigits: 0 })}
-                                </span>
+                    {/* REAL dealer GEX (when streamed) + per-expiry GEX breakdown */}
+                    <div className="grid grid-cols-1 gap-[var(--gap)] lg:grid-cols-3" id="quant-suite-gex-footer">
+                      <div className="rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] p-3">
+                        <LabLabel>Dealer GEX Profile</LabLabel>
+                        {gexProfile ? (
+                          <div className="flex flex-col gap-2 text-[11px]">
+                            {([
+                              {
+                                l: 'Net GEX',
+                                v: typeof gexProfile.netGex === 'number' ? `${(gexProfile.netGex / 1e9).toFixed(2)}B` : '—',
+                                c: (gexProfile.netGex ?? 0) >= 0 ? 'text-[var(--positive-ink)]' : 'text-[var(--negative-ink)]',
+                              },
+                              {
+                                l: 'Gamma Flip',
+                                v: gexProfile.gammaFlip ? gexProfile.gammaFlip.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—',
+                                c: 'text-[var(--warning)]',
+                              },
+                              {
+                                l: 'Call Wall',
+                                v: gexProfile.callWall ? gexProfile.callWall.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—',
+                                c: 'text-[var(--call)]',
+                              },
+                              {
+                                l: 'Put Wall',
+                                v: gexProfile.putWall ? gexProfile.putWall.toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—',
+                                c: 'text-[var(--negative-ink)]',
+                              },
+                            ]).map((row, i, arr) => (
+                              <div key={row.l} className={`flex justify-between ${i < arr.length - 1 ? 'border-b border-[var(--border)] pb-1.5' : ''}`}>
+                                <span className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{row.l}</span>
+                                <span className={`slayer-num font-semibold ${row.c}`}>{row.v}</span>
                               </div>
-                            );
-                          });
-                        })()}
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="py-8 text-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">
+                            No dealer GEX profile streamed yet.
+                          </div>
+                        )}
                       </div>
-                    ) : (
-                      <div className="py-8 text-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">No per-expiry GEX streamed yet.</div>
-                    )}
-                  </div>
-                </div>
-              </>
-            )}
 
-            {/* §3 DISTRIBUTION & RISK — the full B-L distribution deep-dive + tail-risk map */}
-            {activeSubTab === 'distrib' && rndResult.density.length > 2 && spotPrice > 0 && (
-              <>
-                <div id="quant-suite-rnd-distribution">
-                  <RiskNeutralDistribution
-                    rnd={rndResult}
-                    spot={spotPrice}
-                    dteDays={dteD}
-                    ivAtm={defaultIv}
-                    realizedVol={volSuite.yangZhang}
-                    callWall={gexProfile?.callWall}
-                    putWall={gexProfile?.putWall}
-                    gammaFlip={gexProfile?.gammaFlip}
-                    decimals={activeAsset.decimals}
-                    ticker={activeTicker}
-                    live={isLiveData}
-                  />
-                </div>
-                <div id="quant-suite-tail-risk">
-                  <TailRiskMap
-                    rnd={rndResult}
-                    spot={spotPrice}
-                    dteDays={dteD}
-                    callWall={gexProfile?.callWall}
-                    putWall={gexProfile?.putWall}
-                    gammaFlip={gexProfile?.gammaFlip}
-                    decimals={activeAsset.decimals}
-                    ticker={activeTicker}
-                    live={isLiveData}
-                  />
-                </div>
-              </>
-            )}
+                      <div className="rounded-[var(--radius-panel,8px)] border border-[var(--border)] bg-[var(--bg-panel-soft)] p-3 lg:col-span-2">
+                        <LabLabel right={<span className="text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Per-expiry</span>}>
+                          GEX by Expiry
+                        </LabLabel>
+                        {expiryGex.length ? (
+                          <div className="flex flex-col gap-1.5">
+                            {(() => {
+                              const maxAbs = Math.max(1, ...expiryGex.map(n => Math.abs(n.totalGex)));
+                              return expiryGex.map((node, idx) => {
+                                const up = node.totalGex >= 0;
+                                const pct = Math.min(100, (Math.abs(node.totalGex) / maxAbs) * 100);
+                                const tok = up ? 'var(--positive-ink)' : 'var(--negative-ink)';
+                                return (
+                                  <div key={idx} className="flex items-center gap-2.5">
+                                    <span className="slayer-num w-14 shrink-0 text-[10px] font-semibold text-[var(--text-secondary)]">{node.expiry}</span>
+                                    <div className="relative h-[22px] flex-1 overflow-hidden rounded-sm border border-[var(--border)] bg-[var(--bg-panel)]">
+                                      <div
+                                        className="absolute inset-y-0 left-0"
+                                        style={{
+                                          width: `${Math.max(3, pct)}%`,
+                                          background: `linear-gradient(to right, color-mix(in srgb, ${tok} 55%, transparent), color-mix(in srgb, ${tok} 22%, transparent))`,
+                                        }}
+                                      />
+                                      <span className="slayer-num absolute inset-0 flex items-center px-2 text-[10px] font-semibold" style={{ color: tok }}>
+                                        {up ? '+' : '-'}${(Math.abs(node.totalGex) / 1e6).toFixed(1)}M
+                                      </span>
+                                    </div>
+                                    <span className="slayer-num w-16 shrink-0 text-right text-[9px] text-[var(--text-tertiary)]">
+                                      K {node.dominantStrike.toLocaleString('en-US', { maximumFractionDigits: 0 })}
+                                    </span>
+                                  </div>
+                                );
+                              });
+                            })()}
+                          </div>
+                        ) : (
+                          <div className="py-8 text-center text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">No per-expiry GEX streamed yet.</div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                )}
 
-            {/* §4 FACTOR / STRUCTURE LAB — real cross-asset correlation + PCA + IV smile factors */}
-            {activeSubTab === 'factor' && (
-              <FactorLabPanel chain={optionChain} spot={spotPrice} ticker={activeTicker} live={isLiveData} />
-            )}
+                {/* §3 DISTRIBUTION & RISK — the full B-L distribution deep-dive + tail-risk map */}
+                {activeSubTab === 'distrib' && rndResult.density.length > 2 && spotPrice > 0 && (
+                  <>
+                    <div id="quant-suite-rnd-distribution">
+                      <RiskNeutralDistribution
+                        rnd={rndResult}
+                        spot={spotPrice}
+                        dteDays={dteD}
+                        ivAtm={defaultIv}
+                        realizedVol={volSuite.yangZhang}
+                        callWall={gexProfile?.callWall}
+                        putWall={gexProfile?.putWall}
+                        gammaFlip={gexProfile?.gammaFlip}
+                        decimals={activeAsset.decimals}
+                        ticker={activeTicker}
+                        live={isLiveData}
+                      />
+                    </div>
+                    <div id="quant-suite-tail-risk">
+                      <TailRiskMap
+                        rnd={rndResult}
+                        spot={spotPrice}
+                        dteDays={dteD}
+                        callWall={gexProfile?.callWall}
+                        putWall={gexProfile?.putWall}
+                        gammaFlip={gexProfile?.gammaFlip}
+                        decimals={activeAsset.decimals}
+                        ticker={activeTicker}
+                        live={isLiveData}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* §4 FACTOR / STRUCTURE LAB — real cross-asset correlation + PCA + IV smile factors */}
+                {activeSubTab === 'factor' && (
+                  <FactorLabPanel chain={optionChain} spot={spotPrice} ticker={activeTicker} live={isLiveData} />
+                )}
+              </div>
+            </SheetSection>
+
+            {/* ── SHEET FOOTER — real metadata only ── */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 pt-1">
+              <span className="text-[8px] uppercase tracking-[0.18em] text-[var(--text-faint)]">End of sheet</span>
+              <span className="slayer-num text-[8px] uppercase tracking-[0.14em] text-[var(--text-faint)]">
+                {activeTicker} · {isLiveData ? 'live chain' : 'model chain'} · calibrated {calibratedAt.toLocaleTimeString('en-US', { hour12: false })}
+              </span>
+            </div>
           </div>
-        </section>
+        </div>
       </div>
     </StrikeSyncProvider>
   );

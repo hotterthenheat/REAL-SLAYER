@@ -2,22 +2,26 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  *
- * OPTIONS FLOW TAPE — the institutional dealer-flow feed. A live, prepending
- * tape of options prints (sweeps · blocks · splits · dark-pool) with a
- * recomputing KPI strip, type/sentiment/premium filters, a dedicated
- * dark-pool prints rail and a top-tickers-by-premium ladder.
+ * OPTIONS FLOW TAPE — the institutional dealer-flow feed, recomposed as a
+ * workbench split: the LIVE TAPE is the dominant full-height left column with
+ * its type/sentiment/premium filters docked inside the panel header as compact
+ * segmented controls; the right third is a stacked intelligence rail — session
+ * pulse KPIs as value-first cells, dark-pool prints, top tickers by premium.
+ * On mobile the pulse band leads, the tape follows full-width, the rail stacks
+ * below. Fresh prints carry a brief accent left rule, not a row wash.
  *
  * Fully self-contained: no props, no network. Prints are synthesized in-effect
  * on an interval so the tape reads live; the stream freezes under
  * prefers-reduced-motion. Nothing is fabricated at module scope.
+ *
+ * Hallmark · component: dealer-flow view · design-system: GLACIER (locked)
+ * macrostructure: Workbench split (tape-dominant + intelligence rail)
+ * pre-emit critique: P4 H5 E4 S4 R5 V4
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useReducedMotion } from 'motion/react';
-import { TerminalPanel } from './ui/terminal/TerminalPanel';
 import { DataTable, type DataColumn } from './ui/terminal/DataTable';
-import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
-import { StatusBadge } from './ui/terminal/StatusBadge';
 import { ToggleGroup } from './ui/ToggleGroup';
 
 // ── Domain types ────────────────────────────────────────────────────────────
@@ -194,7 +198,7 @@ function RatioBar({ left, right }: { left: number; right: number }) {
   const total = left + right || 1;
   const lp = Math.max(0, Math.min(100, (left / total) * 100));
   return (
-    <div className="mt-1.5 flex h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+    <div className="mt-2 flex h-1 w-full overflow-hidden rounded-[2px] bg-[var(--surface-2)]">
       <div style={{ width: `${lp}%`, background: 'var(--call)' }} />
       <div style={{ width: `${100 - lp}%`, background: 'var(--negative-ink)' }} />
     </div>
@@ -205,8 +209,49 @@ function RatioBar({ left, right }: { left: number; right: number }) {
 const cpColor = (cp: CP): string =>
   cp === 'C' ? 'var(--call)' : cp === 'P' ? 'var(--negative-ink)' : 'var(--text-faint)';
 
-const typeTone = (t: FlowType): 'warning' | 'info' | 'neutral' | 'pin' =>
-  t === 'SWEEP' ? 'warning' : t === 'BLOCK' ? 'info' : t === 'DARKPOOL' ? 'pin' : 'neutral';
+const typeInk = (t: FlowType): string =>
+  t === 'SWEEP'
+    ? 'var(--warning-ink)'
+    : t === 'BLOCK'
+      ? 'var(--info-ink)'
+      : t === 'DARKPOOL'
+        ? 'var(--pin)'
+        : 'var(--text-muted)';
+
+// ── Rail panel — the intelligence-rail frame (quiet section-tier header) ────
+function RailPanel({
+  title,
+  meta,
+  children,
+  className = '',
+}: {
+  title: string;
+  meta?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`slayer-panel flex min-h-0 min-w-0 flex-col ${className}`}>
+      <header className="slayer-panel-header flex items-center justify-between gap-3 py-2.5!">
+        <div className="slayer-title-section truncate">{title}</div>
+        {meta ? (
+          <div className="slayer-num shrink-0 text-[10px] tabular-nums text-[var(--text-muted)]">{meta}</div>
+        ) : null}
+      </header>
+      <div className="min-h-0 min-w-0 flex-1">{children}</div>
+    </section>
+  );
+}
+
+// ── Session-pulse cell — value first, tick + label beneath ──────────────────
+interface PulseCell {
+  key: string;
+  value: ReactNode;
+  tick: string;
+  label: string;
+  extra?: ReactNode;
+  wide?: boolean;
+}
 
 // ── Main view ───────────────────────────────────────────────────────────────
 export default function OptionsFlowTape() {
@@ -308,11 +353,17 @@ export default function OptionsFlowTape() {
     [rows, typeFilter, sentFilter, minPrem],
   );
 
-  // ── KPI strip metrics ─────────────────────────────────────────────────────
-  const metrics: Metric[] = [
-    { label: 'Session Premium', value: fmtUsd(kpi.total), sub: `${rows.length} prints on tape`, tone: 'neutral' },
+  // ── Session-pulse cells — the same session KPIs, value-first ──────────────
+  const pulseCells: PulseCell[] = [
     {
-      label: 'Call / Put Premium',
+      key: 'premium',
+      wide: true,
+      value: fmtUsd(kpi.total),
+      tick: 'var(--accent-color)',
+      label: `Session Premium · ${rows.length} prints on tape`,
+    },
+    {
+      key: 'cp',
       value: (
         <span>
           <span className="text-[var(--call)]">{kpi.callPct}</span>
@@ -320,56 +371,44 @@ export default function OptionsFlowTape() {
           <span className="text-[var(--negative-ink)]">{100 - kpi.callPct}</span>
         </span>
       ),
-      sub: <RatioBar left={kpi.call} right={kpi.put} />,
-      tone: 'neutral',
+      tick: 'var(--call)',
+      label: 'Call / Put Premium',
+      extra: <RatioBar left={kpi.call} right={kpi.put} />,
     },
     {
-      label: 'Bullish vs Bearish',
+      key: 'bias',
       value: (
         <span className={kpi.bullPct >= 50 ? 'text-[var(--call)]' : 'text-[var(--negative-ink)]'}>
           {kpi.bullPct}% {kpi.bullPct >= 50 ? 'BULL' : 'BEAR'}
         </span>
       ),
-      sub: <RatioBar left={kpi.bull} right={kpi.bear} />,
-      tone: 'neutral',
+      tick: kpi.bullPct >= 50 ? 'var(--call)' : 'var(--negative-ink)',
+      label: 'Bullish vs Bearish',
+      extra: <RatioBar left={kpi.bull} right={kpi.bear} />,
     },
-    { label: 'Sweeps', value: fmtInt(kpi.sweeps), sub: 'aggressive orders', tone: 'warning' },
-    { label: 'Blocks', value: fmtInt(kpi.blocks), sub: 'negotiated size', tone: 'call' },
-    { label: 'Dark-Pool Prints', value: fmtInt(darkPrints.length), sub: 'off-exchange', tone: 'pin' },
+    { key: 'sweeps', value: fmtInt(kpi.sweeps), tick: 'var(--warning-ink)', label: 'Sweeps · aggressive orders' },
+    { key: 'blocks', value: fmtInt(kpi.blocks), tick: 'var(--call)', label: 'Blocks · negotiated size' },
+    { key: 'dark', value: fmtInt(darkPrints.length), tick: 'var(--pin)', label: 'Dark-Pool Prints · off-exchange' },
     {
-      label: 'Largest Print',
+      key: 'largest',
       value: kpi.largest ? fmtUsd(kpi.largest.premium) : '—',
-      sub: kpi.largest ? `${kpi.largest.ticker} · ${kpi.largest.type.toLowerCase()}` : undefined,
-      tone: 'neutral',
+      tick: 'var(--text-faint)',
+      label: kpi.largest
+        ? `Largest Print · ${kpi.largest.ticker} ${kpi.largest.type.toLowerCase()}`
+        : 'Largest Print',
     },
   ];
 
-  // ── Tape columns ──────────────────────────────────────────────────────────
+  // ── Tape columns — denser cells, time demoted to the right edge ───────────
+  const dense = 'px-2! py-[5px]!';
   const columns: DataColumn<FlowRow>[] = [
-    {
-      id: 'time',
-      title: 'TIME',
-      align: 'left',
-      className: 'whitespace-nowrap',
-      render: (r) => <span className="slayer-num text-[11px] text-[var(--text-muted)]">{fmtET(r.ts)}</span>,
-    },
     {
       id: 'ticker',
       title: 'TICKER',
       align: 'left',
-      render: (r) => <span className="slayer-num text-[11.5px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>,
-    },
-    {
-      id: 'expiry',
-      title: 'EXPIRY',
-      align: 'left',
-      className: 'whitespace-nowrap',
+      className: dense,
       render: (r) => (
-        <span
-          className={`slayer-num text-[10.5px] ${r.expiry === '0DTE' ? 'font-semibold text-[var(--warning)]' : 'text-[var(--text-secondary)]'}`}
-        >
-          {r.expiry}
-        </span>
+        <span className="slayer-num text-[11.5px] font-semibold text-[var(--text-primary)]">{r.ticker}</span>
       ),
     },
     {
@@ -377,7 +416,7 @@ export default function OptionsFlowTape() {
       // Strike carries its own call/put tag (tinted C/P) — no standalone C/P column.
       title: 'STRIKE',
       align: 'right',
-      className: 'whitespace-nowrap',
+      className: `${dense} whitespace-nowrap`,
       render: (r) =>
         r.strike == null ? (
           <span className="slayer-num text-[11px] text-[var(--text-faint)]">—</span>
@@ -393,9 +432,23 @@ export default function OptionsFlowTape() {
         ),
     },
     {
+      id: 'expiry',
+      title: 'EXPIRY',
+      align: 'left',
+      className: `${dense} whitespace-nowrap`,
+      render: (r) => (
+        <span
+          className={`slayer-num text-[10.5px] ${r.expiry === '0DTE' ? 'font-semibold text-[var(--warning)]' : 'text-[var(--text-secondary)]'}`}
+        >
+          {r.expiry}
+        </span>
+      ),
+    },
+    {
       id: 'side',
       title: 'SIDE',
       align: 'center',
+      className: dense,
       render: (r) => (
         <span
           className="slayer-num text-[10.5px] font-semibold"
@@ -409,12 +462,14 @@ export default function OptionsFlowTape() {
       id: 'size',
       title: 'SIZE',
       align: 'right',
+      className: dense,
       render: (r) => <span className="slayer-num text-[11px] text-[var(--text-secondary)]">{fmtInt(r.size)}</span>,
     },
     {
       id: 'premium',
       title: 'PREMIUM',
       align: 'right',
+      className: dense,
       render: (r) => (
         <span
           className={`slayer-num text-[11.5px] font-semibold ${r.premium >= 1e6 ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}
@@ -426,15 +481,27 @@ export default function OptionsFlowTape() {
     {
       id: 'type',
       title: 'TYPE',
-      align: 'center',
-      className: 'whitespace-nowrap',
-      render: (r) => <StatusBadge tone={typeTone(r.type)}>{r.type}</StatusBadge>,
+      align: 'left',
+      className: `${dense} whitespace-nowrap`,
+      render: (r) => (
+        <span
+          className="slayer-num text-[10px] font-semibold uppercase tracking-[0.1em]"
+          style={{ color: typeInk(r.type) }}
+        >
+          {r.type}
+        </span>
+      ),
+    },
+    {
+      id: 'time',
+      title: 'TIME',
+      align: 'right',
+      className: `${dense} whitespace-nowrap`,
+      render: (r) => <span className="slayer-num text-[10.5px] text-[var(--text-muted)]">{fmtET(r.ts)}</span>,
     },
   ];
 
-  // The dark-pool rail lives in the narrow xl:col-span-4 panel; tighten cell
-  // padding (6px vs the table default 10px) so all five columns — including the
-  // TIME header — fit without clipping.
+  // Dark-pool rail table — tight cells so all five columns fit the narrow rail.
   const denseCell = 'px-1.5!';
   const darkColumns: DataColumn<DarkPrint>[] = [
     {
@@ -476,125 +543,179 @@ export default function OptionsFlowTape() {
     },
   ];
 
+  // Live status — paired dot + label + ET clock; the pulse stops with the stream.
   const liveTag = (
-    <div className="flex items-center gap-2">
-      <span className="slayer-num text-[11px] tabular-nums text-[var(--text-secondary)]">{fmtET(now.getTime())} ET</span>
+    <div className="flex shrink-0 items-center gap-2">
+      <span
+        aria-hidden
+        className={`h-1.5 w-1.5 rounded-full ${reduce ? '' : 'animate-pulse'}`}
+        style={{ background: reduce ? 'var(--text-faint)' : 'var(--positive-ink)' }}
+      />
+      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        {reduce ? 'Paused' : 'Live'}
+      </span>
+      <span className="slayer-num text-[11px] tabular-nums text-[var(--text-secondary)]">
+        {fmtET(now.getTime())} ET
+      </span>
     </div>
   );
 
   return (
-    <div className="w-full space-y-[var(--gap)]" id="options-flow-tape-view">
-      {/* ============== KPI STRIP — recomputes from the current tape ============== */}
-      <MetricStrip metrics={metrics} columns={7} />
-
-      {/* ============== FILTER BAR ============== */}
-      <div className="slayer-panel flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Flow</span>
-          <ToggleGroup<TypeFilter>
-            ariaLabel="Filter by flow type"
-            size="sm"
-            value={typeFilter}
-            onChange={setTypeFilter}
-            options={[
-              { value: 'ALL', label: 'All' },
-              { value: 'SWEEP', label: 'Sweeps' },
-              { value: 'BLOCK', label: 'Blocks' },
-              { value: 'SPLIT', label: 'Splits' },
-              { value: 'DARKPOOL', label: 'Dark Pool' },
-            ]}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-            Sentiment
-          </span>
-          <ToggleGroup<SentFilter>
-            ariaLabel="Filter by sentiment"
-            size="sm"
-            value={sentFilter}
-            onChange={setSentFilter}
-            options={[
-              { value: 'ALL', label: 'All' },
-              { value: 'BULLISH', label: 'Bullish' },
-              { value: 'BEARISH', label: 'Bearish' },
-            ]}
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-            Min Premium
-          </span>
-          <ToggleGroup<PremFilter>
-            ariaLabel="Filter by minimum premium"
-            size="sm"
-            value={premFilter}
-            onChange={setPremFilter}
-            options={[
-              { value: '0', label: 'All' },
-              { value: '100000', label: '≥$100K' },
-              { value: '500000', label: '≥$500K' },
-              { value: '1000000', label: '≥$1M' },
-            ]}
-          />
-        </div>
-      </div>
-
-      {/* ============== TAPE + RIGHT RAIL ============== */}
-      <div className="grid grid-cols-1 items-start gap-[var(--gap)] xl:grid-cols-12">
-        <TerminalPanel
-          className="xl:col-span-8"
-          title="Options Flow Tape"
-          subtitle={`${filtered.length} of ${rows.length} prints · sweeps · blocks · splits · dark pool`}
-          actions={liveTag}
-          padded={false}
-        >
-          <DataTable
-            columns={columns}
-            rows={filtered}
-            rowKey={(r) => r.id}
-            className="max-h-[560px] border-0"
-            rowClassName={(r) =>
-              r.id === flashId ? 'bg-[color-mix(in_srgb,var(--call)_12%,transparent)]' : undefined
-            }
-            emptyState="No prints match the current filters."
-          />
-        </TerminalPanel>
-
-        <div className="space-y-[var(--gap)] xl:col-span-4">
-          <TerminalPanel title="Dark-Pool Prints" subtitle="off-exchange block crosses" padded={false}>
-            <DataTable
-              columns={darkColumns}
-              rows={darkPrints}
-              rowKey={(r) => r.id}
-              className="max-h-[300px] border-0"
-              emptyState="No dark-pool prints yet."
-            />
-          </TerminalPanel>
-
-          <TerminalPanel title="Top Tickers by Premium" subtitle="session flow concentration">
-            <div className="space-y-2.5">
-              {topTickers.length === 0 ? (
-                <div className="text-[12px] slayer-muted">No flow yet.</div>
-              ) : (
-                topTickers.map((t) => (
-                  <div key={t.ticker} className="flex items-center gap-3">
-                    <span className="slayer-num w-12 shrink-0 text-[11.5px] font-semibold text-[var(--text-primary)]">
-                      {t.ticker}
-                    </span>
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
-                      <div className="h-full rounded-full" style={{ width: `${t.pct}%`, background: 'var(--call)' }} />
-                    </div>
-                    <span className="slayer-num w-16 shrink-0 text-right text-[11px] text-[var(--text-secondary)]">
-                      {fmtUsd(t.premium)}
-                    </span>
-                  </div>
-                ))
-              )}
+    <div
+      className="grid w-full min-w-0 grid-cols-1 gap-[var(--gap)] xl:grid-cols-12"
+      id="options-flow-tape-view"
+    >
+      {/* ============== SESSION PULSE — value-first KPI cells (leads on mobile, tops the rail on xl) ============== */}
+      <RailPanel
+        title="Session Pulse"
+        meta={`${rows.length} prints`}
+        className="xl:col-start-9 xl:col-span-4 xl:row-start-1"
+      >
+        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-b-[7px] bg-[var(--border-subtle)] xl:grid-cols-1">
+          {pulseCells.map((c) => (
+            <div
+              key={c.key}
+              className={`min-w-0 bg-[var(--bg-panel)] px-3.5 py-3 ${c.wide ? 'col-span-2 xl:col-span-1' : ''}`}
+            >
+              <div className="slayer-num text-[17px] font-semibold leading-none tracking-tight text-[var(--text-primary)]">
+                {c.value}
+              </div>
+              <div className="mt-2 flex min-w-0 items-center gap-1.5">
+                <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-[1px]" style={{ background: c.tick }} />
+                <span className="truncate text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
+                  {c.label}
+                </span>
+              </div>
+              {c.extra}
             </div>
-          </TerminalPanel>
+          ))}
         </div>
-      </div>
+      </RailPanel>
+
+      {/* ============== LIVE TAPE — dominant full-height column, filters docked in-header ============== */}
+      <section className="slayer-panel flex min-h-0 min-w-0 flex-col xl:col-start-1 xl:col-span-8 xl:row-start-1 xl:row-span-3">
+        <header className="slayer-panel-header">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="min-w-0">
+              <div className="slayer-title">Live Dealer Tape</div>
+              <div className="slayer-subtitle">
+                {filtered.length} of {rows.length} prints · sweeps · blocks · splits · dark pool
+              </div>
+            </div>
+            {liveTag}
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Flow
+              </span>
+              <ToggleGroup<TypeFilter>
+                ariaLabel="Filter by flow type"
+                size="sm"
+                value={typeFilter}
+                onChange={setTypeFilter}
+                options={[
+                  { value: 'ALL', label: 'All' },
+                  { value: 'SWEEP', label: 'Sweeps' },
+                  { value: 'BLOCK', label: 'Blocks' },
+                  { value: 'SPLIT', label: 'Splits' },
+                  { value: 'DARKPOOL', label: 'Dark Pool' },
+                ]}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Sentiment
+              </span>
+              <ToggleGroup<SentFilter>
+                ariaLabel="Filter by sentiment"
+                size="sm"
+                value={sentFilter}
+                onChange={setSentFilter}
+                options={[
+                  { value: 'ALL', label: 'All' },
+                  { value: 'BULLISH', label: 'Bullish' },
+                  { value: 'BEARISH', label: 'Bearish' },
+                ]}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                Min Premium
+              </span>
+              <ToggleGroup<PremFilter>
+                ariaLabel="Filter by minimum premium"
+                size="sm"
+                value={premFilter}
+                onChange={setPremFilter}
+                options={[
+                  { value: '0', label: 'All' },
+                  { value: '100000', label: '≥$100K' },
+                  { value: '500000', label: '≥$500K' },
+                  { value: '1000000', label: '≥$1M' },
+                ]}
+              />
+            </div>
+          </div>
+        </header>
+        <DataTable
+          columns={columns}
+          rows={filtered}
+          rowKey={(r) => r.id}
+          className="max-h-[60vh] min-h-0 rounded-none border-0 xl:max-h-none xl:flex-1"
+          rowClassName={(r) =>
+            r.id === flashId
+              ? '[&>td:first-child]:shadow-[inset_2px_0_0_var(--accent-color)]'
+              : undefined
+          }
+          emptyState="No prints match the current filters."
+        />
+      </section>
+
+      {/* ============== INTELLIGENCE RAIL — dark pool, then concentration ============== */}
+      <RailPanel
+        title="Dark-Pool Prints"
+        meta="off-exchange crosses"
+        className="xl:col-start-9 xl:col-span-4 xl:row-start-2"
+      >
+        <DataTable
+          columns={darkColumns}
+          rows={darkPrints}
+          rowKey={(r) => r.id}
+          className="max-h-[240px] rounded-none border-0"
+          emptyState="No dark-pool prints yet."
+        />
+      </RailPanel>
+
+      <RailPanel
+        title="Top Tickers by Premium"
+        meta="session concentration"
+        className="xl:col-start-9 xl:col-span-4 xl:row-start-3"
+      >
+        {topTickers.length === 0 ? (
+          <div className="slayer-muted px-3.5 py-4 text-[12px]">No flow yet.</div>
+        ) : (
+          <div>
+            {topTickers.map((t, i) => (
+              <div
+                key={t.ticker}
+                className="flex min-w-0 items-center gap-2.5 border-b border-[var(--border-subtle)] px-3.5 py-2 last:border-b-0"
+              >
+                <span className="slayer-num w-4 shrink-0 text-[10px] text-[var(--text-faint)]">{i + 1}</span>
+                <span className="slayer-num w-12 shrink-0 text-[11.5px] font-semibold text-[var(--text-primary)]">
+                  {t.ticker}
+                </span>
+                <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-[2px] bg-[var(--surface-2)]">
+                  <div className="h-full rounded-[2px]" style={{ width: `${t.pct}%`, background: 'var(--call)' }} />
+                </div>
+                <span className="slayer-num w-16 shrink-0 text-right text-[11px] text-[var(--text-secondary)]">
+                  {fmtUsd(t.premium)}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </RailPanel>
     </div>
   );
 }
