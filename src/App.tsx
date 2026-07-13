@@ -29,6 +29,7 @@ const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m =
 const OptionsFlowTape = lazy(() => import('./components/OptionsFlowTape'));
 const PinpointTerminal = lazy(() => import('./components/PinpointTerminal'));
 const PinpointGexView = lazy(() => import('./components/PinpointGexView'));
+const HomeDashboard = lazy(() => import('./components/HomeDashboard'));
 const ResearchDesk = lazy(() => import('./components/ResearchDesk'));
 const SettingsPanel = lazy(() => import('./components/SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const AdminOverseerPanel = lazy(() => import('./components/AdminOverseerPanel').then(m => ({ default: m.AdminOverseerPanel })));
@@ -333,7 +334,7 @@ export default function App() {
     ];
 
     const navItems = [
-      { id: 'nav-home', name: 'Home Workspace', ticker: 'HOME', pnl: 'Workspace', isNav: true, targetTab: 'home' },
+      { id: 'nav-home', name: 'Home Workspace', ticker: 'HOME', pnl: 'Workspace', isNav: true, targetTab: 'dashboard' },
       { id: 'nav-skyvision', name: 'SkyVision Cockpit', ticker: 'SKYV', pnl: 'Workspace', isNav: true, targetTab: 'skyvision' },
       { id: 'nav-pinpoint', name: 'Pinpoint GEX', ticker: 'PINP', pnl: 'Workspace', isNav: true, targetTab: 'pinpoint' },
       { id: 'nav-auditor', name: 'Trade History', ticker: 'AUDIT', pnl: 'Workspace', isNav: true, targetTab: 'auditor' },
@@ -437,7 +438,7 @@ export default function App() {
         useContractStore.getState().setIsGlobalSearchOpen(!currentOpen);
       } else if (pressedCombo === binds.home && !disabled.home) {
         e.preventDefault();
-        useContractStore.getState().setActiveTab('home');
+        useContractStore.getState().setActiveTab('dashboard');
         useContractStore.getState().setIsGlobalSearchOpen(false);
       } else if (pressedCombo === binds.skyvision && !disabled.skyvision) {
         e.preventDefault();
@@ -949,7 +950,7 @@ export default function App() {
           pressure={landingPressure}
           spark={landingSpark}
           onEnter={(tab) => handleSelectTab((tab as any) || 'pinpoint')}
-          onLaunch={() => (session?.authenticated ? handleSelectTab('pinpoint') : setShowAuthModal(true))}
+          onLaunch={() => (session?.authenticated ? handleSelectTab('dashboard') : setShowAuthModal(true))}
         />
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
@@ -1018,12 +1019,13 @@ export default function App() {
           )}
           {/* Main workspace frame */}
           <main 
-            className={`flex-1 flex flex-col w-full max-w-full justify-start overflow-y-auto overflow-x-hidden scroll-smooth touch-pan-y ${['workspace', 'home'].includes(activeTab) ? 'p-0 gap-0' : 'p-2 sm:p-4 md:p-6 gap-4 md:gap-6'}`}
+            className={`flex-1 flex flex-col w-full max-w-full justify-start overflow-y-auto overflow-x-hidden scroll-smooth touch-pan-y ${['workspace', 'home', 'dashboard'].includes(activeTab) ? 'p-0 gap-0' : 'p-2 sm:p-4 md:p-6 gap-4 md:gap-6'}`}
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <ErrorBoundary
               label={
                 activeTab === 'subscription' ? 'Pricing' :
+                activeTab === 'dashboard' ? 'Home' :
                 activeTab === 'skyvision' ? 'SkyVision' :
                 activeTab === 'pinpoint' ? 'Pinpoint GEX' :
                 activeTab === 'dealerflow' ? 'Dealer Flow' :
@@ -1049,10 +1051,21 @@ export default function App() {
                      setWelcomeCelebrationTier(newTier);
                      setShowWelcomeCelebration(true);
                    }}
-                   onEnterApp={() => setActiveTab('home')}
+                   onEnterApp={() => setActiveTab('dashboard')}
                    session={session}
                    onRequestAuth={() => setShowAuthModal(true)}
                  />
+              </div>
+            )}
+
+            {/* TAB: HOME DASHBOARD — the in-shell terminal overview grid. The
+                marketing landing keeps the full-screen 'home' tab (handled above);
+                this dense cockpit is the sidebar "Home" destination. */}
+            {activeTab === 'dashboard' && (
+              <div className="view-enter">
+                <TierGuard requiredTier={1} tabKey="home" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
+                  <HomeDashboard feedStatus={feedStatus} discovery={discovery} />
+                </TierGuard>
               </div>
             )}
 
@@ -1150,7 +1163,7 @@ export default function App() {
             )}
 
             {/* Defensive fallback: an unknown tab (e.g. corrupt persisted value) never blanks the workspace. */}
-            {!['home', 'subscription', 'skyvision', 'pinpoint', 'dealerflow', 'liveterminal', 'quant', 'auditor', 'community', 'settings', 'workspace', 'admin'].includes(activeTab) && (
+            {!['home', 'dashboard', 'subscription', 'skyvision', 'pinpoint', 'dealerflow', 'liveterminal', 'quant', 'auditor', 'community', 'settings', 'workspace', 'admin'].includes(activeTab) && (
               <div className="w-full flex-1 flex flex-col items-center justify-center text-center py-24 px-6 select-none">
                 <div className="text-[var(--text-tertiary)] font-mono text-[11px] uppercase tracking-widest mb-3">View not found</div>
                 <p className="text-[var(--text-secondary)] text-sm max-w-sm mb-6 leading-relaxed">This workspace view isn’t available. Let’s get you back to the home cockpit.</p>

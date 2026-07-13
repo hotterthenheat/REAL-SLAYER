@@ -39,7 +39,7 @@ export interface NavItemDef {
 
 /** "Main Views" group — order matters, it is the render order. */
 export const NAV_MAIN_VIEWS: NavItemDef[] = [
-  { id: 'home', label: 'Home', desc: 'Overview & landing', icon: Home, accent: true },
+  { id: 'dashboard', label: 'Home', desc: 'Terminal overview dashboard', icon: Home, accent: true },
   { id: 'skyvision', label: 'SkyVision', desc: 'Ranked trade setups', icon: Sparkles, accent: true },
   { id: 'pinpoint', label: 'Pinpoint GEX', desc: 'Dealer positioning & hedging flow', icon: Dna, accent: true },
   { id: 'dealerflow', label: 'Dealer Flow', desc: 'Unusual options & dark-pool prints', icon: Waves, accent: true },
