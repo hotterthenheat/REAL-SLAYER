@@ -18,9 +18,44 @@
  * waveform. Off-hours, when only a synthetic candle series is available, the
  * panel is labelled MODEL.
  */
-import { useRef } from 'react';
+import { useRef, useId } from 'react';
 import { type VolConePoint } from '../lib/quantSuite';
 import { useCrosshair, ChartTools } from './quant/chartInteraction';
+
+/** Monotone-cubic (Fritsch–Carlson) smooth SVG path through screen-space points — no overshoot. */
+function smoothPath(pts: { x: number; y: number }[], startCmd: 'M' | 'L' = 'M'): string {
+  const n = pts.length;
+  if (n === 0) return '';
+  const f = (v: number) => v.toFixed(1);
+  if (n < 3) return pts.map((p, i) => `${i === 0 ? startCmd : 'L'}${f(p.x)},${f(p.y)}`).join(' ');
+  const xs = pts.map((p) => p.x), ys = pts.map((p) => p.y);
+  const dx: number[] = [], slope: number[] = [];
+  for (let i = 0; i < n - 1; i++) { dx[i] = xs[i + 1] - xs[i]; slope[i] = (ys[i + 1] - ys[i]) / (dx[i] || 1e-9); }
+  const t: number[] = new Array(n);
+  t[0] = slope[0]; t[n - 1] = slope[n - 2];
+  for (let i = 1; i < n - 1; i++) t[i] = slope[i - 1] * slope[i] <= 0 ? 0 : (slope[i - 1] + slope[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (slope[i] === 0) { t[i] = 0; t[i + 1] = 0; }
+    else { const a = t[i] / slope[i], b = t[i + 1] / slope[i], s = a * a + b * b; if (s > 9) { const tau = 3 / Math.sqrt(s); t[i] = tau * a * slope[i]; t[i + 1] = tau * b * slope[i]; } }
+  }
+  let d = `${startCmd}${f(xs[0])},${f(ys[0])}`;
+  for (let i = 0; i < n - 1; i++) {
+    const x1 = xs[i] + dx[i] / 3, y1 = ys[i] + (t[i] * dx[i]) / 3;
+    const x2 = xs[i + 1] - dx[i] / 3, y2 = ys[i + 1] - (t[i + 1] * dx[i]) / 3;
+    d += ` C${f(x1)},${f(y1)} ${f(x2)},${f(y2)} ${f(xs[i + 1])},${f(ys[i + 1])}`;
+  }
+  return d;
+}
+
+/** Dense legend chip — sharp corners, cold-dark surface, hairline accent border. */
+function LegChip({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
+  return (
+    <span className="flex items-center gap-1 px-1.5 py-[1px] text-[8px] font-bold uppercase tracking-wider leading-none" style={{ background: 'color-mix(in srgb, var(--surface-2) 90%, transparent)', border: `1px solid color-mix(in srgb, ${color} 35%, transparent)`, color: 'var(--text-secondary)' }}>
+      <span className="inline-block w-2.5" style={{ height: dashed ? 0 : 2, borderTop: dashed ? `2px dashed ${color}` : undefined, background: dashed ? undefined : color }} />
+      {label}
+    </span>
+  );
+}
 
 interface VolConePanelProps {
   cone: VolConePoint[];  // precomputed by calculateVolatilityCone (real, annualized)
@@ -50,6 +85,7 @@ function conePercentile(p: VolConePoint, v: number): number {
 export function VolConePanel({ cone: coneRaw, atmIv, realizedVol, ticker, live }: VolConePanelProps) {
   const cone = coneRaw.filter((c) => isFinite(c.p50) && c.max > 0);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const uid = useId().replace(/:/g, '');
   const { svgRef, vx, onPointerMove, onPointerLeave } = useCrosshair(1000);
   const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
 
@@ -79,11 +115,14 @@ export function VolConePanel({ cone: coneRaw, atmIv, realizedVol, ticker, live }
     return Math.max(y0, Math.min(y1, yy)); // clamp into the plot box
   };
 
-  const lineFor = (key: 'min' | 'p25' | 'p50' | 'p75' | 'max' | 'current') =>
-    cone.map((c, i) => `${i === 0 ? 'M' : 'L'}${sx(c.window).toFixed(1)},${sy(c[key]).toFixed(1)}`).join(' ');
-  const band = (top: 'max' | 'p75', bot: 'min' | 'p25') =>
-    `${cone.map((c, i) => `${i === 0 ? 'M' : 'L'}${sx(c.window).toFixed(1)},${sy(c[top]).toFixed(1)}`).join(' ')} ` +
-    `${cone.slice().reverse().map((c) => `L${sx(c.window).toFixed(1)},${sy(c[bot]).toFixed(1)}`).join(' ')} Z`;
+  const ptsFor = (key: 'min' | 'p25' | 'p50' | 'p75' | 'max' | 'current') =>
+    cone.map((c) => ({ x: sx(c.window), y: sy(c[key]) }));
+  const lineFor = (key: 'min' | 'p25' | 'p50' | 'p75' | 'max' | 'current') => smoothPath(ptsFor(key));
+  const band = (top: 'max' | 'p75', bot: 'min' | 'p25') => {
+    const topD = smoothPath(ptsFor(top));
+    const botD = smoothPath(ptsFor(bot).reverse(), 'L');
+    return `${topD} ${botD} Z`;
+  };
 
   const ticks = [vLo, (vLo + vHi) / 2, vHi];
 
@@ -121,26 +160,50 @@ export function VolConePanel({ cone: coneRaw, atmIv, realizedVol, ticker, live }
 
       <div className="relative">
         <svg ref={svgRef} onPointerMove={onPointerMove} onPointerLeave={onPointerLeave} viewBox={`0 0 ${W} ${H}`} className="w-full h-auto block cursor-crosshair" preserveAspectRatio="none" style={{ maxHeight: 220 }}>
+          <defs>
+            <linearGradient id={`coneOuter-${uid}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.12" />
+              <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0.02" />
+            </linearGradient>
+            <linearGradient id={`coneInner-${uid}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent-color)" stopOpacity="0.24" />
+              <stop offset="100%" stopColor="var(--accent-color)" stopOpacity="0.08" />
+            </linearGradient>
+          </defs>
+          {/* faint vertical gridlines at each lookback window */}
+          {cone.map((c) => (
+            <line key={`vg${c.window}`} x1={sx(c.window)} y1={y0} x2={sx(c.window)} y2={y1} stroke="var(--border)" strokeWidth={1} opacity={0.28} />
+          ))}
+          {/* horizontal gridlines + tick labels */}
           {ticks.map((t, i) => (
             <g key={i}>
-              <line x1={x0} y1={sy(t)} x2={x1} y2={sy(t)} stroke="var(--border)" strokeWidth={1} strokeDasharray="2 4" opacity={0.5} />
+              <line x1={x0} y1={sy(t)} x2={x1} y2={sy(t)} stroke="var(--border)" strokeWidth={1} strokeDasharray="1 4" opacity={0.6} />
               <text x={4} y={sy(t) + 3} fontSize={10} fill="var(--text-tertiary)" fontFamily="ui-monospace, monospace">{(t * 100).toFixed(0)}%</text>
             </g>
           ))}
-          {/* min–max envelope, then 25–75 band */}
-          <path d={band('max', 'min')} fill="color-mix(in srgb, var(--accent-color) 8%, transparent)" stroke="none" />
-          <path d={band('p75', 'p25')} fill="color-mix(in srgb, var(--accent-color) 16%, transparent)" stroke="none" />
-          <path d={lineFor('p50')} fill="none" stroke="var(--text-secondary)" strokeWidth={1.25} strokeDasharray="4 3" />
+          {/* min–max envelope, then 25–75 band (gradient-filled) */}
+          <path d={band('max', 'min')} fill={`url(#coneOuter-${uid})`} stroke="none" />
+          <path d={band('p75', 'p25')} fill={`url(#coneInner-${uid})`} stroke="none" />
+          <path d={lineFor('p50')} fill="none" stroke="var(--text-secondary)" strokeWidth={1.25} strokeDasharray="4 3" strokeLinejoin="round" />
           {/* front ATM IV reference */}
-          <line x1={x0} y1={sy(atmIv)} x2={x1} y2={sy(atmIv)} stroke="var(--info)" strokeWidth={1.25} strokeDasharray="5 3" />
-          <text x={x1 - 4} y={sy(atmIv) - 4} fontSize={10} fill="var(--info)" textAnchor="end" fontFamily="ui-monospace, monospace">IV {(atmIv * 100).toFixed(0)}%</text>
-          {/* current realized vol per window */}
-          <path d={lineFor('current')} fill="none" stroke="var(--accent-color)" strokeWidth={2.25} />
-          {cone.map((c) => <circle key={c.window} cx={sx(c.window)} cy={sy(c.current)} r={2} fill="var(--accent-color)" />)}
+          <line x1={x0} y1={sy(atmIv)} x2={x1} y2={sy(atmIv)} stroke="var(--pin)" strokeWidth={1.25} strokeDasharray="5 3" />
+          <g style={{ pointerEvents: 'none' }}>
+            <rect x={x1 - 44} y={sy(atmIv) - 13} width={40} height={11} fill="var(--surface-2)" stroke="color-mix(in srgb, var(--pin) 45%, transparent)" strokeWidth={0.75} />
+            <text x={x1 - 6} y={sy(atmIv) - 5} fontSize={7.5} fill="var(--pin)" textAnchor="end" fontFamily="ui-monospace, monospace" style={{ fontWeight: 700, letterSpacing: '0.06em' }}>IV {(atmIv * 100).toFixed(0)}%</text>
+          </g>
+          {/* current realized vol per window (smooth) */}
+          <path d={lineFor('current')} fill="none" stroke="var(--accent-color)" strokeWidth={2.25} strokeLinejoin="round" strokeLinecap="round" />
+          {cone.map((c) => <circle key={c.window} cx={sx(c.window)} cy={sy(c.current)} r={2.2} fill="var(--accent-color)" stroke="var(--surface)" strokeWidth={0.75} />)}
           {/* crosshair */}
           {hoverPt && <line x1={sx(hoverPt.window)} y1={y0} x2={sx(hoverPt.window)} y2={y1} stroke="var(--accent-color)" strokeWidth={1} opacity={0.6} />}
           {hoverPt && <circle cx={sx(hoverPt.window)} cy={sy(hoverPt.current)} r={3.2} fill="var(--accent-color)" />}
         </svg>
+        <div className="pointer-events-none absolute top-1.5 right-2 flex items-center gap-1">
+          <LegChip color="var(--accent-color)" label="Current" />
+          <LegChip color="var(--pin)" label="ATM IV" dashed />
+          <LegChip color="var(--text-secondary)" label="Median" dashed />
+          <LegChip color="var(--accent-color)" label="25–75" />
+        </div>
         {hoverPt && (
           <div className="pointer-events-none absolute top-1 px-2 py-1 rounded-md bg-[var(--surface-2)] border border-[var(--border)] text-[10px] tabular-nums shadow-lg" style={{ left: `${Math.min(78, (sx(hoverPt.window) / W) * 100)}%` }}>
             <div className="text-[var(--text-primary)] font-bold">{hoverPt.window}-bar</div>
@@ -156,7 +219,7 @@ export function VolConePanel({ cone: coneRaw, atmIv, realizedVol, ticker, live }
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 px-3.5 py-2.5 border-t border-[var(--border)]">
-        <Cell label="Front IV" value={pct(atmIv)} sub="ATM implied" tone="var(--info)" />
+        <Cell label="Front IV" value={pct(atmIv)} sub="ATM implied" tone="var(--pin)" />
         <Cell label="Realized (YZ)" value={pct(realizedVol)} sub="front window" />
         <Cell label="VRP (IV−RV)" value={`${(vrp * 100).toFixed(1)} pts`} sub={vrp >= 0 ? 'options rich' : 'options cheap'} tone={vrp >= 0 ? 'var(--success)' : 'var(--danger)'} />
         <Cell label={`IV %ile (${front.window}-bar)`} value={`${ivPctShort.toFixed(0)}%`} sub={ivPctShort >= 75 ? 'rich vs history' : ivPctShort <= 25 ? 'cheap vs history' : 'mid-cone'} tone={ivPctShort >= 75 ? 'var(--danger)' : ivPctShort <= 25 ? 'var(--success)' : 'var(--text-primary)'} />

@@ -33,42 +33,43 @@ function registerSlayerTheme(echarts: EChartsModule) {
   // Data font is a neutral system mono (tabular digits, clean axes) — the brand
   // face (JetBrains Mono) is reserved for the wordmark, never chart data.
   const dataFont = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+  // Neutral axis furniture for the pure-black institutional canvas.
   const axis = {
     axisLine: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
     axisTick: { lineStyle: { color: 'rgba(255,255,255,0.14)' } },
-    axisLabel: { color: '#8A8A92', fontFamily: dataFont, fontSize: 10 },
+    axisLabel: { color: '#9BA3AF', fontFamily: dataFont, fontSize: 10 },
     splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
     splitArea: { areaStyle: { color: ['rgba(255,255,255,0.012)', 'transparent'] } },
   };
-  // Series palette = the terminal's semantic data accents (steel/amber/green/red
-  // + muted greek/dealer tones), not generic bright chart hues.
+  // Series palette = the reference data accents (steel/gold/emerald/rose +
+  // greek/dealer tones) with the emerald brand accent in reach for emphasis series.
   echarts.registerTheme('slayer-dark', {
-    color: ['#6A93B5', '#C79350', '#3F9C79', '#B23B3B', '#7C6DA8', '#5E8C8C', '#8A8A92', '#A66FA0'],
+    color: ['#5B9DF0', '#E5B94E', '#34D399', '#F86A6F', '#9B7BE0', '#4E86D6', '#26C281', '#93A7B8'],
     backgroundColor: 'transparent',
-    textStyle: { fontFamily: dataFont, color: '#A3A3A3' },
-    title: { textStyle: { color: '#E5E5E5', fontWeight: 700 }, subtextStyle: { color: '#71717A' } },
-    legend: { textStyle: { color: '#A3A3A3', fontFamily: dataFont }, inactiveColor: '#3f3f46' },
+    textStyle: { fontFamily: dataFont, color: '#C3C9D2' },
+    title: { textStyle: { color: '#E6E9EF', fontWeight: 700 }, subtextStyle: { color: '#9BA3AF' } },
+    legend: { textStyle: { color: '#C3C9D2', fontFamily: dataFont }, inactiveColor: '#4B535E' },
     tooltip: {
-      backgroundColor: 'rgba(10,10,11,0.96)',
-      borderColor: 'rgba(255,255,255,0.10)',
+      backgroundColor: 'rgba(14,16,19,0.96)',
+      borderColor: 'rgba(255,255,255,0.12)',
       borderWidth: 1,
-      textStyle: { color: '#E5E5E5', fontFamily: dataFont, fontSize: 11 },
-      extraCssText: 'border-radius: 7px;',
+      textStyle: { color: '#E6E9EF', fontFamily: dataFont, fontSize: 11 },
+      extraCssText: 'border-radius: 4px; box-shadow: 0 10px 30px -12px rgba(0,0,0,0.75);',
     },
-    axisPointer: { lineStyle: { color: '#3f3f46' }, crossStyle: { color: '#3f3f46' }, label: { backgroundColor: '#1c1c1e' } },
+    axisPointer: { lineStyle: { color: '#4B535E' }, crossStyle: { color: '#4B535E' }, label: { backgroundColor: '#1A1D23' } },
     categoryAxis: axis,
     valueAxis: axis,
     timeAxis: axis,
     logAxis: axis,
     grid: { borderColor: 'rgba(255,255,255,0.06)' },
-    toolbox: { iconStyle: { borderColor: '#71717A' }, emphasis: { iconStyle: { borderColor: '#E5E5E5' } } },
+    toolbox: { iconStyle: { borderColor: '#9BA3AF' }, emphasis: { iconStyle: { borderColor: '#26C281' } } },
     dataZoom: {
       borderColor: 'rgba(255,255,255,0.08)',
-      fillerColor: 'rgba(106,147,181,0.12)',
-      handleStyle: { color: '#6A93B5' },
-      moveHandleStyle: { color: '#6A93B5' },
-      dataBackground: { lineStyle: { color: '#3f3f46' }, areaStyle: { color: 'rgba(255,255,255,0.04)' } },
-      textStyle: { color: '#71717A' },
+      fillerColor: 'rgba(38,194,129,0.12)',
+      handleStyle: { color: '#26C281' },
+      moveHandleStyle: { color: '#26C281' },
+      dataBackground: { lineStyle: { color: '#4B535E' }, areaStyle: { color: 'rgba(255,255,255,0.04)' } },
+      textStyle: { color: '#9BA3AF' },
     },
   });
 }

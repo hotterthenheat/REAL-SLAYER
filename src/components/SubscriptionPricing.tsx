@@ -177,15 +177,15 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
     }
   };
 
-  // Shared institutional field / control styling for the checkout modal.
-  const modalLabelCls = "text-[10px] text-[var(--text-faint)] uppercase tracking-[0.18em] font-semibold block mb-1.5";
-  const modalInputCls = "w-full bg-[var(--bg-shell)] border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder:text-[var(--text-faint)] rounded-[7px] px-3 py-2.5 text-[13px] focus:outline-none focus:border-[var(--border-mid)] transition-colors font-sans";
-  const ghostCtaCls = "w-full py-3 rounded-[7px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(248,248,255,0.05)] font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
-  const primaryCtaCls = "w-full py-3 rounded-[7px] bg-[var(--text-primary)] text-[#0A0806] hover:opacity-90 font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  // Shared institutional field / control styling for the checkout modal (GLACIER: controls radius 5).
+  const modalLabelCls = "text-[10px] text-[var(--text-tertiary)] uppercase tracking-[0.18em] font-semibold block mb-1.5";
+  const modalInputCls = "w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] rounded-[5px] px-3 py-2.5 text-[13px] focus:outline-none focus:border-[var(--accent-color)] transition-colors font-sans";
+  const ghostCtaCls = "w-full py-3 rounded-[5px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-soft)] font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  const primaryCtaCls = "w-full py-3 rounded-[5px] bg-[var(--accent-color)] text-[#04121C] hover:opacity-95 font-semibold text-[11.5px] uppercase tracking-[0.1em] shadow-[0_0_18px_var(--accent-glow)] hover:shadow-[0_0_30px_var(--accent-glow)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
   // Compact CTA styling for the compare-plans matrix column headers (mirror the card CTAs).
-  const matrixGhostCta = "w-full py-2 px-2 rounded-[7px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(248,248,255,0.05)] font-semibold text-[10px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
-  const matrixPrimaryCta = "w-full py-2 px-2 rounded-[7px] bg-[var(--text-primary)] text-[#0A0806] hover:opacity-90 font-semibold text-[10px] uppercase tracking-[0.1em] transition-opacity cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
+  const matrixGhostCta = "w-full py-2 px-2 rounded-[5px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-soft)] font-semibold text-[10px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
+  const matrixPrimaryCta = "w-full py-2 px-2 rounded-[5px] bg-[var(--accent-color)] text-[#04121C] hover:opacity-95 font-semibold text-[10px] uppercase tracking-[0.1em] shadow-[0_0_14px_var(--accent-glow)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
 
   // Columns (tiers) for the Compare plans matrix. Prices track the billingCycle
   // toggle just like the cards above; lifetime is always "Custom".
@@ -243,26 +243,27 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
         className="relative z-10 py-12 sm:py-20 px-4 sm:px-6 max-w-[1320px] mx-auto w-full"
       >
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10 max-w-5xl mx-auto w-full">
-          <div>
-            <span className="text-[var(--text-faint)] text-[10px] font-semibold uppercase tracking-[0.18em] block mb-2">
+        {/* SECTION HEADER ROW — title left, billing-cycle toggle docked right, ruled off from the tiers */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 pb-5 mb-8 sm:mb-10 border-b border-[var(--border)] max-w-5xl mx-auto w-full min-w-0">
+          <div className="min-w-0">
+            <span className="text-[var(--accent-color)] text-[10px] font-semibold uppercase tracking-[0.18em] block mb-2">
               Access
             </span>
             <h2 className="text-[22px] sm:text-[24px] font-semibold text-[var(--text-primary)] tracking-tight font-sans leading-none">
               Plans &amp; pricing
             </h2>
-            <p className="text-[var(--text-muted)] text-[12.5px] mt-2 leading-relaxed">
+            <p className="text-[var(--text-tertiary)] text-[12.5px] mt-2 leading-relaxed">
               Each tier includes everything below it. Cancel anytime.
             </p>
           </div>
 
-          <div role="radiogroup" aria-label="Billing cycle" className="inline-flex items-center gap-1 bg-[var(--bg-panel)] border border-[var(--border-subtle)] p-1 rounded-[7px] shrink-0 self-start sm:self-auto">
+          <div role="radiogroup" aria-label="Billing cycle" className="inline-flex items-center gap-1 bg-[var(--surface)] border border-[var(--border)] p-1 rounded-[5px] shrink-0 self-start sm:self-auto">
             <button
               role="radio"
               aria-checked={billingCycle === 'monthly'}
               onClick={() => setBillingCycle('monthly')}
-              className={`px-4 py-1.5 min-h-[34px] rounded-[7px] text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] border ${
-                billingCycle === 'monthly' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border-transparent'
+              className={`px-4 py-1.5 min-h-[34px] rounded-[5px] text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] border ${
+                billingCycle === 'monthly' ? 'bg-[var(--accent-soft)] text-[var(--accent-color)] border-[var(--accent-glow)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border-transparent'
               }`}
             >
               Monthly
@@ -271,8 +272,8 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
               role="radio"
               aria-checked={billingCycle === 'annual'}
               onClick={() => setBillingCycle('annual')}
-              className={`px-4 py-1.5 min-h-[34px] rounded-[7px] text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] flex items-center gap-2 border ${
-                billingCycle === 'annual' ? 'bg-[var(--bg-panel-raised)] text-[var(--text-primary)] border-[var(--border-mid)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] border-transparent'
+              className={`px-4 py-1.5 min-h-[34px] rounded-[5px] text-[11px] font-semibold uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] flex items-center gap-2 border ${
+                billingCycle === 'annual' ? 'bg-[var(--accent-soft)] text-[var(--accent-color)] border-[var(--accent-glow)]' : 'text-[var(--text-tertiary)] hover:text-[var(--text-primary)] border-transparent'
               }`}
             >
               Annual <span className="text-[9px] text-[var(--positive-ink)] tabular-nums font-semibold tracking-wide">−18%</span>
@@ -280,27 +281,89 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 items-stretch max-w-[340px] sm:max-w-none lg:max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto w-full min-w-0">
 
-          {/* PINPOINT CARD — everything except SkyVision picks & Quant Lab */}
+          {/* SKYVISION HERO — the flagship tier as a wide horizontal card spanning the top.
+              Identity / price / CTA rail on the left, feature highlights in columns on the right. */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[10px] p-6 flex flex-col bg-[var(--bg-panel)] border border-[var(--border-subtle)] transition-colors duration-200 hover:border-[var(--border-mid)]"
+            className="relative rounded-[8px] border border-[var(--accent-color)] bg-[var(--surface)] shadow-[0_0_44px_-10px_var(--accent-glow)] overflow-hidden min-w-0"
           >
-            <div className="flex flex-col flex-grow">
-              <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] lg:grid-cols-[320px_1fr]">
+              <div className="p-6 sm:p-7 bg-[var(--accent-soft)] border-b md:border-b-0 md:border-r border-[var(--border)] flex flex-col min-w-0">
+                <span className="self-start bg-[var(--surface)] border border-[var(--accent-color)] text-[var(--accent-color)] text-[9px] font-semibold uppercase tracking-[0.16em] px-2.5 py-1 rounded-[5px] whitespace-nowrap">
+                  Flagship
+                </span>
+                <div className="mt-5">
+                  <span className="text-[var(--text-primary)] text-[15px] font-semibold">
+                    SkyVision
+                  </span>
+                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Everything included</span>
+                </div>
+                <div className="flex items-baseline gap-1.5 mt-4 mb-7">
+                  <span className="text-[40px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$275' : '$226'}</span>
+                  <span className="text-[12px] text-[var(--text-tertiary)]">/ mo</span>
+                </div>
+                <div className="mt-auto">
+                  <button
+                    onClick={() => handleStripeCheckout('skyvision')}
+                    disabled={checkoutPending === 'skyvision'}
+                    className={primaryCtaCls}
+                  >
+                    {checkoutPending === 'skyvision' ? 'Redirecting…' : 'Select plan'}
+                  </button>
+                </div>
+              </div>
+
+              <ul className="p-6 sm:p-7 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-3 content-center min-w-0">
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span className="text-[var(--text-primary)] font-medium">Everything in Pinpoint</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span className="text-[var(--text-primary)] font-medium">Tells you which options to trade</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span>Live volatility surface &amp; expected P&amp;L</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span>Trade health score tracker</span>
+                </li>
+                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
+                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
+                  <span>Quant Lab — backtester, order flow &amp; momentum</span>
+                </li>
+              </ul>
+            </div>
+          </motion.div>
+
+          {/* SUPPORTING TIERS — Pinpoint and Lifetime as compact cards side-by-side beneath the hero */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 items-stretch min-w-0">
+
+            {/* PINPOINT CARD — everything except SkyVision picks & Quant Lab */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col min-w-0 transition-colors duration-200 hover:border-[var(--border-strong)]"
+            >
+              <div className="flex items-start justify-between gap-4 pb-4 mb-4 border-b border-[var(--border)]">
+                <div className="min-w-0">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     Pinpoint
                   </span>
-                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">The dealer-GEX terminal</span>
+                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">The dealer-GEX terminal</span>
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$125' : '$103'}</span>
-                  <span className="text-[12px] text-[var(--text-muted)]">/ mo</span>
+                <div className="flex items-baseline gap-1 shrink-0">
+                  <span className="text-[24px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$125' : '$103'}</span>
+                  <span className="text-[11px] text-[var(--text-tertiary)]">/ mo</span>
                 </div>
               </div>
 
@@ -330,96 +393,34 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   <span>Real-time Discord chat &amp; alerts</span>
                 </li>
               </ul>
-            </div>
 
-            <button
-              onClick={() => handleStripeCheckout('pinpoint')}
-              disabled={checkoutPending === 'pinpoint'}
-              className={ghostCtaCls}
+              <button
+                onClick={() => handleStripeCheckout('pinpoint')}
+                disabled={checkoutPending === 'pinpoint'}
+                className={ghostCtaCls}
+              >
+                {checkoutPending === 'pinpoint' ? 'Redirecting…' : 'Select plan'}
+              </button>
+            </motion.div>
+
+            {/* LIFETIME CARD — custom-quote contact tier */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: 0.26, ease: [0.16, 1, 0.3, 1] }}
+              className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 flex flex-col min-w-0 transition-colors duration-200 hover:border-[var(--border-strong)]"
             >
-              {checkoutPending === 'pinpoint' ? 'Redirecting…' : 'Select plan'}
-            </button>
-          </motion.div>
-
-          {/* SKYVISION CARD - flagship, featured */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[10px] p-6 pt-7 flex flex-col relative bg-[var(--bg-panel-raised)] border border-[var(--border-strong)] transition-colors duration-200"
-          >
-            <div className="absolute top-0 left-0 h-full w-[2px] bg-[var(--accent-color)] rounded-l-[10px]" aria-hidden="true" />
-            <div className="absolute -top-2.5 left-6 bg-[var(--text-primary)] text-[#0A0806] text-[9px] font-semibold uppercase tracking-[0.16em] px-2.5 py-1 rounded-[7px] whitespace-nowrap z-10">
-              Flagship
-            </div>
-
-            <div className="flex flex-col flex-grow">
-              <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="mb-4">
-                  <span className="text-[var(--text-primary)] text-[13px] font-semibold">
-                    SkyVision
-                  </span>
-                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">Everything included</span>
-                </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[34px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{billingCycle === 'monthly' ? '$275' : '$226'}</span>
-                  <span className="text-[12px] text-[var(--text-muted)]">/ mo</span>
-                </div>
-              </div>
-
-              <ul className="space-y-2.5 mb-6 flex-grow">
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span className="text-[var(--text-primary)] font-medium">Everything in Pinpoint</span>
-                </li>
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span className="text-[var(--text-primary)] font-medium">Tells you which options to trade</span>
-                </li>
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span>Live volatility surface &amp; expected P&amp;L</span>
-                </li>
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span>Trade health score tracker</span>
-                </li>
-                <li className="flex gap-2.5 items-start text-[12.5px] text-[var(--text-secondary)] leading-snug">
-                  <Check className="w-3.5 h-3.5 text-[var(--positive-ink)] shrink-0 mt-0.5" />
-                  <span>Quant Lab — backtester, order flow &amp; momentum</span>
-                </li>
-              </ul>
-            </div>
-
-            <button
-              onClick={() => handleStripeCheckout('skyvision')}
-              disabled={checkoutPending === 'skyvision'}
-              className={primaryCtaCls}
-            >
-              {checkoutPending === 'skyvision' ? 'Redirecting…' : 'Select plan'}
-            </button>
-          </motion.div>
-
-          {/* LIFETIME CARD */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="group rounded-[10px] p-6 flex flex-col bg-[var(--bg-panel)] border border-[var(--border-subtle)] transition-colors duration-200 hover:border-[var(--border-mid)]"
-          >
-            <div className="flex flex-col flex-grow">
-              <div className="pb-5 mb-5 border-b border-[var(--border-subtle)]">
-                <div className="mb-4">
+              <div className="flex items-start justify-between gap-4 pb-4 mb-4 border-b border-[var(--border)]">
+                <div className="min-w-0">
                   <span className="text-[var(--text-primary)] text-[13px] font-semibold">
                     Lifetime
                   </span>
+                  <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">Tailored pricing &mdash; talk to us</span>
                 </div>
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[26px] font-semibold text-[var(--text-primary)] tracking-tight leading-none">Custom</span>
+                <div className="shrink-0">
+                  <span className="text-[20px] font-semibold text-[var(--text-primary)] tracking-tight leading-none">Custom</span>
                 </div>
-                <span className="text-[12px] text-[var(--text-muted)] mt-2 block">Tailored pricing &mdash; talk to us</span>
               </div>
 
               <ul className="space-y-2.5 mb-6 flex-grow">
@@ -440,16 +441,16 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   <span>Early beta access to tools</span>
                 </li>
               </ul>
-            </div>
 
-            <button
-              onClick={() => handleCheckoutPlan('lifetime')}
-              className={ghostCtaCls}
-            >
-              Contact us
-            </button>
-          </motion.div>
+              <button
+                onClick={() => handleCheckoutPlan('lifetime')}
+                className={ghostCtaCls}
+              >
+                Contact us
+              </button>
+            </motion.div>
 
+          </div>
         </div>
 
         {/* COMPARE PLANS MATRIX — side-by-side capability comparison beneath the cards */}
@@ -458,48 +459,53 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-          className="max-w-[340px] sm:max-w-none lg:max-w-5xl mx-auto mt-12 sm:mt-16"
+          className="max-w-5xl mx-auto mt-12 sm:mt-16 min-w-0"
         >
           <div className="mb-5 sm:mb-6">
-            <span className="text-[var(--text-faint)] text-[10px] font-semibold uppercase tracking-[0.18em] block mb-2">
+            <span className="text-[var(--accent-color)] text-[10px] font-semibold uppercase tracking-[0.18em] block mb-2">
               Compare
             </span>
             <h3 className="text-[18px] sm:text-[20px] font-semibold text-[var(--text-primary)] tracking-tight font-sans leading-none">
               Compare plans
             </h3>
-            <p className="text-[var(--text-muted)] text-[12.5px] mt-2 leading-relaxed">
+            <p className="text-[var(--text-tertiary)] text-[12.5px] mt-2 leading-relaxed">
               Every capability, side by side &mdash; see exactly what each tier unlocks.
             </p>
           </div>
 
-          <div className="rounded-[10px] border border-[var(--border-subtle)] bg-[var(--bg-panel)] overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse min-w-[640px]">
+          {/* The matrix scrolls both ways INSIDE this container (never the page):
+              header row sticks to the top, feature column sticks to the left. */}
+          <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] overflow-hidden min-w-0">
+            <div className="overflow-auto max-h-[600px] min-w-0">
+              <table className="w-full border-separate border-spacing-0 min-w-[640px]">
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-20 bg-[var(--bg-panel)] text-left align-bottom p-4 min-w-[200px] sm:min-w-[240px] border-b border-[var(--border-subtle)]">
-                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-faint)]">Features</span>
+                    <th className="sticky left-0 top-0 z-30 bg-[var(--surface)] text-left align-bottom p-4 min-w-[200px] sm:min-w-[240px] border-b border-r border-[var(--border)]">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Features</span>
                     </th>
                     {matrixColumns.map((col) => (
                       <th
                         key={col.key}
-                        className={`align-bottom p-4 text-left border-b border-[var(--border-subtle)] min-w-[150px] ${col.flagship ? 'bg-[var(--bg-panel-raised)] border-t-2 border-t-[var(--accent-color)]' : ''}`}
+                        className={`sticky top-0 z-20 align-bottom p-4 text-left border-b border-[var(--border)] min-w-[150px] ${col.flagship ? 'border-t-2 border-t-[var(--accent-color)]' : ''}`}
+                        style={col.flagship
+                          ? { backgroundColor: 'var(--surface)', backgroundImage: 'linear-gradient(var(--accent-soft), var(--accent-soft))' }
+                          : { backgroundColor: 'var(--surface)' }}
                       >
                         <div className="flex flex-col gap-2.5">
                           <div>
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-[13px] font-semibold text-[var(--text-primary)]">{col.name}</span>
                               {col.flagship && (
-                                <span className="bg-[var(--text-primary)] text-[#0A0806] text-[8px] font-semibold uppercase tracking-[0.16em] px-1.5 py-0.5 rounded-[7px] whitespace-nowrap">
+                                <span className="bg-[var(--accent-soft)] border border-[var(--accent-color)] text-[var(--accent-color)] text-[8px] font-semibold uppercase tracking-[0.16em] px-1.5 py-0.5 rounded-[5px] whitespace-nowrap">
                                   Flagship
                                 </span>
                               )}
                             </div>
-                            <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-faint)]">{col.tagline}</span>
+                            <span className="block mt-0.5 text-[10px] uppercase tracking-[0.14em] text-[var(--text-tertiary)]">{col.tagline}</span>
                           </div>
                           <div className="flex items-baseline gap-1">
                             <span className="text-[22px] font-semibold text-[var(--text-primary)] tracking-tight tabular-nums slayer-num leading-none">{col.price}</span>
-                            {col.sub && <span className="text-[11px] text-[var(--text-muted)]">{col.sub}</span>}
+                            {col.sub && <span className="text-[11px] text-[var(--text-tertiary)]">{col.sub}</span>}
                           </div>
                           <button
                             onClick={col.onSelect}
@@ -517,27 +523,31 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   {matrixGroups.map((g) => (
                     <React.Fragment key={g.group}>
                       <tr>
-                        <td colSpan={1 + matrixColumns.length} className="bg-[var(--bg-panel-soft)] border-b border-[var(--border-subtle)] px-4 py-2">
+                        <th
+                          scope="row"
+                          className="sticky left-0 z-10 bg-[var(--surface-2)] text-left px-4 py-2 border-b border-r border-[var(--border)]"
+                        >
                           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)]">{g.group}</span>
-                        </td>
+                        </th>
+                        <td colSpan={matrixColumns.length} className="bg-[var(--surface-2)] border-b border-[var(--border)] px-4 py-2" />
                       </tr>
                       {g.rows.map((row) => (
-                        <tr key={row.label} className="border-b border-[var(--border-subtle)] last:border-0">
+                        <tr key={row.label}>
                           <th
                             scope="row"
-                            className="sticky left-0 z-10 bg-[var(--bg-panel)] text-left font-normal px-4 py-3 text-[12.5px] text-[var(--text-secondary)] leading-snug align-top"
+                            className="sticky left-0 z-10 bg-[var(--surface)] text-left font-normal px-4 py-3 text-[12.5px] text-[var(--text-secondary)] leading-snug align-top border-b border-r border-[var(--border)]"
                           >
                             {row.label}
                           </th>
                           {row.cells.map((c, ci) => (
                             <td
                               key={ci}
-                              className={`px-4 py-3 align-top ${matrixColumns[ci].flagship ? 'bg-[var(--bg-panel-raised)]' : ''}`}
+                              className={`px-4 py-3 align-top border-b border-[var(--border)] ${matrixColumns[ci].flagship ? 'bg-[var(--accent-soft)]' : ''}`}
                             >
                               {c === true ? (
                                 <Check className="w-3.5 h-3.5 text-[var(--positive-ink)]" aria-label="Included" />
                               ) : c === false ? (
-                                <span className="text-[var(--text-faint)] text-[13px] leading-none" aria-label="Not included">—</span>
+                                <span className="text-[var(--text-tertiary)] text-[13px] leading-none" aria-label="Not included">—</span>
                               ) : (
                                 <span className="text-[12px] text-[var(--text-primary)] font-medium tabular-nums whitespace-nowrap">{c}</span>
                               )}

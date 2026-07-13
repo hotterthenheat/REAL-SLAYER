@@ -50,24 +50,32 @@ html, body, #root {
 }
 
 :root {
-  /* BACKGROUND FOUNDATION */
-  --bg-base: #0A0A0A;          /* Deep Ink Black - NEVER use #000000 */
-  --bg-surface: rgba(20, 20, 20, 0.8); /* The "Mirror" Surface */
-  
-  /* MIRROR-GREY SCALE */
-  --grey-100: #E5E5E5;         /* Primary Text (Do not use pure #FFFFFF) */
-  --grey-300: #A3A3A3;         /* Secondary Text / Labels */
-  --grey-500: #525252;         /* Functional Dividers */
-  --grey-700: #1F1F1F;         /* Panel Borders */
-  --grey-900: #161616;         /* Hover States */
+  /* ════════════════════════════════════════════════════════════════════
+     SLAYER TERMINAL — institutional Bloomberg-grade system. Pure black canvas,
+     a multi-hue DATA palette (emerald=bullish, rose=bearish, gold=premium/walls,
+     steel=calls/price, purple=greeks) with EMERALD as the brand/active accent,
+     max-density geometry, flat hairline panels. Every token NAME is preserved so
+     ~100 token-driven files re-skin automatically.
+     ════════════════════════════════════════════════════════════════════ */
+
+  /* BACKGROUND FOUNDATION — pure institutional black (Bloomberg terminal) */
+  --bg-base: #0A0B0D;          /* near-black canvas, flat */
+  --bg-surface: rgba(16, 18, 22, 0.8);
+
+  /* NEUTRAL GREY SCALE */
+  --grey-100: #E6E9EF;         /* Primary Text */
+  --grey-300: #9BA3AF;         /* Secondary Text / Labels */
+  --grey-500: #4B535E;         /* Functional Dividers */
+  --grey-700: #171A1F;         /* Panel Borders */
+  --grey-900: #101216;         /* Hover States */
 
   /* INSTITUTIONAL STATUS COLORS (Desaturated/Matte, brand-derived) */
-  --status-holding: #3A8A68;
-  --status-holding-bg: rgba(58, 138, 104, 0.12);
-  --status-failing: #B03838;
-  --status-failing-bg: rgba(176, 56, 56, 0.12);
-  --status-testing: #A1A1AA;
-  --status-testing-bg: rgba(161, 161, 170, 0.1);
+  --status-holding: #34D399;
+  --status-holding-bg: rgba(38, 194, 129, 0.12);
+  --status-failing: #F86A6F;
+  --status-failing-bg: rgba(214, 72, 77, 0.12);
+  --status-testing: #9BA3AF;
+  --status-testing-bg: rgba(155, 163, 175, 0.1);
 
   /* ====================================================================
      SEMANTIC DESIGN TOKENS — single source of truth for theming.
@@ -79,42 +87,60 @@ html, body, #root {
   /* BRAND ANCHORS — the three colors that are genuinely ours. Every semantic
      tone below is derived from one of these, so nothing resolves to a framework
      default: success ← signal, warning ← amber, info ← steel. */
-  --steel: #6A93B5;              /* SkyVision · calls · positioning · info origin */
-  --amber: #C79350;              /* Pinpoint · pins · dealer flow · warning origin */
-  --signal: #3F9C79;             /* call wall · bullish · success origin */
+  --steel: #5B9DF0;              /* calls / price / info — steel blue */
+  --amber: #E5B94E;              /* premium / pins / walls — gold */
+  --signal: #26C281;             /* bullish / call wall / positive — emerald */
 
-  --primary: #3A8A68;            /* brand / positive accent (signal-derived) */
-  --primary-contrast: #04140A;   /* text on a primary fill */
-  --secondary: #5580A4;          /* secondary accent (steel info) */
+  --primary: #C4CBD7;            /* brand accent — SILVER (brand/active, not data) */
+  --primary-contrast: #0A0B0D;   /* dark text on a silver primary fill */
+  --secondary: #5B9DF0;          /* secondary accent (steel-blue) */
   --background: var(--bg-base);  /* app background */
-  --surface: #141414;            /* card / panel surface */
-  --surface-2: #1C1C1C;          /* nested surface */
-  --surface-3: #242424;          /* hover / raised */
-  --border: rgba(255, 255, 255, 0.10);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --text-primary: #E5E5E5;       /* ~13:1 on surface */
-  --text-secondary: #C4C4C4;     /* ~11:1 on surface (AAA) */
-  --text-tertiary: #A3A3A3;      /* ~7:1 on surface (AA) */
+  --surface: #0E1013;            /* panel surface — near-black, flat */
+  --surface-2: #14171C;          /* nested surface */
+  --surface-3: #1D2129;          /* hover / raised */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text-primary: #E6E9EF;       /* off-white */
+  --text-secondary: #9BA3AF;     /* labels */
+  --text-tertiary: #626B78;      /* muted */
   /* Semantic state — brand-derived. The base token fills; the -ink variant is the
      brighter text tone used when a number itself carries the sign; -soft is a wash. */
-  --success: #3A8A68;
-  --success-ink: #3F9C79;
-  --success-soft: rgba(30, 92, 66, 0.20);
-  --warning: #B5862A;
-  --warning-ink: #C79350;
-  --warning-soft: rgba(181, 134, 42, 0.20);
-  --danger: #B03838;
-  --danger-ink: #C84848;
-  --danger-soft: rgba(152, 4, 4, 0.18);
-  --info: #5580A4;
-  --info-ink: #6A93B5;
-  --info-soft: rgba(85, 128, 164, 0.18);
-  --greek: #8A5AA0;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
-  --dealer: #4A9BC4;             /* §9 — dealer / market-maker tracking */
-  /* Brand default accent is monochrome (black & white identity). The 73 theme
-     presets each override --accent-color with their own hue, so picking a theme
-     is what introduces color — the default stays on-brand. */
-  --accent-color: #FAFAFA;
+  --success: #1F9E68;
+  --success-ink: #34D399;
+  --success-soft: rgba(38, 194, 129, 0.15);
+  --warning: #C99A34;
+  --warning-ink: #E5B94E;
+  --warning-soft: rgba(229, 185, 78, 0.15);
+  --danger: #D6484D;
+  --danger-ink: #F86A6F;
+  --danger-soft: rgba(248, 106, 111, 0.15);
+  --info: #4E86D6;
+  --info-ink: #6AA9F0;
+  --info-soft: rgba(91, 157, 240, 0.15);
+  --greek: #9B7BE0;             /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
+  --dealer: #5B9DF0;            /* §9 — dealer / market-maker tracking */
+  /* ── HOLOGRAPHIC NEON SILVER — the Slayer brand accent ──────────────────────
+     A restrained metallic silver with subtle spectral (cyan↔violet) edges. Used
+     ONLY for brand identity, active-nav indicators, keyboard focus, selected
+     outlines, primary outline buttons, and rare premium moments — NEVER for
+     market data. Solid silver is used far more often than the holographic
+     gradient. The data palette above stays fully semantic. */
+  --slayer-silver-high: #EAEEF4;   /* bright highlight edge */
+  --slayer-silver-mid:  #C4CBD7;   /* core silver — the solid accent */
+  --slayer-silver-low:  #868D9C;   /* shadow silver */
+  --slayer-spectral-cyan:   #82E9FF;  /* spectral edge — holographic gradient only */
+  --slayer-spectral-violet: #B79CFF;  /* spectral edge — holographic gradient only */
+  --slayer-focus: #C4CBD7;
+  --slayer-selection: rgba(196, 203, 215, 0.16);
+  /* Holographic gradient — reserved for the wordmark + a single hero moment. */
+  --slayer-holo: linear-gradient(100deg, #82E9FF 0%, #EAEEF4 42%, #C4CBD7 58%, #B79CFF 100%);
+
+  /* Brand accent → solid silver. Active nav, focus rings, selected outlines, the
+     wordmark caret. NOT a data color. */
+  --accent-color: var(--slayer-silver-mid);
+  --accent-strong: var(--slayer-silver-high);   /* hover/pressed accent */
+  --accent-soft: var(--slayer-selection);        /* accent wash for tinted fills */
+  --accent-glow: rgba(196, 203, 215, 0.26);      /* restrained — no constant glow */
 
   /* ── TERMINAL DESIGN-SYSTEM ALIASES (mirror of src/styles/slayer-terminal.css) ──
      The Slayer Terminal pages (QuantSuite / QuantAudit / Pinpoint) and many shared
@@ -123,23 +149,23 @@ html, body, #root {
      block below a place to supply light-mode values — without which terminal panels
      rendered near-black text on near-black surfaces in light mode. Dark values match
      slayer-terminal.css exactly, so the dark UI is unchanged. */
-  --bg-app: #000000;
-  --bg-shell: #050505;
-  --bg-panel: #080706;
-  --bg-panel-soft: #0d0a08;
-  --bg-panel-raised: #100c08;
-  --border-subtle: rgba(248, 248, 255, 0.08);
-  --border-mid: rgba(248, 248, 255, 0.14);
-  --text-muted: rgba(248, 248, 255, 0.50);
-  --text-faint: rgba(248, 248, 255, 0.29);
-  --positive: #1E5430;
-  --positive-ink: #3A8A68;
-  --positive-soft: rgba(30, 84, 48, 0.22);
-  --negative: #980404;
-  --negative-ink: #C84848;
-  --negative-soft: rgba(152, 4, 4, 0.18);
-  --call: #6A93B5;
-  --pin: #C79350;
+  --bg-app: #0A0B0D;
+  --bg-shell: #0C0E11;
+  --bg-panel: #0E1013;
+  --bg-panel-soft: #121418;
+  --bg-panel-raised: #1A1D23;
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-mid: rgba(255, 255, 255, 0.12);
+  --text-muted: rgba(230, 233, 239, 0.52);
+  --text-faint: rgba(230, 233, 239, 0.30);
+  --positive: #177A4E;
+  --positive-ink: #34D399;
+  --positive-soft: rgba(38, 194, 129, 0.16);
+  --negative: #7E2A2E;
+  --negative-ink: #F86A6F;
+  --negative-soft: rgba(214, 72, 77, 0.16);
+  --call: #5B9DF0;
+  --pin: #E5B94E;
 
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
@@ -238,6 +264,11 @@ html, body, #root {
 
 body {
   background-color: var(--bg-base);
+  /* Pure institutional black — flat, no atmospheric bloom. A Bloomberg-grade
+     terminal canvas is a dead-flat void so the data carries all the light. */
+  background-image: none;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
   font-family: var(--font-sans);
   /* Apple system font is proportional — keep every trading number column-aligned. */
   font-variant-numeric: tabular-nums;
@@ -328,13 +359,13 @@ body {
 
   /* High Density Theme Custom Color Mappings — dark greys collapse to the deep-ink base
      (#0A0A0A), never pure #000000, so bg-black / bg-zinc-* utilities honor the theme rule. */
-  --color-black: #0A0A0A;
-  --color-zinc-950: #0A0A0A;
-  --color-zinc-900: #0A0A0A;
-  --color-zinc-850: #0A0A0A;
-  --color-zinc-800: #0A0A0A;
-  --color-zinc-750: #0A0A0A;
-  --color-zinc-700: #0A0A0A;
+  --color-black: #0A0B0D;
+  --color-zinc-950: #0A0B0D;
+  --color-zinc-900: #0C0E11;
+  --color-zinc-850: #0E1013;
+  --color-zinc-800: #121418;
+  --color-zinc-750: #14171C;
+  --color-zinc-700: #1A1D23;
   /* Muted label greys lifted for readability (were #52525B / #71717A — too low
      contrast on black at small sizes, then #8A8A92 / #A3A3A3 — still a squint on
      glass panels). Now a clear 3-step ramp: dim → label → bright, all comfortably
@@ -364,27 +395,25 @@ body {
   --color-rose-950: #2c0806;
   --color-rose-900: #af1f18;
 
-  --color-amber-500: #ff9500;
-  --color-amber-450: #ff9f0a;
-  --color-amber-400: #ff9f0a;
-  --color-amber-950: #321c00;
-  --color-amber-900: #b26500;
+  --color-amber-500: #E5B94E;
+  --color-amber-450: #EAC66A;
+  --color-amber-400: #EAC66A;
+  --color-amber-950: #2A2005;
+  --color-amber-900: #9C7C2C;
 
-  /* Radial dotted grid from the theme mockup */
-  --color-grid-dot: #16161a;
+  /* Radial dotted grid — neutral dark, barely-there on flat black */
+  --color-grid-dot: #16181D;
 
-  /* THREE-RADIUS POLICY — the whole Tailwind rounded-* ramp collapses to the
-     terminal's three real radii: 7px controls, 10px panels, 0 for data grids.
-     The old 4/8/12/16/20/24/32 "liquid" ladder was an AI tell (every card a
-     different soft corner). Now rounded-sm/md read as controls (7px) and
-     rounded-lg/xl/2xl/3xl all read as panels (10px), so nothing over-rounds. */
-  --radius-xs: 6px;
-  --radius-sm: 7px;
-  --radius-md: 7px;
-  --radius-lg: 10px;
-  --radius-xl: 10px;
-  --radius-2xl: 10px;
-  --radius-3xl: 10px;
+  /* MAX-DENSITY RADIUS — a pro terminal has near-square corners. The whole
+     Tailwind rounded-* ramp collapses to 2px (controls) / 3px (panels) so
+     nothing reads as a soft "card"; everything reads as an instrument cell. */
+  --radius-xs: 2px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 3px;
+  --radius-2xl: 3px;
+  --radius-3xl: 3px;
   --radius-full: 9999px;
 }
 
@@ -398,26 +427,25 @@ body {
    renders independently of these tokens.
    ==================================================================== */
 @theme {
-  /* Surfaces */
-  --color-canvas: #050505;
-  --color-panel: #0a0a0a;
-  --color-panelHover: #101010;
-  --color-inset: #070707;
-  --color-inputBg: #050505;
-  /* Borders */
-  --color-borderSubtle: #1c1c1c;
-  --color-borderMuted: #2a2a2a;
-  --color-borderFocus: #ededed;
-  /* Text */
-  --color-textPrimary: #ededed;
-  --color-textSecondary: #8f8f8f;
-  --color-textMuted: #4d4d4d;
-  /* Directional / status accents — harmonized to the semantic data palette
-     (was a second, neon color world: #10b981 / #f43f5e / #f59e0b / #38bdf8). */
-  --color-bull: #3F9C79;   /* green — bullish / call-side positive */
-  --color-bear: #B23B3B;   /* red — bearish / put-side negative */
-  --color-warn: #C79350;   /* amber — dealer flow / walls / pins */
-  --color-select: #6A93B5; /* steel — selection / calls */
+  /* Surfaces — pure institutional black */
+  --color-canvas: #0A0B0D;
+  --color-panel: #0E1013;
+  --color-panelHover: #1A1D23;
+  --color-inset: #08090B;
+  --color-inputBg: #0C0E11;
+  /* Borders — neutral hairline */
+  --color-borderSubtle: #1A1D23;
+  --color-borderMuted: #262A31;
+  --color-borderFocus: #C4CBD7;
+  /* Text — neutral off-white ramp */
+  --color-textPrimary: #E6E9EF;
+  --color-textSecondary: #9BA3AF;
+  --color-textMuted: #4B535E;
+  /* Directional / status accents — reference data palette. */
+  --color-bull: #34D399;   /* emerald — bullish / call-side positive */
+  --color-bear: #F86A6F;   /* rose — bearish / put-side negative */
+  --color-warn: #E5B94E;   /* gold — dealer flow / walls / pins */
+  --color-select: #5B9DF0; /* steel — selection / calls */
 }
 
 /* Tabular figures for the Flow Map's numeric tables, ladders, and panes. */
@@ -713,9 +741,11 @@ body {
    LIGHT THEME OVERRIDES
    ============================================================ */
 body.light-theme {
-  background-color: #f4f5f8 !important;
-  color: #1a1d20 !important;
-  background-image: radial-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px) !important;
+  background-color: #F2F6FA !important;   /* cool neutral paper */
+  color: #16202A !important;
+  background-image:
+    radial-gradient(52% 40% at 50% -8%, rgba(91, 100, 114, 0.05), transparent 64%),
+    radial-gradient(rgba(20, 40, 60, 0.03) 1px, transparent 1px) !important;
 }
 
 body.light-theme ::-webkit-scrollbar-track {
@@ -731,43 +761,48 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
 }
 
 .light-theme {
-  /* Semantic design tokens — light-mode values (WCAG AA+ on light surfaces). */
-  --background: #F4F4F5;
+  /* Semantic design tokens — Glacier light (cool paper, WCAG AA+). */
+  --background: #F2F6FA;
   --surface: #FFFFFF;
-  --surface-2: #F4F4F5;
-  --surface-3: #E9E9EC;
-  --border: rgba(0, 0, 0, 0.12);
-  --border-strong: rgba(0, 0, 0, 0.22);
-  --text-primary: #18181B;     /* near-black on white ≈ 16:1 */
-  --text-secondary: #3F3F46;   /* ≈ 10:1 */
-  --text-tertiary: #52525B;    /* ≈ 7:1 (AA) */
-  --primary: #16A34A;          /* darker green for contrast on white */
+  --surface-2: #EDF2F7;
+  --surface-3: #E2EAF2;
+  --border: rgba(20, 40, 60, 0.13);
+  --border-strong: rgba(20, 40, 60, 0.24);
+  --text-primary: #16202A;     /* cool near-black on white ≈ 15:1 */
+  --text-secondary: #3B4A59;   /* ≈ 9:1 */
+  --text-tertiary: #56687A;    /* ≈ 6:1 (AA) */
+  --primary: #5B6472;          /* graphite-silver — brand accent, readable on paper */
   --primary-contrast: #FFFFFF;
-  --secondary: #2563EB;
-  --success: #16A34A;
-  --warning: #B45309;
-  --danger: #DC2626;
-  --info: #2563EB;
-  --greek: #8E24AA;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
-  --dealer: #0288D1;             /* §9 — dealer / market-maker tracking */
-  --accent-color: #18181B;     /* monochrome brand accent (near-black on white) */
+  --secondary: #2570A8;
+  --success: #148254;
+  --warning: #A8650E;
+  --danger: #C63530;
+  --info: #2570A8;
+  --greek: #7C4EA8;              /* §9 — mathematical Greeks (GEX / Vanna / Charm) */
+  --dealer: #2570A8;             /* §9 — dealer / market-maker tracking */
+  --accent-color: #5B6472;     /* brand accent — graphite-silver on paper */
+  --accent-strong: #454B57;
+  --accent-soft: rgba(91, 100, 114, 0.12);
+  --accent-glow: rgba(91, 100, 114, 0.20);
 
   /* Terminal design-system aliases — light-mode values. Without these, panels/tables
      that reference --bg-panel / --text-muted / --text-faint / --border-subtle stayed on
      their near-black dark values in light mode (near-black text on a near-black surface =
      invisible), because .light-theme only overrode the index.css neutrals. Now the whole
      terminal follows the theme. */
-  --bg-app: #F4F4F5;
+  --bg-app: #F2F6FA;
   --bg-shell: #FFFFFF;
   --bg-panel: #FFFFFF;
-  --bg-panel-soft: #FAFAFA;
+  --bg-panel-soft: #F7FAFC;
   --bg-panel-raised: #FFFFFF;
-  --border-subtle: rgba(0, 0, 0, 0.08);
-  --border-mid: rgba(0, 0, 0, 0.14);
-  --text-muted: rgba(0, 0, 0, 0.55);
-  --text-faint: rgba(0, 0, 0, 0.40);
-  --positive-ink: #15803D;     /* darker green — readable on white */
-  --negative-ink: #B91C1C;     /* darker red — readable on white */
+  --border-subtle: rgba(20, 40, 60, 0.08);
+  --border-mid: rgba(20, 40, 60, 0.15);
+  --text-muted: rgba(22, 32, 42, 0.56);
+  --text-faint: rgba(22, 32, 42, 0.40);
+  --positive-ink: #148254;     /* darker green — readable on paper */
+  --negative-ink: #BE322D;     /* darker red — readable on paper */
+  --call: #2570A8;
+  --pin: #A8650E;
 
   /* Redefine Tailwind's custom theme variables for light mode */
   --color-black: #ffffff;
@@ -1209,12 +1244,12 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
 /* Accessible keyboard focus ring — keyboard navigation only, never on
    mouse click, so it adds a11y without changing the click aesthetic. */
 :where(button, a, summary, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid rgba(74, 222, 128, 0.75);
+  outline: 2px solid rgba(196, 203, 215, 0.85);
   outline-offset: 2px;
 }
 :where(button, a, [role="button"]):focus:not(:focus-visible) { outline: none; }
 .light-theme :where(button, a, summary, [role="button"], input, select, textarea, [tabindex]):focus-visible {
-  outline-color: rgba(2, 132, 199, 0.85);
+  outline-color: rgba(91, 100, 114, 0.85);
 }
 
 /* Consistent disabled treatment everywhere. */
@@ -1225,7 +1260,7 @@ button:disabled, [aria-disabled="true"] { opacity: 0.5; cursor: not-allowed !imp
    popovers, flyouts). Hover only brightens the border (defined once above). */
 
 /* On-brand text selection + crisp rendering. */
-::selection { background: rgba(74, 222, 128, 0.25); color: #ffffff; }
+::selection { background: rgba(196, 203, 215, 0.28); color: #ffffff; }
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
 
 /* ──────────────────────────────────────────────────────────────────────────

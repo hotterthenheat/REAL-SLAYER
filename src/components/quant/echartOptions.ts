@@ -7,13 +7,13 @@
  * `bull`/`bear` follow Slayer's convention (up = green, down = red).
  */
 
-// Slayer data accents — bullish green / bearish red (not the default neon Tailwind ramp).
-const BULL = '#3F9C79';
-const BEAR = '#B23B3B';
-const BULL_SOFT = 'rgba(63,156,121,0.16)';
-const BEAR_SOFT = 'rgba(178,59,59,0.16)';
-const STEEL = '#6A93B5'; // calls / fast MA
-const AMBER = '#C79350'; // dealer flow / slow MA
+// Institutional data accents — bullish emerald / bearish rose (reference palette).
+const BULL = '#34D399';
+const BEAR = '#F86A6F';
+const BULL_SOFT = 'rgba(38,194,129,0.16)';
+const BEAR_SOFT = 'rgba(214,72,77,0.16)';
+const STEEL = '#5B9DF0'; // calls / fast MA
+const AMBER = '#E5B94E'; // dealer flow / slow MA
 
 // ── Intraday candlestick + moving averages + volume ─────────────────────────
 // Adapted from the ECharts "candlestick + MA + volume" example.

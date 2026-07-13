@@ -23,6 +23,80 @@ const GAP = 8;
 // toast) — matches NavFlyout so the app has exactly one elevation, not per-widget shadows.
 const OVERLAY_SHADOW = '0 16px 44px -12px rgba(0,0,0,0.8)';
 
+// Geometry fingerprint of a layout, ignoring pane ids and array order. Lets the
+// library mark the card whose panes exactly match what's on the canvas as ACTIVE
+// — derived, so it stays honest the moment the user drags a pane.
+const layoutSignature = (panes: PaneLayout[]) =>
+  panes.map((p) => `${p.widget}@${p.x},${p.y},${p.w},${p.h}`).sort().join('|');
+
+// Miniature schematic of a layout: each pane drawn to scale on a 12-col canvas.
+function LayoutThumb({ panes, active }: { panes: PaneLayout[]; active: boolean }) {
+  const rows = Math.max(1, panes.reduce((m, p) => Math.max(m, p.y + p.h), 0));
+  return (
+    <div className="relative w-full h-[72px] rounded-[3px] overflow-hidden bg-[var(--background)] border border-[var(--border)]" aria-hidden="true">
+      {panes.map((p) => (
+        <div
+          key={p.i}
+          className="absolute rounded-[1px]"
+          style={{
+            left: `calc(${(p.x / GRID_COLS) * 100}% + 2px)`,
+            top: `calc(${(p.y / rows) * 100}% + 2px)`,
+            width: `calc(${(p.w / GRID_COLS) * 100}% - 3px)`,
+            height: `calc(${(p.h / rows) * 100}% - 3px)`,
+            background: active ? 'var(--accent-soft)' : 'var(--surface-3)',
+            boxShadow: active ? 'inset 0 0 0 1px var(--accent-color)' : 'inset 0 0 0 1px var(--border)',
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// Large selectable layout card for the library gallery. The whole card applies the
+// layout; delete (saved layouts only) is a per-card hover action. The card whose
+// geometry matches the live canvas gets an accent frame + ACTIVE chip.
+function LayoutCard({ name, panes, active, onApply, onDelete }: {
+  name: string;
+  panes: PaneLayout[];
+  active: boolean;
+  onApply: () => void;
+  onDelete?: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <div
+      className={`relative group min-w-0 bg-[var(--surface)] border rounded-[var(--radius-panel)] p-2.5 transition-colors ${active ? 'border-[var(--accent-color)]' : 'border-[var(--border)] hover:border-[var(--border-strong)]'}`}
+      style={active ? { boxShadow: '0 0 0 1px var(--accent-color), 0 0 16px var(--accent-glow)' } : undefined}
+    >
+      <button
+        onClick={onApply}
+        aria-pressed={active}
+        aria-label={active ? `${name} — currently applied` : `Apply layout ${name}`}
+        className="absolute inset-0 z-10 rounded-[var(--radius-panel)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+      />
+      <LayoutThumb panes={panes} active={active} />
+      <div className="mt-2 flex items-center justify-between gap-2 min-w-0">
+        <span className={`text-[11px] font-medium truncate ${active ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]'}`}>{name}</span>
+        <span className="flex items-center gap-1.5 shrink-0">
+          {active && (
+            <span className="text-[8px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-color)] bg-[var(--accent-soft)] rounded-[3px] px-1.5 py-0.5">Active</span>
+          )}
+          <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{panes.length}p</span>
+        </span>
+      </div>
+      {onDelete && (
+        <button
+          onClick={onDelete}
+          title="Delete"
+          aria-label={`Delete saved layout ${name}`}
+          className="absolute top-1.5 right-1.5 z-20 p-1 rounded-[3px] bg-[var(--surface-2)] text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface Props { isSuperAdmin?: boolean; }
 
 export function WorkspaceView({ isSuperAdmin }: Props) {
@@ -287,74 +361,126 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
   const gridHeight = Math.max(8, maxRow) * (ROW_HEIGHT + GAP) + GAP;
   const visibleWidgets = WIDGETS.filter((w) => isSuperAdmin || !w.adminOnly);
   const templateKeys = (['A', 'B', 'C', 'D', 'E'] as const).filter((k) => isSuperAdmin || !TEMPLATES[k].adminOnly);
+
+  // ── Layout library (shared by the inline band and the empty-canvas state) ──
+  const activeSig = layoutSignature(layout);
+  const savedNames = Object.keys(customLayouts);
+  const applySaved = (name: string) => { commit(customLayouts[name].map(p => ({ ...p }))); setLoadOpen(false); setMaximized(null); };
+
+  const savedGallery = savedNames.length > 0 ? (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 min-w-0">
+      {savedNames.map((name) => (
+        <LayoutCard
+          key={name}
+          name={name}
+          panes={customLayouts[name]}
+          active={layoutSignature(customLayouts[name]) === activeSig}
+          onApply={() => applySaved(name)}
+          onDelete={(e) => deleteCustomLayout(name, e)}
+        />
+      ))}
+    </div>
+  ) : (
+    // Empty saved-layouts state: invite saving the first one.
+    <button
+      onClick={() => { setShowSaveOverlay(true); setAddOpen(false); }}
+      className="w-full flex flex-col items-center gap-1 border border-dashed border-[var(--border-strong)] rounded-[var(--radius-panel)] px-4 py-5 text-center hover:border-[var(--accent-color)] hover:bg-[var(--accent-soft)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
+    >
+      <span className="text-[11px] font-medium text-[var(--text-secondary)]">No saved layouts yet</span>
+      <span className="text-[10px] text-[var(--text-tertiary)]">Arrange your desk, then save your first layout — it lives in this browser.</span>
+    </button>
+  );
+
+  const templateGallery = (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 min-w-0">
+      {templateKeys.map((k) => (
+        <LayoutCard
+          key={k}
+          name={TEMPLATES[k].name}
+          panes={TEMPLATES[k].layout}
+          active={layoutSignature(TEMPLATES[k].layout) === activeSig}
+          onApply={() => loadTemplate(k)}
+        />
+      ))}
+    </div>
+  );
+
+  const toolBtn = 'flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] px-2.5 py-1.5 transition-colors focus-visible:outline-none focus-visible:bg-[var(--surface-3)]';
   return (
     <>
-      <div className="flex-1 flex flex-col w-full h-full text-[var(--text-primary)] bg-[var(--background)] overflow-hidden select-none relative">
-        <div className="flex-none bg-[var(--surface)] border-b border-[var(--border)] px-3 py-2 flex items-center justify-between gap-3 z-40">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Workspace Editor</span>
-          <div className="flex items-center gap-1.5">
-            <span className="hidden lg:flex items-center gap-1.5 mr-1 text-[10px] font-medium tabular-nums text-[var(--text-tertiary)]">
-              <span className="text-[var(--text-secondary)]">{layout.length}</span> panes
+      <div className="flex-1 flex flex-col w-full h-full min-w-0 text-[var(--text-primary)] bg-[var(--background)] overflow-hidden select-none relative">
+        {/* ── Command bar: identity on the left, one consolidated toolbar on the right ── */}
+        <div className="flex-none bg-[var(--surface)] border-b border-[var(--border)] px-3 py-2 flex items-center gap-3 z-40 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-1 h-3.5 rounded-full bg-[var(--accent-color)] shrink-0" aria-hidden="true" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-secondary)] truncate">Workspace</span>
+            <span className="hidden sm:inline text-[10px] tabular-nums text-[var(--text-tertiary)] border border-[var(--border)] rounded-[var(--radius-control)] px-1.5 py-0.5 shrink-0">
+              {layout.length} panes
             </span>
-            <button ref={saveTriggerRef} onClick={() => { setShowSaveOverlay(true); setLoadOpen(false); setAddOpen(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
-              <Plus className="w-3 h-3" /> <span className="hidden md:inline">Save</span>
-            </button>
-
-            <div className="relative">
-              <button onClick={() => { setLoadOpen(!loadOpen); setAddOpen(false); setShowSaveOverlay(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
-                <span className="hidden md:inline">Workspaces</span><ChevronDown className="w-3 h-3 text-[var(--text-tertiary)]" />
+          </div>
+          <div className="flex-1" />
+          <div className="relative shrink-0">
+            <div className="inline-flex items-stretch bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] overflow-hidden divide-x divide-[var(--border)]">
+              <button
+                onClick={() => { setLoadOpen(!loadOpen); setAddOpen(false); setShowSaveOverlay(false); }}
+                aria-expanded={loadOpen}
+                className={`${toolBtn} ${loadOpen ? 'text-[var(--accent-color)] bg-[var(--accent-soft)]' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]'}`}
+              >
+                <span className="hidden md:inline">Layouts</span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${loadOpen ? 'rotate-180 text-[var(--accent-color)]' : 'text-[var(--text-tertiary)]'}`} />
               </button>
-              {loadOpen && (
-                <div className="absolute right-0 md:left-0 mt-1.5 w-72 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] z-50 overflow-hidden max-h-[26rem] overflow-y-auto text-left" style={{ boxShadow: OVERLAY_SHADOW }}>
-                  {Object.keys(customLayouts).length > 0 && (
-                    <div className="border-b border-[var(--border)]">
-                      <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Saved · this browser</div>
-                      {Object.keys(customLayouts).map(name => (
-                        <div key={name} className="flex justify-between items-center gap-2 group w-full pl-3 pr-2 py-1.5 hover:bg-[var(--surface-3)] transition-colors">
-                          <button onClick={() => { commit(customLayouts[name].map(p => ({...p}))); setLoadOpen(false); setMaximized(null); }} className="flex-1 flex items-baseline justify-between gap-3 text-left min-w-0">
-                            <span className="text-[11px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{name}</span>
-                            <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{customLayouts[name].length}p</span>
-                          </button>
-                          <button onClick={(e) => deleteCustomLayout(name, e)} title="Delete" aria-label={`Delete saved layout ${name}`} className="text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Templates</div>
-                  <div className="pb-1.5">
-                    {templateKeys.map((k) => (
-                      <button key={k} onClick={() => loadTemplate(k)} className="w-full flex items-baseline justify-between gap-3 text-left px-3 py-1.5 hover:bg-[var(--surface-3)] transition-colors group">
-                        <span className="text-[11px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{TEMPLATES[k].name}</span>
-                        <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{TEMPLATES[k].layout.length}p</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="relative">
-              <button onClick={() => { setAddOpen(!addOpen); setLoadOpen(false); setShowSaveOverlay(false); }} className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-control)] px-2.5 py-1.5 hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)] transition-colors">
+              <button
+                ref={saveTriggerRef}
+                onClick={() => { setShowSaveOverlay(true); setLoadOpen(false); setAddOpen(false); }}
+                className={`${toolBtn} text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]`}
+              >
+                <span className="hidden md:inline">Save</span>
+                <Plus className="w-3 h-3 md:hidden" />
+              </button>
+              <button
+                onClick={() => { setAddOpen(!addOpen); setLoadOpen(false); setShowSaveOverlay(false); }}
+                aria-expanded={addOpen}
+                className={`${toolBtn} ${addOpen ? 'text-[var(--text-primary)] bg-[var(--surface-3)]' : 'text-[var(--text-secondary)] hover:bg-[var(--surface-3)] hover:text-[var(--text-primary)]'}`}
+              >
                 <Plus className="w-3 h-3 text-[var(--success)]" /> <span className="hidden md:inline">Add Widget</span>
               </button>
-              {addOpen && (
-                <div className="absolute right-0 mt-1.5 w-72 max-h-[26rem] overflow-y-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] z-50 overflow-hidden text-left" style={{ boxShadow: OVERLAY_SHADOW }}>
-                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Add widget</div>
-                  <div className="pb-1.5">
-                    {visibleWidgets.map((w) => (
-                      <button key={w.type} onClick={() => addWidget(w.type)} className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors">
-                        {w.title}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
+            {addOpen && (
+              <div className="absolute right-0 top-full mt-1.5 w-72 max-h-[26rem] overflow-y-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] z-50 text-left" style={{ boxShadow: OVERLAY_SHADOW }}>
+                <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3 pt-2.5 pb-1.5 tracking-[0.16em]">Add widget</div>
+                <div className="pb-1.5">
+                  {visibleWidgets.map((w) => (
+                    <button key={w.type} onClick={() => addWidget(w.type)} className="w-full text-left px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-3)] transition-colors">
+                      {w.title}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* ── Layout library band: gallery of large selectable cards with schematic previews ── */}
+        {loadOpen && (
+          <div className="flex-none bg-[var(--surface)] border-b border-[var(--border)] max-h-[46vh] overflow-y-auto px-3 py-3 min-w-0">
+            <div className="flex flex-col gap-4 min-w-0">
+              <section className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3 mb-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Saved · this browser</span>
+                  <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{savedNames.length}</span>
+                </div>
+                {savedGallery}
+              </section>
+              <section className="min-w-0">
+                <div className="flex items-baseline justify-between gap-3 mb-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Templates</span>
+                  <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{templateKeys.length}</span>
+                </div>
+                {templateGallery}
+              </section>
+            </div>
+          </div>
+        )}
 
         <div ref={containerRef} className="flex-1 overflow-auto bg-[var(--background)] p-2 relative h-full">
           {isNarrow && layout.length > 0 ? (
@@ -411,47 +537,39 @@ export function WorkspaceView({ isSuperAdmin }: Props) {
               );
             })}
             {layout.length === 0 && !loading && (
-              // Not a centered hero — a working saved-layouts manager anchored top-left,
-              // listing every layout the desk can restore with its pane count.
-              <div className="absolute inset-0 overflow-auto p-2">
-                <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-panel)] overflow-hidden">
-                  <div className="flex items-baseline justify-between gap-3 px-3.5 py-2.5 border-b border-[var(--border)]">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-tertiary)]">Load a layout</span>
-                    <span className="text-[10px] text-[var(--text-tertiary)]">no active panes</span>
+              // Empty desk: the layout library takes over the canvas as a centered
+              // gallery — restore a saved layout, apply a template, or start blank.
+              <div className="absolute inset-0 overflow-auto p-3 md:p-6">
+                <div className="w-full max-w-3xl mx-auto flex flex-col gap-5 min-w-0">
+                  <div className="pt-4 md:pt-8 flex flex-col items-center gap-2 text-center">
+                    <span className="w-8 h-1 rounded-full bg-[var(--accent-color)]" aria-hidden="true" />
+                    <h2 className="text-[12px] font-semibold uppercase tracking-[0.2em] text-[var(--text-primary)]">Empty desk</h2>
+                    <p className="text-[11px] text-[var(--text-tertiary)] max-w-sm leading-relaxed">
+                      No active panes. Restore a saved layout, apply a template below, or start blank and save your first layout once the desk feels right.
+                    </p>
                   </div>
 
-                  {Object.keys(customLayouts).length > 0 && (
-                    <div className="border-b border-[var(--border)]">
-                      <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3.5 pt-2.5 pb-1 tracking-[0.16em]">Saved · this browser</div>
-                      {Object.keys(customLayouts).map((name) => (
-                        <div key={name} className="flex items-center gap-2 group pl-3.5 pr-2 hover:bg-[var(--surface-2)] transition-colors">
-                          <button onClick={() => { commit(customLayouts[name].map(p => ({ ...p }))); setMaximized(null); }} className="flex-1 flex items-baseline justify-between gap-3 py-2 text-left min-w-0 focus-visible:outline-none">
-                            <span className="text-[12px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{name}</span>
-                            <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{customLayouts[name].length} panes</span>
-                          </button>
-                          <button onClick={(e) => deleteCustomLayout(name, e)} title="Delete" aria-label={`Delete saved layout ${name}`} className="text-[var(--text-tertiary)] hover:text-[var(--danger)] opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
+                  {savedNames.length > 0 && (
+                    <section className="min-w-0">
+                      <div className="flex items-baseline justify-between gap-3 mb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Saved · this browser</span>
+                        <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{savedNames.length}</span>
+                      </div>
+                      {savedGallery}
+                    </section>
                   )}
 
-                  <div className="text-[10px] text-[var(--text-tertiary)] uppercase font-semibold px-3.5 pt-2.5 pb-1 tracking-[0.16em]">Templates</div>
-                  {templateKeys.map((k) => (
-                    <button
-                      key={k}
-                      onClick={() => loadTemplate(k)}
-                      className="w-full flex items-baseline justify-between gap-3 px-3.5 py-2 text-left hover:bg-[var(--surface-2)] transition-colors group border-t border-[var(--border)] first-of-type:border-t-0 focus-visible:outline-none focus-visible:bg-[var(--surface-2)]"
-                    >
-                      <span className="text-[12px] text-[var(--text-secondary)] font-medium truncate group-hover:text-[var(--text-primary)]">{TEMPLATES[k].name}</span>
-                      <span className="text-[10px] tabular-nums text-[var(--text-tertiary)] shrink-0">{TEMPLATES[k].layout.length} panes</span>
-                    </button>
-                  ))}
+                  <section className="min-w-0">
+                    <div className="flex items-baseline justify-between gap-3 mb-2">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-tertiary)]">Templates</span>
+                      <span className="text-[10px] tabular-nums text-[var(--text-tertiary)]">{templateKeys.length}</span>
+                    </div>
+                    {templateGallery}
+                  </section>
 
                   <button
                     onClick={() => { setAddOpen(true); setLoadOpen(false); setShowSaveOverlay(false); }}
-                    className="w-full text-left px-3.5 py-2 text-[11px] font-medium text-[var(--text-tertiary)] border-t border-[var(--border)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:bg-[var(--surface-2)]"
+                    className="self-center text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text-tertiary)] border border-[var(--border)] rounded-[var(--radius-control)] px-3 py-2 hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--ring)]"
                   >
                     Or start blank — add a single widget
                   </button>

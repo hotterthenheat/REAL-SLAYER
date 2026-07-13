@@ -516,8 +516,12 @@ async function runTickerCycleInner() {
         const prev5m = db.candles[`${asset.ticker}-5m`];
         const lastPrice = (prev5m && prev5m.length > 0) ? prev5m[prev5m.length - 1].close : asset.defaultPrice;
         const anchor = asset.defaultPrice;
-        const baseRange = anchor * asset.volatility * 0.0012;
-        const burst = Math.random() > 0.96 ? 2.5 + Math.random() * 2 : 1; // ~4% of ticks: displacement
+        // Per-tick shock sized so that ticks accumulating into a bar yield a
+        // realistic per-bar move (~0.15% / 15-min for an index) — i.e. annualized
+        // realized vol in the low-teens, not ~130%. Bursts still add occasional
+        // displacement without dominating the vol.
+        const baseRange = anchor * asset.volatility * 0.00015;
+        const burst = Math.random() > 0.975 ? 1.6 + Math.random() * 1.0 : 1; // ~2.5% of ticks: displacement
         const prevMom = sandboxMomentum[asset.ticker] || 0;
         const reversion = (-(lastPrice - anchor) / anchor) * 0.04 * anchor; // pull back toward anchor
         const shock = (Math.random() - 0.5) * 2 * baseRange * burst;

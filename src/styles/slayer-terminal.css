@@ -1,124 +1,125 @@
 /**
- * REAL-SLAYER global terminal design system
+ * REAL-SLAYER — institutional Bloomberg-grade terminal design system.
  * Single source of truth for shell, panels, grid, tables, chart tags, and status tones.
- * The palette is intentionally restrained: color encodes data, not decoration.
  *
- * Ink rule: --positive/--negative are the deep brand anchors (#0D4715/#980404) used for
- * fills, borders, bars and soft washes; --positive-ink/--negative-ink are the readable
- * text variants used when a number itself carries the sign. Never decorate with either.
+ * The voice: a pure institutional-black canvas (no atmospheric bloom), flat hairline
+ * panels, near-square corners (3px panels / 2px controls), and a multi-hue DATA
+ * palette — emerald=bullish, rose=bearish, gold=premium/walls, steel=calls/price,
+ * purple=greeks — with EMERALD as the single brand/active accent. Color encodes
+ * data, never decoration.
+ *
+ * Ink rule: --positive/--negative are deep anchors (fills, borders, bars, washes);
+ * --positive-ink/--negative-ink are the readable text variants used when a number
+ * itself carries the sign. Never decorate with either.
  */
 :root {
   /* Core brand */
-  --slayer-white: #F5F5F5;
-  --slayer-coffee: #100C08;
-  --slayer-ghost: #F8F8FF;
-  --slayer-black: #000000;
+  --slayer-white: #E6E9EF;
+  --slayer-coffee: #0E1013;
+  --slayer-ghost: #F4F8FC;
+  --slayer-black: #0A0B0D;
 
   /* Semantic site colors */
-  --slayer-red: #980404;
-  --slayer-green: #0D4715;
+  --slayer-red: #F86A6F;
+  --slayer-green: #177A4E;
 
-  /* Backgrounds */
-  --bg-app: #000000;
-  --bg-shell: #050505;
-  --bg-panel: #080706;
-  --bg-panel-soft: #0d0a08;
-  --bg-panel-raised: #100c08;
+  /* Backgrounds — pure institutional black, matched to index.css :root */
+  --bg-app: #0A0B0D;
+  --bg-shell: #0C0E11;
+  --bg-panel: #0E1013;
+  --bg-panel-soft: #121418;
+  --bg-panel-raised: #1A1D23;
 
-  /* Border system. NOTE: --border-strong is owned by index.css :root (the shared
-     source of truth). It is intentionally NOT redefined here — this file loads after
-     index.css, so redefining it would silently override the app-wide value in dark
-     mode and leave light mode inconsistent. */
-  --border-subtle: rgba(248, 248, 255, 0.08);
-  --border-mid: rgba(248, 248, 255, 0.14);
+  /* Border system. --border-strong is owned by index.css :root. Neutral hairline. */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-mid: rgba(255, 255, 255, 0.12);
 
-  /* Typography. NOTE: --text-primary and --text-secondary are owned by index.css :root
-     (source of truth) so the terminal reads the same neutrals as the rest of the app in
-     every theme. Only the terminal-specific muted/faint tones are declared here. */
-  --text-muted: rgba(248, 248, 255, 0.50);
-  --text-faint: rgba(248, 248, 255, 0.29);
+  /* Typography — terminal-specific muted/faint (primary/secondary owned by index.css) */
+  --text-muted: rgba(230, 233, 239, 0.52);
+  --text-faint: rgba(230, 233, 239, 0.30);
 
-  /* Data tones — deep anchors (fills/borders) + readable ink (text).
-     Brand-derived and kept in lock-step with index.css :root so the terminal
-     and the rest of the app read one palette. */
-  --negative: #980404;
-  --negative-ink: #C84848;
-  --negative-soft: rgba(152, 4, 4, 0.18);
-  --positive: #1E5430;
-  --positive-ink: #3A8A68;
-  --positive-soft: rgba(30, 84, 48, 0.22);
+  /* Data tones — deep anchors (fills/borders) + readable ink (text). */
+  --negative: #7E2A2E;
+  --negative-ink: #F86A6F;
+  --negative-soft: rgba(214, 72, 77, 0.16);
+  --positive: #177A4E;
+  --positive-ink: #34D399;
+  --positive-soft: rgba(38, 194, 129, 0.18);
 
   /* Market-specific accents */
-  --call: #6A93B5;
-  --pin: #C79350;
-  --warning: #B5862A;
-  --warning-ink: #C79350;
-  --warning-soft: rgba(181, 134, 42, 0.20);
-  --info: #5580A4;
-  --info-ink: #6A93B5;
-  --neutral: rgba(248, 248, 255, 0.55);
+  --call: #5B9DF0;
+  --pin: #E5B94E;
+  --warning: #C99A34;
+  --warning-ink: #E5B94E;
+  --warning-soft: rgba(229, 185, 78, 0.16);
+  --info: #4E86D6;
+  --info-ink: #6AA9F0;
+  --neutral: rgba(230, 233, 239, 0.55);
 
-  /* GEX palette — brand-routed (steel navy → steel → signal green → danger) so the
-     ramp reads in the same language as the IV surface and the rest of the app. */
-  --gex-1: #1E4870;
-  --gex-2: #2A6890;
-  --gex-3: #4A8A60;
-  --gex-4: #A84020;
+  /* GEX palette — deep steel → steel → emerald → gold heat. */
+  --gex-1: #1E4E78;
+  --gex-2: #4E86D6;
+  --gex-3: #34D399;
+  --gex-4: #E5B94E;
 
-  /* Geometry */
-  --radius-panel: 10px;
-  --radius-control: 7px;
-  --gap: 10px;
-  --gap-tight: 6px;
-  --panel-pad: 14px;
+  /* MAX-DENSITY geometry — near-square, tight. Every cell earns its pixels. */
+  --radius-panel: 3px;
+  --radius-control: 2px;
+  --gap: 8px;
+  --gap-tight: 5px;
+  --panel-pad: 10px;
 
-  /* Named type scale — the one layer of the system that was never tokenized, and
-     the root of the size drift the audit flagged (ad-hoc 8/9/10/11/12/13/15px
-     literals). 10px is a HARD floor: nothing below --text-3xs. Consumed by name
-     (var(--text-xs)) so a single edit re-scales the terminal proportionally. */
-  --text-3xs: 10px;  /* caption / label floor */
-  --text-2xs: 11px;
-  --text-xs: 12px;
-  --text-sm: 13px;
-  --text-md: 15px;
-  --text-lg: 18px;
-  --text-xl: 22px;
+  /* Named type scale — dense: 9px floor, everything a notch smaller so more
+     data fits one screen (the point of a pro terminal). */
+  --text-3xs: 9px;
+  --text-2xs: 10px;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
 
-  /* Recessed well — the fill that makes a PASSIVE readout sit visibly below an
-     interactive control instead of matching it. .slayer-readout references this
-     (it was undefined, so readouts silently equalled controls). */
-  --bg-well: #030303;
+  /* Recessed well — passive readouts sit visibly below interactive controls. */
+  --bg-well: #070B10;
 
-  /* Overlay shadow — the single shadow token, reserved for things that truly
-     float (modals, popovers, flyouts). Panels stay flat, so this is no longer
-     applied to .slayer-panel. Mirrors NavFlyout's overlay elevation. */
-  --shadow-panel: 0 16px 44px -12px rgba(0, 0, 0, 0.8);
+  /* Flat by design — a data panel does NOT lift. Overlays still float. */
+  --shadow-panel: 0 16px 44px -12px rgba(0, 0, 0, 0.85);
+  --shadow-card: none;
+  --edge-sheen: none;
 }
 
 .slayer-terminal {
   min-height: 100vh;
-  /* Flat shell. The radial "hero wash" at 20% 0% was pure ornament — removed. */
+  /* Flat institutional black — no atmospheric glow behind the grid. */
   background: var(--bg-shell);
   color: var(--text-primary);
 }
 
+/* MAX-DENSITY panel — a flat instrument cell. No gradient, no shadow; a hairline
+   frame and a near-square corner. It sits IN the grid, not forward of it. */
 .slayer-panel {
-  /* Flat fill + 1px hairline, no top-sheen gradient, no drop shadow. A data
-     panel sits in the page; it does not glow or lift off it. */
   background: var(--bg-panel);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-panel);
 }
 
 .slayer-panel-header {
+  position: relative;
   border-bottom: 1px solid var(--border-subtle);
-  padding: 12px 14px;
+  padding: 7px 10px;
+}
+/* Dense signature: a 1px accent tick on the header rule under the title. */
+.slayer-panel-header::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  bottom: -1px;
+  width: 20px;
+  height: 1px;
+  background: var(--accent-color);
 }
 
-/* Three heading tiers so structural depth reads by WEIGHT, not just position.
-   Before this, one .slayer-title class served page + panel + section, so a reader
-   couldn't tell the view title from a panel title from an in-panel section head.
-   One clear step between each: page (brightest/largest) → panel → section (dim). */
+/* Three heading tiers — structural depth reads by WEIGHT: page → panel → section. */
 .slayer-title-page {
   color: var(--text-primary);
   font-size: var(--text-sm);
@@ -154,24 +155,28 @@
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-control);
   color: var(--text-secondary);
-  font-size: 11px;
-  padding: 7px 10px;
+  font-size: 10px;
+  padding: 4px 7px;
   transition:
     border-color 120ms ease,
     color 120ms ease,
-    background-color 120ms ease;
+    background-color 120ms ease,
+    box-shadow 120ms ease;
 }
 
-.slayer-control:hover,
-.slayer-control:focus-visible {
+.slayer-control:hover {
   border-color: var(--border-mid);
   color: var(--text-primary);
   outline: none;
 }
+.slayer-control:focus-visible {
+  border-color: var(--accent-color);
+  color: var(--text-primary);
+  box-shadow: 0 0 0 3px var(--accent-soft, rgba(196, 203, 215, 0.16));
+  outline: none;
+}
 
-/* Passive readout chip: same footprint as .slayer-control but no hover/focus
-   affordance and a recessed fill, so a static value (current expiry, model,
-   calibrated-at) never reads as an interactive control sitting next to real ones. */
+/* Passive readout chip — recessed fill, no hover/focus affordance. */
 .slayer-readout {
   appearance: none;
   background: var(--bg-well, var(--bg-shell));
@@ -185,30 +190,31 @@
 .slayer-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 
 .slayer-table th {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  padding: 9px 10px;
+  padding: 5px 8px;
   border-bottom: 1px solid var(--border-subtle);
   background: var(--bg-panel);
 }
 
 .slayer-table td {
   color: var(--text-secondary);
-  padding: 9px 10px;
-  border-bottom: 1px solid rgba(248, 248, 255, 0.045);
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   vertical-align: middle;
 }
 
+/* Rows lift toward a neutral silver on hover — the live-instrument feel, no hue. */
 .slayer-table tr:hover td {
-  background: rgba(248, 248, 255, 0.025);
+  background: rgba(196, 203, 215, 0.05);
 }
 
 .slayer-num {
@@ -224,15 +230,15 @@
 
 .slayer-grid-lines {
   background-image:
-    linear-gradient(rgba(248, 248, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(248, 248, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
 .slayer-level-tag {
   border: 1px solid var(--border-subtle);
-  background: rgba(0, 0, 0, 0.88);
-  border-radius: 7px;
+  background: rgba(10, 11, 13, 0.92);
+  border-radius: 5px;
   padding: 5px 8px;
   font-size: 10px;
   letter-spacing: 0.14em;
@@ -241,12 +247,15 @@
 
 .slayer-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(248, 248, 255, 0.15) transparent;
+  scrollbar-color: rgba(196, 203, 215, 0.22) transparent;
 }
 .slayer-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
 .slayer-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(248, 248, 255, 0.12);
+  background: rgba(196, 203, 215, 0.16);
   border-radius: 999px;
+}
+.slayer-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 203, 215, 0.3);
 }
 .slayer-scrollbar::-webkit-scrollbar-track { background: transparent; }
 

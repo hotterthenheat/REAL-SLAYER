@@ -111,13 +111,17 @@ interface DriverState {
 /** Append one AR(1)-ish random-walk bar to a series, keeping OHLC well-formed. */
 function nextCandle(prev: Candle, asset: AssetInfo, minMult: number, prevRet: number): { candle: Candle; ret: number } {
   const vol = asset.volatility;
-  const eps = (Math.random() - 0.5) * 0.003 * (0.5 + vol);
+  // Per-bar shock + wicks sized so the ANNUALIZED realized vol reads like a real
+  // instrument (~10–25% for an index) rather than the old ~130%. The close-to-close
+  // path stays visibly candle-shaped; it's the oversized random wicks + shock that
+  // were inflating the range-based (Parkinson/Garman-Klass/Yang-Zhang) estimators.
+  const eps = (Math.random() - 0.5) * 0.0008 * (0.5 + vol);
   let ret = 0.6 * prevRet + eps;                 // AR(1) with phi = 0.6
-  ret = clamp(ret, -0.02, 0.02);
+  ret = clamp(ret, -0.006, 0.006);
   const open = prev.close;
   const close = Math.max(0.01, open * (1 + ret));
-  const wickUp = Math.random() * 0.0015 * (0.5 + vol) * open;
-  const wickDown = Math.random() * 0.0015 * (0.5 + vol) * open;
+  const wickUp = Math.random() * 0.0004 * (0.5 + vol) * open;
+  const wickDown = Math.random() * 0.0004 * (0.5 + vol) * open;
   const high = Math.max(open, close) + wickUp;
   const low = Math.max(0.0001, Math.min(open, close) - wickDown);
   const baseVol = 100000 * (asset.decimals === 5 ? 0.01 : 1);

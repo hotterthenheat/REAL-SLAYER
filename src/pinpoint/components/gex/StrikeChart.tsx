@@ -34,9 +34,13 @@ interface StrikeChartProps {
   height?: number;
 }
 
-// Wall / flip / king overlay colors (independent of candle theme)
-const CALL_WALL = '#10b981';
-const PUT_WALL = '#f43f5e';
+// Wall / flip / king overlay colors (independent of candle theme).
+// Institutional dealer-structure palette: steel call, rose put, gold pin (king),
+// emerald accent flip — tuned to read clearly over the green/red candles.
+const CALL_WALL = '#5B9DF0'; // var(--call) steel
+const PUT_WALL = '#F86A6F'; // var(--negative-ink) rose
+const PIN = '#E5B94E'; // var(--pin) gold
+const FLIP = '#26C281'; // var(--accent-color) emerald
 
 const toCandle = (b: Candle) => ({
   time: b.time as UTCTimestamp,
@@ -106,20 +110,33 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
       autoSize: true,
       layout: {
         background: { color: 'transparent' },
-        textColor: '#6b6b6b',
+        // muted cool grey, mono — scale/axis text reads as instrumentation
+        textColor: '#7C8794',
         fontFamily: 'JetBrains Mono, monospace',
         fontSize: 10,
         attributionLogo: true,
       },
       grid: {
-        vertLines: { color: 'rgba(255,255,255,0.03)' },
-        horzLines: { color: 'rgba(255,255,255,0.03)' },
+        // very faint cool gridlines so the panel shows through
+        vertLines: { color: 'rgba(140,165,190,0.045)' },
+        horzLines: { color: 'rgba(140,165,190,0.05)' },
       },
-      rightPriceScale: { borderColor: '#1c1c1c' },
-      timeScale: { borderColor: '#1c1c1c', timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 7 },
+      rightPriceScale: { borderColor: '#1E242C' },
+      timeScale: { borderColor: '#1E242C', timeVisible: true, secondsVisible: false, rightOffset: 6, barSpacing: 7 },
       crosshair: {
-        vertLine: { color: 'rgba(255,255,255,0.3)', labelBackgroundColor: '#262626' },
-        horzLine: { color: 'rgba(255,255,255,0.3)', labelBackgroundColor: '#262626' },
+        // clean cool crosshair with tabular-mono labels on a dark cool tag
+        vertLine: {
+          color: 'rgba(167,184,199,0.28)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: '#1A2028',
+        },
+        horzLine: {
+          color: 'rgba(167,184,199,0.28)',
+          width: 1,
+          style: LineStyle.Dashed,
+          labelBackgroundColor: '#1A2028',
+        },
       },
     });
 
@@ -131,8 +148,10 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
       wickUpColor: candleTheme.wickUp,
       wickDownColor: candleTheme.wickDown,
       priceLineVisible: true,
-      priceLineColor: 'rgba(237,237,237,0.4)',
+      // soft cool-ivory last-price line; label rides the price scale
+      priceLineColor: 'rgba(220,231,242,0.34)',
       priceLineStyle: LineStyle.Dotted,
+      priceLineWidth: 1,
       // Widen the visible price range to always include the walls/king so several
       // strike-node bands are on screen, not just the couple around spot.
       autoscaleInfoProvider: (original: () => { priceRange: { minValue: number; maxValue: number } } | null) => {
@@ -225,10 +244,10 @@ const StrikeChart = ({ ticker, revision, levels, overlay, timeframe, height = 46
       const mk = (price: number, color: string, title: string, style: LineStyle, width: 1 | 2 = 1) =>
         candleSeries.createPriceLine({ price, color, title, lineStyle: style, lineWidth: width, axisLabelVisible: true });
       const defs: Array<[string, number, string, string, LineStyle, (1 | 2)?]> = [
-        ['callWall', levels.callWall, CALL_WALL, 'CALL WALL', LineStyle.Solid],
-        ['putWall', levels.putWall, PUT_WALL, 'PUT WALL', LineStyle.Solid],
-        ['flip', levels.flip, '#f59e0b', 'FLIP', LineStyle.Dashed],
-        ['king', levels.king, '#eab308', 'KING', LineStyle.Solid, 2],
+        ['callWall', levels.callWall, CALL_WALL, 'CALL WALL', LineStyle.Dashed],
+        ['putWall', levels.putWall, PUT_WALL, 'PUT WALL', LineStyle.Dashed],
+        ['flip', levels.flip, FLIP, 'FLIP', LineStyle.Dashed],
+        ['king', levels.king, PIN, 'KING', LineStyle.Solid, 2],
       ];
       levelLinesRef.current = defs
         .filter(([id]) => !hidden.has(id))

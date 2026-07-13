@@ -580,23 +580,26 @@ export function generateInitialCandles(asset: AssetInfo, timeframe: TimeframeVal
       isHeavyDisplacement = true;
       const isDown = i === dispBar2 ? dispBar2Bearish : (i === dispBar3 && !dispBar2Bearish);
       displacementDir = isDown ? 'bearish' : 'bullish';
-      biasFactor = isDown ? -2.2 * vol : 2.5 * vol;
+      // Softened so the seeded window's realized vol reads like a real index
+      // (~10–20% annualized) instead of ~130%; the displacement is still a visible
+      // institutional expansion bar, just not a vol-inflating gap.
+      biasFactor = isDown ? -0.42 * vol : 0.48 * vol;
     } else if (i > dispBar1 && i < dispBar1 + 6) {
       // gentle pullbacks after the first displacement
-      biasFactor = -0.3 * vol;
+      biasFactor = -0.14 * vol;
     } else if (i > dispBar2 && i < dispBar2 + 4) {
       // momentum continuation after the second displacement
-      biasFactor = -0.6 * vol;
+      biasFactor = -0.26 * vol;
     } else {
-      biasFactor = (rnd() - 0.46) * 0.5 * vol + trendBias;
+      biasFactor = (rnd() - 0.46) * 0.2 * vol + trendBias;
     }
 
     const priceChange = basePrice * (biasFactor / 100) * tfScale;
     const open = currentPrice;
     const close = currentPrice + priceChange;
-    
-    let high = Math.max(open, close) + (rnd() * 0.08 * vol * basePrice) / 100;
-    let low = Math.min(open, close) - (rnd() * 0.08 * vol * basePrice) / 100;
+
+    let high = Math.max(open, close) + (rnd() * 0.03 * vol * basePrice) / 100;
+    let low = Math.min(open, close) - (rnd() * 0.03 * vol * basePrice) / 100;
     
     // Stretch candle body for institutional displacement
     if (isHeavyDisplacement) {

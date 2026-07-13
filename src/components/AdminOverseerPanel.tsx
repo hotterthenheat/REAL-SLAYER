@@ -6,14 +6,30 @@ import { FieldError, zodError, type SubmitState } from './ui/Field';
 import { SearchInput } from './ui/SearchInput';
 import { ConversionCard } from './admin/ConversionCard';
 import { TerminalPanel } from './ui/terminal/TerminalPanel';
-import { MetricStrip, type Metric } from './ui/terminal/MetricStrip';
 import { DataTable, type Column } from './ui/terminal/DataTable';
 import { StatusBadge } from './ui/terminal/StatusBadge';
 import { couponCodeSchema, couponPercentSchema } from '../lib/formSchemas';
 import {
-  ShieldAlert, Users, Activity, Key, Radio,
+  ShieldAlert, Users, Key, Radio,
   Ticket, Power, ToggleLeft, ToggleRight, Ban, UserX, LogOut, Eye, RefreshCw, ScrollText
 } from 'lucide-react';
+
+/**
+ * ADMIN OPERATIONS BOARD — the Overseer page laid out as one continuous board
+ * instead of a sidebar-and-tabs shell:
+ *
+ *   1. COMMAND BAR      — identity (rose = privileged), feed pill, live readout,
+ *                         maintenance flag, board refresh.
+ *   2. KPI BAND         — one slim hairline-divided row of value-first cells.
+ *   3. TWO-COLUMN BODY  — LEFT (wide): the working desks (Users / Coupons /
+ *                         Audit) with search + actions docked in each panel
+ *                         header; RIGHT: a monitoring rail stacking feed health,
+ *                         recent activity, the conversion chart and the
+ *                         privileged system switches.
+ *
+ * Rose marks admin-only destructive controls (ban, maintenance kill-switch,
+ * the role badge); the GLACIER accent carries all normal interactions.
+ */
 
 /**
  * Map the server's provider identifier to a live-flag + human label for the Feed Health card.
@@ -43,9 +59,13 @@ const FIELD = 'slayer-control w-full placeholder:text-[var(--text-faint)] focus:
 const ICON_BTN = 'flex shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] p-2.5 text-[var(--text-muted)] transition-colors cursor-pointer hover:border-[var(--border-mid)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]';
 const GHOST_BTN = 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)] transition-colors cursor-pointer hover:border-[var(--border-mid)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]';
 const PAGER_BTN = `${GHOST_BTN} disabled:cursor-default disabled:opacity-40 disabled:hover:border-[var(--border-subtle)] disabled:hover:text-[var(--text-secondary)]`;
+// GLACIER accent CTA — the one primary action of a panel (normal interactions stay ice-blue).
+const ACCENT_BTN = 'cursor-pointer rounded-[var(--radius-control)] border border-[color:var(--accent-glow)] bg-[var(--accent-soft)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-color)] transition-colors hover:border-[var(--accent-color)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] disabled:opacity-50';
+// Command-bar readout chip — passive status, recessed fill.
+const READOUT = 'slayer-readout flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]';
 
 export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps) {
-  const [tab, setTab] = useState<string>('overview');
+  const [tab, setTab] = useState<string>('users');
   const [overview, setOverview] = useState<any>(null);
   const [live, setLive] = useState<number>(0);
 
@@ -67,83 +87,147 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
   if (!session?.is_super_admin && !['super_admin', 'owner', 'admin'].includes(session?.admin_role || '')) {
     return (
       <div className="slayer-panel mx-auto mt-10 max-w-xl p-8 text-center font-mono">
-        <ShieldAlert className="mx-auto mb-4 h-10 w-10 text-[var(--negative-ink)]" />
+        <ShieldAlert className="mx-auto mb-4 h-10 w-10 text-rose-400" />
         <h2 className="slayer-title text-[15px]">Unauthorized Access</h2>
         <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">You don't have permission to view this page.</p>
       </div>
     );
   }
 
-  const SECTIONS = [
-    { id: 'overview', label: 'Overview', icon: Activity },
-    { id: 'users', label: 'User Management', icon: Users },
+  // The working desks of the left column — overview data lives on the board itself now.
+  const WORKSPACES = [
+    { id: 'users', label: 'Users', icon: Users },
     { id: 'subscriptions', label: 'Coupons', icon: Ticket },
     { id: 'audit', label: 'Audit Trail', icon: ScrollText },
   ];
 
   const adminRole = overview?.admin_role || session?.admin_role || (session?.is_super_admin ? 'super_admin' : '—');
+  const feed = FEED_META[overview?.data_source] || { state: 'model' as const, label: overview?.data_source || 'Unknown' };
 
   return (
-    <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-4 p-4 font-mono md:h-[calc(100vh-80px)] md:flex-row">
-      {/* Sidebar */}
-      <aside className="slayer-scrollbar flex w-full shrink-0 flex-col gap-4 md:w-56 md:overflow-y-auto md:border-r md:border-[var(--border-subtle)] md:pr-4">
-        <div className="border-b border-[var(--border-subtle)] pb-4">
-          <div className="mb-3 flex items-center gap-2">
-            <Key className="h-4 w-4 text-[var(--negative-ink)]" />
-            <span className="slayer-title">Overseer</span>
-          </div>
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-            <span>Role</span>
-            <span className="font-semibold text-[var(--warning)]">{adminRole}</span>
+    <div className="mx-auto w-full max-w-[1500px] space-y-3 p-4 font-mono">
+      {/* ── 1 · COMMAND BAR — who you are, what the system is doing, right now ── */}
+      <header className="slayer-panel flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Key className="h-4 w-4 shrink-0 text-rose-400" />
+          <div className="min-w-0">
+            <div className="slayer-title-page">Overseer</div>
+            <div className="slayer-subtitle">Operations board</div>
           </div>
         </div>
-
-        <nav className="slayer-scrollbar flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
-          {SECTIONS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.id;
-            return (
-              <button key={t.id} onClick={() => setTab(t.id)}
-                className={cx(
-                  'flex items-center gap-2.5 whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]',
-                  active
-                    ? 'border border-[var(--border-mid)] bg-[rgba(248,248,255,0.05)] text-[var(--text-primary)]'
-                    : 'border border-transparent text-[var(--text-muted)] hover:bg-[rgba(248,248,255,0.03)] hover:text-[var(--text-primary)]',
-                )}>
-                <Icon className="h-4 w-4 shrink-0" /> {t.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="md:mt-auto md:border-t md:border-[var(--border-subtle)] md:pt-4">
-          <div className="slayer-panel flex items-center gap-2.5 px-3 py-2.5">
+        <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
+          {/* Rose readout — the privileged-identity marker. */}
+          <span className="flex items-center gap-2 rounded-[var(--radius-control)] border border-rose-500/30 bg-rose-500/10 px-2.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-400">
+            Role · {adminRole}
+          </span>
+          <span className={READOUT} title={`Market data: ${feed.label}`}>
+            <span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', feed.state === 'live' ? 'animate-pulse bg-[var(--positive-ink)]' : 'bg-[var(--info)]')}></span>
+            <span className="max-w-[150px] truncate">{feed.label}</span>
+          </span>
+          <span className={READOUT} title="Live terminal connections">
             <Radio className="h-3.5 w-3.5 shrink-0 text-[var(--positive-ink)]" />
-            <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Live Connections</div>
-              <div className="slayer-num text-sm font-semibold leading-tight text-[var(--text-primary)]">{live}</div>
-            </div>
-          </div>
+            <span className="slayer-num text-[var(--text-primary)]">{live}</span>
+            <span className="text-[var(--text-muted)]">Live</span>
+          </span>
+          {overview?.maintenance_mode && <StatusBadge tone="negative">503 Active</StatusBadge>}
+          <button onClick={loadOverview} aria-label="Refresh overview" className={ICON_BTN}><RefreshCw className="h-4 w-4" /></button>
         </div>
-      </aside>
+      </header>
 
-      {/* Main Content */}
-      <div className="slayer-scrollbar min-w-0 flex-1 pb-10 md:overflow-y-auto">
-        {tab === 'overview' && <OverviewTab overview={overview} reload={loadOverview} onSimulateTier={onSimulateTier} />}
-        {tab === 'users' && <UsersTab />}
-        {tab === 'subscriptions' && <CouponsTab />}
-        {tab === 'audit' && <AuditTab />}
+      {/* ── 2 · KPI BAND — every board number in one slim hairline-divided row ── */}
+      <KpiBand overview={overview} live={live} />
+
+      {/* ── 3 · BOARD BODY — working desks left, monitoring rail right ── */}
+      <div className="grid grid-cols-1 items-start gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(300px,360px)]">
+        <div className="min-w-0 space-y-3">
+          {/* Workspace switcher — a segmented strip docked over the desk, not a sidebar. */}
+          <nav aria-label="Admin workspaces" className="slayer-panel flex gap-1 overflow-x-auto p-1.5">
+            {WORKSPACES.map((w) => {
+              const Icon = w.icon;
+              const active = tab === w.id;
+              return (
+                <button key={w.id} onClick={() => setTab(w.id)} aria-current={active ? 'page' : undefined}
+                  className={cx(
+                    'flex flex-1 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-[var(--radius-control)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]',
+                    active
+                      ? 'border border-[color:var(--accent-glow)] bg-[var(--accent-soft)] text-[var(--accent-color)]'
+                      : 'border border-transparent text-[var(--text-muted)] hover:bg-[rgba(248,248,255,0.03)] hover:text-[var(--text-primary)]',
+                  )}>
+                  <Icon className="h-3.5 w-3.5 shrink-0" /> {w.label}
+                </button>
+              );
+            })}
+          </nav>
+
+          {tab === 'users' && <UsersDesk />}
+          {tab === 'subscriptions' && <CouponDesk />}
+          {tab === 'audit' && <AuditDesk />}
+        </div>
+
+        <MonitoringRail overview={overview} reload={loadOverview} onSimulateTier={onSimulateTier} feed={feed} />
       </div>
     </div>
   );
 }
 
-function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; reload: () => void; onSimulateTier: (s: string, n: number) => void }) {
+/* ════════════════════════════════ KPI BAND ════════════════════════════════ */
+
+type KpiTone = 'accent' | 'positive' | 'warning' | 'negative' | 'neutral';
+
+// Value ink + label tick per tone — the value leads the cell, quote-board style.
+const KPI_TONE: Record<KpiTone, { ink: string; tick: string }> = {
+  accent: { ink: 'var(--text-primary)', tick: 'var(--accent-color)' },
+  positive: { ink: 'var(--positive-ink)', tick: 'var(--positive-ink)' },
+  warning: { ink: 'var(--warning-ink, var(--warning))', tick: 'var(--warning)' },
+  negative: { ink: 'var(--negative-ink)', tick: 'var(--negative-ink)' },
+  neutral: { ink: 'var(--text-secondary)', tick: 'var(--border-strong)' },
+};
+
+function KpiBand({ overview, live }: { overview: any; live: number }) {
+  const total: number | null = typeof overview?.total_users === 'number' ? overview.total_users : null;
+  const paid: number | null = typeof overview?.paid_users === 'number' ? overview.paid_users : null;
+  const rate = total != null && paid != null && total > 0 ? paid / total : null;
+
+  const cells: { label: string; value: React.ReactNode; tone: KpiTone }[] = [
+    { label: 'Total Users', value: total ?? '—', tone: 'accent' },
+    { label: 'Buyers', value: paid ?? '—', tone: 'accent' },
+    { label: 'Conversion', value: rate != null ? `${(rate * 100).toFixed(rate >= 0.1 ? 0 : 1)}%` : '—', tone: 'accent' },
+    { label: 'Live Now', value: live, tone: live ? 'positive' : 'neutral' },
+    { label: 'Suspended', value: overview?.suspended ?? '—', tone: overview?.suspended ? 'warning' : 'neutral' },
+    { label: 'Banned', value: overview?.banned ?? '—', tone: overview?.banned ? 'negative' : 'neutral' },
+    { label: 'Coupons', value: overview?.coupons ?? '—', tone: 'neutral' },
+    { label: 'Audit Entries', value: overview?.audit_entries ?? '—', tone: 'neutral' },
+  ];
+
+  return (
+    <div className="slayer-panel grid grid-cols-2 gap-px overflow-hidden bg-[var(--border-subtle)] sm:grid-cols-4 xl:grid-cols-8">
+      {cells.map((c) => {
+        const t = KPI_TONE[c.tone];
+        return (
+          <div key={c.label} className="min-w-0 bg-[var(--bg-panel)] px-3 py-2.5">
+            <div className="slayer-num truncate text-[17px] font-bold leading-none" style={{ color: t.ink }}>{c.value}</div>
+            <div className="mt-1.5 flex min-w-0 items-center gap-1.5">
+              <span aria-hidden="true" className="h-[2px] w-3 shrink-0 rounded-full" style={{ background: t.tick }}></span>
+              <span title={c.label} className="truncate text-[9px] font-semibold uppercase leading-tight tracking-[0.15em] text-[var(--text-muted)]">{c.label}</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ═══════════════════════════ MONITORING RAIL ═══════════════════════════ */
+
+function MonitoringRail({ overview, reload, onSimulateTier, feed }: {
+  overview: any; reload: () => void; onSimulateTier: (s: string, n: number) => void;
+  feed: { state: 'live' | 'model'; label: string };
+}) {
   const [busy, setBusy] = useState(false);
   const [recent, setRecent] = useState<any[]>([]);
   const [recentLoaded, setRecentLoaded] = useState(false);
   // Recent-activity preview: the five newest audit entries, refreshed whenever the overview
-  // reloads so operational actions surface here without leaving the Overview tab.
+  // reloads so operational actions surface on the rail without opening the Audit desk.
   useEffect(() => {
     let alive = true;
     api('/api/admin/audit').then((d) => { if (alive) { setRecent((d.entries || []).slice(0, 5)); setRecentLoaded(true); } }).catch(() => { if (alive) setRecentLoaded(true); });
@@ -157,61 +241,72 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
     reload();
   };
   const flags = overview?.feature_flags || {};
-  const feed = FEED_META[overview?.data_source] || { state: 'model' as const, label: overview?.data_source || 'Unknown' };
   const serverTime = typeof overview?.server_time === 'number' ? overview.server_time : null;
 
-  const metrics: Metric[] = [
-    { label: 'Total Users', value: overview?.total_users ?? '—' },
-    { label: 'Live Now', value: overview?.live_connections ?? '—', tone: overview?.live_connections ? 'positive' : 'neutral' },
-    { label: 'Suspended', value: overview?.suspended ?? '—', tone: overview?.suspended ? 'warning' : 'neutral' },
-    { label: 'Banned', value: overview?.banned ?? '—', tone: overview?.banned ? 'negative' : 'neutral' },
-    { label: 'Audit Entries', value: overview?.audit_entries ?? '—' },
-    { label: 'Coupons', value: overview?.coupons ?? '—' },
-  ];
-
   return (
-    <div className="animate-fadeIn space-y-3">
-      <MetricStrip metrics={metrics} columns={6} />
-
-      {/* Visitors vs buyers — the focal instrument of the Overview. */}
-      <ConversionCard overview={overview} />
-
+    <div className="flex min-w-0 flex-col gap-3">
       {/* Feed health — the market-data provider currently backing every terminal read. */}
-      <TerminalPanel title="Feed Health" subtitle="Market-data provider backing every terminal read">
-        <div className="grid grid-cols-2 gap-x-4 gap-y-4 md:grid-cols-3">
-          <div>
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Provider</div>
-            <div className="flex items-center gap-2">
-              <span className={cx('h-2 w-2 rounded-full', feed.state === 'live' ? 'animate-pulse bg-[var(--positive-ink)]' : 'bg-[var(--info)]')}></span>
-              <span className="text-[12px] font-semibold text-[var(--text-primary)]">{feed.label}</span>
-            </div>
+      <TerminalPanel title="Feed Health" subtitle="Provider backing every terminal read">
+        <div className="divide-y divide-[var(--border-subtle)]">
+          <div className="flex items-center justify-between gap-3 pb-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Provider</span>
+            <span className="flex min-w-0 items-center gap-2">
+              <span className={cx('h-2 w-2 shrink-0 rounded-full', feed.state === 'live' ? 'animate-pulse bg-[var(--positive-ink)]' : 'bg-[var(--info)]')}></span>
+              <span className="truncate text-[11px] font-semibold text-[var(--text-primary)]">{feed.label}</span>
+            </span>
           </div>
-          <div>
-            <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Server Time</div>
-            <div className="slayer-num text-[13px] font-semibold text-[var(--text-secondary)]">{serverTime ? formatDateTime(new Date(serverTime).toISOString()) : '—'}</div>
+          <div className="flex items-center justify-between gap-3 pt-2.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Server Time</span>
+            <span className="slayer-num truncate text-[11px] font-semibold text-[var(--text-secondary)]">{serverTime ? formatDateTime(new Date(serverTime).toISOString()) : '—'}</span>
           </div>
         </div>
       </TerminalPanel>
 
-      {/* System controls — maintenance kill-switch and QA impersonation sit together. */}
-      <div className="grid gap-3 md:grid-cols-2">
-        {/* Maintenance */}
-        <TerminalPanel title="Maintenance Mode" subtitle="Returns 503 to all non-admin traffic while active">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Power className={cx('h-4 w-4', overview?.maintenance_mode ? 'text-[var(--negative-ink)]' : 'text-[var(--text-muted)]')} />
-              <span className="text-[12px] font-semibold text-[var(--text-primary)]">{overview?.maintenance_mode ? 'Active' : 'Inactive'}</span>
-              {overview?.maintenance_mode && <StatusBadge tone="negative">503 Active</StatusBadge>}
-            </div>
-            <button onClick={toggleMaintenance} disabled={busy} className="cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] disabled:opacity-50" aria-label="Toggle maintenance mode">
-              {overview?.maintenance_mode ? <ToggleRight className="h-9 w-9 text-[var(--negative-ink)]" /> : <ToggleLeft className="h-9 w-9 text-[var(--text-muted)]" />}
-            </button>
+      {/* Recent activity — the five newest audit-trail entries, stacked for the rail. */}
+      <TerminalPanel title="Recent Activity" subtitle="Five newest audit entries">
+        {!recentLoaded ? (
+          <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Loading…</div>
+        ) : recent.length === 0 ? (
+          <div className="py-1 text-[11px] leading-relaxed text-[var(--text-muted)]">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here as they happen.</div>
+        ) : (
+          <div className="divide-y divide-[var(--border-subtle)]">
+            {recent.map((e) => (
+              <div key={e.id} className="py-2 first:pt-0 last:pb-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 truncate text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]" title={e.action_taken}>{e.action_taken}</span>
+                  <span className="slayer-num shrink-0 whitespace-nowrap text-[9.5px] text-[var(--text-muted)]">{formatDateTime(e.timestamp)}</span>
+                </div>
+                <div className="mt-0.5 flex items-center justify-between gap-2 text-[10px]">
+                  <span className="min-w-0 truncate text-[var(--positive-ink)]" title={e.admin_email}>{e.admin_email}</span>
+                  {e.target_id && <span className="min-w-0 truncate text-[var(--text-muted)]" title={e.target_id}>{e.target_id}</span>}
+                </div>
+              </div>
+            ))}
           </div>
-        </TerminalPanel>
+        )}
+      </TerminalPanel>
 
-        {/* QA viewport simulation */}
-        <TerminalPanel title="QA Viewport Simulation" subtitle="Preview the app as another access tier">
-          <div className="flex flex-wrap gap-2">
+      {/* Visitors vs buyers — the conversion instrument, charted. */}
+      <ConversionCard overview={overview} />
+
+      {/* Privileged switches — rose marks the destructive kill-switch. */}
+      <TerminalPanel title="System Controls" subtitle="Privileged switches — every action is audited">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <Power className={cx('h-4 w-4 shrink-0', overview?.maintenance_mode ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
+            <div className="min-w-0">
+              <div className="text-[11px] font-semibold text-[var(--text-primary)]">Maintenance Mode</div>
+              <div className="truncate text-[9.5px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{overview?.maintenance_mode ? '503 to all non-admin traffic' : 'Inactive'}</div>
+            </div>
+          </div>
+          <button onClick={toggleMaintenance} disabled={busy} className="shrink-0 cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-rose-400 disabled:opacity-50" aria-label="Toggle maintenance mode">
+            {overview?.maintenance_mode ? <ToggleRight className="h-8 w-8 text-rose-400" /> : <ToggleLeft className="h-8 w-8 text-[var(--text-muted)]" />}
+          </button>
+        </div>
+
+        <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">
+          <div className="mb-2 text-[9.5px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">QA Viewport Simulation</div>
+          <div className="flex flex-wrap gap-1.5">
             {([['Guest', 0], ['SkyVision', 2], ['Pinpoint', 3], ['Quant', 4], ['Lifetime', 5]] as const).map(([label, n]) => (
               <button key={label} onClick={() => onSimulateTier(label, n)}
                 className="slayer-control cursor-pointer text-[10px] font-semibold uppercase tracking-[0.14em] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]">
@@ -219,54 +314,33 @@ function OverviewTab({ overview, reload, onSimulateTier }: { overview: any; relo
               </button>
             ))}
           </div>
-        </TerminalPanel>
-      </div>
+        </div>
+      </TerminalPanel>
 
-      {/* Recent activity + feature toggles — the two operational logs read side by side. */}
-      <div className="grid gap-3 md:grid-cols-2">
-        {/* Recent activity — the five newest audit-trail entries, previewed on Overview. */}
-        <TerminalPanel title="Recent Activity" subtitle="Five newest audit-trail entries">
-          {!recentLoaded ? (
-            <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Loading…</div>
-          ) : recent.length === 0 ? (
-            <div className="py-1 text-[11px] leading-relaxed text-[var(--text-muted)]">No admin actions recorded yet. Role changes, feature toggles, coupon creation and maintenance actions appear here as they happen.</div>
-          ) : (
-            <div className="divide-y divide-[var(--border-subtle)]">
-              {recent.map((e) => (
-                <div key={e.id} className="flex items-center gap-3 py-2 first:pt-0 last:pb-0">
-                  <span className="w-40 shrink-0 truncate text-[10px] font-semibold uppercase tracking-wide text-[var(--warning)]" title={e.action_taken}>{e.action_taken}</span>
-                  <span className="min-w-0 flex-1 truncate text-[10px] text-[var(--positive-ink)]" title={e.admin_email}>{e.admin_email}</span>
-                  {e.target_id && <span className="hidden max-w-[30%] truncate text-[10px] text-[var(--text-muted)] sm:inline" title={e.target_id}>{e.target_id}</span>}
-                  <span className="slayer-num shrink-0 whitespace-nowrap text-[10px] text-[var(--text-muted)]">{formatDateTime(e.timestamp)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </TerminalPanel>
-
-        {/* Feature flags */}
-        <TerminalPanel title="Feature Toggles">
-          {Object.keys(flags).length === 0 ? (
-            <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">No feature toggles available</div>
-          ) : (
-            <div className="divide-y divide-[var(--border-subtle)]">
-              {Object.keys(flags).map((k) => (
-                <button key={k} onClick={() => toggleFlag(k, !flags[k])}
-                  aria-pressed={!!flags[k]} aria-label={`Toggle ${k.replace(/_/g, ' ')}`}
-                  className="group flex w-full items-center justify-between gap-3 rounded-[var(--radius-control)] py-2.5 text-left first:pt-0 last:pb-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">
-                  <span className="text-[11px] capitalize text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">{k.replace(/_/g, ' ')}</span>
-                  {flags[k] ? <ToggleRight className="h-6 w-6 shrink-0 text-[var(--positive-ink)]" /> : <ToggleLeft className="h-6 w-6 shrink-0 text-[var(--text-muted)]" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </TerminalPanel>
-      </div>
+      {/* Feature flags — normal interactions read GLACIER accent when on. */}
+      <TerminalPanel title="Feature Toggles">
+        {Object.keys(flags).length === 0 ? (
+          <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">No feature toggles available</div>
+        ) : (
+          <div className="divide-y divide-[var(--border-subtle)]">
+            {Object.keys(flags).map((k) => (
+              <button key={k} onClick={() => toggleFlag(k, !flags[k])}
+                aria-pressed={!!flags[k]} aria-label={`Toggle ${k.replace(/_/g, ' ')}`}
+                className="group flex w-full items-center justify-between gap-3 rounded-[var(--radius-control)] py-2.5 text-left first:pt-0 last:pb-0 focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)]">
+                <span className="text-[11px] capitalize text-[var(--text-secondary)] transition-colors group-hover:text-[var(--text-primary)]">{k.replace(/_/g, ' ')}</span>
+                {flags[k] ? <ToggleRight className="h-6 w-6 shrink-0 text-[var(--accent-color)]" /> : <ToggleLeft className="h-6 w-6 shrink-0 text-[var(--text-muted)]" />}
+              </button>
+            ))}
+          </div>
+        )}
+      </TerminalPanel>
     </div>
   );
 }
 
-function UsersTab() {
+/* ═══════════════════════════════ USERS DESK ═══════════════════════════════ */
+
+function UsersDesk() {
   const [data, setData] = useState<any>({ rows: [], total: 0, nextCursor: null });
   const [cursors, setCursors] = useState<{ current: string | null; history: (string | null)[] }>({ current: null, history: [] });
   const [q, setQ] = useState('');
@@ -372,7 +446,8 @@ function UsersTab() {
         <button aria-label={`Impersonate ${u.email}`} onClick={() => impersonate(u.email)} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Eye className="h-3.5 w-3.5" /></button>
         <button aria-label={`${u.suspended ? 'Unsuspend' : 'Suspend'} ${u.email}`} onClick={() => act(u.email, u.suspended ? 'unsuspend' : 'suspend')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--warning)] transition-colors hover:bg-[rgba(196,154,58,0.14)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><UserX className="h-3.5 w-3.5" /></button>
         <button aria-label={`Force logout ${u.email}`} onClick={() => act(u.email, 'force-logout')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><LogOut className="h-3.5 w-3.5" /></button>
-        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--negative-ink)] transition-colors hover:bg-[var(--negative-soft)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><Ban className="h-3.5 w-3.5" /></button>
+        {/* Rose — the admin-only destructive action of the row. */}
+        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-rose-400 transition-colors hover:bg-rose-500/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-rose-400"><Ban className="h-3.5 w-3.5" /></button>
       </div>
     ) },
   ];
@@ -391,7 +466,7 @@ function UsersTab() {
   );
 
   return (
-    <div className="animate-fadeIn space-y-3">
+    <>
       <ConfirmDialog
         open={!!confirmDialog}
         title={confirmDialog?.title ?? ''}
@@ -401,45 +476,57 @@ function UsersTab() {
         onConfirm={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }}
         onCancel={() => setConfirmDialog(null)}
       />
-      <div className="flex items-center gap-2">
-        <SearchInput
-          id="admin-user-search"
-          ariaLabel="Search users"
-          value={q}
-          onChange={(v) => { setCursors({ current: null, history: [] }); setQ(v); }}
-          onClear={() => { setCursors({ current: null, history: [] }); setQ(''); }}
-          placeholder="Search by email, username, name…"
-          className="flex-1"
+      <TerminalPanel
+        className="animate-fadeIn"
+        title="User Management"
+        subtitle={<span className="slayer-num">{data.total} account{data.total === 1 ? '' : 's'} on record</span>}
+        actions={
+          <div className="flex items-center gap-2">
+            <SearchInput
+              id="admin-user-search"
+              ariaLabel="Search users"
+              value={q}
+              onChange={(v) => { setCursors({ current: null, history: [] }); setQ(v); }}
+              onClear={() => { setCursors({ current: null, history: [] }); setQ(''); }}
+              placeholder="Search by email, username, name…"
+              className="w-52 min-w-0 sm:w-64"
+            />
+            <button onClick={() => load(cursors.current)} aria-label="Refresh users" className={ICON_BTN}><RefreshCw className={cx('h-4 w-4', loading && 'animate-spin')} /></button>
+          </div>
+        }
+        padded={false}
+        contentClassName="space-y-3 p-3"
+        footer={
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            <span className="slayer-num">{data.total} users</span>
+            <div className="flex gap-2">
+              <button disabled={cursors.history.length === 0} onClick={() => setCursors(prev => { const h = [...prev.history]; const c = h.pop() || null; return { history: h, current: c }; })} className={PAGER_BTN}>Prev</button>
+              <button disabled={!data.nextCursor} onClick={() => setCursors(prev => ({ history: [...prev.history, prev.current], current: data.nextCursor }))} className={PAGER_BTN}>Next</button>
+            </div>
+          </div>
+        }
+      >
+        {actionError && (
+          <div role="alert" className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[color:rgba(152,4,4,0.4)] bg-[var(--negative-soft)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--negative-ink)]">
+            <span className="min-w-0 break-words">{actionError}</span>
+            <button onClick={() => setActionError('')} aria-label="Dismiss error" className="shrink-0 rounded-[var(--radius-control)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">Dismiss</button>
+          </div>
+        )}
+
+        <DataTable<any>
+          columns={columns}
+          rows={data.rows}
+          rowKey={(u) => u.id}
+          emptyState={<div className="text-[10px]">{emptyNode}</div>}
         />
-        <button onClick={() => load(cursors.current)} aria-label="Refresh users" className={ICON_BTN}><RefreshCw className={cx('h-4 w-4', loading && 'animate-spin')} /></button>
-      </div>
-
-      {actionError && (
-        <div role="alert" className="flex items-center justify-between gap-3 rounded-[var(--radius-control)] border border-[color:rgba(152,4,4,0.4)] bg-[var(--negative-soft)] px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--negative-ink)]">
-          <span className="min-w-0 break-words">{actionError}</span>
-          <button onClick={() => setActionError('')} aria-label="Dismiss error" className="shrink-0 rounded-[var(--radius-control)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]">Dismiss</button>
-        </div>
-      )}
-
-      <DataTable<any>
-        columns={columns}
-        rows={data.rows}
-        rowKey={(u) => u.id}
-        emptyState={<div className="text-[10px]">{emptyNode}</div>}
-      />
-
-      <div className="flex items-center justify-between text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">
-        <span className="slayer-num">{data.total} users</span>
-        <div className="flex gap-2">
-          <button disabled={cursors.history.length === 0} onClick={() => setCursors(prev => { const h = [...prev.history]; const c = h.pop() || null; return { history: h, current: c }; })} className={PAGER_BTN}>Prev</button>
-          <button disabled={!data.nextCursor} onClick={() => setCursors(prev => ({ history: [...prev.history, prev.current], current: data.nextCursor }))} className={PAGER_BTN}>Next</button>
-        </div>
-      </div>
-    </div>
+      </TerminalPanel>
+    </>
   );
 }
 
-function AuditTab() {
+/* ═══════════════════════════════ AUDIT DESK ═══════════════════════════════ */
+
+function AuditDesk() {
   const [entries, setEntries] = useState<any[]>([]);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [q, setQ] = useState('');
@@ -479,35 +566,43 @@ function AuditTab() {
   );
 
   return (
-    <div className="animate-fadeIn space-y-3">
-      <div className="flex items-center gap-2">
-        <SearchInput
-          id="admin-audit-search"
-          ariaLabel="Filter audit trail"
-          value={q}
-          onChange={setQ}
-          onClear={() => setQ('')}
-          placeholder="Filter by admin, action, target, IP…"
-          className="flex-1"
-        />
-        <button onClick={load} aria-label="Refresh audit trail" className={ICON_BTN}><RefreshCw className={cx('h-4 w-4', status === 'loading' && 'animate-spin')} /></button>
-      </div>
-
+    <TerminalPanel
+      className="animate-fadeIn"
+      title="Audit Trail"
+      subtitle="Immutable record of privileged actions"
+      actions={
+        <div className="flex items-center gap-2">
+          <SearchInput
+            id="admin-audit-search"
+            ariaLabel="Filter audit trail"
+            value={q}
+            onChange={setQ}
+            onClear={() => setQ('')}
+            placeholder="Filter by admin, action, target, IP…"
+            className="w-52 min-w-0 sm:w-64"
+          />
+          <button onClick={load} aria-label="Refresh audit trail" className={ICON_BTN}><RefreshCw className={cx('h-4 w-4', status === 'loading' && 'animate-spin')} /></button>
+        </div>
+      }
+      padded={false}
+      contentClassName="p-3"
+      footer={status === 'ready' && entries.length > 0 ? (
+        <div className="slayer-num text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{filtered.length} of {entries.length} entries</div>
+      ) : undefined}
+    >
       <DataTable<any>
         columns={columns}
         rows={filtered}
         rowKey={(e) => e.id}
         emptyState={<div className="text-[10px]">{emptyNode}</div>}
       />
-
-      {status === 'ready' && entries.length > 0 && (
-        <div className="slayer-num text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{filtered.length} of {entries.length} entries</div>
-      )}
-    </div>
+    </TerminalPanel>
   );
 }
 
-function CouponsTab() {
+/* ══════════════════════════════ COUPON DESK ══════════════════════════════ */
+
+function CouponDesk() {
   const [coupons, setCoupons] = useState<any[]>([]);
   const [form, setForm] = useState({ code: '', discount_type: 'PERCENT', discount_value: 10, redemption_limit: 100, user_restriction: '', expires_at: '' });
   const [msg, setMsg] = useState('');
@@ -555,12 +650,20 @@ function CouponsTab() {
       <button onClick={load} className={GHOST_BTN}>Retry</button>
     </span>
   ) : (
-    <span className="leading-relaxed text-[var(--text-muted)]">No coupons created yet. Generate one above and it will appear here with its redemption status.</span>
+    <span className="leading-relaxed text-[var(--text-muted)]">No coupons created yet. Mint one above and it will appear here with its redemption status.</span>
   );
 
   return (
-    <div className="animate-fadeIn space-y-4">
-      <TerminalPanel title="Generate Coupon" contentClassName="p-[var(--panel-pad)] space-y-4">
+    <TerminalPanel
+      className="animate-fadeIn"
+      title="Coupon Desk"
+      subtitle={listStatus === 'ready' ? <span className="slayer-num">{coupons.length} code{coupons.length === 1 ? '' : 's'} on the ledger</span> : 'Discount codes and redemptions'}
+      actions={<button onClick={load} aria-label="Refresh coupons" className={ICON_BTN}><RefreshCw className={cx('h-4 w-4', listStatus === 'loading' && 'animate-spin')} /></button>}
+      padded={false}
+    >
+      {/* Mint dock — the creation form sits as a bordered strip above the ledger. */}
+      <div className="space-y-3 border-b border-[var(--border-subtle)] p-4">
+        <div className="slayer-title-section">Mint New Code</div>
         <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
           <div>
             <input aria-label="Coupon code" aria-invalid={!!errs.code} placeholder="CODE (A-Z 0-9)" value={form.code} onChange={(e) => { setForm({ ...form, code: e.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '') }); if (errs.code) setErrs({ ...errs, code: null }); }}
@@ -584,25 +687,23 @@ function CouponsTab() {
             className={cx(FIELD, 'slayer-num')} />
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={create} disabled={state === 'loading'} className="cursor-pointer rounded-[var(--radius-control)] border border-[color:rgba(13,71,21,0.5)] bg-[var(--positive-soft)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--positive-ink)] transition-colors hover:border-[color:rgba(13,71,21,0.75)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)] disabled:opacity-50">
+          <button onClick={create} disabled={state === 'loading'} className={ACCENT_BTN}>
             {state === 'loading' ? 'Generating…' : 'Generate'}
           </button>
           {msg && <span role="status" className={cx('text-[10px]', state === 'error' ? 'text-[var(--negative-ink)]' : state === 'success' ? 'text-[var(--positive-ink)]' : 'text-[var(--text-secondary)]')}>{msg}</span>}
         </div>
-      </TerminalPanel>
-
-      <div className="flex items-center justify-between">
-        <span className="slayer-num text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">{listStatus === 'ready' ? `${coupons.length} coupon${coupons.length === 1 ? '' : 's'}` : ''}</span>
-        <button onClick={load} aria-label="Refresh coupons" className={ICON_BTN}><RefreshCw className={cx('h-4 w-4', listStatus === 'loading' && 'animate-spin')} /></button>
       </div>
 
-      <DataTable<any>
-        columns={columns}
-        rows={coupons}
-        rowKey={(c) => c.code}
-        emptyState={<div className="text-[10px]">{emptyNode}</div>}
-      />
-    </div>
+      {/* Ledger — every minted code with its redemption state. */}
+      <div className="p-3">
+        <DataTable<any>
+          columns={columns}
+          rows={coupons}
+          rowKey={(c) => c.code}
+          emptyState={<div className="text-[10px]">{emptyNode}</div>}
+        />
+      </div>
+    </TerminalPanel>
   );
 }
 

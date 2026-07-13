@@ -37,7 +37,14 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
   return (
     <section
       className="relative flex flex-col overflow-hidden"
-      style={{ minHeight: '100vh', background: '#08090A' }}
+      style={{
+        minHeight: '100vh',
+        // Institutional atmosphere — a faint emerald bloom at the crown over pure black.
+        background:
+          'radial-gradient(56% 44% at 50% -8%, rgba(196,203,215,0.06), transparent 64%),' +
+          'radial-gradient(44% 38% at 100% 110%, rgba(130,233,255,0.03), transparent 70%),' +
+          '#0A0B0D',
+      }}
       data-scene="hero"
     >
       {/* backdrop — a pool of light that follows the pointer, revealing the
@@ -95,13 +102,18 @@ export function HeroAssemblyScene({ onEnter, onLaunch }: Props) {
           >
             <button
               onClick={onLaunch}
-              className="rounded-[7px] bg-[#F4F4F5] px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#0A0806] transition-opacity hover:opacity-90 cursor-pointer"
+              className="rounded-[5px] px-5 py-3 text-[12px] font-bold uppercase tracking-[0.12em] transition-all hover:brightness-110 cursor-pointer"
+              style={{
+                background: 'var(--accent-color)',
+                color: 'var(--primary-contrast)',
+                boxShadow: '0 8px 28px -10px var(--accent-glow, rgba(196,203,215,0.30))',
+              }}
             >
               Launch Terminal
             </button>
             <button
               onClick={() => onEnter('pinpoint')}
-              className="rounded-[7px] border border-white/15 px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#F4F4F5] transition-colors hover:border-white/30 cursor-pointer"
+              className="rounded-[5px] border border-white/15 px-5 py-3 text-[12px] font-semibold uppercase tracking-[0.12em] text-[#E6E9EF] transition-colors hover:border-white/30 cursor-pointer"
             >
               View Terminal Preview
             </button>

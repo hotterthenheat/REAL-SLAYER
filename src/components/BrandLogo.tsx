@@ -15,7 +15,11 @@ import React from 'react';
  */
 
 const PROMPT = 'var(--brand-prompt, #6B7177)'; // --dim  : the ">" terminal prompt
-const WHITE = 'var(--brand-ink, #F4F5F6)';     // --white : the S / wordmark / caret
+const WHITE = 'var(--brand-ink, #F4F5F6)';     // --white : the S / wordmark
+// The blinking caret is THE brand moment: a holographic silver bar with a spectral
+// cyan↔violet edge. This is the one place the full --slayer-holo gradient is used.
+const CARET_HOLO = 'var(--slayer-holo, linear-gradient(100deg, #82E9FF 0%, #EAEEF4 42%, #C4CBD7 58%, #B79CFF 100%))';
+const CARET_GLOW = 'var(--slayer-spectral-cyan, #82E9FF)';
 
 export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
   const fontSize = expanded ? 18 : 24;
@@ -48,8 +52,8 @@ export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
           height: expanded ? '0.92em' : '0.88em',
           marginLeft: expanded ? '0.14em' : '0.125em',
           borderRadius: expanded ? 2 : 1,
-          background: WHITE,
-          boxShadow: `0 0 ${expanded ? 18 : 12}px color-mix(in srgb, ${WHITE} 50%, transparent)`,
+          background: CARET_HOLO,
+          boxShadow: `0 0 ${expanded ? 16 : 11}px color-mix(in srgb, ${CARET_GLOW} 45%, transparent)`,
         }}
       />
     </span>
