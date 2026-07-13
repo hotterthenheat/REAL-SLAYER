@@ -17,6 +17,31 @@ import type {
   TickerSymbol,
   TradePlan,
 } from '../types/market';
+import { ASSET_LIST } from '../../data';
+
+// Realistic base price per selectable instrument, sourced from the app's asset
+// universe (defaultPrice). Without this, the simulator synthesized a hash-based
+// price for any ticker not hand-set below — so SPX charted near ~565 instead of
+// ~5,460, disagreeing with the header/KPIs that read the real server state. Seeding
+// from here keeps the live tick chart on the correct scale for every instrument.
+const ASSET_BASE: Record<string, number> = (() => {
+  const m: Record<string, number> = {};
+  for (const a of ASSET_LIST) {
+    const t = a?.ticker?.toUpperCase();
+    if (t && typeof a.defaultPrice === 'number' && isFinite(a.defaultPrice) && a.defaultPrice > 0) {
+      m[t] = a.defaultPrice;
+    }
+  }
+  return m;
+})();
+
+// A sane options-strike step for a given underlying price (SPX→5, NDX→25, ETFs→1…).
+function stepForPrice(price: number): number {
+  if (price >= 8000) return 25;
+  if (price >= 2500) return 5;
+  if (price >= 400) return 1;
+  return 0.5;
+}
 
 const Simulator = (() => {
   // Math Helpers
@@ -215,10 +240,17 @@ const Simulator = (() => {
     const sym = symbolRaw.toUpperCase();
     if (!TICKERS[sym]) {
       const h = symbolHash(sym);
-      const basePrice = Number((15 + (h % 58500) / 100).toFixed(2)); // ~15..600
       const iv = 0.15 + ((h >>> 5) % 45) / 100; // ~0.15..0.60
-      const step = basePrice >= 100 ? 1 : 0.5;
-      TICKERS[sym] = { basePrice, currentPrice: basePrice, iv, step };
+      const known = ASSET_BASE[sym];
+      if (known) {
+        // Real instrument — chart it at its actual scale (SPX ~5,460, NDX ~19,800…).
+        TICKERS[sym] = { basePrice: known, currentPrice: known, iv, step: stepForPrice(known) };
+      } else {
+        // Truly unknown ticker — keep the deterministic hash-based synthesis.
+        const basePrice = Number((15 + (h % 58500) / 100).toFixed(2)); // ~15..600
+        const step = basePrice >= 100 ? 1 : 0.5;
+        TICKERS[sym] = { basePrice, currentPrice: basePrice, iv, step };
+      }
     }
     if (!priceHistory[sym]) seedHistory(sym);
     return sym;

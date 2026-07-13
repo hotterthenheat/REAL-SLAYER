@@ -166,6 +166,13 @@ html, body, #root {
   --negative-soft: rgba(214, 72, 77, 0.16);
   --call: #5B9DF0;
   --pin: #E5B94E;
+  /* GEX structural-level hues — distinct from the directional (emerald/rose) and
+     wall (gold) families so each level reads at a glance on the chart + rails.
+     Adopted from the sibling build: flip = cool regime border (baby blue), king =
+     the standout heaviest-inventory strike (magenta), dark-pool = teal. */
+  --flip: #7DD3FC;      /* gamma-flip / regime border — baby blue */
+  --king: #E255FF;      /* king / heaviest |net-γ| strike — magenta */
+  --darkpool: #2DD4BF;  /* dark-pool prints — teal */
 
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
@@ -803,6 +810,9 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --negative-ink: #BE322D;     /* darker red — readable on paper */
   --call: #2570A8;
   --pin: #A8650E;
+  --flip: #2E86C1;      /* baby blue → deeper on paper */
+  --king: #A81FB8;      /* magenta → deeper on paper */
+  --darkpool: #0E9488;  /* teal → deeper on paper */
 
   /* Redefine Tailwind's custom theme variables for light mode */
   --color-black: #ffffff;
@@ -1316,4 +1326,84 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 }
 @media (prefers-reduced-motion: reduce) {
   .slayer-marquee { animation: none; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   ANIMATED HOLOGRAPHIC SILVER — the brand's living accent.
+   A slow spectral band (cyan ↔ silver ↔ violet) that drifts across whatever it
+   clips to: the wordmark, the caret, the active-nav rail, a hero edge. This is
+   the ONE animated brand moment — restrained, never applied to market data.
+   The band is symmetric so an ease-in-out `alternate` sweep never shows a seam.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  --slayer-holo-band: linear-gradient(
+    105deg,
+    var(--slayer-silver-mid, #C4CBD7) 0%,
+    var(--slayer-spectral-cyan, #82E9FF) 18%,
+    var(--slayer-silver-high, #EAEEF4) 38%,
+    var(--slayer-spectral-violet, #B79CFF) 58%,
+    var(--slayer-silver-high, #EAEEF4) 78%,
+    var(--slayer-silver-mid, #C4CBD7) 100%
+  );
+}
+
+@keyframes slayer-holo-drift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* Animated holographic TEXT — clip the drifting band to the glyphs. */
+.slayer-holo-text {
+  background-image: var(--slayer-holo-band);
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: slayer-holo-drift 7s ease-in-out infinite alternate;
+}
+
+/* Animated holographic FILL — for the caret bar, active rail, tiny accents. */
+.slayer-holo-fill {
+  background-image: var(--slayer-holo-band);
+  background-size: 220% 100%;
+  background-position: 0% 50%;
+  animation: slayer-holo-drift 7s ease-in-out infinite alternate;
+}
+
+/* A single traveling sheen — a narrow bright pass that sweeps a surface/edge
+   once every cycle (the partner's border-beam idea, re-skinned to spectral silver).
+   Put it on a thin element (a 2px rail, a 1px top border) via ::after. */
+.slayer-holo-beam { position: relative; overflow: hidden; }
+.slayer-holo-beam::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    color-mix(in srgb, var(--slayer-spectral-cyan, #82E9FF) 70%, transparent) 42%,
+    var(--slayer-silver-high, #EAEEF4) 50%,
+    color-mix(in srgb, var(--slayer-spectral-violet, #B79CFF) 70%, transparent) 58%,
+    transparent 100%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+  animation: slayer-holo-drift 4.6s linear infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slayer-holo-text,
+  .slayer-holo-fill { animation: none; background-position: 42% 50%; }
+  .slayer-holo-beam::after { animation: none; opacity: 0.5; }
+}
+
+/* Light theme: the bright spectral band would wash out on pale surfaces — swap in
+   a legible graphite-silver band so the wordmark/active-rail still read and still
+   shimmer (matching the light theme's graphite accent). */
+body.light-theme .slayer-holo-text,
+body.light-theme .slayer-holo-fill {
+  background-image: linear-gradient(105deg, #5B6472 0%, #8A93A6 30%, #454B57 52%, #6B7488 74%, #5B6472 100%);
 }

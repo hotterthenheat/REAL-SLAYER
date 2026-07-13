@@ -40,7 +40,11 @@ export function TerminalLogo({ expanded = false }: { expanded?: boolean }) {
       >
         {'>'}
       </span>
-      <span style={{ color: WHITE, letterSpacing: expanded ? '-0.02em' : '-0.5px' }}>
+      {/* The wordmark is the living brand moment: a slow holographic silver shimmer
+          (cyan↔silver↔violet) drifts across the glyphs. `color: WHITE` is the
+          no-background-clip fallback; the class clips the animated band to text and
+          the light theme swaps in a legible graphite band. */}
+      <span className="slayer-holo-text" style={{ color: WHITE, letterSpacing: expanded ? '-0.02em' : '-0.5px' }}>
         {expanded ? 'slayer_terminal' : 'S'}
       </span>
       <span

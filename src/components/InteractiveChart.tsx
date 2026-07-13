@@ -331,7 +331,7 @@ export const InteractiveChart = React.memo(function InteractiveChart({
       defs.push(
         { price: gexLevels.callWall, color: '#22c55e', title: 'Call Wall' },
         { price: gexLevels.putWall, color: '#ef4444', title: 'Put Wall' },
-        { price: gexLevels.gammaFlip, color: '#eab308', title: 'γ Flip' },
+        { price: gexLevels.gammaFlip, color: '#7DD3FC', title: 'γ Flip' },
         { price: gexLevels.magnet, color: '#a855f7', title: 'Magnet' },
       );
     }

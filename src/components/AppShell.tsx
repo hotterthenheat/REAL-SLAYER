@@ -646,11 +646,13 @@ function SidebarRow({ it }: { it: NavItemDef }) {
             : 'text-[var(--text-tertiary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)]'
         }`}
       >
-        {/* active marker — a spectral (holographic silver) 2px rule on the row's edge */}
+        {/* active marker — a 2px rule on the row's edge. When active (and not the
+            rose admin row) it carries the LIVING holographic-silver band: a slow
+            cyan↔silver↔violet drift, the same brand shimmer as the wordmark. */}
         <span
           aria-hidden="true"
-          className={`absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 rounded-r-full transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-0'}`}
-          style={{ background: railColor }}
+          className={`absolute left-0 top-1/2 h-6 w-[2px] -translate-y-1/2 rounded-r-full transition-opacity duration-150 ${isActive ? 'opacity-100' : 'opacity-0'} ${isActive && !admin ? 'slayer-holo-fill' : ''}`}
+          style={isActive && !admin ? undefined : { background: railColor }}
         />
         <Icon className={`h-[18px] w-[18px] shrink-0 ${iconTint}`} />
         {isSidebarExpanded ? (
