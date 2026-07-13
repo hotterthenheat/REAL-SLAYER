@@ -14,6 +14,7 @@ import { AssetSparkline } from './AssetSparkline';
 // is unavailable. `ChainContract` mirrors the server's per-strike chain shape.
 import { calculateAnalyticGreeks, type ChainContract } from '../lib/v11Math';
 import { Table, THead, TBody, TR, TH, TD } from './ui/Table';
+import { DataClassificationLabel } from './ui/terminal/DataClassificationLabel';
 import { useTrackingStore, setupKey, isTerminal, type TrackDataMode } from '../lib/trackedSetups';
 import { toast } from './ui/toast';
 
@@ -506,7 +507,7 @@ export function SkyVisionView() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-[var(--surface)] border border-[var(--border)] p-3 rounded-[var(--radius-control)] gap-3">
         <div className="flex gap-2 items-center">
           <Zap className="w-4 h-4 text-[var(--text-tertiary)]" />
-          <span className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest font-bold">Slayer Terminal</span>
+          <span className="slayer-holo-text text-[10px] text-[var(--text-secondary)] uppercase tracking-widest font-bold">Slayer Terminal</span>
         </div>
 
         <div className="flex items-center gap-2.5 flex-wrap w-full sm:w-auto">
@@ -587,7 +588,10 @@ export function SkyVisionView() {
               </div>
               <div className="flex items-stretch">
                 <div className="pl-6 border-l border-[var(--border)] text-right">
-                  <span className="text-[var(--text-tertiary)] uppercase text-[10px] block tracking-[0.16em] font-bold">Mid</span>
+                  <span className="flex items-center justify-end gap-1.5">
+                    <span className="text-[var(--text-tertiary)] uppercase text-[10px] tracking-[0.16em] font-bold">Mid</span>
+                    <DataClassificationLabel kind={isPriceLive ? 'RAW' : 'MODELED'} />
+                  </span>
                   <span className="text-[var(--text-primary)] font-semibold block text-[17px] font-mono tabular-nums leading-tight mt-0.5">${(activePrice ?? 0).toFixed(2)}</span>
                 </div>
               </div>
@@ -647,6 +651,7 @@ export function SkyVisionView() {
                 {/* Greeks 2x2 grid */}
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-[10px] text-[var(--text-tertiary)] uppercase tracking-widest font-bold">Greeks</span>
+                  <DataClassificationLabel kind={derivedGreeks.source === 'live' ? 'RAW' : 'MODELED'} />
                 </div>
                 <div className="grid grid-cols-4 border-t border-b border-[var(--border)] py-2.5 font-mono text-[10px]">
                   <div className="flex flex-col gap-0.5 pr-2">

@@ -439,7 +439,9 @@ export function QuantAuditView({
     void themeMode;
     const posText = cssVar('--positive-ink', '#2f9d45'); // legible win (themeable)
     const negText = cssVar('--negative-ink', '#d94646'); // legible loss (themeable)
-    const muted = cssVar('--text-muted', 'rgba(248,248,255,0.46)');
+    const muted = cssVar('--text-muted', 'rgba(230,233,239,0.52)');
+    const grid = cssVar('--border-subtle', 'rgba(255,255,255,0.06)');     // hairline gridlines — theme-aware
+    const zeroLine = cssVar('--border-strong', 'rgba(255,255,255,0.14)'); // break-even baseline — theme-aware
     const fmtVal = (v: number) => (perfMode === 'r' ? `${v >= 0 ? '+' : ''}${v.toFixed(2)}R` : `${v < 0 ? '-' : '+'}$${Math.abs(v).toFixed(0)}`);
 
     if (perfTab === 'equity') {
@@ -463,7 +465,7 @@ export function QuantAuditView({
           },
         },
         xAxis: { type: 'category', data: cats, name: 'TRADE #', nameLocation: 'middle', nameGap: 20, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700 }, axisLabel: { fontSize: 9, color: muted } },
-        yAxis: { type: 'value', name: unitLabel, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700, align: 'right' }, axisLabel: { fontSize: 9, color: muted, formatter: (v: number) => (perfMode === 'r' ? `${v.toFixed(1)}` : `$${Math.round(v)}`) }, splitLine: { lineStyle: { color: 'rgba(248,248,255,0.05)' } } },
+        yAxis: { type: 'value', name: unitLabel, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700, align: 'right' }, axisLabel: { fontSize: 9, color: muted, formatter: (v: number) => (perfMode === 'r' ? `${v.toFixed(1)}` : `$${Math.round(v)}`) }, splitLine: { lineStyle: { color: grid } } },
         series: [{
           type: 'line', data: vals, showSymbol: false, smooth: false,
           lineStyle: { color: lineCol, width: 1.6 },
@@ -473,7 +475,7 @@ export function QuantAuditView({
               { offset: 1, color: 'rgba(0,0,0,0)' },
             ]),
           },
-          markLine: { silent: true, symbol: 'none', data: [{ yAxis: 0, lineStyle: { color: 'rgba(248,248,255,0.18)', type: 'dashed', width: 1 }, label: { show: false } }] },
+          markLine: { silent: true, symbol: 'none', data: [{ yAxis: 0, lineStyle: { color: zeroLine, type: 'dashed', width: 1 }, label: { show: false } }] },
         }],
       });
     }
@@ -502,7 +504,7 @@ export function QuantAuditView({
         formatter: (ps: any) => { const p = Array.isArray(ps) ? ps[0] : ps; return `<span style="font-size:11px;font-variant-numeric:tabular-nums">${p.name}<br/><b style="color:${p.value < 0 ? negText : posText}">${fmtVal(p.value)}</b></span>`; },
       },
       xAxis: { type: 'category', data: keys, axisLabel: { fontSize: 9, color: muted, rotate: perfTab === 'daily' ? 40 : 0, formatter: (v: string) => (perfTab === 'daily' ? v.slice(5) : v) } },
-      yAxis: { type: 'value', name: `${perfTab === 'daily' ? 'DAILY' : 'MONTHLY'} ${unitLabel}`, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700, align: 'right' }, axisLabel: { fontSize: 9, color: muted, formatter: (v: number) => (perfMode === 'r' ? `${v.toFixed(1)}` : `$${Math.round(v)}`) }, splitLine: { lineStyle: { color: 'rgba(248,248,255,0.05)' } } },
+      yAxis: { type: 'value', name: `${perfTab === 'daily' ? 'DAILY' : 'MONTHLY'} ${unitLabel}`, nameTextStyle: { color: muted, fontSize: 9, fontWeight: 700, align: 'right' }, axisLabel: { fontSize: 9, color: muted, formatter: (v: number) => (perfMode === 'r' ? `${v.toFixed(1)}` : `$${Math.round(v)}`) }, splitLine: { lineStyle: { color: grid } } },
       series: [{ type: 'bar', data: vals, barMaxWidth: 34, itemStyle: { borderRadius: 0, color: (p: any) => (p.value < 0 ? negText : posText) } }],
     });
   }, [closedOrdered, perfTab, perfMode, unitLabel, themeMode]);

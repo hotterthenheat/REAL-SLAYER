@@ -28,7 +28,7 @@ import {
  *                         privileged system switches.
  *
  * Rose marks admin-only destructive controls (ban, maintenance kill-switch,
- * the role badge); the GLACIER accent carries all normal interactions.
+ * the role badge); the silver accent carries all normal interactions.
  */
 
 /**
@@ -59,7 +59,7 @@ const FIELD = 'slayer-control w-full placeholder:text-[var(--text-faint)] focus:
 const ICON_BTN = 'flex shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] p-2.5 text-[var(--text-muted)] transition-colors cursor-pointer hover:border-[var(--border-mid)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]';
 const GHOST_BTN = 'rounded-[var(--radius-control)] border border-[var(--border-subtle)] bg-[var(--bg-shell)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)] transition-colors cursor-pointer hover:border-[var(--border-mid)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:border-[var(--border-strong)]';
 const PAGER_BTN = `${GHOST_BTN} disabled:cursor-default disabled:opacity-40 disabled:hover:border-[var(--border-subtle)] disabled:hover:text-[var(--text-secondary)]`;
-// GLACIER accent CTA — the one primary action of a panel (normal interactions stay ice-blue).
+// Silver accent CTA — the one primary action of a panel (silver = primary outline buttons, per the design system).
 const ACCENT_BTN = 'cursor-pointer rounded-[var(--radius-control)] border border-[color:var(--accent-glow)] bg-[var(--accent-soft)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--accent-color)] transition-colors hover:border-[var(--accent-color)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent-color)] disabled:opacity-50';
 // Command-bar readout chip — passive status, recessed fill.
 const READOUT = 'slayer-readout flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em]';
@@ -87,7 +87,7 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
   if (!session?.is_super_admin && !['super_admin', 'owner', 'admin'].includes(session?.admin_role || '')) {
     return (
       <div className="slayer-panel mx-auto mt-10 max-w-xl p-8 text-center font-mono">
-        <ShieldAlert className="mx-auto mb-4 h-10 w-10 text-rose-400" />
+        <ShieldAlert className="mx-auto mb-4 h-10 w-10 text-[var(--negative-ink)]" />
         <h2 className="slayer-title text-[15px]">Unauthorized Access</h2>
         <p className="mt-2 text-[11px] uppercase tracking-[0.16em] text-[var(--text-muted)]">You don't have permission to view this page.</p>
       </div>
@@ -109,7 +109,7 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
       {/* ── 1 · COMMAND BAR — who you are, what the system is doing, right now ── */}
       <header className="slayer-panel flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
         <div className="flex min-w-0 items-center gap-2.5">
-          <Key className="h-4 w-4 shrink-0 text-rose-400" />
+          <Key className="h-4 w-4 shrink-0 text-[var(--negative-ink)]" />
           <div className="min-w-0">
             <div className="slayer-title-page">Overseer</div>
             <div className="slayer-subtitle">Operations board</div>
@@ -117,7 +117,7 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
         </div>
         <div className="ml-auto flex min-w-0 flex-wrap items-center gap-2">
           {/* Rose readout — the privileged-identity marker. */}
-          <span className="flex items-center gap-2 rounded-[var(--radius-control)] border border-rose-500/30 bg-rose-500/10 px-2.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.16em] text-rose-400">
+          <span className="flex items-center gap-2 rounded-[var(--radius-control)] border border-[color:rgba(152,4,4,0.4)] bg-[var(--negative-soft)] px-2.5 py-[7px] text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--negative-ink)]">
             Role · {adminRole}
           </span>
           <span className={READOUT} title={`Market data: ${feed.label}`}>
@@ -175,8 +175,11 @@ export function AdminOverseerPanel({ session, onSimulateTier }: AdminPanelProps)
 type KpiTone = 'accent' | 'positive' | 'warning' | 'negative' | 'neutral';
 
 // Value ink + label tick per tone — the value leads the cell, quote-board style.
+// The status tones (positive/warning/negative) tick in their semantic hue; the
+// non-status counts tick with a neutral hairline — the silver brand accent is
+// reserved for active/focus/selection and never marks data.
 const KPI_TONE: Record<KpiTone, { ink: string; tick: string }> = {
-  accent: { ink: 'var(--text-primary)', tick: 'var(--accent-color)' },
+  accent: { ink: 'var(--text-primary)', tick: 'var(--border-strong)' },
   positive: { ink: 'var(--positive-ink)', tick: 'var(--positive-ink)' },
   warning: { ink: 'var(--warning-ink, var(--warning))', tick: 'var(--warning)' },
   negative: { ink: 'var(--negative-ink)', tick: 'var(--negative-ink)' },
@@ -293,14 +296,14 @@ function MonitoringRail({ overview, reload, onSimulateTier, feed }: {
       <TerminalPanel title="System Controls" subtitle="Privileged switches — every action is audited">
         <div className="flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-2.5">
-            <Power className={cx('h-4 w-4 shrink-0', overview?.maintenance_mode ? 'text-rose-400' : 'text-[var(--text-muted)]')} />
+            <Power className={cx('h-4 w-4 shrink-0', overview?.maintenance_mode ? 'text-[var(--negative-ink)]' : 'text-[var(--text-muted)]')} />
             <div className="min-w-0">
               <div className="text-[11px] font-semibold text-[var(--text-primary)]">Maintenance Mode</div>
               <div className="truncate text-[9.5px] uppercase tracking-[0.14em] text-[var(--text-muted)]">{overview?.maintenance_mode ? '503 to all non-admin traffic' : 'Inactive'}</div>
             </div>
           </div>
-          <button onClick={toggleMaintenance} disabled={busy} className="shrink-0 cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-rose-400 disabled:opacity-50" aria-label="Toggle maintenance mode">
-            {overview?.maintenance_mode ? <ToggleRight className="h-8 w-8 text-rose-400" /> : <ToggleLeft className="h-8 w-8 text-[var(--text-muted)]" />}
+          <button onClick={toggleMaintenance} disabled={busy} className="shrink-0 cursor-pointer rounded-[var(--radius-control)] transition-opacity focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--negative-ink)] disabled:opacity-50" aria-label="Toggle maintenance mode">
+            {overview?.maintenance_mode ? <ToggleRight className="h-8 w-8 text-[var(--negative-ink)]" /> : <ToggleLeft className="h-8 w-8 text-[var(--text-muted)]" />}
           </button>
         </div>
 
@@ -317,7 +320,7 @@ function MonitoringRail({ overview, reload, onSimulateTier, feed }: {
         </div>
       </TerminalPanel>
 
-      {/* Feature flags — normal interactions read GLACIER accent when on. */}
+      {/* Feature flags — an on toggle reads the silver accent as its active-control state. */}
       <TerminalPanel title="Feature Toggles">
         {Object.keys(flags).length === 0 ? (
           <div className="py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">No feature toggles available</div>
@@ -447,7 +450,7 @@ function UsersDesk() {
         <button aria-label={`${u.suspended ? 'Unsuspend' : 'Suspend'} ${u.email}`} onClick={() => act(u.email, u.suspended ? 'unsuspend' : 'suspend')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--warning)] transition-colors hover:bg-[rgba(196,154,58,0.14)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><UserX className="h-3.5 w-3.5" /></button>
         <button aria-label={`Force logout ${u.email}`} onClick={() => act(u.email, 'force-logout')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[rgba(248,248,255,0.06)] hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--border-strong)]"><LogOut className="h-3.5 w-3.5" /></button>
         {/* Rose — the admin-only destructive action of the row. */}
-        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-rose-400 transition-colors hover:bg-rose-500/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-rose-400"><Ban className="h-3.5 w-3.5" /></button>
+        <button aria-label={`${u.banned ? 'Unban' : 'Ban'} ${u.email}`} onClick={() => act(u.email, u.banned ? 'unban' : 'ban')} className="cursor-pointer rounded-[var(--radius-control)] p-1.5 text-[var(--negative-ink)] transition-colors hover:bg-[var(--negative-soft)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--negative-ink)]"><Ban className="h-3.5 w-3.5" /></button>
       </div>
     ) },
   ];

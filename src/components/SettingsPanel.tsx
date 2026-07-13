@@ -1688,7 +1688,7 @@ export function SettingsPanel({ session, onUpdateSession }: SettingsPanelProps) 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-0.5 min-w-0">
                         <span className="text-[11px] text-[var(--text-tertiary)] font-semibold block uppercase tracking-wider">Stripe Customer ID</span>
-                        <code className="text-[var(--accent-color)] font-mono text-xs break-all">{session.customer_id}</code>
+                        <code className="text-[var(--text-primary)] font-mono text-xs break-all">{session.customer_id}</code>
                       </div>
                       <div className="space-y-0.5 min-w-0">
                         <span className="text-[11px] text-[var(--text-tertiary)] font-semibold block uppercase tracking-wider">Tokenized Payment Method ID</span>

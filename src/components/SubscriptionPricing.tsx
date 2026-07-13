@@ -181,11 +181,11 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
   const modalLabelCls = "text-[10px] text-[var(--text-tertiary)] uppercase tracking-[0.18em] font-semibold block mb-1.5";
   const modalInputCls = "w-full bg-[var(--surface-2)] border border-[var(--border)] text-[var(--text-primary)] placeholder:text-[var(--text-tertiary)] rounded-[5px] px-3 py-2.5 text-[13px] focus:outline-none focus:border-[var(--accent-color)] transition-colors font-sans";
   const ghostCtaCls = "w-full py-3 rounded-[5px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-soft)] font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
-  const primaryCtaCls = "w-full py-3 rounded-[5px] bg-[var(--accent-color)] text-[#04121C] hover:opacity-95 font-semibold text-[11.5px] uppercase tracking-[0.1em] shadow-[0_0_18px_var(--accent-glow)] hover:shadow-[0_0_30px_var(--accent-glow)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
+  const primaryCtaCls = "w-full py-3 rounded-[5px] bg-[var(--accent-color)] text-[var(--primary-contrast)] hover:opacity-95 font-semibold text-[11.5px] uppercase tracking-[0.1em] shadow-[0_0_18px_var(--accent-glow)] hover:shadow-[0_0_30px_var(--accent-glow)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed";
 
   // Compact CTA styling for the compare-plans matrix column headers (mirror the card CTAs).
   const matrixGhostCta = "w-full py-2 px-2 rounded-[5px] bg-transparent border border-[var(--border-strong)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent-color)] hover:bg-[var(--accent-soft)] font-semibold text-[10px] uppercase tracking-[0.1em] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
-  const matrixPrimaryCta = "w-full py-2 px-2 rounded-[5px] bg-[var(--accent-color)] text-[#04121C] hover:opacity-95 font-semibold text-[10px] uppercase tracking-[0.1em] shadow-[0_0_14px_var(--accent-glow)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
+  const matrixPrimaryCta = "w-full py-2 px-2 rounded-[5px] bg-[var(--accent-color)] text-[var(--primary-contrast)] hover:opacity-95 font-semibold text-[10px] uppercase tracking-[0.1em] shadow-[0_0_14px_var(--accent-glow)] transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap";
 
   // Columns (tiers) for the Compare plans matrix. Prices track the billingCycle
   // toggle just like the cards above; lifetime is always "Custom".
@@ -917,7 +917,7 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                                 );
                               }
                             }}
-                            className="w-full mt-4 py-3 rounded-[7px] bg-[var(--text-primary)] text-[#0A0806] hover:opacity-90 font-semibold text-[11.5px] uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 transition-opacity cursor-pointer"
+                            className="w-full mt-4 py-3 rounded-[7px] bg-[var(--text-primary)] text-[var(--primary-contrast)] hover:opacity-90 font-semibold text-[11.5px] uppercase tracking-[0.1em] flex items-center justify-center gap-1.5 transition-opacity cursor-pointer"
                           >
                             <span>Send message</span>
                           </button>
@@ -950,14 +950,14 @@ export function SubscriptionPricing({ onUpgradeComplete, onEnterApp, session, on
                   <button
                     onClick={() => handleStripeCheckout(selectedPlanForCheckout)}
                     disabled={checkoutPending === selectedPlanForCheckout}
-                    className="w-full py-3 rounded-[7px] bg-[var(--text-primary)] text-[#0A0806] hover:opacity-90 font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-opacity cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 rounded-[7px] bg-[var(--text-primary)] text-[var(--primary-contrast)] hover:opacity-90 font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-opacity cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <span>{checkoutPending === selectedPlanForCheckout ? 'Redirecting…' : 'Try again'}</span>
                   </button>
                 )}
                 <button
                   onClick={() => setSelectedPlanForCheckout(null)}
-                  className="w-full py-3 rounded-[7px] bg-transparent border border-[var(--border-strong)] hover:bg-[rgba(248,248,255,0.05)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-colors cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3 rounded-[7px] bg-transparent border border-[var(--border-strong)] hover:bg-[var(--bg-panel-raised)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] font-semibold text-[11.5px] uppercase tracking-[0.1em] transition-colors cursor-pointer flex items-center justify-center gap-2"
                 >
                   <span>{contactSubmitted ? 'Close' : 'Cancel & choose another plan'}</span>
                 </button>
