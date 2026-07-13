@@ -27,6 +27,7 @@ import { SubscriptionPricing } from './components/SubscriptionPricing';
 const SkyVisionView = lazy(() => import('./components/SkyVisionView').then(m => ({ default: m.SkyVisionView })));
 const QuantAuditView = lazy(() => import('./components/QuantAuditView').then(m => ({ default: m.QuantAuditView })));
 const OptionsFlowTape = lazy(() => import('./components/OptionsFlowTape'));
+const DealerFlowSection = lazy(() => import('./components/DealerFlowSection'));
 const PinpointTerminal = lazy(() => import('./components/PinpointTerminal'));
 const PinpointGexView = lazy(() => import('./components/PinpointGexView'));
 const HomeDashboard = lazy(() => import('./components/HomeDashboard'));
@@ -1083,7 +1084,7 @@ export default function App() {
             {activeTab === 'dealerflow' && (
               <div className="view-enter">
                 <TierGuard requiredTier={2} tabKey="dealerflow" planKey="pinpoint" planName="Pinpoint" planPrice="$125">
-                  <OptionsFlowTape />
+                  <DealerFlowSection feedStatus={feedStatus} screener={<OptionsFlowTape />} />
                 </TierGuard>
               </div>
             )}
