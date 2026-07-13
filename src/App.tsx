@@ -13,6 +13,7 @@ import SlayerLoader from './components/SlayerLoader';
 import TierGuard from './components/TierGuard';
 import { ClerkGate } from './components/ClerkGate';
 import { CelebrationOverlay } from './components/CelebrationOverlay';
+import LaunchTransition from './components/LaunchTransition';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CommandPalette } from './components/CommandPalette';
 import { Toaster } from './components/ui/toast';
@@ -156,6 +157,8 @@ export default function App() {
   const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
   const [welcomeCelebrationTier, setWelcomeCelebrationTier] = useState(1);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  // Holographic launch-gate veil, played once when entering the terminal from the landing.
+  const [launching, setLaunching] = useState(false);
 
   // INJECT: VIEWPORT SIMULATION STATE
   const [originalAdminSession, setOriginalAdminSession] = useState<any | null>(null);
@@ -951,7 +954,7 @@ export default function App() {
           pressure={landingPressure}
           spark={landingSpark}
           onEnter={(tab) => handleSelectTab((tab as any) || 'pinpoint')}
-          onLaunch={() => (session?.authenticated ? handleSelectTab('dashboard') : setShowAuthModal(true))}
+          onLaunch={() => (session?.authenticated ? (setLaunching(true), handleSelectTab('dashboard')) : setShowAuthModal(true))}
         />
         {showAuthModal && (
           <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fadeIn">
@@ -995,6 +998,7 @@ export default function App() {
       setShowAuthModal={setShowAuthModal}
     >
       <div className={`w-full h-full flex flex-col relative overscroll-none ${bgClass}`}>
+        {launching && <LaunchTransition onDone={() => setLaunching(false)} />}
         {session?.is_impersonating && (
           <div 
             onClick={() => {

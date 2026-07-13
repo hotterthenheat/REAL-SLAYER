@@ -7,7 +7,7 @@
  */
 
 /** Semantic data tones — never the silver brand accent (that's brand-only). */
-export type Tone = 'neutral' | 'positive' | 'negative' | 'call' | 'pin' | 'warning';
+export type Tone = 'neutral' | 'positive' | 'negative' | 'call' | 'pin' | 'warning' | 'flip' | 'king';
 
 export const toneText: Record<Tone, string> = {
   neutral: 'text-[var(--text-primary)]',
@@ -16,6 +16,8 @@ export const toneText: Record<Tone, string> = {
   call: 'text-[var(--call)]',
   pin: 'text-[var(--pin)]',
   warning: 'text-[var(--warning-ink)]',
+  flip: 'text-[var(--flip)]',
+  king: 'text-[var(--king)]',
 };
 
 export const toneVar: Record<Tone, string> = {
@@ -25,6 +27,8 @@ export const toneVar: Record<Tone, string> = {
   call: 'var(--call)',
   pin: 'var(--pin)',
   warning: 'var(--warning-ink)',
+  flip: 'var(--flip)',
+  king: 'var(--king)',
 };
 
 /** Sign → tone. Zero reads neutral. */

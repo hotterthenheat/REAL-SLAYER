@@ -13,10 +13,10 @@ import type { PlanTarget } from '../../lib/tradePlan';
  */
 
 export const REASON_TONE: Record<PlanTarget['reason'], string> = {
-  'EMA Projection': '#60A5FA',
-  'Liquidity Sweep': '#C084FC',
-  'Loaded Strike': '#D9A15C',
-  'GEX Wall': '#F87171',
+  'EMA Projection': 'var(--call)',       // price-derived projection — steel-blue
+  'Liquidity Sweep': 'var(--greek)',     // purple, keyed distinct from price/wall
+  'Loaded Strike': 'var(--pin)',         // premium/OI-loaded strike — gold
+  'GEX Wall': 'var(--negative-ink)',     // dealer wall — rose
 };
 
 // ── Composite gauge — the confidence/composite as a radial gauge + hero number ──
@@ -135,8 +135,8 @@ export function PriceLadder({
   const targetLevels: LadderLevel[] = targets.length
     ? targets.map((t, i) => ({ price: t.price, label: `TP${i + 1}`, sub: t.reason, tone: REASON_TONE[t.reason], kind: 'target' }))
     : [
-        { price: tp1, label: 'TP1', sub: '0.5σ move', tone: '#4ADE80', kind: 'target' },
-        { price: tp2, label: 'TP2', sub: '1.0σ move', tone: '#4ADE80', kind: 'target' },
+        { price: tp1, label: 'TP1', sub: '0.5σ move', tone: 'var(--positive-ink)', kind: 'target' },
+        { price: tp2, label: 'TP2', sub: '1.0σ move', tone: 'var(--positive-ink)', kind: 'target' },
       ];
   const stopLevel: LadderLevel = { price: stop, label: 'Stop', sub: '−0.5σ move', tone: 'var(--danger)', kind: 'stop' };
   const all = [...targetLevels, stopLevel];

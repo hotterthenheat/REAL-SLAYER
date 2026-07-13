@@ -38,8 +38,8 @@ export function KeyLevelsRail({ profile, biasWord, biasTone, netDex }: {
       { id: 'spot', label: 'Spot', price: spot, tone: 'neutral' },
       { id: 'putWall', label: 'Put Wall', price: profile?.putWall, tone: 'negative' },
       { id: 'pin', label: 'Pin Level', price: profile?.magnet, tone: 'pin' },
-      { id: 'flip', label: 'Flip Level', price: profile?.gammaFlip, tone: 'warning' },
-      { id: 'king', label: 'King Level', price: king?.strike, tone: 'negative' },
+      { id: 'flip', label: 'Flip Level', price: profile?.gammaFlip, tone: 'flip' },
+      { id: 'king', label: 'King Level', price: king?.strike, tone: 'king' },
     ];
     return base.map((r) => ({
       ...r,

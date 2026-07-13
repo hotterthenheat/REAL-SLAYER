@@ -44,8 +44,8 @@ export function KeyLevelsPanel({ profile, onOpen }: { profile: any; onOpen: () =
       { name: 'Call Wall', nameTone: 'call', price: profile?.callWall, type: 'Resistance', typeTone: 'negative', strengthPct: strength(netAt(profile?.callWall)), strengthColor: toneVar.call },
       { name: 'Pin Level', nameTone: 'pin', price: profile?.magnet, type: 'Magnet', typeTone: 'pin', strengthPct: strength(netAt(profile?.magnet)), strengthColor: toneVar.pin },
       { name: 'Put Wall', nameTone: 'negative', price: profile?.putWall, type: 'Support', typeTone: 'positive', strengthPct: strength(netAt(profile?.putWall)), strengthColor: toneVar.negative },
-      { name: 'Flip Level', nameTone: 'warning', price: profile?.gammaFlip, type: 'Critical', typeTone: 'warning', strengthPct: strength(netAt(profile?.gammaFlip)), strengthColor: toneVar.warning },
-      { name: 'King Level', nameTone: 'negative', price: king?.strike, type: 'Critical', typeTone: 'warning', strengthPct: king ? strength(king.netGex ?? 0) : 0, strengthColor: toneVar.negative },
+      { name: 'Flip Level', nameTone: 'flip', price: profile?.gammaFlip, type: 'Regime', typeTone: 'flip', strengthPct: strength(netAt(profile?.gammaFlip)), strengthColor: toneVar.flip },
+      { name: 'King Level', nameTone: 'king', price: king?.strike, type: 'Heaviest γ', typeTone: 'king', strengthPct: king ? strength(king.netGex ?? 0) : 0, strengthColor: toneVar.king },
     ];
   }, [profile]);
 
