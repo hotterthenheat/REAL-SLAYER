@@ -166,6 +166,13 @@ html, body, #root {
   --negative-soft: rgba(214, 72, 77, 0.16);
   --call: #5B9DF0;
   --pin: #E5B94E;
+  /* GEX structural-level hues — distinct from the directional (emerald/rose) and
+     wall (gold) families so each level reads at a glance on the chart + rails.
+     Adopted from the sibling build: flip = cool regime border (baby blue), king =
+     the standout heaviest-inventory strike (magenta), dark-pool = teal. */
+  --flip: #7DD3FC;      /* gamma-flip / regime border — baby blue */
+  --king: #E255FF;      /* king / heaviest |net-γ| strike — magenta */
+  --darkpool: #2DD4BF;  /* dark-pool prints — teal */
 
   /* ====================================================================
      SEMANTIC UI TOKENS — shadcn-style aliases over the Slayer palette so
@@ -803,6 +810,9 @@ body.light-theme ::-webkit-scrollbar-thumb:hover {
   --negative-ink: #BE322D;     /* darker red — readable on paper */
   --call: #2570A8;
   --pin: #A8650E;
+  --flip: #2E86C1;      /* baby blue → deeper on paper */
+  --king: #A81FB8;      /* magenta → deeper on paper */
+  --darkpool: #0E9488;  /* teal → deeper on paper */
 
   /* Redefine Tailwind's custom theme variables for light mode */
   --color-black: #ffffff;
